@@ -1,12 +1,16 @@
 package onpremconfig
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -259,4 +263,133 @@ func TestSecretReconcilerSkipsUnnotifiableCredentialRefs(t *testing.T) {
 	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
 	require.NoError(t, err)
 	requireNoChange(t, cn.NotifyChannel())
+}
+
+// A cross-namespace secretRef points at a Secret outside the entity's namespace, so a
+// change to that Secret must notify the entity too.
+func TestSecretReconcilerNotifiesCrossNamespaceReferrers(t *testing.T) {
+	const secretName = "client-secret"
+	crossNamespaceRefStrategy := onPremAuthStrategyWithSecretRef("strat", secretName)
+	crossNamespaceRefStrategy.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClientSecret[0].
+		SecretRef.Namespace = new("secrets")
+	cred := consumerCredential("cred", "consumer", secretName)
+	cred.Spec.APISpec.APIKey.SecretRef.Namespace = new("secrets")
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t, crossNamespaceRefStrategy, onPremConsumer("consumer", "gw"), cred)
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	ch := cn.NotifyChannel()
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "secrets", Name: secretName})
+	require.NoError(t, err)
+	notified := []string{
+		client.ObjectKeyFromObject(waitForChange(t, ch).Object).String(),
+		client.ObjectKeyFromObject(waitForChange(t, ch).Object).String(),
+	}
+	require.ElementsMatch(t, []string{"default/strat", "default/consumer"}, notified)
+	requireNoChange(t, ch)
+
+	// The same Secret name in the entity's namespace is not referenced.
+	_, err = r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
+	require.NoError(t, err)
+	requireNoChange(t, ch)
+}
+
+func onPremConjurVault(name, secretName string, secretNamespace *string) *aiconfigurationv1alpha1.AIGatewayVault {
+	return &aiconfigurationv1alpha1.AIGatewayVault{
+		Namespace: "default", Name: name,
+		Spec: aiconfigurationv1alpha1.AIGatewayVaultSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayVaultAPISpec{
+				AIGatewayVaultConfig: &aiconfigurationv1alpha1.AIGatewayVaultConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayVaultConfigTypeConjur,
+					Conjur: &aiconfigurationv1alpha1.ConjurVault{
+						Name: "conjur",
+						Config: aiconfigurationv1alpha1.ConjurVaultConfig{
+							APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+								Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+									Name: secretName, Key: "apiKey", Namespace: secretNamespace,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// A vault renders its Secrets into the pushed configuration, so a Secret change or a
+// KongReferenceGrant change must re-render it like any other entity with secretRefs.
+func TestSecretAndGrantReconcilersNotifyVault(t *testing.T) {
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t, onPremConjurVault("vault", "conjur-apikey", new("secrets")))
+	ch := cn.NotifyChannel()
+
+	secretReconciler := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	_, err := secretReconciler.Reconcile(t.Context(), ctrl.Request{Namespace: "secrets", Name: "conjur-apikey"})
+	require.NoError(t, err)
+	change := waitForChange(t, ch)
+	require.Equal(t, "default/vault", client.ObjectKeyFromObject(change.Object).String())
+	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw"}, *change.ParentNN)
+	requireNoChange(t, ch)
+
+	grantReconciler := &KongReferenceGrantReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	_, err = grantReconciler.Reconcile(t.Context(), ctrl.Request{Namespace: "secrets", Name: "allow-vaults"})
+	require.NoError(t, err)
+	require.Equal(t, "default/vault", client.ObjectKeyFromObject(waitForChange(t, ch).Object).String())
+	requireNoChange(t, ch)
+}
+
+// listRecorder records the types of the lists read through it.
+type listRecorder struct {
+	client.Client
+
+	listed map[string]struct{}
+}
+
+func (r *listRecorder) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	r.listed[fmt.Sprintf("%T", list)] = struct{}{}
+	return r.Client.List(ctx, list, opts...)
+}
+
+// Every kind with secretRefs must be in secretRefNotifierFuncs: a missing kind keeps
+// pushing a stale Secret value, or a revoked cross-namespace one, until an unrelated
+// event re-renders its gateway. The expected kinds come from the scheme, so a new kind
+// with secretRefs fails here until it is added.
+func TestSecretRefNotifierFuncsCoverEveryKindWithSecretRefs(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	var want []string
+	for gvk := range scheme.AllKnownTypes() {
+		if gvk.GroupVersion() != aiconfigurationv1alpha1.GroupVersion || strings.HasSuffix(gvk.Kind, "List") {
+			continue
+		}
+		obj, err := scheme.New(gvk)
+		require.NoError(t, err)
+		if _, ok := obj.(sensitiveSecretRefGetter); !ok {
+			continue
+		}
+		list, err := scheme.New(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
+		require.NoError(t, err)
+		want = append(want, fmt.Sprintf("%T", list))
+	}
+	require.NotEmpty(t, want)
+
+	recorder := &listRecorder{Client: newReconcilerClient(t), listed: map[string]struct{}{}}
+	cn := changenotifier.New()
+	defer cn.Close()
+	require.NoError(t, notifySecretRefEntities(t.Context(), recorder, referencesSecret(types.NamespacedName{Namespace: "default", Name: "s"}), cn, logr.Discard()))
+
+	for _, w := range want {
+		require.Contains(t, recorder.listed, w, "secretRefNotifierFuncs does not list %s", w)
+	}
 }

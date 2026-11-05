@@ -11,13 +11,13 @@ import (
 func TestEventGatewaySchemaRegistryAPISpec_ToSchemaRegistryCreate(t *testing.T) {
 	spec := &EventGatewaySchemaRegistryAPISpec{}
 	result, err := spec.ToSchemaRegistryCreate()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "EventGatewaySchemaRegistry config is required")
 	require.Nil(t, result)
 }
 
 func TestEventGatewaySchemaRegistryAPISpec_ToUpdateEventGatewaySchemaRegistryRequest(t *testing.T) {
 	spec := &EventGatewaySchemaRegistryAPISpec{}
 	result, err := spec.ToUpdateEventGatewaySchemaRegistryRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "EventGatewaySchemaRegistry config is required")
 	require.Nil(t, result)
 }

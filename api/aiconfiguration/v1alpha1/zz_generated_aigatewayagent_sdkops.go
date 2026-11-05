@@ -532,13 +532,13 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 			access = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayAgentAccessAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedAccessAclsAllowAllow, err := resolveAIGatewayAgentAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.access.acls.allow.allow references: %w", err)
 			}
 			access["acls"] = map[string]any{"allow": resolvedAccessAclsAllowAllow}
-		case acls.Type == AIGatewayAgentAccessAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedAccessAclsDenyDeny, err := resolveAIGatewayAgentAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.access.acls.deny.deny references: %w", err)
@@ -604,13 +604,13 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 			access = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayAgentAccessAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedAccessAclsAllowAllow, err := resolveAIGatewayAgentAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.access.acls.allow.allow references: %w", err)
 			}
 			access["acls"] = map[string]any{"allow": resolvedAccessAclsAllowAllow}
-		case acls.Type == AIGatewayAgentAccessAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedAccessAclsDenyDeny, err := resolveAIGatewayAgentAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.access.acls.deny.deny references: %w", err)

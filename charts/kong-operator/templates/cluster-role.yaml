@@ -83,6 +83,7 @@ rules:
       - aigatewayconsumergroups
       - aigatewayconsumers
       - aigatewaycustompolicies
+      - aigatewaydatastores
       - aigatewaymcpservers
       - aigatewaymodelproviders
       - aigatewaymodels
@@ -108,6 +109,7 @@ rules:
       - aigatewayconsumers/finalizers
       - aigatewaycustompolicies/finalizers
       - aigatewaydataplanecertificates/finalizers
+      - aigatewaydatastores/finalizers
       - aigatewaymcpservers/finalizers
       - aigatewaymodelproviders/finalizers
       - aigatewaymodels/finalizers
@@ -128,6 +130,7 @@ rules:
       - aigatewayconsumers/status
       - aigatewaycustompolicies/status
       - aigatewaydataplanecertificates/status
+      - aigatewaydatastores/status
       - aigatewaymcpservers/status
       - aigatewaymodelproviders/status
       - aigatewaymodels/status
@@ -465,6 +468,7 @@ rules:
       - controlplane
       - dataplanemetricsextensions
       - gatewayconfigurations
+      - watchnamespacegrants
     verbs:
       - get
       - list
@@ -480,13 +484,6 @@ rules:
       - list
       - patch
       - update
-      - watch
-  - apiGroups:
-      - gateway-operator.konghq.com
-    resources:
-      - watchnamespacegrants
-    verbs:
-      - list
       - watch
   - apiGroups:
       - gateway.networking.k8s.io

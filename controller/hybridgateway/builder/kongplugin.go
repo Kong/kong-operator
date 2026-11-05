@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -155,6 +156,12 @@ func (b *KongPluginBuilder) WithTags(tags commonv1alpha1.Tags) *KongPluginBuilde
 // WithPluginName sets the plugin name for the KongPlugin being built.
 func (b *KongPluginBuilder) WithPluginName(name string) *KongPluginBuilder {
 	b.plugin.PluginName = name
+	return b
+}
+
+// WithOrdering sets the spec.Ordering field for the KongPlugin being built.
+func (b *KongPluginBuilder) WithOrdering(ordering *kong.PluginOrdering) *KongPluginBuilder {
+	b.plugin.Ordering = ordering
 	return b
 }
 

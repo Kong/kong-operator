@@ -898,21 +898,6 @@ func (e EventGatewayParsedRecordTranscodeProduceConfigAvroOutputFormat) Valid() 
 	}
 }
 
-// Defines values for EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat.
-const (
-	EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormatJson EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat = "json"
-)
-
-// Valid indicates whether the value is a known member of the EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat enum.
-func (e EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat) Valid() bool {
-	switch e {
-	case EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormatJson:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for EventGatewayParsedRecordTranscodeProducePolicyCreateType.
 const (
 	EventGatewayParsedRecordTranscodeProducePolicyCreateTypeTranscode EventGatewayParsedRecordTranscodeProducePolicyCreateType = "transcode"
@@ -1605,6 +1590,7 @@ func (e SchemaRegistryConfluentType) Valid() bool {
 
 // Defines values for SchemaRegistryConfluentConfigSchemaType.
 const (
+	SchemaRegistryConfluentConfigSchemaTypeAny  SchemaRegistryConfluentConfigSchemaType = "any"
 	SchemaRegistryConfluentConfigSchemaTypeAvro SchemaRegistryConfluentConfigSchemaType = "avro"
 	SchemaRegistryConfluentConfigSchemaTypeJson SchemaRegistryConfluentConfigSchemaType = "json"
 )
@@ -1612,6 +1598,8 @@ const (
 // Valid indicates whether the value is a known member of the SchemaRegistryConfluentConfigSchemaType enum.
 func (e SchemaRegistryConfluentConfigSchemaType) Valid() bool {
 	switch e {
+	case SchemaRegistryConfluentConfigSchemaTypeAny:
+		return true
 	case SchemaRegistryConfluentConfigSchemaTypeAvro:
 		return true
 	case SchemaRegistryConfluentConfigSchemaTypeJson:
@@ -1681,6 +1669,24 @@ func (e TLSVersionRangeMin) Valid() bool {
 	case TLSVersionRangeMinTLSv12:
 		return true
 	case TLSVersionRangeMinTLSv13:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TranscodeOnUnknownField.
+const (
+	Drop TranscodeOnUnknownField = "drop"
+	Fail TranscodeOnUnknownField = "fail"
+)
+
+// Valid indicates whether the value is a known member of the TranscodeOnUnknownField enum.
+func (e TranscodeOnUnknownField) Valid() bool {
+	switch e {
+	case Drop:
+		return true
+	case Fail:
 		return true
 	default:
 		return false
@@ -2016,20 +2022,17 @@ type BackendClusterAuthenticationSaslAwsIamType string
 //
 // **Requires a minimum runtime version of `1.3`**.
 type BackendClusterAuthenticationSaslAwsIamAssumeRole struct {
-	// AssumeRole Configuration for assuming an IAM role. Required when `type` is `assume_role`.
-	AssumeRole struct {
-		// Arn The [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-arns)
-		// of the IAM role to assume, formatted as `arn:aws:iam::<account-id>:role/<role-name>`.
-		//
-		//
-		// Example: arn:aws:iam::123456789012:role/example-role
-		Arn string `json:"arn"`
+	// Arn The [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-arns)
+	// of the IAM role to assume, formatted as `arn:aws:iam::<account-id>:role/<role-name>`.
+	//
+	//
+	// Example: arn:aws:iam::123456789012:role/example-role
+	Arn string `json:"arn"`
 
-		// SessionName The session name to attach to the assumed role session. The value becomes part of the assumed
-		// role user ARN, queryable as `arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>`.
-		SessionName *string `json:"session_name,omitempty"`
-	} `json:"assume_role"`
-	Type BackendClusterAuthenticationSaslAwsIamAssumeRoleType `json:"type"`
+	// SessionName The session name to attach to the assumed role session. The value becomes part of the assumed
+	// role user ARN, queryable as `arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>`.
+	SessionName *string                                              `json:"session_name,omitempty"`
+	Type        BackendClusterAuthenticationSaslAwsIamAssumeRoleType `json:"type"`
 }
 
 // BackendClusterAuthenticationSaslAwsIamAssumeRoleType defines model for BackendClusterAuthenticationSaslAwsIamAssumeRole.Type.
@@ -2638,11 +2641,8 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 	//   to help to identify the clients violating schema.
 	// * skip - skips delivering a record.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	KeyValidationAction *ConsumeKeyValidationAction `json:"key_validation_action,omitempty"`
-
-	// SchemaRegistry A reference to a schema Registry.
-	SchemaRegistry *SchemaRegistryReference                                        `json:"schema_registry,omitempty"`
-	Type           EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigType `json:"type"`
+	KeyValidationAction *ConsumeKeyValidationAction                                     `json:"key_validation_action,omitempty"`
+	Type                EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigType `json:"type"`
 
 	// ValidateKey If true, validate the record key.
 	//
@@ -3231,14 +3231,12 @@ type EventGatewayMaskStrategy struct {
 
 // EventGatewayMaskStrategyEmail Masks an email address by applying a separate strategy to the local part and to the domain.
 type EventGatewayMaskStrategyEmail struct {
-	Email struct {
-		// Domain The strategy used to redact the domain of an email address.
-		Domain EventGatewayMaskEmailDomainStrategy `json:"domain"`
+	// Domain The strategy used to redact the domain of an email address.
+	Domain EventGatewayMaskEmailDomainStrategy `json:"domain"`
 
-		// LocalPart The strategy used to redact the local part of an email address.
-		LocalPart EventGatewayMaskEmailLocalPartStrategy `json:"local_part"`
-	} `json:"email"`
-	Type EventGatewayMaskStrategyEmailType `json:"type"`
+	// LocalPart The strategy used to redact the local part of an email address.
+	LocalPart EventGatewayMaskEmailLocalPartStrategy `json:"local_part"`
+	Type      EventGatewayMaskStrategyEmailType      `json:"type"`
 }
 
 // EventGatewayMaskStrategyEmailType defines model for EventGatewayMaskStrategyEmail.Type.
@@ -3247,17 +3245,15 @@ type EventGatewayMaskStrategyEmailType string
 // EventGatewayMaskStrategyKeepChars Keeps a number of leading and/or trailing characters and replaces the middle with a fixed phrase.
 // If `first + last` is greater than or equal to the value length, the whole value is replaced with the phrase, so it never shows more characters than the original value. The phrase is fixed, so the masked output does not leak the value length.
 type EventGatewayMaskStrategyKeepChars struct {
-	KeepChars struct {
-		// First Number of leading characters to keep unmasked.
-		First *int `json:"first,omitempty"`
+	// First Number of leading characters to keep unmasked.
+	First *int `json:"first,omitempty"`
 
-		// Last Number of trailing characters to keep unmasked.
-		Last *int `json:"last,omitempty"`
+	// Last Number of trailing characters to keep unmasked.
+	Last *int `json:"last,omitempty"`
 
-		// Phrase The phrase that replaces the masked middle of the value.
-		Phrase string `json:"phrase"`
-	} `json:"keep_chars"`
-	Type EventGatewayMaskStrategyKeepCharsType `json:"type"`
+	// Phrase The phrase that replaces the masked middle of the value.
+	Phrase string                                `json:"phrase"`
+	Type   EventGatewayMaskStrategyKeepCharsType `json:"type"`
 }
 
 // EventGatewayMaskStrategyKeepCharsType defines model for EventGatewayMaskStrategyKeepChars.Type.
@@ -3265,11 +3261,9 @@ type EventGatewayMaskStrategyKeepCharsType string
 
 // EventGatewayMaskStrategyReplace Replaces the whole value with a fixed phrase. The masked length does not reflect the original value length.
 type EventGatewayMaskStrategyReplace struct {
-	Replace struct {
-		// Phrase The phrase to replace the value with.
-		Phrase string `json:"phrase"`
-	} `json:"replace"`
-	Type EventGatewayMaskStrategyReplaceType `json:"type"`
+	// Phrase The phrase to replace the value with.
+	Phrase string                              `json:"phrase"`
+	Type   EventGatewayMaskStrategyReplaceType `json:"type"`
 }
 
 // EventGatewayMaskStrategyReplaceType defines model for EventGatewayMaskStrategyReplace.Type.
@@ -3739,13 +3733,15 @@ type EventGatewayParsedRecordTranscodeConsumeConfigAvro struct {
 	// **Requires a minimum runtime version of `1.2`**.
 	FailureMode ConsumeFailureMode `json:"failure_mode"`
 
+	// OnUnknownField Describes how to handle JSON fields that are not defined in the target schema.
+	// * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled.
+	// * `drop` - the unknown fields are removed from the transcoded value.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	OnUnknownField *TranscodeOnUnknownField `json:"on_unknown_field,omitempty"`
+
 	// OutputFormat The serialization format to convert the record value into.
 	OutputFormat EventGatewayParsedRecordTranscodeConsumeConfigAvroOutputFormat `json:"output_format"`
-
-	// SchemaRefDestination Defines how to record the schema id for the transcoded output data. See the
-	// [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
-	// for more about the wire format.
-	SchemaRefDestination EventGatewayParsedRecordTranscodeSchemaRefDestination `json:"schema_ref_destination"`
 
 	// SchemaSource Determines how to look up the schema to use for the transcoded output data.
 	// Leave this unset if the output data schema isn't needed.
@@ -3766,13 +3762,15 @@ type EventGatewayParsedRecordTranscodeConsumeConfigJson struct {
 	// **Requires a minimum runtime version of `1.2`**.
 	FailureMode ConsumeFailureMode `json:"failure_mode"`
 
+	// OnUnknownField Describes how to handle JSON fields that are not defined in the target schema.
+	// * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled.
+	// * `drop` - the unknown fields are removed from the transcoded value.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	OnUnknownField *TranscodeOnUnknownField `json:"on_unknown_field,omitempty"`
+
 	// OutputFormat The serialization format to convert the record value into.
 	OutputFormat EventGatewayParsedRecordTranscodeConsumeConfigJsonOutputFormat `json:"output_format"`
-
-	// SchemaRefDestination Defines how to record the schema id for the transcoded output data. See the
-	// [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
-	// for more about the wire format.
-	SchemaRefDestination EventGatewayParsedRecordTranscodeSchemaRefDestination `json:"schema_ref_destination"`
 
 	// SchemaSource Determines how to look up the schema to use for the transcoded output data.
 	// Leave this unset if the output data schema isn't needed.
@@ -3844,13 +3842,15 @@ type EventGatewayParsedRecordTranscodeProduceConfigAvro struct {
 	// **Requires a minimum runtime version of `1.2`**.
 	FailureMode ProduceFailureMode `json:"failure_mode"`
 
+	// OnUnknownField Describes how to handle JSON fields that are not defined in the target schema.
+	// * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled.
+	// * `drop` - the unknown fields are removed from the transcoded value.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	OnUnknownField *TranscodeOnUnknownField `json:"on_unknown_field,omitempty"`
+
 	// OutputFormat The serialization format to convert the record value into.
 	OutputFormat EventGatewayParsedRecordTranscodeProduceConfigAvroOutputFormat `json:"output_format"`
-
-	// SchemaRefDestination Defines how to record the schema id for the transcoded output data. See the
-	// [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
-	// for more about the wire format.
-	SchemaRefDestination EventGatewayParsedRecordTranscodeSchemaRefDestination `json:"schema_ref_destination"`
 
 	// SchemaSource Determines how to look up the schema to use for the transcoded output data.
 	// Leave this unset if the output data schema isn't needed.
@@ -3859,32 +3859,6 @@ type EventGatewayParsedRecordTranscodeProduceConfigAvro struct {
 
 // EventGatewayParsedRecordTranscodeProduceConfigAvroOutputFormat The serialization format to convert the record value into.
 type EventGatewayParsedRecordTranscodeProduceConfigAvroOutputFormat string
-
-// EventGatewayParsedRecordTranscodeProduceConfigJson The configuration of the transcode parsed record policy when converting produced records to JSON.
-type EventGatewayParsedRecordTranscodeProduceConfigJson struct {
-	// FailureMode Describes how to handle a failure in a policy applied to produced records.
-	// * `reject` - rejects the record batch.
-	// * `passthrough` - passes the record silently to the backend cluster even though policy execution failed.
-	// * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).
-	//
-	// **Requires a minimum runtime version of `1.2`**.
-	FailureMode ProduceFailureMode `json:"failure_mode"`
-
-	// OutputFormat The serialization format to convert the record value into.
-	OutputFormat EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat `json:"output_format"`
-
-	// SchemaRefDestination Defines how to record the schema id for the transcoded output data. See the
-	// [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
-	// for more about the wire format.
-	SchemaRefDestination EventGatewayParsedRecordTranscodeSchemaRefDestination `json:"schema_ref_destination"`
-
-	// SchemaSource Determines how to look up the schema to use for the transcoded output data.
-	// Leave this unset if the output data schema isn't needed.
-	SchemaSource *EventGatewayParsedRecordTranscodeSchemaSource `json:"schema_source,omitempty"`
-}
-
-// EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat The serialization format to convert the record value into.
-type EventGatewayParsedRecordTranscodeProduceConfigJsonOutputFormat string
 
 // EventGatewayParsedRecordTranscodeProducePolicyCreate Converts an already schema-validated record value into a different serialization
 // format before it is produced to the backend cluster.
@@ -3957,10 +3931,8 @@ type EventGatewayParsedRecordTranscodeSchemaRefDestinationNoneType string
 
 // EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader Puts the schema reference in a record header.
 type EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader struct {
-	RecordHeader *struct {
-		// Name The name is compatible with Confluent's serializer by default but can be changed.
-		Name *string `json:"name,omitempty"`
-	} `json:"record_header,omitempty"`
+	// Name The name is compatible with Confluent's serializer by default but can be changed.
+	Name *string                                                               `json:"name,omitempty"`
 	Type EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeaderType `json:"type"`
 }
 
@@ -3985,6 +3957,11 @@ type EventGatewayParsedRecordTranscodeSchemaSourceInlineType string
 
 // EventGatewayParsedRecordTranscodeSchemaSourceReference References a schema registered in a schema registry, computing the subject and version to use.
 type EventGatewayParsedRecordTranscodeSchemaSourceReference struct {
+	// SchemaRefDestination Defines how to record the schema id for the transcoded output data. See the
+	// [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
+	// for more about the wire format.
+	SchemaRefDestination EventGatewayParsedRecordTranscodeSchemaRefDestination `json:"schema_ref_destination"`
+
 	// SchemaRegistry A reference to a schema Registry.
 	SchemaRegistry SchemaRegistryReference `json:"schema_registry"`
 
@@ -4118,11 +4095,8 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
 	//   to help to identify the clients violating schema.
-	KeyValidationAction *ProduceKeyValidationAction `json:"key_validation_action,omitempty"`
-
-	// SchemaRegistry A reference to a schema Registry.
-	SchemaRegistry *SchemaRegistryReference                                        `json:"schema_registry,omitempty"`
-	Type           EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigType `json:"type"`
+	KeyValidationAction *ProduceKeyValidationAction                                     `json:"key_validation_action,omitempty"`
+	Type                EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigType `json:"type"`
 
 	// ValidateKey If true, validate the record key.
 	//
@@ -4890,11 +4864,34 @@ type Gateway struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
+// GatewayConfigVersion The version of the config built from the entities.
+type GatewayConfigVersion struct {
+	// DataVersion The version of the entities used to bundle the config. Every user change that affects the config increments this version.
+	DataVersion int `json:"data_version"`
+
+	// FeatureBitmap The state of all feature flags that impact the config, encoded as bits.
+	FeatureBitmap uint64 `json:"feature_bitmap"`
+
+	// OperatorVersion The semantic version of the operator that bundled the config, such as "1.2.0".
+	//
+	// Example: 1.2.0
+	OperatorVersion string `json:"operator_version"`
+}
+
 // GatewayDescription A human-readable description of the Gateway.
 type GatewayDescription = string
 
 // GatewayEntities The set of entities scoped to a gateway.
 type GatewayEntities struct {
+	// ConfigVersion The version of the config built from the entities.
+	ConfigVersion GatewayConfigVersion `json:"config_version"`
+
+	// Entities The entities scoped to the gateway.
+	Entities GatewayEntitySet `json:"entities"`
+}
+
+// GatewayEntitySet The entities scoped to the gateway.
+type GatewayEntitySet struct {
 	// BackendClusters The backend clusters scoped to the gateway.
 	BackendClusters []EventGatewayBackendClusterOnPrem `json:"backend_clusters"`
 
@@ -5084,6 +5081,12 @@ type InvalidRules string
 //
 // Example: {"env":"test"}
 type Labels map[string]string
+
+// ListEventGatewayDataPlaneCertificatesOnPrem The dataplane certificates scoped to a gateway.
+type ListEventGatewayDataPlaneCertificatesOnPrem struct {
+	// Data The dataplane certificates scoped to the gateway.
+	Data []EventGatewayDataPlaneCertificateOnPrem `json:"data"`
+}
 
 // MinRuntimeVersion The minimum runtime version supported by the API. This is the lowest version of the data plane
 // release that can be used with the entity model.
@@ -5343,6 +5346,13 @@ type TLSVersionRangeMax string
 
 // TLSVersionRangeMin Minimum TLS version to use.
 type TLSVersionRangeMin string
+
+// TranscodeOnUnknownField Describes how to handle JSON fields that are not defined in the target schema.
+// * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled.
+// * `drop` - the unknown fields are removed from the transcoded value.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type TranscodeOnUnknownField string
 
 // UUIDv4 A version 4 UUID.
 //
@@ -5639,6 +5649,8 @@ type VirtualClusterNamespace struct {
 	Mode VirtualClusterNamespaceMode `json:"mode"`
 
 	// Prefix The namespace is differentiated by this chosen prefix.
+	// The prefix is prepended to Kafka topic names, so it can only contain the characters Kafka allows in them: ASCII letters, digits, `.`, `_` and `-`.
+	// It must contain at least one character other than `.` and be at most 100 characters long to leave room for the rest of the topic name (Kafka limits topic names to 249 characters).
 	// For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients
 	// of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`.
 	Prefix string `json:"prefix"`
@@ -8529,40 +8541,6 @@ func (t *EventGatewayParsedRecordTranscodeConsumeConfig) UnmarshalJSON(b []byte)
 	return err
 }
 
-// AsEventGatewayParsedRecordTranscodeProduceConfigJson returns the union data inside the EventGatewayParsedRecordTranscodeProduceConfig as a EventGatewayParsedRecordTranscodeProduceConfigJson
-func (t EventGatewayParsedRecordTranscodeProduceConfig) AsEventGatewayParsedRecordTranscodeProduceConfigJson() (EventGatewayParsedRecordTranscodeProduceConfigJson, error) {
-	var body EventGatewayParsedRecordTranscodeProduceConfigJson
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromEventGatewayParsedRecordTranscodeProduceConfigJson overwrites any union data inside the EventGatewayParsedRecordTranscodeProduceConfig as the provided EventGatewayParsedRecordTranscodeProduceConfigJson
-func (t *EventGatewayParsedRecordTranscodeProduceConfig) FromEventGatewayParsedRecordTranscodeProduceConfigJson(v EventGatewayParsedRecordTranscodeProduceConfigJson) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"output_format":"json"}`))
-	t.union = b
-	return err
-}
-
-// MergeEventGatewayParsedRecordTranscodeProduceConfigJson performs a merge with any union data inside the EventGatewayParsedRecordTranscodeProduceConfig, using the provided EventGatewayParsedRecordTranscodeProduceConfigJson
-func (t *EventGatewayParsedRecordTranscodeProduceConfig) MergeEventGatewayParsedRecordTranscodeProduceConfigJson(v EventGatewayParsedRecordTranscodeProduceConfigJson) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	b, err = runtime.JSONMerge(b, []byte(`{"output_format":"json"}`))
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsEventGatewayParsedRecordTranscodeProduceConfigAvro returns the union data inside the EventGatewayParsedRecordTranscodeProduceConfig as a EventGatewayParsedRecordTranscodeProduceConfigAvro
 func (t EventGatewayParsedRecordTranscodeProduceConfig) AsEventGatewayParsedRecordTranscodeProduceConfigAvro() (EventGatewayParsedRecordTranscodeProduceConfigAvro, error) {
 	var body EventGatewayParsedRecordTranscodeProduceConfigAvro
@@ -8613,8 +8591,6 @@ func (t EventGatewayParsedRecordTranscodeProduceConfig) ValueByDiscriminator() (
 	switch discriminator {
 	case "avro":
 		return t.AsEventGatewayParsedRecordTranscodeProduceConfigAvro()
-	case "json":
-		return t.AsEventGatewayParsedRecordTranscodeProduceConfigJson()
 	default:
 		return nil, errors.New("unknown discriminator value: " + discriminator)
 	}
@@ -11367,12 +11343,26 @@ type ClientInterface interface {
 	// Corresponds with PUT /event-gateways/{gatewayId} (the `UpdateEventGateway` operationId).
 	UpdateEventGateway(ctx context.Context, gatewayId openapi_types.UUID, body UpdateEventGatewayJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListEventGatewayDataPlaneCertificates List Event Gateway DataPlane Certificates
+	//
+	// Returns the dataplane certificates scoped to an individual gateway.
+	//
+	// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates (the `ListEventGatewayDataPlaneCertificates` operationId).
+	ListEventGatewayDataPlaneCertificates(ctx context.Context, gatewayId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteEventGatewayDataPlaneCertificate Delete Event Gateway DataPlane Certificate
 	//
 	// Delete an individual dataplane certificate scoped to a gateway.
 	//
 	// Corresponds with DELETE /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `DeleteEventGatewayDataPlaneCertificate` operationId).
 	DeleteEventGatewayDataPlaneCertificate(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetEventGatewayDataPlaneCertificate Get Event Gateway DataPlane Certificate
+	//
+	// Returns an individual dataplane certificate scoped to a gateway.
+	//
+	// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `GetEventGatewayDataPlaneCertificate` operationId).
+	GetEventGatewayDataPlaneCertificate(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// UpdateEventGatewayDataPlaneCertificateWithBody Update Event Gateway DataPlane Certificate
 	//
@@ -11491,6 +11481,23 @@ func (c *Client) UpdateEventGateway(ctx context.Context, gatewayId openapi_types
 	return c.Client.Do(req)
 }
 
+// ListEventGatewayDataPlaneCertificates List Event Gateway DataPlane Certificates
+//
+// Returns the dataplane certificates scoped to an individual gateway.
+//
+// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates (the `ListEventGatewayDataPlaneCertificates` operationId).
+func (c *Client) ListEventGatewayDataPlaneCertificates(ctx context.Context, gatewayId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListEventGatewayDataPlaneCertificatesRequest(c.Server, gatewayId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // DeleteEventGatewayDataPlaneCertificate Delete Event Gateway DataPlane Certificate
 //
 // Delete an individual dataplane certificate scoped to a gateway.
@@ -11498,6 +11505,23 @@ func (c *Client) UpdateEventGateway(ctx context.Context, gatewayId openapi_types
 // Corresponds with DELETE /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `DeleteEventGatewayDataPlaneCertificate` operationId).
 func (c *Client) DeleteEventGatewayDataPlaneCertificate(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteEventGatewayDataPlaneCertificateRequest(c.Server, gatewayId, certificateId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// GetEventGatewayDataPlaneCertificate Get Event Gateway DataPlane Certificate
+//
+// Returns an individual dataplane certificate scoped to a gateway.
+//
+// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `GetEventGatewayDataPlaneCertificate` operationId).
+func (c *Client) GetEventGatewayDataPlaneCertificate(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetEventGatewayDataPlaneCertificateRequest(c.Server, gatewayId, certificateId)
 	if err != nil {
 		return nil, err
 	}
@@ -11720,6 +11744,40 @@ func NewUpdateEventGatewayRequestWithBody(server string, gatewayId openapi_types
 	return req, nil
 }
 
+// NewListEventGatewayDataPlaneCertificatesRequest constructs an http.Request for the ListEventGatewayDataPlaneCertificates method
+func NewListEventGatewayDataPlaneCertificatesRequest(server string, gatewayId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "gatewayId", gatewayId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/event-gateways/%s/data-plane-certificates", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewDeleteEventGatewayDataPlaneCertificateRequest constructs an http.Request for the DeleteEventGatewayDataPlaneCertificate method
 func NewDeleteEventGatewayDataPlaneCertificateRequest(server string, gatewayId openapi_types.UUID, certificateId openapi_types.UUID) (*http.Request, error) {
 	var err error
@@ -11754,6 +11812,47 @@ func NewDeleteEventGatewayDataPlaneCertificateRequest(server string, gatewayId o
 	}
 
 	req, err := http.NewRequest(http.MethodDelete, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetEventGatewayDataPlaneCertificateRequest constructs an http.Request for the GetEventGatewayDataPlaneCertificate method
+func NewGetEventGatewayDataPlaneCertificateRequest(server string, gatewayId openapi_types.UUID, certificateId openapi_types.UUID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "gatewayId", gatewayId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "certificateId", certificateId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: "uuid"})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/event-gateways/%s/data-plane-certificates/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -12007,6 +12106,15 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with PUT /event-gateways/{gatewayId} (the `UpdateEventGateway` operationId).
 	UpdateEventGatewayWithResponse(ctx context.Context, gatewayId openapi_types.UUID, body UpdateEventGatewayJSONRequestBody, reqEditors ...RequestEditorFn) (*UpdateEventGatewayResponse, error)
 
+	// ListEventGatewayDataPlaneCertificatesWithResponse List Event Gateway DataPlane Certificates
+	//
+	// Returns the dataplane certificates scoped to an individual gateway.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates (the `ListEventGatewayDataPlaneCertificates` operationId).
+	ListEventGatewayDataPlaneCertificatesWithResponse(ctx context.Context, gatewayId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListEventGatewayDataPlaneCertificatesResponse, error)
+
 	// DeleteEventGatewayDataPlaneCertificateWithResponse Delete Event Gateway DataPlane Certificate
 	//
 	// Delete an individual dataplane certificate scoped to a gateway.
@@ -12015,6 +12123,15 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with DELETE /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `DeleteEventGatewayDataPlaneCertificate` operationId).
 	DeleteEventGatewayDataPlaneCertificateWithResponse(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*DeleteEventGatewayDataPlaneCertificateResponse, error)
+
+	// GetEventGatewayDataPlaneCertificateWithResponse Get Event Gateway DataPlane Certificate
+	//
+	// Returns an individual dataplane certificate scoped to a gateway.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `GetEventGatewayDataPlaneCertificate` operationId).
+	GetEventGatewayDataPlaneCertificateWithResponse(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetEventGatewayDataPlaneCertificateResponse, error)
 
 	// UpdateEventGatewayDataPlaneCertificateWithBodyWithResponse Update Event Gateway DataPlane Certificate
 	//
@@ -12204,6 +12321,68 @@ func (r UpdateEventGatewayResponse) ContentType() string {
 	return ""
 }
 
+type ListEventGatewayDataPlaneCertificatesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *ListEventGatewayDataPlaneCertificatesOnPrem
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ListEventGatewayDataPlaneCertificatesResponse) GetJSON200() *ListEventGatewayDataPlaneCertificatesOnPrem {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r ListEventGatewayDataPlaneCertificatesResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r ListEventGatewayDataPlaneCertificatesResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r ListEventGatewayDataPlaneCertificatesResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r ListEventGatewayDataPlaneCertificatesResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ListEventGatewayDataPlaneCertificatesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListEventGatewayDataPlaneCertificatesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ListEventGatewayDataPlaneCertificatesResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type DeleteEventGatewayDataPlaneCertificateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12253,6 +12432,68 @@ func (r DeleteEventGatewayDataPlaneCertificateResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r DeleteEventGatewayDataPlaneCertificateResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type GetEventGatewayDataPlaneCertificateResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *EventGatewayDataPlaneCertificateOnPrem
+	// ApplicationproblemJSON401 the response for an HTTP 401 `application/problem+json` response
+	ApplicationproblemJSON401 *Unauthorized
+	// ApplicationproblemJSON403 the response for an HTTP 403 `application/problem+json` response
+	ApplicationproblemJSON403 *Forbidden
+	// ApplicationproblemJSON404 the response for an HTTP 404 `application/problem+json` response
+	ApplicationproblemJSON404 *NotFound
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetEventGatewayDataPlaneCertificateResponse) GetJSON200() *EventGatewayDataPlaneCertificateOnPrem {
+	return r.JSON200
+}
+
+// GetApplicationproblemJSON401 returns the response for an HTTP 401 `application/problem+json` response
+func (r GetEventGatewayDataPlaneCertificateResponse) GetApplicationproblemJSON401() *Unauthorized {
+	return r.ApplicationproblemJSON401
+}
+
+// GetApplicationproblemJSON403 returns the response for an HTTP 403 `application/problem+json` response
+func (r GetEventGatewayDataPlaneCertificateResponse) GetApplicationproblemJSON403() *Forbidden {
+	return r.ApplicationproblemJSON403
+}
+
+// GetApplicationproblemJSON404 returns the response for an HTTP 404 `application/problem+json` response
+func (r GetEventGatewayDataPlaneCertificateResponse) GetApplicationproblemJSON404() *NotFound {
+	return r.ApplicationproblemJSON404
+}
+
+// GetBody returns the raw response body bytes
+func (r GetEventGatewayDataPlaneCertificateResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetEventGatewayDataPlaneCertificateResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetEventGatewayDataPlaneCertificateResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetEventGatewayDataPlaneCertificateResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -12559,6 +12800,21 @@ func (c *ClientWithResponses) UpdateEventGatewayWithResponse(ctx context.Context
 	return ParseUpdateEventGatewayResponse(rsp)
 }
 
+// ListEventGatewayDataPlaneCertificatesWithResponse List Event Gateway DataPlane Certificates
+//
+// Returns the dataplane certificates scoped to an individual gateway.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates (the `ListEventGatewayDataPlaneCertificates` operationId).
+func (c *ClientWithResponses) ListEventGatewayDataPlaneCertificatesWithResponse(ctx context.Context, gatewayId openapi_types.UUID, reqEditors ...RequestEditorFn) (*ListEventGatewayDataPlaneCertificatesResponse, error) {
+	rsp, err := c.ListEventGatewayDataPlaneCertificates(ctx, gatewayId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListEventGatewayDataPlaneCertificatesResponse(rsp)
+}
+
 // DeleteEventGatewayDataPlaneCertificateWithResponse Delete Event Gateway DataPlane Certificate
 //
 // Delete an individual dataplane certificate scoped to a gateway.
@@ -12572,6 +12828,21 @@ func (c *ClientWithResponses) DeleteEventGatewayDataPlaneCertificateWithResponse
 		return nil, err
 	}
 	return ParseDeleteEventGatewayDataPlaneCertificateResponse(rsp)
+}
+
+// GetEventGatewayDataPlaneCertificateWithResponse Get Event Gateway DataPlane Certificate
+//
+// Returns an individual dataplane certificate scoped to a gateway.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /event-gateways/{gatewayId}/data-plane-certificates/{certificateId} (the `GetEventGatewayDataPlaneCertificate` operationId).
+func (c *ClientWithResponses) GetEventGatewayDataPlaneCertificateWithResponse(ctx context.Context, gatewayId openapi_types.UUID, certificateId openapi_types.UUID, reqEditors ...RequestEditorFn) (*GetEventGatewayDataPlaneCertificateResponse, error) {
+	rsp, err := c.GetEventGatewayDataPlaneCertificate(ctx, gatewayId, certificateId, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetEventGatewayDataPlaneCertificateResponse(rsp)
 }
 
 // UpdateEventGatewayDataPlaneCertificateWithBodyWithResponse Update Event Gateway DataPlane Certificate
@@ -12776,6 +13047,53 @@ func ParseUpdateEventGatewayResponse(rsp *http.Response) (*UpdateEventGatewayRes
 	return response, nil
 }
 
+// ParseListEventGatewayDataPlaneCertificatesResponse parses an HTTP response from a ListEventGatewayDataPlaneCertificatesWithResponse call
+func ParseListEventGatewayDataPlaneCertificatesResponse(rsp *http.Response) (*ListEventGatewayDataPlaneCertificatesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListEventGatewayDataPlaneCertificatesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ListEventGatewayDataPlaneCertificatesOnPrem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteEventGatewayDataPlaneCertificateResponse parses an HTTP response from a DeleteEventGatewayDataPlaneCertificateWithResponse call
 func ParseDeleteEventGatewayDataPlaneCertificateResponse(rsp *http.Response) (*DeleteEventGatewayDataPlaneCertificateResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -12792,6 +13110,53 @@ func ParseDeleteEventGatewayDataPlaneCertificateResponse(rsp *http.Response) (*D
 	switch {
 	case rsp.StatusCode == 204:
 		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Forbidden
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest NotFound
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationproblemJSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetEventGatewayDataPlaneCertificateResponse parses an HTTP response from a GetEventGatewayDataPlaneCertificateWithResponse call
+func ParseGetEventGatewayDataPlaneCertificateResponse(rsp *http.Response) (*GetEventGatewayDataPlaneCertificateResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetEventGatewayDataPlaneCertificateResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest EventGatewayDataPlaneCertificateOnPrem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Unauthorized

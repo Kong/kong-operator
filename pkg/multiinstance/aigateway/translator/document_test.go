@@ -23,6 +23,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -32,6 +34,7 @@ import (
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -39,6 +42,8 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -453,6 +458,9 @@ func TestBuildDocument(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -672,6 +680,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -753,6 +764,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -811,6 +825,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -869,6 +884,7 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -893,6 +909,285 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 		}
 	}
 	require.Equal(t, 1, failed)
+}
+
+// TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector
+// alias: the converter renders one ai_models entity per alias, named after it,
+// so two identically named rows would make the data plane's declarative import
+// reject the whole payload (uniqueness violation). The earliest-created model
+// keeps the alias (ties fall back to namespace/name order); the later claimant
+// is excluded from the document and reported per-entity instead.
+func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
+	t.Parallel()
+
+	// buildClient assembles the fake client with the index every kind needs:
+	// BuildDocument lists every configuration-entity kind.
+	buildClient := func(t *testing.T, objects ...client.Object) client.Client {
+		t.Helper()
+		scheme := runtime.NewScheme()
+		require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+		require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+		// The fake tracker stamps resource versions into the objects it is
+		// given, so parallel subtests must not share a fixture.
+		objs := make([]client.Object, 0, len(objects))
+		for _, obj := range objects {
+			objs = append(objs, obj.DeepCopyObject().(client.Object))
+		}
+
+		builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...)
+		for _, opts := range [][]index.Option{
+			index.OptionsForAIGatewayModel(),
+			index.OptionsForAIGatewayModelProvider(),
+			index.OptionsForAIGatewayPolicy(),
+			index.OptionsForAIGatewayConsumerGroup(),
+			index.OptionsForAIGatewayConsumer(),
+			index.OptionsForAIGatewayConsumerCredential(),
+			index.OptionsForAIGatewayAuthStrategy(),
+			index.OptionsForAIGatewayCACertificate(),
+			index.OptionsForAIGatewayCertificate(),
+			index.OptionsForAIGatewaySNI(),
+			index.OptionsForAIGatewayCustomPolicy(),
+			index.OptionsForAIGatewayAgent(),
+			index.OptionsForAIGatewayMCPServer(),
+			index.OptionsForAIGatewayVault(),
+			index.OptionsForAIGatewayDatastore(),
+		} {
+			for _, opt := range opts {
+				builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+			}
+		}
+		return builder.Build()
+	}
+
+	withAlias := func(name string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
+		m := aiGatewayModelFixture(name)
+		m.CreationTimestamp = created
+		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"shared-alias"},
+		}
+		return m
+	}
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	dayOne := metav1.NewTime(time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC))
+	dayTwo := metav1.NewTime(time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC))
+
+	t.Run("the earliest-created model keeps the alias", func(t *testing.T) {
+		t.Parallel()
+
+		// scoped sorts after plain, so name order would pick plain-model:
+		// the creation-time winner proves the rule is not name-based.
+		plain := withAlias("plain-model", dayTwo)
+		scoped := withAlias("scoped-model", dayOne)
+
+		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 1)
+		require.Equal(t, "scoped-model", doc.Models[0].Name)
+
+		require.Len(t, statuses, 2)
+		conflicts := 0
+		for _, s := range statuses {
+			if s.Err != nil {
+				conflicts++
+				require.Equal(t, "plain-model", s.Obj.GetName())
+				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+				require.ErrorContains(t, s.Err, `"scoped-model"`)
+			}
+		}
+		require.Equal(t, 1, conflicts)
+	})
+
+	t.Run("ties fall back to namespace/name order", func(t *testing.T) {
+		t.Parallel()
+
+		// Equal creation timestamps (e.g. two models applied in the same
+		// second): the entity names break the tie deterministically.
+		plain := withAlias("plain-model", dayOne)
+		scoped := withAlias("scoped-model", dayOne)
+
+		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 1)
+		require.Equal(t, "plain-model", doc.Models[0].Name)
+
+		require.Len(t, statuses, 2)
+		conflicts := 0
+		for _, s := range statuses {
+			if s.Err != nil {
+				conflicts++
+				require.Equal(t, "scoped-model", s.Obj.GetName())
+				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+				require.ErrorContains(t, s.Err, `"plain-model"`)
+			}
+		}
+		require.Equal(t, 1, conflicts)
+	})
+
+	t.Run("an excluded model does not exclude later claimants", func(t *testing.T) {
+		t.Parallel()
+
+		// middle loses "x" to oldest, so its claim on "y" must not exclude newest.
+		oldest := aiGatewayModelFixture("oldest")
+		oldest.CreationTimestamp = dayOne
+		oldest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"x"},
+		}
+		middle := aiGatewayModelFixture("middle")
+		middle.CreationTimestamp = dayTwo
+		middle.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"x", "y"},
+		}
+		newest := aiGatewayModelFixture("newest")
+		newest.CreationTimestamp = metav1.NewTime(dayTwo.Add(24 * time.Hour))
+		newest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"y"},
+		}
+
+		cl := buildClient(t, gw.DeepCopy(), oldest, middle, newest)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		names := make([]string, 0, len(doc.Models))
+		for _, m := range doc.Models {
+			names = append(names, m.Name)
+		}
+		require.ElementsMatch(t, []string{"oldest", "newest"}, names)
+
+		require.Len(t, statuses, 3)
+		for _, s := range statuses {
+			if s.Obj.GetName() != "middle" {
+				require.NoError(t, s.Err)
+				continue
+			}
+			require.ErrorContains(t, s.Err, `duplicate model alias "x"`)
+			require.ErrorContains(t, s.Err, `"oldest"`)
+		}
+	})
+
+	t.Run("a disabled model claims no alias", func(t *testing.T) {
+		t.Parallel()
+
+		// The converter renders nothing for a disabled model, so the older
+		// disabled one must not exclude the newer enabled one.
+		disabled := withAlias("disabled-model", dayOne)
+		disabled.Spec.APISpec.Model.Enabled = "Disabled"
+		enabled := withAlias("enabled-model", dayTwo)
+
+		cl := buildClient(t, gw.DeepCopy(), disabled, enabled)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 2)
+		require.Len(t, statuses, 2)
+		for _, s := range statuses {
+			require.NoError(t, s.Err, s.Obj.GetName())
+		}
+	})
+}
+
+// TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision
+// shapes of modelAliases's fallback rule: a no-selector model's entity name is
+// itself an alias, and each value of a multi-value selector is claimed
+// separately.
+func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// No selector: the model's entity name is its alias. model-c's selector
+	// value collides with it.
+	modelA := aiGatewayModelFixture("model-a")
+	modelC := aiGatewayModelFixture("model-c")
+	modelC.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"model-a", "model-c-alias"},
+	}
+	// Multi-value selectors: model-d claims two aliases, model-e shares the
+	// second one (its first alias is unique).
+	modelD := aiGatewayModelFixture("model-d")
+	modelD.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"d-alias-1", "d-alias-2"},
+	}
+	modelE := aiGatewayModelFixture("model-e")
+	modelE.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"e-alias", "d-alias-2"},
+	}
+	// Duplicate values within one model collapse to their first occurrence
+	// (mirroring the converter's extractModelAliases): no conflict, one entity.
+	modelF := aiGatewayModelFixture("model-f")
+	modelF.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"f-alias", "f-alias"},
+	}
+	// With a selector, the entity name is not an alias: model-h's value equal
+	// to model-g's name is no conflict.
+	modelG := aiGatewayModelFixture("model-g")
+	modelG.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"g-alias"},
+	}
+	modelH := aiGatewayModelFixture("model-h")
+	modelH.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"model-g"},
+	}
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gw, modelA, modelC, modelD, modelE, modelF, modelG, modelH)
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	// Equal (zero) creation timestamps: the tie-break by name decides. model-c
+	// and model-e conflict; the rest survive.
+	names := make([]string, 0, len(doc.Models))
+	for _, m := range doc.Models {
+		names = append(names, m.Name)
+	}
+	require.ElementsMatch(t, []string{"model-a", "model-d", "model-f", "model-g", "model-h"}, names)
+
+	wantConflicts := map[string][]string{
+		"model-c": {`duplicate model alias "model-a"`, `AIGatewayModel "model-a"`},
+		"model-e": {`duplicate model alias "d-alias-2"`, `AIGatewayModel "model-d"`},
+	}
+	require.Len(t, statuses, 7)
+	for _, s := range statuses {
+		want, conflict := wantConflicts[s.Obj.GetName()]
+		if !conflict {
+			require.NoError(t, s.Err, s.Obj.GetName())
+			continue
+		}
+		for _, w := range want {
+			require.ErrorContains(t, s.Err, w)
+		}
+	}
 }
 
 // TestBuildDocument_SNIFailsWhenReferencedCertificateFails covers the cross-entity dependency:
@@ -963,6 +1258,9 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -992,20 +1290,60 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	require.Equal(t, 2, failed)
 }
 
-// TestBuildDocument_CrossNamespaceEntityRejected covers the same-namespace rule: an entity
-// referencing the OnPremAIGateway from another namespace is rejected with a per-entity error
-// (surfacing as the entity's Programmed condition) instead of failing later on its Secrets
-// being invisible to the gateway-namespace scoped cache.
-func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
-	t.Parallel()
+// newTranslatorTestClient builds a fake client with a scheme holding the OnPremAIGateway,
+// the configuration entities and the KongReferenceGrants a cross-namespace reference is
+// checked against, with every AI Gateway configuration index registered, so that
+// BuildDocument can list entities per gateway.
+func newTranslatorTestClient(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	// The fake tracker stamps resource versions into the objects it is given,
+	// so parallel subtests must not share a fixture.
+	copies := make([]client.Object, 0, len(objs))
+	for _, obj := range objs {
+		copies = append(copies, obj.DeepCopyObject().(client.Object))
+	}
+
+	return newTestBuilder(scheme, copies...).Build()
+}
+
+// crossNamespaceGrant returns a KongReferenceGrant in the gateway's namespace
+// allowing fromKind from the "other" namespace to reference the gateway "gw".
+func crossNamespaceGrant(fromKind string, toName *string) *configurationv1alpha1.KongReferenceGrant {
+	return &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cross-ns", Namespace: "default",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      configurationv1alpha1.Kind(fromKind),
+				Namespace: "other",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aigateway.konghq.com",
+				Kind:  "OnPremAIGateway",
+				Name:  (*configurationv1alpha1.ObjectName)(toName),
+			}},
+		},
+	}
+}
+
+// TestBuildDocument_CrossNamespaceEntityNeedsKongReferenceGrant covers the guard on a
+// cross-namespace aiGatewayRef: an entity in another namespace is translated like any
+// other entity only when a KongReferenceGrant in the gateway's namespace allows its kind,
+// from its namespace, to reference the OnPremAIGateway. The instance cache scopes which
+// namespaces are visible (see spec.watchNamespaces); the grant decides which entities of
+// those namespaces may reference the gateway.
+func TestBuildDocument_CrossNamespaceEntityNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
 	// An AuthStrategy in another namespace explicitly targeting the gateway in "default":
-	// the field index matches it, so the translation must reject it explicitly.
+	// the field index matches it, and the instance's cache decides whether it is listed.
 	crossNamespace := aiGatewayAuthStrategyFixture("cross-ns")
 	crossNamespace.Namespace = "other"
 	crossNamespace.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
@@ -1014,79 +1352,122 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	}
 	sameNamespace := aiGatewayAuthStrategyFixture("same-ns")
 
-	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, crossNamespace, sameNamespace)
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	tests := []struct {
+		name         string
+		grants       []client.Object
+		wantIncluded bool
+	}{
+		{
+			name: "no grant",
+		},
+		{
+			name:         "grant for the kind and the gateway",
+			grants:       []client.Object{crossNamespaceGrant("AIGatewayAuthStrategy", new("gw"))},
+			wantIncluded: true,
+		},
+		{
+			name:         "grant for the kind, any gateway",
+			grants:       []client.Object{crossNamespaceGrant("AIGatewayAuthStrategy", nil)},
+			wantIncluded: true,
+		},
+		{
+			name:   "grant for another kind",
+			grants: []client.Object{crossNamespaceGrant("AIGatewayModel", nil)},
+		},
+		{
+			name:   "grant for another gateway",
+			grants: []client.Object{crossNamespaceGrant("AIGatewayAuthStrategy", new("other-gw"))},
+		},
 	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	cl := builder.Build()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+			cl := newTranslatorTestClient(t,
+				append([]client.Object{gw, crossNamespace, sameNamespace}, tt.grants...)...,
+			)
+
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+			require.NoError(t, err)
+
+			require.Empty(t, doc.Models)
+			require.Empty(t, doc.ModelProviders)
+			require.Empty(t, doc.Policies)
+			require.Empty(t, doc.ConsumerGroups)
+			require.Empty(t, doc.Consumers)
+			require.Empty(t, doc.CACertificates)
+			require.Empty(t, doc.Certificates)
+			require.Empty(t, doc.SNIs)
+			require.Empty(t, doc.CustomPolicies)
+			require.Empty(t, doc.Vaults)
+
+			// The entity in the gateway's own namespace needs no grant.
+			require.Len(t, statuses, 2)
+			require.Equal(t, "same-ns", statuses[0].Obj.GetName())
+			require.NoError(t, statuses[0].Err)
+			require.Equal(t, "cross-ns", statuses[1].Obj.GetName())
+
+			if !tt.wantIncluded {
+				require.ErrorContains(t, statuses[1].Err, "KongReferenceGrant")
+				require.Len(t, doc.AuthStrategies, 1)
+				require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
+				return
+			}
+			require.NoError(t, statuses[1].Err)
+			require.Len(t, doc.AuthStrategies, 2)
+			require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
+			require.Equal(t, "cross-ns", doc.AuthStrategies[1].Name)
+		})
+	}
+}
+
+// TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant pins that the guard
+// covers the whole consumer, credentials included: credentials are rendered through their
+// consumer, so they are reported failed with the consumer's error rather than keeping a
+// stale Programmed condition.
+func TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumer := aiGatewayConsumerFixture("cross-ns")
+	consumer.Namespace = "other"
+	consumer.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred", Namespace: "other",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: consumer.Name,
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Type: "api-key",
+			},
+		},
+	}
+
+	cl := newTranslatorTestClient(t, gw, consumer, credential)
+
+	_, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 
-	require.Empty(t, doc.Models)
-	require.Empty(t, doc.ModelProviders)
-	require.Empty(t, doc.Policies)
-	require.Empty(t, doc.ConsumerGroups)
-	require.Empty(t, doc.Consumers)
-	require.Empty(t, doc.CACertificates)
-	require.Empty(t, doc.Certificates)
-	require.Empty(t, doc.SNIs)
-	require.Empty(t, doc.CustomPolicies)
-	require.Empty(t, doc.Vaults)
-	require.Len(t, doc.AuthStrategies, 1)
-	require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
-
-	require.Len(t, statuses, 2)
-	failed := 0
-	for _, s := range statuses {
-		if s.Err != nil {
-			failed++
-			require.Equal(t, "cross-ns", s.Obj.GetName())
-			require.Contains(t, s.Err.Error(),
-				"cross-namespace reference to OnPremAIGateway default/gw is not supported on-prem")
+	var consumerStatus, credentialStatus *EntityStatus
+	for i := range statuses {
+		switch statuses[i].Obj.GetName() {
+		case consumer.Name:
+			consumerStatus = &statuses[i]
+		case credential.Name:
+			credentialStatus = &statuses[i]
 		}
 	}
-	require.Equal(t, 1, failed)
+	require.NotNil(t, consumerStatus)
+	require.ErrorContains(t, consumerStatus.Err, "KongReferenceGrant")
+	require.NotNil(t, credentialStatus)
+	require.ErrorContains(t, credentialStatus.Err, "KongReferenceGrant")
 }
 
 // TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the
@@ -1146,6 +1527,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -1264,6 +1646,7 @@ func newTestBuilder(scheme *runtime.Scheme, objs ...client.Object) *fake.ClientB
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -1294,10 +1677,12 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// A provider with a cross-namespace secretRef fails its own translation while keeping its
-	// entity name intact; the healthy pair proves the model failure stays per-entity.
+	// A provider with a cross-namespace secretRef and no KongReferenceGrant fails its own
+	// translation while keeping its entity name intact; the healthy pair proves the model
+	// failure stays per-entity.
 	brokenProvider := aiGatewayModelProviderFixture("provider-broken")
 	brokenProvider.Spec.APISpec.Openai.Config.Auth.Headers = []aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthBasicHeaders{{
 		Name: "Authorization",
@@ -1334,9 +1719,12 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 	require.Equal(t, "provider-healthy", doc.Models[0].TargetModels[0].Provider)
 
 	require.Len(t, statuses, 4)
-	require.Contains(t, findStatusByName(t, statuses, "provider-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "provider-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "model-broken").Err.Error(),
 		`referenced AIGatewayModelProvider "provider-broken" was excluded from the document`)
+	// The grant denial and the exclusion it causes only fail their entities, not the gateway.
+	require.True(t, IsEntityScopedFailure(findStatusByName(t, statuses, "provider-broken").Err))
+	require.True(t, IsEntityScopedFailure(findStatusByName(t, statuses, "model-broken").Err))
 	require.NoError(t, findStatusByName(t, statuses, "model-healthy").Err)
 }
 
@@ -1392,10 +1780,11 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// A policy with a cross-namespace secretRef fails its own translation while keeping its
-	// entity name intact.
+	// A policy with a cross-namespace secretRef and no KongReferenceGrant fails its own
+	// translation while keeping its entity name intact.
 	brokenPolicy := aiGatewayPolicyFixture("policy-broken")
 	brokenPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
 		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
@@ -1444,7 +1833,7 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	require.Empty(t, doc.Consumers[0].Credentials)
 
 	require.Len(t, statuses, 5)
-	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "consumer-broken").Err.Error(),
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "consumer-healthy").Err)
@@ -1458,54 +1847,6 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 		"the credential reports why its consumer was excluded")
 }
 
-// TestBuildDocument_ReportsCrossNamespaceConsumerCredentials pins that the credentials of a
-// consumer rejected for its namespace are reported too: they are rendered through the
-// consumer, so leaving them out of the status set keeps a stale Programmed condition.
-func TestBuildDocument_ReportsCrossNamespaceConsumerCredentials(t *testing.T) {
-	t.Parallel()
-
-	scheme := runtime.NewScheme()
-	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
-	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
-
-	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	consumer := aiGatewayConsumerFixture("consumer-other")
-	consumer.Namespace = "other"
-	// The reference has to name the gateway's namespace, or it would default to the
-	// consumer's own and never match this gateway.
-	consumer.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{Namespace: new("default"), Name: "gw"}
-	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
-		Name: "cred-other", Namespace: "other",
-		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
-			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "consumer-other"},
-			},
-			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
-				Name:        "cred-other",
-				DisplayName: "Credential Of Another Namespace",
-				Type:        "api-key",
-				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
-					Type:  aiconfigurationv1alpha1.SensitiveDataSourceTypeInline,
-					Value: new("s3cr3t"),
-				},
-			},
-		},
-	}
-
-	cl := newTestBuilder(scheme, gw, consumer, credential).Build()
-
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
-	require.NoError(t, err)
-
-	require.Empty(t, doc.Consumers, "the cross-namespace consumer must not render")
-	require.ErrorContains(t, findStatusByName(t, statuses, "consumer-other").Err, "cross-namespace")
-
-	credentialStatus := findStatusByName(t, statuses, "cred-other")
-	require.ErrorContains(t, credentialStatus.Err, "its AIGatewayConsumer other/consumer-other failed")
-	require.ErrorContains(t, credentialStatus.Err, "cross-namespace")
-}
-
 // TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails pins the translated-reference
 // check for consumer-group policy references: a consumer group referencing an AIGatewayPolicy
 // that failed its own translation must be excluded with a per-entity error.
@@ -1515,10 +1856,11 @@ func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T)
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// A policy with a cross-namespace secretRef fails its own translation while keeping its
-	// entity name intact.
+	// A policy with a cross-namespace secretRef and no KongReferenceGrant fails its own
+	// translation while keeping its entity name intact.
 	brokenPolicy := aiGatewayPolicyFixture("policy-broken")
 	brokenPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
 		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
@@ -1543,7 +1885,7 @@ func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T)
 	require.Equal(t, []string{"policy-healthy"}, doc.ConsumerGroups[0].Policies)
 
 	require.Len(t, statuses, 4)
-	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "group-broken").Err.Error(),
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "group-healthy").Err)
@@ -1558,10 +1900,11 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// An auth strategy with a cross-namespace secretRef fails its own translation while
-	// keeping its entity name intact.
+	// An auth strategy with a cross-namespace secretRef and no KongReferenceGrant fails its
+	// own translation while keeping its entity name intact.
 	brokenAuthStrategy := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
 		Name: "auth-strategy-broken", Namespace: "default",
 		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
@@ -1611,7 +1954,7 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 	require.Equal(t, "agent-healthy", doc.Agents[0].Name)
 
 	require.Len(t, statuses, 6)
-	require.Contains(t, findStatusByName(t, statuses, "auth-strategy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "auth-strategy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "agent-broken").Err.Error(),
 		`referenced AIGatewayAuthStrategy "auth-strategy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "agent-healthy").Err)
@@ -1644,8 +1987,9 @@ func TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails(t *testing
 		s.Spec.APISpec.PassthroughListener.Access = &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccess{
 			AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
 			Consumer: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{
-				Acls: aiconfigurationv1alpha1.AIGatewayMCPACLs{
-					Allow: []aiconfigurationv1alpha1.AIGatewayMCPACLRef{{Name: group}},
+				Acls: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAcls{
+					Type:  aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+					Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Name: group}},
 				},
 			},
 		}
@@ -1767,9 +2111,51 @@ func TestBuildDocument_MCPServerListenerFailsWhenSourceFails(t *testing.T) {
 	require.Contains(t, findStatusByName(t, statuses, "mcp-listener-broken").Err.Error(),
 		`referenced AIGatewayMCPServer "mcp-src-broken" was excluded from the document`)
 	require.Contains(t, findStatusByName(t, statuses, "mcp-listener-cascade").Err.Error(),
-		`referenced AIGatewayMCPServer "mcp-listener-broken" was excluded from the document: its own translation failed, or it references an excluded server`)
+		`referenced AIGatewayMCPServer "mcp-listener-broken" was excluded from the document: its own translation failed`)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-src-healthy").Err)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-listener-healthy").Err)
+	// The source failed for a reason other than a grant denial, so the listeners that
+	// depend on it still fail the gateway.
+	require.False(t, IsEntityScopedFailure(findStatusByName(t, statuses, "mcp-listener-broken").Err))
+	require.False(t, IsEntityScopedFailure(findStatusByName(t, statuses, "mcp-listener-cascade").Err))
+}
+
+// TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped pins the cause
+// chain through the sources post-pass: a source excluded because its policy has no
+// KongReferenceGrant only excludes the listeners that source it, also through a
+// cascade, and does not fail the gateway.
+func TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	deniedPolicy := aiGatewayPolicyFixture("policy-denied")
+	deniedPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "creds", Key: "key", Namespace: new("other-ns")},
+	}
+	src := aiGatewayMCPServerConversionOnlyFixture("mcp-src")
+	src.Spec.APISpec.ConversionOnly.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-denied"}}
+	listener := aiGatewayMCPServerListenerFixture("mcp-listener", "mcp-src")
+	cascade := aiGatewayMCPServerListenerFixture("mcp-listener-cascade", "mcp-listener")
+
+	cl := newTestBuilder(scheme, gw, deniedPolicy, src, listener, cascade).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+	require.Empty(t, doc.MCPServers)
+
+	for _, name := range []string{"policy-denied", "mcp-src", "mcp-listener", "mcp-listener-cascade"} {
+		status := findStatusByName(t, statuses, name)
+		require.Error(t, status.Err, name)
+		require.True(t, IsEntityScopedFailure(status.Err), "%s: %v", name, status.Err)
+	}
+	require.EqualError(t, findStatusByName(t, statuses, "mcp-listener").Err,
+		`referenced AIGatewayMCPServer "mcp-src" was excluded from the document: its own translation failed, or it references an excluded server`)
 }
 
 // TestBuildDocument_MCPServerSourceSortedLater is the regression guard for the same-kind
@@ -1833,4 +2219,218 @@ func TestBuildDocument_MCPServerDuplicateEntityNameRejected(t *testing.T) {
 	require.Contains(t, findStatusByName(t, statuses, "mcp-dup-b").Err.Error(),
 		`duplicate AIGatewayMCPServer entity name "mcp-dup"`)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-dup-a").Err)
+}
+
+func TestIsEntityScopedFailure(t *testing.T) {
+	notGranted := &crossnamespace.ReferenceNotGrantedError{ToNamespace: "secrets", ToName: "creds"}
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "model alias conflict", err: fmt.Errorf("converting: %w", &ModelAliasConflictError{Alias: "a", First: "m"}), want: true},
+		{name: "cross-namespace reference not granted", err: fmt.Errorf("converting: %w", notGranted), want: true},
+		{
+			name: "reference to an entity excluded for a reference not granted",
+			err:  &ReferencedEntityExcludedError{Kind: "AIGatewayPolicy", Name: "p", Cause: fmt.Errorf("converting: %w", notGranted)},
+			want: true,
+		},
+		{
+			name: "reference to an entity excluded for another failure",
+			err:  &ReferencedEntityExcludedError{Kind: "AIGatewayPolicy", Name: "p", Cause: errors.New("missing key")},
+		},
+		{name: "reference to an entity never translated", err: &ReferencedEntityExcludedError{Kind: "AIGatewayPolicy", Name: "p"}},
+		{name: "other failure", err: errors.New("spec.apiSpec is required")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, IsEntityScopedFailure(tt.err))
+		})
+	}
+}
+
+func TestTranslatedNamesRecord(t *testing.T) {
+	failure := errors.New("failure")
+	names := make(translatedNames)
+
+	names.record("failed-then-ok", failure)
+	names.record("failed-then-ok", nil)
+	names.record("ok-then-failed", nil)
+	names.record("ok-then-failed", failure)
+	names.record("failed", failure)
+	names.record("failed", errors.New("later failure"))
+
+	// A success wins: the document holds an entity of that name.
+	require.NoError(t, checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed-then-ok", "ok-then-failed"}))
+
+	err := checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed"})
+	require.ErrorIs(t, err, failure, "the first failure is kept as the cause")
+	require.EqualError(t, err, `referenced AIGatewayPolicy "failed" was excluded from the document: its own translation failed, or it references an excluded server`)
+
+	err = checkTranslatedRefs(names, "AIGatewayPolicy", []string{"unknown"})
+	require.Error(t, err)
+	require.NoError(t, errors.Unwrap(err))
+}
+
+// aiGatewayDatastoreFixture returns a redis-ce datastore whose entity name is "shared-redis",
+// distinct from its CR name, as the references resolve the entity name. Two CRs made by it
+// therefore share the entity name.
+func aiGatewayDatastoreFixture(name string) *aiconfigurationv1alpha1.AIGatewayDatastore {
+	return &aiconfigurationv1alpha1.AIGatewayDatastore{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayDatastoreSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayDatastoreAPISpec{
+				AIGatewayDatastoreConfig: &aiconfigurationv1alpha1.AIGatewayDatastoreConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayDatastoreConfigTypeRedisCE,
+					RedisCE: &aiconfigurationv1alpha1.RedisCEDatastore{
+						Name:   aiconfigurationv1alpha1.AIGatewayDatastoreName("shared-redis"),
+						Config: aiconfigurationv1alpha1.RedisCEDatastoreConfig{Host: "redis.example.com", Port: 6379},
+					},
+				},
+			},
+		},
+	}
+}
+
+// datastoreRefsReferrers returns one CR of each kind that references the given datastore:
+// the datastore entity is what a Policy, a Model, a ModelProvider, an MCPServer and an
+// AuthStrategy all point at.
+func datastoreRefsReferrers(datastoreName string) []client.Object {
+	ref := aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{Name: datastoreName}
+
+	policy := aiGatewayPolicyFixture("policy")
+	policy.Spec.APISpec.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	model := aiGatewayModelFixture("model")
+	model.Spec.APISpec.Model.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	provider := aiGatewayModelProviderFixture("provider")
+	provider.Spec.APISpec.Openai.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	mcpServer := aiGatewayMCPServerFixture("mcp-server-a")
+	mcpServer.Spec.APISpec.PassthroughListener.Policies = nil
+	mcpServer.Spec.APISpec.PassthroughListener.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	authStrategy := aiGatewayAuthStrategyFixture("auth-strategy")
+	authStrategy.Spec.APISpec.KeyAuth.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	return []client.Object{policy, model, provider, mcpServer, authStrategy}
+}
+
+// TestBuildDocument_DatastoreRefs covers the datastores collection and its references: every
+// kind that can reference a datastore resolves it to the datastore's entity name, which is what
+// the converter keys its datastore registry by.
+func TestBuildDocument_DatastoreRefs(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// The CR name differs from the datastore's entity name, so the assertions observe the
+	// resolved name, not the name the reference was written with.
+	objs := append([]client.Object{aiGatewayDatastoreFixture("datastore")},
+		datastoreRefsReferrers("datastore")...)
+
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
+		client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Datastores, 1)
+	require.Equal(t, aigw.Datastore{
+		Type:   "redis-ce",
+		Name:   "shared-redis",
+		Config: map[string]any{"host": "redis.example.com", "port": 6379},
+	}, doc.Datastores[0])
+
+	require.Len(t, doc.Policies, 1)
+	require.Len(t, doc.Policies[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.Policies[0].Datastores[0].Name)
+	require.Len(t, doc.Models, 1)
+	require.Len(t, doc.Models[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.Models[0].Datastores[0].Name)
+	require.Len(t, doc.ModelProviders, 1)
+	require.Len(t, doc.ModelProviders[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.ModelProviders[0].Datastores[0].Name)
+	require.Len(t, doc.MCPServers, 1)
+	require.Len(t, doc.MCPServers[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.MCPServers[0].Datastores[0].Name)
+	require.Len(t, doc.AuthStrategies, 1)
+	require.Len(t, doc.AuthStrategies[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.AuthStrategies[0].Datastores[0].Name)
+
+	require.Len(t, statuses, 6)
+	for _, s := range statuses {
+		require.NoError(t, s.Err)
+	}
+}
+
+// TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails pins the translated-reference
+// check for datastores: a datastore that failed its own translation is excluded, and every
+// entity referencing it fails with an explicit error instead of reporting success while the
+// converter leaves its connection out of the pushed payload.
+func TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	broken := aiGatewayDatastoreFixture("datastore")
+	broken.Spec.APISpec.RedisCE.Config.Password = aiconfigurationv1alpha1.SensitiveDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "does-not-exist", Key: "password"},
+	}
+	objs := append([]client.Object{broken}, datastoreRefsReferrers("datastore")...)
+
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
+		client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Empty(t, doc.Datastores)
+	require.Empty(t, doc.Policies)
+	require.Empty(t, doc.Models)
+	require.Empty(t, doc.ModelProviders)
+	require.Empty(t, doc.MCPServers)
+	require.Empty(t, doc.AuthStrategies)
+
+	require.ErrorContains(t, findStatusByName(t, statuses, "datastore").Err, "does-not-exist")
+	for _, name := range []string{"policy", "model", "provider", "mcp-server-a", "auth-strategy"} {
+		require.ErrorContains(
+			t, findStatusByName(t, statuses, name).Err,
+			"referenced AIGatewayDatastore default/datastore was excluded from the document",
+		)
+	}
+}
+
+// TestBuildDocument_DatastoreDuplicateEntityNameRejected: the converter resolves a datastore
+// reference by name into one registry, so two AIGatewayDatastores sharing a spec name would
+// leave the later one unreachable. The second CR is rejected with a per-entity error.
+func TestBuildDocument_DatastoreDuplicateEntityNameRejected(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	first := aiGatewayDatastoreFixture("datastore-a")
+	second := aiGatewayDatastoreFixture("datastore-b")
+
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, gw, first, second).Build(),
+		client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Datastores, 1)
+	require.Equal(t, "shared-redis", doc.Datastores[0].Name)
+	require.NoError(t, findStatusByName(t, statuses, "datastore-a").Err)
+	require.ErrorContains(t, findStatusByName(t, statuses, "datastore-b").Err,
+		`duplicate datastore name "shared-redis"`)
 }

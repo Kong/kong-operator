@@ -27,6 +27,93 @@ Thank you for helping to keep Kong secure.
 
 For more information on our security policies and guidelines, please visit the [Kong Vulnerability Disclosure](https://konghq.com/compliance/bug-bounty) page.
 
+## Verifying Released Images and SBOMs
+
+Kong Operator images are built, signed and attested by GitHub Actions with GitHub's OIDC identity, so
+a released image can be traced back to this repository, its commit and the workflow that produced it.
+
+Every release attaches to its GitHub Release page:
+
+- a **source SBOM** in SPDX (`source-sbom.spdx.json`) and CycloneDX (`source-sbom.cyclonedx.json`)
+- an **image SBOM** per platform: `image-linux-amd64-sbom.*.json` and `image-linux-arm64-sbom.*.json`
+- a `SHA256SUMS` covering all of the above
+
+The same reports are also attached to the image as attestations (see *Verify the SBOM, vulnerability
+and CIS attestations*), so they do not depend on the Release assets staying around.
+
+The signature and the build provenance describe the **multi-arch index digest**, never a
+per-platform digest and never a tag. Collect it first ([`regctl`](https://github.com/regclient/regclient/blob/main/docs/install.md)
+is one way):
+
+```sh
+IMAGE=kong/kong-operator
+TAG=2.4.0
+IMAGE_DIGEST=$(regctl manifest digest "${IMAGE}:${TAG}")
+```
+
+### Verify the cosign signature
+
+The signature is an OCI 1.1 referrer of the image, attached in the image's own repository, so cosign
+finds it with no extra configuration:
+
+```sh
+cosign verify \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+   --certificate-identity-regexp='^https://github\.com/Kong/kong-operator/\.github/workflows/'
+```
+
+The GitHub owner is case-sensitive (`Kong/kong-operator`, not `kong/kong-operator`).
+
+### Verify the build provenance
+
+With [`slsa-verifier`](https://github.com/slsa-framework/slsa-verifier#installation):
+
+```sh
+slsa-verifier verify-image \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --print-provenance \
+   --source-uri 'github.com/Kong/kong-operator'
+```
+
+The provenance is signed by the generator and published in the same repository as the image, as the
+`sha256-<index digest>.att` tag. `cosign verify-attestation` reads the referrers only and does not see
+that tag, so `slsa-verifier` above is the supported command.
+
+### Verify the SBOM, vulnerability and CIS attestations
+
+The reports behind the Release assets are also published as attestations on the image itself, one per
+predicate type. `cosign tree` lists what is attached; the types are:
+
+| Predicate type | Report |
+|---|---|
+| `cyclonedx`, `spdxjson` | source SBOM |
+| `https://cyclonedx.org/bom/image/<arch>`, `https://spdx.dev/Document/image/<arch>` | image SBOM, per platform |
+| `https://cosign.sigstore.dev/sarif/vuln/source`, `https://cosign.sigstore.dev/sarif/vuln/image/<arch>` | Grype vulnerability report |
+| `https://cisecurity.org/docker/<arch>` | CIS Docker benchmark report |
+| `https://konghq.com/build-metadata` | workflow and runner context of the build |
+
+```sh
+cosign verify-attestation \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --type='cyclonedx' \
+   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+   --certificate-identity-regexp='^https://github\.com/Kong/kong-operator/\.github/workflows/'
+```
+
+### Verify the SBOM files
+
+Download the SBOMs and `SHA256SUMS` from the Release page, then check them:
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+`SHA256SUMS` proves the files were not corrupted in transit; it is not signed, so it does not prove who
+produced them. Authorship is carried by the image: the signature, the provenance and the SBOM
+attestations all cover the index digest, and the CycloneDX image SBOM names the platform digest it
+describes (`metadata.component.version`).
+
 ## Contact
 
 For any questions or further assistance, please contact us at [vulnerability@konghq.com](mailto:vulnerability@konghq.com).

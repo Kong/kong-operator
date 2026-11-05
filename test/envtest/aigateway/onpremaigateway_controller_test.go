@@ -19,6 +19,8 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	aigwonprem "github.com/kong/kong-operator/v2/controller/aigateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/crdschema"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
@@ -684,4 +686,466 @@ func TestOnPremAIGatewayReconciler_ObjectFilters(t *testing.T) {
 	certSecret := secrets.Items[0]
 	require.Equal(t, "true", certSecret.Labels["app"], "the operator's secret label selector must be stamped")
 	require.Equal(t, "foo", certSecret.Labels["team"], "the objectFilters matchLabels must be stamped")
+}
+
+// TestOnPremAIGatewayReconciler_WatchNamespacesRequireGrant verifies the multi-namespace
+// gate: a gateway that lists another namespace in spec.watchNamespaces does not schedule
+// its instance before that namespace grants it permission, and the WatchNamespaceGrant
+// watch re-triggers the reconcile that schedules the instance once the grant exists.
+func TestOnPremAIGatewayReconciler_WatchNamespacesRequireGrant(t *testing.T) {
+	t.Parallel()
+
+	// Same generous window as the sibling tests: readiness takes ~16s in CI under
+	// -race + parallel envtest load.
+	const waitTime = time.Minute
+
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-watch-ns-cluster-ca")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
+	require.NoError(t, mgr.Add(instancesMgr))
+
+	envtest.StartReconcilers(ctx, t, mgr, logs,
+		&aigwonprem.Reconciler{
+			Client:                   mgr.GetClient(),
+			TypeConverter:            ssaProvider,
+			InstancesManager:         instancesMgr,
+			RestConfig:               cfg,
+			Scheme:                   scheme.Get(),
+			CacheSyncTimeout:         waitTime,
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	watchedNS := &corev1.Namespace{Name: ns.Name + "-watched"}
+	require.NoError(t, cl.Create(ctx, watchedNS))
+
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{
+		Name: "onprem-aigw-watch-ns", Namespace: ns.Name,
+		Spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+			WatchNamespaces: &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+				Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeList,
+				List: []string{watchedNS.Name},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, onprem))
+
+	mgrID, err := manager.NewID(string(onprem.GetUID()))
+	require.NoError(t, err)
+
+	t.Log("Expecting WatchNamespaceGrantValid=False and no control plane instance")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+			return
+		}
+		cond := apimeta.FindStatusCondition(
+			onprem.Status.Conditions,
+			string(aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType),
+		)
+		if assert.NotNil(ct, cond) {
+			assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+		}
+	}, waitTime, tickTime)
+	require.ErrorIs(t, instancesMgr.IsInstanceReady(mgrID), instances.NewInstanceNotFoundError(mgrID))
+
+	t.Log("Creating the WatchNamespaceGrant in the watched namespace")
+	grant := &operatorv1alpha1.WatchNamespaceGrant{
+		Name: "grant", Namespace: watchedNS.Name,
+		Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+			From: []operatorv1alpha1.WatchNamespaceGrantFrom{{
+				Group:     aigatewayv1alpha1.GroupName,
+				Kind:      "OnPremAIGateway",
+				Namespace: ns.Name,
+			}},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, grant))
+
+	t.Log("Expecting the grant condition and Ready to become true")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+			return
+		}
+		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType, onprem))
+		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
+	}, waitTime, tickTime)
+
+	t.Log("Revoking the grant")
+	require.NoError(t, cl.Delete(ctx, grant))
+
+	t.Log("Expecting Ready=False and the control plane instance to be stopped")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+			return
+		}
+		grantCond := apimeta.FindStatusCondition(
+			onprem.Status.Conditions,
+			string(aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType),
+		)
+		if assert.NotNil(ct, grantCond) {
+			assert.Equal(ct, metav1.ConditionFalse, grantCond.Status)
+		}
+		readyCond := apimeta.FindStatusCondition(
+			onprem.Status.Conditions,
+			string(aigatewayv1alpha1.ReadyType),
+		)
+		if assert.NotNil(ct, readyCond) {
+			assert.Equal(ct, metav1.ConditionFalse, readyCond.Status)
+		}
+	}, waitTime, tickTime)
+	// StopInstance only closes the stop channel; the registry drops the entry from its run
+	// goroutine, so poll for the removal instead of racing it.
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.ErrorIs(ct, instancesMgr.IsInstanceReady(mgrID), instances.NewInstanceNotFoundError(mgrID))
+	}, waitTime, tickTime)
+}
+
+// TestOnPremAIGatewayReconciler_CrossNamespaceRefRequiresKongReferenceGrant verifies the
+// guard on a cross-namespace aiGatewayRef: an entity of a watched namespace is reported
+// Programmed=False with a KongReferenceGrant message, translated once the gateway's
+// namespace grants it, and reported failed again when the grant is revoked. The gateway
+// has no data plane here, so a translated entity still reports Programmed=False, with the
+// missing-endpoint message instead of the grant one.
+func TestOnPremAIGatewayReconciler_CrossNamespaceRefRequiresKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	// Same generous window as the sibling tests: readiness takes ~16s in CI under
+	// -race + parallel envtest load.
+	const waitTime = time.Minute
+
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-refgrant-cluster-ca")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
+	require.NoError(t, mgr.Add(instancesMgr))
+
+	envtest.StartReconcilers(ctx, t, mgr, logs,
+		&aigwonprem.Reconciler{
+			Client:                   mgr.GetClient(),
+			TypeConverter:            ssaProvider,
+			InstancesManager:         instancesMgr,
+			RestConfig:               cfg,
+			Scheme:                   scheme.Get(),
+			CacheSyncTimeout:         waitTime,
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	entitiesNS := &corev1.Namespace{Name: ns.Name + "-entities"}
+	require.NoError(t, cl.Create(ctx, entitiesNS))
+
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{
+		Name: "onprem-aigw-refgrant", Namespace: ns.Name,
+		Spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+			WatchNamespaces: &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+				Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeList,
+				List: []string{entitiesNS.Name},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, onprem))
+
+	require.NoError(t, cl.Create(ctx, &operatorv1alpha1.WatchNamespaceGrant{
+		Name: "grant", Namespace: entitiesNS.Name,
+		Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+			From: []operatorv1alpha1.WatchNamespaceGrantFrom{{
+				Group:     aigatewayv1alpha1.GroupName,
+				Kind:      "OnPremAIGateway",
+				Namespace: ns.Name,
+			}},
+		},
+	}))
+
+	t.Log("Expecting the gateway to become ready")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+			return
+		}
+		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
+	}, waitTime, tickTime)
+
+	strategy := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
+		Name:      "cross-ns-strategy",
+		Namespace: entitiesNS.Name,
+		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Namespace: new(onprem.Namespace),
+					Name:      onprem.Name,
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayAuthStrategyAPISpec{
+				AIGatewayAuthStrategyConfig: &aiconfigurationv1alpha1.AIGatewayAuthStrategyConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayAuthStrategyConfigTypeKeyAuth,
+					KeyAuth: &aiconfigurationv1alpha1.AIGatewayAuthStrategyKeyAuth{
+						Name:        "cross-ns-strategy",
+						DisplayName: "Cross Namespace Strategy",
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, strategy))
+
+	// eventuallyProgrammedMessage returns the entity's Programmed condition message.
+	eventuallyProgrammedMessage := func(cond *assert.CollectT) (string, bool) {
+		if !assert.NoError(cond, cl.Get(ctx, client.ObjectKeyFromObject(strategy), strategy)) {
+			return "", false
+		}
+		c := apimeta.FindStatusCondition(strategy.Status.Conditions, string(configurationv1.ConditionProgrammed))
+		if !assert.NotNil(cond, c) {
+			return "", false
+		}
+		return c.Message, true
+	}
+
+	t.Log("Expecting the entity to be left out for the missing KongReferenceGrant")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		msg, ok := eventuallyProgrammedMessage(ct)
+		if ok {
+			assert.Contains(ct, msg, "KongReferenceGrant")
+		}
+	}, waitTime, tickTime)
+
+	referenceGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cross-ns-strategy", Namespace: ns.Name,
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      "AIGatewayAuthStrategy",
+				Namespace: configurationv1alpha1.Namespace(entitiesNS.Name),
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aigateway.konghq.com",
+				Kind:  "OnPremAIGateway",
+				Name:  new(configurationv1alpha1.ObjectName(onprem.Name)),
+			}},
+		},
+	}
+	t.Log("Creating the KongReferenceGrant in the gateway's namespace")
+	require.NoError(t, cl.Create(ctx, referenceGrant))
+
+	// The entity is translated now, and fails only for the missing data plane.
+	t.Log("Expecting the entity to be translated, so the grant message to go away")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		msg, ok := eventuallyProgrammedMessage(ct)
+		if ok {
+			assert.Contains(ct, msg, "no Admin API endpoints discovered")
+		}
+	}, waitTime, tickTime)
+
+	t.Log("Revoking the KongReferenceGrant")
+	require.NoError(t, cl.Delete(ctx, referenceGrant))
+
+	t.Log("Expecting the entity to be left out again")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		msg, ok := eventuallyProgrammedMessage(ct)
+		if ok {
+			assert.Contains(ct, msg, "KongReferenceGrant")
+		}
+	}, waitTime, tickTime)
+}
+
+// TestOnPremAIGatewayReconciler_CrossNamespaceSecretRefGrantOutsideGatewayNamespace pins the
+// scope of the KongReferenceGrant cache the instance reads: the grant allowing a
+// cross-namespace secretRef lives in the Secret's namespace, here a watched namespace other
+// than the gateway's own, so the translation must see it. The entity is left out while the
+// grant is missing, and translated once it exists. A KongReferenceGrant cache narrowed to the
+// gateway's namespace fails this test: the translation cannot list the Secret's namespace at
+// all, so the entity keeps failing whatever the grant says.
+func TestOnPremAIGatewayReconciler_CrossNamespaceSecretRefGrantOutsideGatewayNamespace(t *testing.T) {
+	t.Parallel()
+
+	// Same generous window as the sibling tests: readiness takes ~16s in CI under
+	// -race + parallel envtest load.
+	const waitTime = time.Minute
+
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-secret-grant-cluster-ca")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
+	require.NoError(t, mgr.Add(instancesMgr))
+
+	envtest.StartReconcilers(ctx, t, mgr, logs,
+		&aigwonprem.Reconciler{
+			Client:                   mgr.GetClient(),
+			TypeConverter:            ssaProvider,
+			InstancesManager:         instancesMgr,
+			RestConfig:               cfg,
+			Scheme:                   scheme.Get(),
+			CacheSyncTimeout:         waitTime,
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	// The Secret and its grant live here: watched, but not the gateway's namespace.
+	secretsNS := &corev1.Namespace{Name: ns.Name + "-secrets"}
+	require.NoError(t, cl.Create(ctx, secretsNS))
+
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{
+		Name: "onprem-aigw-secret-grant", Namespace: ns.Name,
+		Spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+			WatchNamespaces: &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+				Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeList,
+				List: []string{secretsNS.Name},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, onprem))
+
+	require.NoError(t, cl.Create(ctx, &operatorv1alpha1.WatchNamespaceGrant{
+		Name: "grant", Namespace: secretsNS.Name,
+		Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+			From: []operatorv1alpha1.WatchNamespaceGrantFrom{{
+				Group:     aigatewayv1alpha1.GroupName,
+				Kind:      "OnPremAIGateway",
+				Namespace: ns.Name,
+			}},
+		},
+	}))
+
+	t.Log("Expecting the gateway to become ready")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+			return
+		}
+		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
+	}, waitTime, tickTime)
+
+	const passwordSecretName = "redis-password"
+	require.NoError(t, cl.Create(ctx, &corev1.Secret{
+		Name: passwordSecretName, Namespace: secretsNS.Name,
+		Data: map[string][]byte{"password": []byte("s3cr3t")},
+	}))
+
+	// A datastore of the gateway's own namespace whose password secretRef points at the Secret
+	// in the watched namespace: only the Secret's namespace needs a grant.
+	datastore := &aiconfigurationv1alpha1.AIGatewayDatastore{
+		Name: "cross-ns-datastore", Namespace: ns.Name,
+		Spec: aiconfigurationv1alpha1.AIGatewayDatastoreSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Namespace: new(onprem.Namespace),
+					Name:      onprem.Name,
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayDatastoreAPISpec{
+				AIGatewayDatastoreConfig: &aiconfigurationv1alpha1.AIGatewayDatastoreConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayDatastoreConfigTypeRedisCE,
+					RedisCE: &aiconfigurationv1alpha1.RedisCEDatastore{
+						Name:        "cross-ns-redis",
+						DisplayName: "Cross Namespace Redis",
+						Config: aiconfigurationv1alpha1.RedisCEDatastoreConfig{
+							Host: "redis.example.com",
+							Port: 6379,
+							Password: aiconfigurationv1alpha1.SensitiveDataSource{
+								Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+									Name:      passwordSecretName,
+									Key:       "password",
+									Namespace: new(secretsNS.Name),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, datastore))
+
+	// eventuallyProgrammedMessage returns the datastore's Programmed condition message.
+	eventuallyProgrammedMessage := func(cond *assert.CollectT) (string, bool) {
+		if !assert.NoError(cond, cl.Get(ctx, client.ObjectKeyFromObject(datastore), datastore)) {
+			return "", false
+		}
+		c := apimeta.FindStatusCondition(datastore.Status.Conditions, string(configurationv1.ConditionProgrammed))
+		if !assert.NotNil(cond, c) {
+			return "", false
+		}
+		return c.Message, true
+	}
+
+	t.Log("Expecting the datastore to be left out for the missing KongReferenceGrant")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		msg, ok := eventuallyProgrammedMessage(ct)
+		if ok {
+			assert.Contains(ct, msg, "KongReferenceGrant")
+		}
+	}, waitTime, tickTime)
+
+	referenceGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-datastore-password", Namespace: secretsNS.Name,
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      "AIGatewayDatastore",
+				Namespace: configurationv1alpha1.Namespace(ns.Name),
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "core",
+				Kind:  "Secret",
+				Name:  new(configurationv1alpha1.ObjectName(passwordSecretName)),
+			}},
+		},
+	}
+	t.Log("Creating the KongReferenceGrant in the Secret's namespace")
+	require.NoError(t, cl.Create(ctx, referenceGrant))
+
+	// The grant is read from a namespace other than the gateway's: the datastore translates,
+	// and fails only for the missing data plane.
+	t.Log("Expecting the datastore to be translated, so the grant message to go away")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		msg, ok := eventuallyProgrammedMessage(ct)
+		if ok {
+			assert.Contains(ct, msg, "no Admin API endpoints discovered")
+		}
+	}, waitTime, tickTime)
 }

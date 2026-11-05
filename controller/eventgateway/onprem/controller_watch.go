@@ -86,46 +86,59 @@ func mapEntityToOnPremEventGateway(cl client.Client) handler.MapFunc {
 // itself, when it is created. It returns an error when a parent entity can't
 // be read.
 func onPremEventGatewayOf(ctx context.Context, cl client.Client, obj client.Object) (types.NamespacedName, bool, error) {
+	gateway, ok, _, err := walkToOnPremEventGateway(ctx, cl, obj)
+	return gateway, ok, err
+}
+
+// walkToOnPremEventGateway is onPremEventGatewayOf, also returning the parent
+// entity of the walk that doesn't exist, when one doesn't: "its Kind
+// namespace/name" for the parent of obj, "the Kind namespace/name it descends
+// from" for one further up.
+func walkToOnPremEventGateway(ctx context.Context, cl client.Client, obj client.Object) (types.NamespacedName, bool, string, error) {
 	var namespaces []string
 	// Each step goes up to an entity of another kind, so the chain can't be
 	// longer than the number of kinds, plus the gateway.
-	for range len(entityGroupKinds) + 1 {
+	for step := range len(entityGroupKinds) + 1 {
 		entity, ok := obj.(entityWithParent)
 		if !ok {
-			return types.NamespacedName{}, false, nil
+			return types.NamespacedName{}, false, "", nil
 		}
 		namespaces = append(namespaces, entity.GetNamespace())
 		ref := entity.GetParentRef()
 		if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
-			return types.NamespacedName{}, false, nil
+			return types.NamespacedName{}, false, "", nil
 		}
 		parentNN := refKey(entity, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name)
 
 		parentGVK := entity.GetParentGVK()
 		if parentGVK == onPremEventGatewayGVK {
-			return parentNN, true, nil
+			return parentNN, true, "", nil
 		}
 		if _, ok := entityGroupKinds[parentGVK.GroupKind()]; !ok {
-			return types.NamespacedName{}, false, nil
+			return types.NamespacedName{}, false, "", nil
 		}
 
 		o, err := cl.Scheme().New(parentGVK)
 		if err != nil {
-			return types.NamespacedName{}, false, &walkError{err: err, namespaces: append(namespaces, parentNN.Namespace)}
+			return types.NamespacedName{}, false, "", &walkError{err: err, namespaces: append(namespaces, parentNN.Namespace)}
 		}
 		parent, ok := o.(client.Object)
 		if !ok {
-			return types.NamespacedName{}, false, nil
+			return types.NamespacedName{}, false, "", nil
 		}
 		if err := cl.Get(ctx, parentNN, parent); err != nil {
 			if apierrors.IsNotFound(err) {
-				return types.NamespacedName{}, false, nil
+				missing := parentGVK.Kind + " " + parentNN.String()
+				if step == 0 {
+					return types.NamespacedName{}, false, "its " + missing, nil
+				}
+				return types.NamespacedName{}, false, "the " + missing + " it descends from", nil
 			}
-			return types.NamespacedName{}, false, &walkError{err: err, namespaces: append(namespaces, parentNN.Namespace)}
+			return types.NamespacedName{}, false, "", &walkError{err: err, namespaces: append(namespaces, parentNN.Namespace)}
 		}
 		obj = parent
 	}
-	return types.NamespacedName{}, false, nil
+	return types.NamespacedName{}, false, "", nil
 }
 
 // walkError is an error reading a parent entity during the walk to the
@@ -216,6 +229,7 @@ var secretReaders = []struct {
 	list  func() client.ObjectList
 }{
 	{index.IndexFieldEventGatewayBackendClusterOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayBackendClusterList{} }},
+	{index.IndexFieldEventGatewayDataPlaneCertificateOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayDataPlaneCertificateList{} }},
 	{index.IndexFieldEventGatewayListenerPolicyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayListenerPolicyList{} }},
 	{index.IndexFieldEventGatewaySchemaRegistryOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewaySchemaRegistryList{} }},
 	{index.IndexFieldEventGatewayStaticKeyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayStaticKeyList{} }},
@@ -289,11 +303,17 @@ func requestsForGWAdmin(ctx context.Context, cl client.Client, gwAdmin client.Ob
 // namespace, not being deleted, and whose UID is a version 4 UUID. gw-admin
 // replaces the whole set on every call.
 func expectedGateways(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) ([]uuid.UUID, error) {
-	gateways, err := gwadminref.GatewaysOf(ctx, cl, gateway.GWAdminKey())
+	return gatewaysServedBy(ctx, cl, gateway.GWAdminKey())
+}
+
+// gatewaysServedBy returns the ids of the gateways the gw-admin of the
+// GWAdmin must serve (see expectedGateways).
+func gatewaysServedBy(ctx context.Context, cl client.Client, gwAdmin client.ObjectKey) ([]uuid.UUID, error) {
+	gateways, err := gwadminref.GatewaysOf(ctx, cl, gwAdmin)
 	if err != nil {
 		return nil, err
 	}
-	gateways, err = gwadminref.GatewaysAllowedToUse(ctx, cl, gateway.GWAdminKey(), gateways)
+	gateways, err = gwadminref.GatewaysAllowedToUse(ctx, cl, gwAdmin, gateways)
 	if err != nil {
 		return nil, err
 	}

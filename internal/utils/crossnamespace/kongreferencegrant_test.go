@@ -7,16 +7,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestIsXNamespaceRefGranted(t *testing.T) {
 	ctx := context.Background()
-	scheme := scheme.Get()
+	// A local scheme: modules/manager/scheme imports api/aiconfiguration, which
+	// imports this package.
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	testCases := []struct {
 		name          string

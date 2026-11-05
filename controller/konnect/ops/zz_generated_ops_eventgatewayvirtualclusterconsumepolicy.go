@@ -46,6 +46,12 @@ func createEventGatewayVirtualClusterConsumePolicy(
 	if req.EventGatewayConsumePolicyCreate != nil && req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordDecryptFieldsPolicyCreate != nil {
 		req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordDecryptFieldsPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordDecryptFieldsPolicyCreate.Labels)
 	}
+	if req.EventGatewayConsumePolicyCreate != nil && req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordTranscodeConsumePolicyCreate != nil {
+		req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordTranscodeConsumePolicyCreate.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordTranscodeConsumePolicyCreate.Labels)
+	}
+	if req.EventGatewayConsumePolicyCreate != nil && req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordMaskFieldsConsumePolicyCreate != nil {
+		req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordMaskFieldsConsumePolicyCreate.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayConsumePolicyCreate.EventGatewayParsedRecordMaskFieldsConsumePolicyCreate.Labels)
+	}
 	req.GatewayID = gatewayID
 	req.VirtualClusterID = virtualClusterID
 

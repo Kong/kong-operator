@@ -10,6 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // TestAIGatewayVault_ToAIGWVault covers variant selection, the nested hcv authMethod union
@@ -21,6 +23,7 @@ func TestAIGatewayVault_ToAIGWVault(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	// newReferencedSecret returns a fresh object per subtest: the fake client's tracker
 	// mutates the objects it's given (SetResourceVersion on Build), so parallel subtests
@@ -251,7 +254,7 @@ func TestAIGatewayVault_ToAIGWVault(t *testing.T) {
 			wantErr: "spec.apiSpec is required",
 		},
 		{
-			name: "cross-namespace secretRef rejected",
+			name: "cross-namespace secretRef without KongReferenceGrant rejected",
 			obj: &AIGatewayVault{
 				Name: "sample-ai-gw-vault-cross-ns", Namespace: "default",
 				Spec: AIGatewayVaultSpec{
@@ -275,7 +278,7 @@ func TestAIGatewayVault_ToAIGWVault(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "cross-namespace secretRef",
+			wantErr: "is not granted by any KongReferenceGrant",
 		},
 		{
 			name: "missing secret",

@@ -1,0 +1,12 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+spec:
+  gwAdminRef:
+    name: ($gwadmin_name)

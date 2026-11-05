@@ -103,6 +103,11 @@ func TestUnionVariantsGetLabels(t *testing.T) {
 			crType:    reflect.TypeFor[aiconfigurationv1alpha1.AIGatewayVault](),
 			functions: []string{"createAIGatewayVault", "updateAIGatewayVault"},
 		},
+		{
+			file:      "zz_generated_ops_aigatewaydatastore.go",
+			crType:    reflect.TypeFor[aiconfigurationv1alpha1.AIGatewayDatastore](),
+			functions: []string{"createAIGatewayDatastore", "updateAIGatewayDatastore"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -461,6 +466,7 @@ func TestUnionVariantsGetLabelsCoversAllUnionEntities(t *testing.T) {
 		"zz_generated_ops_eventgatewayvirtualclusterconsumepolicy.go",
 		"zz_generated_ops_eventgatewayschemaregistry.go",
 		"zz_generated_ops_aigatewayvault.go",
+		"zz_generated_ops_aigatewaydatastore.go",
 	}
 	names, err := filepath.Glob("zz_generated_ops_*.go")
 	require.NoError(t, err)

@@ -14,13 +14,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 )
 
 func TestGenerateCAAndIssueCertificate(t *testing.T) {
 	now := time.Date(2026, 10, 19, 10, 30, 42, 0, time.UTC)
 	caPEM, keyPEM, err := generateCA("test-ca", now, 24*time.Hour)
 	require.NoError(t, err)
-	ca := parseCertificates(caPEM)[0]
+	ca := pki.ParseCertificates(caPEM)[0]
 	assert.True(t, ca.IsCA)
 	assert.True(t, ca.MaxPathLenZero, "it never signs other certificate authorities")
 	assert.Equal(t, "test-ca", ca.Subject.CommonName)
@@ -55,7 +57,7 @@ func TestGenerateCAAndIssueCertificate(t *testing.T) {
 	t.Run("validity capped at the expiry of the CA", func(t *testing.T) {
 		certPEM, _, err := issueCertificate(caSecret, certRequest{commonName: "c", ttl: 48 * time.Hour, now: now})
 		require.NoError(t, err)
-		assert.Equal(t, ca.NotAfter, parseCertificates(certPEM)[0].NotAfter)
+		assert.Equal(t, ca.NotAfter, pki.ParseCertificates(certPEM)[0].NotAfter)
 	})
 
 	t.Run("a chain in tls.crt signs with the first certificate", func(t *testing.T) {
@@ -66,7 +68,7 @@ func TestGenerateCAAndIssueCertificate(t *testing.T) {
 		}}
 		certPEM, _, err := issueCertificate(chained, certRequest{commonName: "c", ttl: time.Hour, now: now})
 		require.NoError(t, err)
-		require.NoError(t, parseCertificates(certPEM)[0].CheckSignatureFrom(ca))
+		require.NoError(t, pki.ParseCertificates(certPEM)[0].CheckSignatureFrom(ca))
 	})
 
 	t.Run("an expired CA issues nothing", func(t *testing.T) {
@@ -80,7 +82,7 @@ func TestGenerateCAAndIssueCertificate(t *testing.T) {
 		certPEM, _, err := issueCertificate(&corev1.Secret{Data: map[string][]byte{corev1.TLSCertKey: live, corev1.TLSPrivateKeyKey: liveKey}},
 			certRequest{commonName: "c", ttl: time.Minute})
 		require.NoError(t, err)
-		assert.WithinDuration(t, time.Now().Add(-clockSkew), parseCertificates(certPEM)[0].NotBefore, 2*time.Minute)
+		assert.WithinDuration(t, time.Now().Add(-clockSkew), pki.ParseCertificates(certPEM)[0].NotBefore, 2*time.Minute)
 	})
 }
 
@@ -133,5 +135,5 @@ func TestIssueCertificateFromRSA(t *testing.T) {
 	}}
 	certPEM, _, err := issueCertificate(ca, certRequest{commonName: "c", ttl: time.Minute, now: now})
 	require.NoError(t, err)
-	require.NoError(t, parseCertificates(certPEM)[0].CheckSignatureFrom(parseCertificates(ca.Data[corev1.TLSCertKey])[0]))
+	require.NoError(t, pki.ParseCertificates(certPEM)[0].CheckSignatureFrom(pki.ParseCertificates(ca.Data[corev1.TLSCertKey])[0]))
 }

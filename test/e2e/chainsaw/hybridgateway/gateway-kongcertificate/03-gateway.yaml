@@ -1,0 +1,71 @@
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: ($gateway_name)
+  namespace: ($namespace)
+spec:
+  konnect:
+    authRef:
+      name: ($auth_name)
+    source: Mirror
+    mirror:
+      konnect:
+        id: ($cp_id)
+  dataPlaneOptions:
+    deployment:
+      replicas: 1
+      hardened: disabled
+      podTemplateSpec:
+        metadata:
+          labels:
+            tls-listener-test: ($test_name)
+        spec:
+          containers:
+            - name: proxy
+              image: ($gateway_image)
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 768Mi
+    network:
+      services:
+        ingress:
+          type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: ($gateway_name)
+spec:
+  controllerName: (env('KONG_CONTROLLER_NAME') || 'konghq.com/gateway-operator')
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: ($gateway_name)
+    namespace: ($namespace)
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($namespace)
+spec:
+  gatewayClassName: ($gateway_name)
+  listeners:
+    - name: https
+      hostname: ($hostname)
+      port: 443
+      protocol: HTTPS
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: configuration.konghq.com
+            kind: KongCertificate
+            name: serving
+            namespace: ($certificate_namespace)
+      allowedRoutes:
+        namespaces:
+          from: Same

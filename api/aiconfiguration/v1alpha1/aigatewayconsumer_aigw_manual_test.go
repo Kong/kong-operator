@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // testCredIndexField mirrors internal/utils/index's
@@ -53,6 +54,7 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	// newReferenced* return fresh objects per subtest: the fake client's tracker mutates the
 	// objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
@@ -239,7 +241,7 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			wantErr: "cross-namespace reference",
 		},
 		{
-			name: "credential with cross-namespace secretRef is left out and reported",
+			name: "credential with cross-namespace secretRef without KongReferenceGrant is left out and reported",
 			obj: &AIGatewayConsumer{
 				Name: "sample-ai-gw-consumer-cross-ns-secret", Namespace: "default",
 				Spec: AIGatewayConsumerSpec{
@@ -257,7 +259,7 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			// The consumer keeps rendering: the broken credential is reported instead of
 			// failing the whole consumer, which is what its own Programmed condition shows.
 			want:      &aigw.Consumer{Name: "cross-ns-secret-consumer", DisplayName: "Cross NS Secret Consumer", Type: "api-key"},
-			wantCreds: map[string]string{"cred-a": "cross-namespace secretRef"},
+			wantCreds: map[string]string{"cred-a": "is not granted by any KongReferenceGrant"},
 		},
 		{
 			name: "credential referencing another consumer is not embedded",

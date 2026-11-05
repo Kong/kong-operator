@@ -25,7 +25,7 @@ func testPortalIdentityProviderRequestOIDC() *konnectv1alpha1.PortalIdentityProv
 				Type: "oidc",
 				Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
 					Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
-					OIDC: &konnectv1alpha1.OIDCIdentityProviderConfig{
+					OIDC: &konnectv1alpha1.PortalOIDCIdentityProviderConfig{
 						IssuerURL: "https://idp.example.com",
 						ClientID:  "client-1",
 					},
@@ -50,7 +50,7 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 						ID:   new("idp-other"),
 						Type: sdkkonnectcomp.IdentityProviderTypeOidc.ToPointer(),
 						Config: &sdkkonnectcomp.PortalIdentityProviderConfig{
-							OIDCIdentityProviderConfigOutput: &sdkkonnectcomp.OIDCIdentityProviderConfigOutput{
+							PortalOIDCIdentityProviderConfigOutput: &sdkkonnectcomp.PortalOIDCIdentityProviderConfigOutput{
 								IssuerURL: "https://other.example.com",
 								ClientID:  "client-2",
 							},
@@ -60,7 +60,7 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 						ID:   new("idp-1"),
 						Type: sdkkonnectcomp.IdentityProviderTypeOidc.ToPointer(),
 						Config: &sdkkonnectcomp.PortalIdentityProviderConfig{
-							OIDCIdentityProviderConfigOutput: &sdkkonnectcomp.OIDCIdentityProviderConfigOutput{
+							PortalOIDCIdentityProviderConfigOutput: &sdkkonnectcomp.PortalOIDCIdentityProviderConfigOutput{
 								IssuerURL: "https://idp.example.com",
 								ClientID:  "client-1",
 							},
@@ -142,8 +142,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
 				IdpMetadataURL: "https://idp.example.com/metadata",
 			},
 		}
@@ -177,8 +177,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
 				IdpMetadataURL: "https://idp.example.com/metadata",
 			},
 		}
@@ -215,8 +215,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
 				IdpMetadataXML: "<EntityDescriptor id=\"ours\"/>",
 			},
 		}
@@ -252,8 +252,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type:       konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{},
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{},
 		}
 
 		sdk.EXPECT().

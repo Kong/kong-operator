@@ -78,6 +78,43 @@ func agentModelParsedSpec() *parser.ParsedSpec {
 	}
 }
 
+func TestBuildUnionVariants_RefArmFlattening(t *testing.T) {
+	parsed := agentModelParsedSpec()
+	var union *parser.Property
+	for _, p := range parsed.Schemas["AIGatewayAgentAccess"].Properties {
+		if p.Name == "acls" {
+			p.Discriminator = ""
+			p.DiscriminatorMapping = nil
+			p.RefName = "TestACLs"
+			union = p
+		}
+	}
+
+	g := newTestGeneratorWithParsed(t, parsed, nil)
+	for _, v := range g.buildUnionVariants(union, "X") {
+		require.True(t, v.flattened, "named union arm %q should flatten", v.discValue)
+		require.NotNil(t, v.flattenedInner)
+	}
+
+	// One non-conforming arm keeps the whole union nested.
+	parsed.Schemas["AIGatewayDenyACL"].Properties = append(
+		parsed.Schemas["AIGatewayDenyACL"].Properties,
+		&parser.Property{Name: "note", Type: "string"},
+	)
+	g = newTestGeneratorWithParsed(t, parsed, nil)
+	for _, v := range g.buildUnionVariants(union, "X") {
+		require.False(t, v.flattened, "mixed-shape union must stay nested")
+	}
+
+	// The keep-nested exception wins over the shape rule.
+	parsed.Schemas["AIGatewayDenyACL"].Properties = parsed.Schemas["AIGatewayDenyACL"].Properties[:1]
+	union.RefName = "AIGatewayACLS"
+	g = newTestGeneratorWithParsed(t, parsed, nil)
+	for _, v := range g.buildUnionVariants(union, "X") {
+		require.False(t, v.flattened, "exceptional union must stay nested")
+	}
+}
+
 func newTestGeneratorWithParsed(t *testing.T, parsed *parser.ParsedSpec, refs map[string][]config.ReferenceConfig) *Generator {
 	t.Helper()
 	g := NewGenerator(Config{APIVersion: "v1alpha1", References: refs})
@@ -662,11 +699,11 @@ func TestGenerateSDKOps_ACLRefPayloadInjection(t *testing.T) {
 	// Variant switch follows the union discriminator and rebuilds the union
 	// value with the resolved names only.
 	require.Contains(t, content, "switch {")
-	require.Contains(t, content, "case acls.Type == AIGatewayAgentAccessAclsTypeAllow:")
+	require.Contains(t, content, "case acls.Allow != nil:")
 	require.Contains(t, content, "resolvedAccessAclsAllowAllow, err := resolveAIGatewayAgentAccessAclsAllowAllow(ctx, cl, obj)")
 	require.Contains(t, content, `return nil, fmt.Errorf("resolving spec.apiSpec.access.acls.allow.allow references: %w", err)`)
 	require.Contains(t, content, `access["acls"] = map[string]any{"allow": resolvedAccessAclsAllowAllow}`)
-	require.Contains(t, content, "case acls.Type == AIGatewayAgentAccessAclsTypeDeny:")
+	require.Contains(t, content, "case acls.Deny != nil:")
 	require.Contains(t, content, `access["acls"] = map[string]any{"deny": resolvedAccessAclsDenyDeny}`)
 	// No flat top-level leaf-key assignment for ACL references inside SDK unions.
 	require.NotContains(t, content, `payload["allow"]`)
@@ -730,8 +767,8 @@ func TestGenerateSDKOps_RootUnionReferenceInjection(t *testing.T) {
 	// Sibling-preserving write-back, innermost first.
 	require.Contains(t, content, `api["access"] = access`)
 	require.Contains(t, content, `payload["api"] = api`)
-	require.Contains(t, content, "case acls.Type == AIGatewayModelAccessAclsTypeAllow:")
-	require.Contains(t, content, "case acls.Type == AIGatewayModelAccessAclsTypeDeny:")
+	require.Contains(t, content, "case acls.Allow != nil:")
+	require.Contains(t, content, "case acls.Deny != nil:")
 	require.Contains(t, content, "return spec.toCreateAIGatewayModelRequestFromPayload(payload)")
 	require.Contains(t, content, "return spec.toUpdateAIGatewayModelRequestFromPayload(payload)")
 	// The whole variant subtree is never rebuilt wholesale (that would drop
@@ -770,9 +807,9 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 
 	t.Run("leaf directly below an inline root union variant", func(t *testing.T) {
 		parsed := modelRootUnionParsedSpec()
-		// The root-union variant is embedded inline in the SDK payload (no key
-		// for the union itself), so its members cannot be rebuilt under a
-		// union key.
+		// The root-union variant is embedded inline in the SDK payload, so the
+		// generic injection overwrites the leaf key inside the variant payload
+		// rather than rebuilding the union.
 		parsed.Schemas["AIGatewayModelAPI"].Properties = append(
 			parsed.Schemas["AIGatewayModelAPI"].Properties,
 			&parser.Property{Name: "policies", Type: "array", Items: &parser.Property{Type: "string"}},
@@ -786,9 +823,15 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 				"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayModelRequest"},
 			},
 		}
-		_, err := g.generateSDKOps("AIGatewayModel", parsed.RequestBodies["AIGatewayModel"], modelOpsConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "spec.apiSpec.api.policies")
+		content, err := g.generateSDKOps("AIGatewayModel", parsed.RequestBodies["AIGatewayModel"], modelOpsConfig)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+
+		require.Contains(t, content, `api, _ := payload["api"].(map[string]any)`)
+		require.Contains(t, content, "resolvedAPIPolicies, err := resolveAIGatewayModelAPIPolicies(ctx, cl, obj)")
+		require.Contains(t, content, `api["policies"] = resolvedAPIPolicies`)
+		require.Contains(t, content, `payload["api"] = api`)
 	})
 
 	t.Run("leaf below an intermediate object under the union variant", func(t *testing.T) {
@@ -810,20 +853,20 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 
 	t.Run("nested non-ACL ref through a non-discriminated property-level union is rejected", func(t *testing.T) {
 		parsed := agentModelParsedSpec()
-		// Strip the discriminator: without it flattenSDKUnions cannot flatten
-		// the union's CRD-side "type" wrapper and variant-key nesting, so the
-		// generic direct injection would leave them in place.
+		// Rename the ACL union so it does not take the ACL injection path: the
+		// rejection applies to non-ACL non-discriminated unions.
 		for _, p := range parsed.Schemas["AIGatewayAgentAccess"].Properties {
 			if p.Name == "acls" {
+				p.Name = "rules"
 				p.Discriminator = ""
 				p.DiscriminatorMapping = nil
 			}
 		}
 		ref := config.ReferenceConfig{
-			Path:        "spec.apiSpec.access.acls.allow.allow",
+			Path:        "spec.apiSpec.access.rules.allow.allow",
 			Kinds:       []string{"AIGatewayConsumerGroup"},
 			ResolvesTo:  "name",
-			RefTypeName: "OtherACLRef",
+			RefTypeName: "OtherRef",
 		}
 		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
 			"AIGatewayAgent": {ref},
@@ -831,30 +874,36 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 
 		err := g.validateReferences(parsed)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "spec.apiSpec.access.acls.allow.allow")
-		require.ErrorContains(t, err, "nested references through a non-discriminated property-level union must use refTypeName AIGatewayACLRef")
+		require.ErrorContains(t, err, "spec.apiSpec.access.rules.allow.allow")
+		require.ErrorContains(t, err, "nested references through a non-discriminated property-level union are not supported")
 
 		_, err = g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
 		require.Error(t, err)
-		require.ErrorContains(t, err, "spec.apiSpec.access.acls.allow.allow")
-		require.ErrorContains(t, err, "nested references through a non-discriminated property-level union must use refTypeName AIGatewayACLRef")
+		require.ErrorContains(t, err, "spec.apiSpec.access.rules.allow.allow")
+		require.ErrorContains(t, err, "nested references through a non-discriminated property-level union are not supported")
 	})
 
 	t.Run("nested non-ACL ref through a discriminated property-level union is supported", func(t *testing.T) {
 		parsed := agentModelParsedSpec()
-		// The "acls" union is discriminated ("type"), so flattenSDKUnions
-		// collapses it after injection: a non-ACLRef reference may pass through
-		// it with a plain leaf-key overwrite. The leaf sits on the union variant
-		// member, so the write navigates the variant's own payload key.
+		// Rename the ACL union so it does not take the ACL injection path. It is
+		// discriminated ("type"), so flattenSDKUnions collapses it after
+		// injection: a non-ACL reference may pass through it with a plain
+		// leaf-key overwrite. The leaf sits on the union variant member, so the
+		// write navigates the variant's own payload key.
+		for _, p := range parsed.Schemas["AIGatewayAgentAccess"].Properties {
+			if p.Name == "acls" {
+				p.Name = "rules"
+			}
+		}
 		ref := config.ReferenceConfig{
-			Path:       "spec.apiSpec.access.acls.allow.allow",
+			Path:       "spec.apiSpec.access.rules.allow.allow",
 			Kinds:      []string{"AIGatewayConsumerGroup"},
 			ResolvesTo: "name",
 		}
 		// AIGatewayAllowACL is also reachable from AIGatewayModel, so embedder
 		// consistency requires a matching entry there too.
 		modelRef := ref
-		modelRef.Path = "spec.apiSpec.api.access.acls.allow.allow"
+		modelRef.Path = "spec.apiSpec.api.access.rules.allow.allow"
 		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
 			"AIGatewayAgent": {ref},
 			"AIGatewayModel": {modelRef},
@@ -867,10 +916,9 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		_, err = format.Source([]byte(content))
 		require.NoError(t, err)
 
-		require.Contains(t, content, "if obj.Spec.APISpec.Access.Acls != nil && obj.Spec.APISpec.Access.Acls.Allow != nil {")
-		require.Contains(t, content, `allow, _ := acls["allow"].(map[string]any)`)
-		require.Contains(t, content, "resolvedAccessAclsAllowAllow, err := resolveAIGatewayAgentAccessAclsAllowAllow(ctx, cl, obj)")
-		require.Contains(t, content, `allow["allow"] = resolvedAccessAclsAllowAllow`)
+		require.Contains(t, content, "if obj.Spec.APISpec.Access.Rules != nil && obj.Spec.APISpec.Access.Rules.Allow != nil {")
+		require.Contains(t, content, "resolvedAccessRulesAllowAllow, err := resolveAIGatewayAgentAccessRulesAllowAllow(ctx, cl, obj)")
+		require.Contains(t, content, `allow["allow"] = resolvedAccessRulesAllowAllow`)
 	})
 
 	t.Run("nested non-ACL ref through a plain object is supported", func(t *testing.T) {
@@ -908,22 +956,6 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		require.Contains(t, content, `payload["access"] = access`)
 	})
 
-	t.Run("AIGatewayACLRef with unsupported suffix is rejected", func(t *testing.T) {
-		parsed := agentModelParsedSpec()
-		ref := config.ReferenceConfig{
-			Path:        "spec.apiSpec.access.throttle.limits",
-			Kinds:       []string{"AIGatewayConsumerGroup"},
-			ResolvesTo:  "name",
-			RefTypeName: "AIGatewayACLRef",
-		}
-		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
-			"AIGatewayAgent": {ref},
-		})
-		_, err := g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
-		require.Error(t, err)
-		require.ErrorContains(t, err, "spec.apiSpec.access.throttle.limits")
-		require.ErrorContains(t, err, "only supports paths ending in access.acls.allow.allow or access.acls.deny.deny")
-	})
 }
 
 // trustBundleUnionMemberParsedSpec builds a fixture mirroring the TLS listener
@@ -1356,4 +1388,123 @@ func TestGenerateSDKOps_UnionMemberInArrayElements(t *testing.T) {
 		require.Contains(t, content, `static["key"] = map[string]any{"id": resolvedEncryptFieldsFieldsEncryptionKeyStaticKey[rewrittenEncryptFieldsFieldsEncryptionKeyStaticKey]}`)
 		require.Contains(t, content, `if rewrittenEncryptFieldsFieldsEncryptionKeyStaticKey != len(resolvedEncryptFieldsFieldsEncryptionKeyStaticKey) {`)
 	})
+}
+
+// datastoreRefParsedSpec builds a fixture whose AIGatewayPolicy and
+// AIGatewayModel both carry a datastores array of {name} objects, matching the
+// AI Gateway OAS: the policy's is a top-level apiSpec field, the model's sits
+// on the shared AIGatewayModelAPI schema.
+func datastoreRefParsedSpec() *parser.ParsedSpec {
+	datastoreRef := &parser.Schema{Properties: []*parser.Property{
+		{Name: "name", Type: "string", Required: true},
+	}}
+	datastores := &parser.Property{
+		Name:     "datastores",
+		Type:     "array",
+		Items:    &parser.Property{Type: "object", RefName: "AIGatewayDatastoreRef"},
+		Required: false,
+	}
+	policyAPISpec := &parser.Schema{Properties: []*parser.Property{datastores}}
+	modelAPI := &parser.Schema{Properties: []*parser.Property{datastores}}
+	modelAPISpec := &parser.Schema{Properties: []*parser.Property{
+		{Name: "api", Type: "object", RefName: "AIGatewayModelAPI"},
+	}}
+	return &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"AIGatewayPolicy": policyAPISpec,
+			"AIGatewayModel":  modelAPISpec,
+		},
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayDatastoreRef": datastoreRef,
+			"AIGatewayModelAPI":     modelAPI,
+		},
+	}
+}
+
+func datastoreReferences() map[string][]config.ReferenceConfig {
+	ref := config.ReferenceConfig{
+		Kinds:       []string{"AIGatewayDatastore"},
+		ResolvesTo:  "name",
+		RefTypeName: "AIGatewayDatastoreNamespacedRef",
+	}
+	policyRef := ref
+	policyRef.Path = "spec.apiSpec.datastores"
+	modelRef := ref
+	modelRef.Path = "spec.apiSpec.api.datastores"
+	return map[string][]config.ReferenceConfig{
+		"AIGatewayPolicy": {policyRef},
+		"AIGatewayModel":  {modelRef},
+	}
+}
+
+// TestRefFieldTarget_DatastoreItems verifies the leaf of an array of
+// single-property objects is marked so the resolved names keep the OAS item
+// shape.
+func TestRefFieldTarget_DatastoreItems(t *testing.T) {
+	parsed := datastoreRefParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, datastoreReferences())
+
+	_, field, goPath, err := g.refFieldTarget("AIGatewayPolicy", datastoreReferences()["AIGatewayPolicy"][0])
+	require.NoError(t, err)
+	require.Equal(t, "datastores", field)
+	require.Equal(t, []GoPathSegment{
+		{Name: "Datastores", JSONKey: "datastores", LeafArray: true, ItemObjectKey: "name"},
+	}, goPath)
+
+	// The leaf of a plain array of strings keeps no item key.
+	parsed.Schemas["AIGatewayModelAPI"].Properties = []*parser.Property{
+		{Name: "policies", Type: "array", Items: &parser.Property{Type: "string"}},
+	}
+	ref := config.ReferenceConfig{
+		Path:       "spec.apiSpec.api.policies",
+		Kinds:      []string{"AIGatewayPolicy"},
+		ResolvesTo: "name",
+	}
+	_, _, goPath, err = g.refFieldTarget("AIGatewayModel", ref)
+	require.NoError(t, err)
+	require.Empty(t, goPath[len(goPath)-1].ItemObjectKey)
+}
+
+// TestGenerateSDKOps_DatastoreItemsWrapped verifies resolved datastore names are
+// sent as [{"name": "<konnect name>"}] for both a top-level apiSpec field and a
+// nested one.
+func TestGenerateSDKOps_DatastoreItemsWrapped(t *testing.T) {
+	parsed := datastoreRefParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, datastoreReferences())
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayPolicyRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayPolicyRequest"},
+		},
+	}
+
+	policyContent, err := g.generateSDKOps("AIGatewayPolicy", parsed.RequestBodies["AIGatewayPolicy"], opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(policyContent))
+	require.NoError(t, err)
+	require.Contains(t, policyContent, `wrappedDatastores = append(wrappedDatastores, map[string]string{"name": v})`)
+	require.Contains(t, policyContent, `payload["datastores"] = wrappedDatastores`)
+	require.NotContains(t, policyContent, `payload["datastores"] = resolvedDatastores`)
+
+	modelContent, err := g.generateSDKOps("AIGatewayModel", parsed.RequestBodies["AIGatewayModel"], opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(modelContent))
+	require.NoError(t, err)
+	require.Contains(t, modelContent, "func RefsAtAIGatewayModelAPIDatastores(obj *AIGatewayModel) []AIGatewayDatastoreNamespacedRef")
+	require.Contains(t, modelContent, `wrappedAPIDatastores = append(wrappedAPIDatastores, map[string]string{"name": v})`)
+	require.Contains(t, modelContent, `api["datastores"] = wrappedAPIDatastores`)
+}
+
+// TestValidateReferences_RefTypeNameCollidesWithSchema verifies a ref type name
+// that would shadow a generated OAS schema type is rejected.
+func TestValidateReferences_RefTypeNameCollidesWithSchema(t *testing.T) {
+	parsed := datastoreRefParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		"AIGatewayPolicy": {{
+			Path:       "spec.apiSpec.datastores",
+			Kinds:      []string{"AIGatewayDatastore"},
+			ResolvesTo: "name",
+		}},
+	})
+	require.ErrorContains(t, g.validateReferences(parsed), `refTypeName "AIGatewayDatastoreRef" collides with the generated OAS schema type AIGatewayDatastoreRef`)
 }

@@ -164,7 +164,7 @@ type EventGatewayVirtualClusterConsumePolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=decrypt;decryptFields;modifyHeaders;schemaValidation;skipRecord
+	// +kubebuilder:validation:Enum=decrypt;decryptFields;maskFields;modifyHeaders;schemaValidation;skipRecord;transcode
 	Type EventGatewayVirtualClusterConsumePolicyConfigType `json:"type,omitempty"`
 
 	// DecryptPolicy configuration.
@@ -175,6 +175,10 @@ type EventGatewayVirtualClusterConsumePolicyConfig struct {
 	//
 	// +optional
 	ParsedRecordDecryptFieldsPolicyCreate *EventGatewayParsedRecordDecryptFieldsPolicyCreate `json:"decryptFields,omitempty"`
+	// ParsedRecordMaskFieldsConsumePolicyCreate configuration.
+	//
+	// +optional
+	ParsedRecordMaskFieldsConsumePolicyCreate *EventGatewayParsedRecordMaskFieldsConsumePolicyCreate `json:"maskFields,omitempty"`
 	// ModifyHeadersPolicyCreate configuration.
 	//
 	// +optional
@@ -187,6 +191,10 @@ type EventGatewayVirtualClusterConsumePolicyConfig struct {
 	//
 	// +optional
 	SkipRecordPolicyCreate *EventGatewaySkipRecordPolicyCreate `json:"skipRecord,omitempty"`
+	// ParsedRecordTranscodeConsumePolicyCreate configuration.
+	//
+	// +optional
+	ParsedRecordTranscodeConsumePolicyCreate *EventGatewayParsedRecordTranscodeConsumePolicyCreate `json:"transcode,omitempty"`
 }
 
 // EventGatewayVirtualClusterConsumePolicyConfigType represents the type of EventGatewayVirtualClusterConsumePolicyConfig.
@@ -194,21 +202,18 @@ type EventGatewayVirtualClusterConsumePolicyConfigType string
 
 // EventGatewayVirtualClusterConsumePolicyConfigType values.
 const (
-	EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy                         EventGatewayVirtualClusterConsumePolicyConfigType = "decrypt"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate EventGatewayVirtualClusterConsumePolicyConfigType = "decryptFields"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate             EventGatewayVirtualClusterConsumePolicyConfigType = "modifyHeaders"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy         EventGatewayVirtualClusterConsumePolicyConfigType = "schemaValidation"
-	EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate                EventGatewayVirtualClusterConsumePolicyConfigType = "skipRecord"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy                             EventGatewayVirtualClusterConsumePolicyConfigType = "decrypt"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate     EventGatewayVirtualClusterConsumePolicyConfigType = "decryptFields"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate EventGatewayVirtualClusterConsumePolicyConfigType = "maskFields"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate                 EventGatewayVirtualClusterConsumePolicyConfigType = "modifyHeaders"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy             EventGatewayVirtualClusterConsumePolicyConfigType = "schemaValidation"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate                    EventGatewayVirtualClusterConsumePolicyConfigType = "skipRecord"
+	EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate  EventGatewayVirtualClusterConsumePolicyConfigType = "transcode"
 )
 
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayVirtualClusterConsumePolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterConsumePolicyConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy:
 		if u.DecryptPolicy != nil {
@@ -225,6 +230,14 @@ func (u EventGatewayVirtualClusterConsumePolicyConfig) MarshalJSON() ([]byte, er
 				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterConsumePolicyConfig decrypt_fields: %w", err)
 			}
 			m["decryptFields"] = raw
+		}
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate:
+		if u.ParsedRecordMaskFieldsConsumePolicyCreate != nil {
+			raw, err := json.Marshal(u.ParsedRecordMaskFieldsConsumePolicyCreate)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterConsumePolicyConfig mask_fields: %w", err)
+			}
+			m["maskFields"] = raw
 		}
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate:
 		if u.ModifyHeadersPolicyCreate != nil {
@@ -250,6 +263,21 @@ func (u EventGatewayVirtualClusterConsumePolicyConfig) MarshalJSON() ([]byte, er
 			}
 			m["skipRecord"] = raw
 		}
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate:
+		if u.ParsedRecordTranscodeConsumePolicyCreate != nil {
+			raw, err := json.Marshal(u.ParsedRecordTranscodeConsumePolicyCreate)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterConsumePolicyConfig transcode: %w", err)
+			}
+			m["transcode"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterConsumePolicyConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -291,6 +319,16 @@ func (u *EventGatewayVirtualClusterConsumePolicyConfig) UnmarshalJSON(data []byt
 			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterConsumePolicyConfig decrypt_fields: %w", err)
 		}
 		u.ParsedRecordDecryptFieldsPolicyCreate = &val
+	case "maskFields":
+		payload, ok := raw["maskFields"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordMaskFieldsConsumePolicyCreate
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterConsumePolicyConfig mask_fields: %w", err)
+		}
+		u.ParsedRecordMaskFieldsConsumePolicyCreate = &val
 	case "modifyHeaders":
 		payload, ok := raw["modifyHeaders"]
 		if !ok || len(payload) == 0 {
@@ -321,6 +359,16 @@ func (u *EventGatewayVirtualClusterConsumePolicyConfig) UnmarshalJSON(data []byt
 			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterConsumePolicyConfig skip_record: %w", err)
 		}
 		u.SkipRecordPolicyCreate = &val
+	case "transcode":
+		payload, ok := raw["transcode"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeConsumePolicyCreate
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterConsumePolicyConfig transcode: %w", err)
+		}
+		u.ParsedRecordTranscodeConsumePolicyCreate = &val
 	}
 	return nil
 }

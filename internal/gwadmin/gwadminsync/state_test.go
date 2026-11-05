@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 )
 
 func TestTryLock(t *testing.T) {
@@ -70,6 +71,49 @@ func TestTryLock(t *testing.T) {
 	s.locks.mu.Lock()
 	defer s.locks.mu.Unlock()
 	assert.Empty(t, s.locks.locked, "a lock nobody holds is dropped")
+	assert.Empty(t, s.locks.lines)
+}
+
+func TestTryLockGWAdmin(t *testing.T) {
+	var s Syncer
+	// The gateway shares the name of its GWAdmin: they still wait apart.
+	a := types.NamespacedName{Namespace: "ns", Name: "a"}
+	gateway := func(name string) types.NamespacedName { return types.NamespacedName{Namespace: "ns", Name: name} }
+	woken := func(wakeups chan event.GenericEvent) []string {
+		var names []string
+		for {
+			select {
+			case e := <-wakeups:
+				names = append(names, e.Object.GetName())
+			default:
+				return names
+			}
+		}
+	}
+
+	unlock, ok := s.TryLock(a, gateway("holder"))
+	require.True(t, ok)
+	_, ok = s.TryLockGWAdmin(a)
+	assert.False(t, ok, "the lock of a GWAdmin is held once at a time")
+	_, ok = s.TryLock(a, a)
+	require.False(t, ok)
+	_, ok = s.TryLock(a, gateway("last"))
+	require.False(t, ok)
+	unlock()
+	assert.Equal(t, []string{"a"}, woken(s.gwAdminWakeupChannel()), "the GWAdmin was first in line")
+	assert.Equal(t, []string{"a"}, woken(s.wakeupChannel()),
+		"the gateway after it too: the reconcile of the GWAdmin may not take the lock, and wake nobody")
+
+	// The gateway takes it, and wakes the next one only.
+	unlock, ok = s.TryLock(a, a)
+	require.True(t, ok)
+	unlock()
+	assert.Equal(t, []string{"last"}, woken(s.wakeupChannel()))
+	assert.Empty(t, woken(s.gwAdminWakeupChannel()))
+
+	s.locks.mu.Lock()
+	defer s.locks.mu.Unlock()
+	assert.Empty(t, s.locks.locked)
 	assert.Empty(t, s.locks.lines)
 }
 

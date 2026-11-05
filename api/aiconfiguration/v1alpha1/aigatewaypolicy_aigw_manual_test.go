@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // TestAIGatewayPolicy_ToAIGWPolicy covers the inline config passthrough, the Enabled/Disabled
@@ -25,6 +26,7 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	// newConfigSecret returns a fresh object per subtest: the fake client's tracker mutates the
 	// objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
@@ -103,7 +105,7 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 			},
 		},
 		{
-			name: "cross-namespace config secretRef rejected",
+			name: "cross-namespace config secretRef without KongReferenceGrant rejected",
 			obj: &AIGatewayPolicy{
 				Name: "sample-ai-gw-policy-cross-ns", Namespace: "default",
 				Spec: AIGatewayPolicySpec{
@@ -121,7 +123,7 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "cross-namespace secretRef",
+			wantErr: "is not granted by any KongReferenceGrant",
 		},
 		{
 			name: "missing secret for config secretRef",
@@ -156,7 +158,6 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			got.Datastores = nil
 			require.Equal(t, tt.want, got)
 		})
 	}

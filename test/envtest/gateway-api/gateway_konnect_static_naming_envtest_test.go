@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
@@ -181,7 +182,7 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 	t.Log("accepting the GatewayClass so the Gateway starts reconciling")
 	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), envtestconsts.WaitTime, envtestconsts.TickTime)
 
-	// This condition is only set on the "found exactly one" branch, so it proves the reconciler
+	// The Pending reason is only set on the "found exactly one" branch, so it proves the reconciler
 	// picked up the seeded Control Plane instead of creating a new one.
 	t.Log("waiting for the Gateway to report on the existing KonnectGatewayControlPlane")
 	require.Eventually(t, func() bool {
@@ -190,7 +191,7 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 			return false
 		}
 		cond := apimeta.FindStatusCondition(got.Status.Conditions, string(kcfggateway.KonnectGatewayControlPlaneProgrammedType))
-		return cond != nil && cond.Status == metav1.ConditionFalse
+		return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == string(configurationv1.ReasonPending)
 	}, envtestconsts.WaitTime, envtestconsts.TickTime, "the Gateway should report the existing KonnectGatewayControlPlane as not programmed")
 
 	t.Log("asserting the pre-existing Konnect name is never rewritten")

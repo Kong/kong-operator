@@ -82,3 +82,22 @@ const (
 	// EnvRuntimeShutdownTimeout is the keg environment variable for the graceful shutdown timeout.
 	EnvRuntimeShutdownTimeout = "KEG__RUNTIME__SHUTDOWN_TIMEOUT"
 )
+
+// The graceful shutdown of keg, which its pods need the time for.
+const (
+	// DefaultDrainDurationSeconds is the drain duration keg defaults to: how
+	// long it keeps serving its connections once asked to stop.
+	DefaultDrainDurationSeconds = 5
+	// DefaultShutdownTimeoutSeconds is the graceful shutdown timeout keg
+	// defaults to: the time between the shutdown signal and keg forcing its
+	// exit. The termination grace period adds it to the drain, which is
+	// longer than needed if the drain counts toward it, never shorter.
+	DefaultShutdownTimeoutSeconds = 10
+	// DefaultTerminationGracePeriodSeconds is the termination grace period of
+	// a pod Kubernetes defaults to.
+	DefaultTerminationGracePeriodSeconds = 30
+	// TerminationGracePeriodMarginSeconds is the time added to the drain and
+	// the shutdown of keg in the termination grace period of its pods, for
+	// the signal to be delivered and the process to exit.
+	TerminationGracePeriodMarginSeconds = 5
+)

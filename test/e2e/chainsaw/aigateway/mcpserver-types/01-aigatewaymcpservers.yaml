@@ -90,6 +90,11 @@ spec:
           headers:
             x-mcp-client:
               - flights-e2e
+      rateLimiting:
+        limits:
+          - method: tools/call
+            limit: 100
+            windowSize: 60
       labels:
         domain: flights
 ---
@@ -186,6 +191,14 @@ spec:
         logging:
           audits: Disabled
           payloads: Enabled
+      rateLimiting:
+        limits:
+          - method: tools/call
+            limit: 100
+            windowSize: 60
+          - tool: search_flights
+            limit: 10
+            windowSize: 1
       tools:
         - name: search_flights
           description: Search available flights by origin, destination, and date

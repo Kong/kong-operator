@@ -136,7 +136,11 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Setting up mock SDK for vault creation")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateVaultRequest) bool {
+			if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+				return false
+			}
+			input := r.Vault
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
 		})).Return(&sdkkonnectops.CreateVaultResponse{
 			Vault: &sdkkonnectcomp.Vault{
@@ -168,7 +172,7 @@ func TestKongVault(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up mock SDK for vault deletion")
-		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), VaultID: vaultID}).
 			Return(&sdkkonnectops.DeleteVaultResponse{}, nil)
 
 		t.Log("Deleting KongVault")
@@ -210,12 +214,15 @@ func TestKongVault(t *testing.T) {
 		}, "KongVault didn't get ConfigStoreRefValid=False with reason NotProgrammed")
 
 		t.Log("Setting up mock SDK expecting config_store_id resolved from the KonnectConfigStore")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
-				return input.Name == vaultBackend &&
-					input.Prefix == vaultPrefix &&
-					input.Config["config_store_id"] == configStoreID
-			})).Return(&sdkkonnectops.CreateVaultResponse{
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateVaultRequest) bool {
+			if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+				return false
+			}
+			input := r.Vault
+			return input.Name == vaultBackend &&
+				input.Prefix == vaultPrefix &&
+				input.Config["config_store_id"] == configStoreID
+		})).Return(&sdkkonnectops.CreateVaultResponse{
 			Vault: &sdkkonnectcomp.Vault{
 				ID: new(vaultID),
 			},
@@ -237,7 +244,7 @@ func TestKongVault(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up mock SDK for vault deletion")
-		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), VaultID: vaultID}).
 			Return(&sdkkonnectops.DeleteVaultResponse{}, nil)
 
 		require.NoError(t, cl.Delete(ctx, vault))
@@ -318,12 +325,15 @@ func TestKongVault(t *testing.T) {
 		require.Empty(t, fetched.GetKonnectID())
 
 		t.Log("Setting up mock SDK expecting config_store_id resolved from the KonnectConfigStore")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
-				return input.Name == vaultBackend &&
-					input.Prefix == vaultPrefix &&
-					input.Config["config_store_id"] == configStoreID
-			})).Return(&sdkkonnectops.CreateVaultResponse{
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateVaultRequest) bool {
+			if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+				return false
+			}
+			input := r.Vault
+			return input.Name == vaultBackend &&
+				input.Prefix == vaultPrefix &&
+				input.Config["config_store_id"] == configStoreID
+		})).Return(&sdkkonnectops.CreateVaultResponse{
 			Vault: &sdkkonnectcomp.Vault{
 				ID: new(vaultID),
 			},
@@ -365,7 +375,7 @@ func TestKongVault(t *testing.T) {
 		}, "KongVault didn't get ConfigStoreRefValid=False with reason RefNotPermitted after the KongReferenceGrant was removed")
 
 		t.Log("Setting up mock SDK for vault deletion")
-		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), vaultID).
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), VaultID: vaultID}).
 			Return(&sdkkonnectops.DeleteVaultResponse{}, nil)
 
 		t.Log("Deleting the KongVault must not get stuck even though the KongReferenceGrant is gone")
@@ -384,7 +394,11 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Setting up mock SDK for vault creation with conflict")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateVaultRequest) bool {
+			if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+				return false
+			}
+			input := r.Vault
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
 		})).Return(nil, &sdkkonnecterrs.SDKError{
 			StatusCode: 400,
@@ -443,8 +457,7 @@ func TestKongVault(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating vaults")
 		sdk.VaultSDK.EXPECT().GetVault(
 			mock.Anything,
-			vaultID,
-			cp.GetKonnectID(),
+			sdkkonnectops.GetVaultRequest{ControlPlaneID: cp.GetKonnectID(), VaultID: vaultID},
 		).Return(
 			&sdkkonnectops.GetVaultResponse{
 				Vault: &sdkkonnectcomp.Vault{
@@ -483,7 +496,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expectations for vault deletion")
-		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectID(), vaultID).Return(nil, nil)
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: cp.GetKonnectID(), VaultID: vaultID}).Return(nil, nil)
 
 		t.Logf("Deleting KongVault %s", createdVault.Name)
 		require.NoError(t, cl.Delete(ctx, createdVault))

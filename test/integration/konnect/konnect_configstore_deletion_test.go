@@ -72,10 +72,11 @@ func TestKonnectConfigStoreDeletionBlockedBySecretEntries(t *testing.T) {
 
 	sdkServer, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err)
-	konnectSDK := sdkops.NewSDKFactory().NewKonnectSDK(
+	konnectSDK, err := sdkops.NewSDKFactory().NewKonnectSDK(
 		sdkServer,
 		sdkops.SDKToken(test.KonnectAccessToken()),
 	)
+	require.NoError(t, err)
 	secretKey := "deletion-guard-" + testID
 	_, err = konnectSDK.GetConfigStoreSecretsSDK().CreateConfigStoreSecret(
 		ctx,

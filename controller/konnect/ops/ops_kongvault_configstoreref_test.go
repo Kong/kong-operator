@@ -144,9 +144,8 @@ func TestCreateKongVaultWithConfigStoreRef(t *testing.T) {
 	// Assert on the payload directly rather than through the converter, so that a
 	// change dropping config_store_id from the request is caught.
 	sdk.EXPECT().
-		CreateVault(mock.Anything, "cp-id", mock.MatchedBy(func(v any) bool {
-			input, ok := v.(sdkkonnectcomp.Vault)
-			return ok && input.Config["config_store_id"] == "cs-id"
+		CreateVault(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateVaultRequest) bool {
+			return r.ControlPlaneID == "cp-id" && r.Vault.Config["config_store_id"] == "cs-id"
 		})).
 		Return(&sdkkonnectops.CreateVaultResponse{
 			Vault:      &sdkkonnectcomp.Vault{ID: new("vault-id")},

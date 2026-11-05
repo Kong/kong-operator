@@ -16,6 +16,7 @@ type GeneratedSDK interface {
 	GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK
 	GetAIGatewayCustomPoliciesSDK() sdkkonnectgo.AIGatewayCustomPoliciesSDK
 	GetAIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK
+	GetAIGatewayDatastoresSDK() sdkkonnectgo.AIGatewayDatastoresSDK
 	GetAIGatewayMCPServersSDK() sdkkonnectgo.AIGatewayMCPServersSDK
 	GetAIGatewayModelsSDK() sdkkonnectgo.AIGatewayModelsSDK
 	GetAIGatewayModelProvidersSDK() sdkkonnectgo.AIGatewayModelProvidersSDK
@@ -84,6 +85,11 @@ func (w sdkWrapper) GetAIGatewayCustomPoliciesSDK() sdkkonnectgo.AIGatewayCustom
 // GetAIGatewayDataPlaneCertificatesSDK returns the SDK to operate AIGatewayDataPlaneCertificate.
 func (w sdkWrapper) GetAIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK {
 	return w.sdk.AIGatewayDataPlaneCertificates
+}
+
+// GetAIGatewayDatastoresSDK returns the SDK to operate AIGatewayDatastore.
+func (w sdkWrapper) GetAIGatewayDatastoresSDK() sdkkonnectgo.AIGatewayDatastoresSDK {
+	return w.sdk.AIGatewayDatastores
 }
 
 // GetAIGatewayMCPServersSDK returns the SDK to operate AIGatewayMCPServer.

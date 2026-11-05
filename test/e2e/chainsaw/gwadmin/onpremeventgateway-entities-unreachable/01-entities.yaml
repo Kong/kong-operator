@@ -1,0 +1,50 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend-cluster
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: backend-cluster
+    bootstrapServers:
+      - kafka:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: virtual-cluster
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend-cluster
+  apiSpec:
+    name: virtual-cluster
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+    dnsLabel: virtual-cluster
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: listener
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: listener
+    addresses:
+      - 0.0.0.0
+    ports:
+      - 19092

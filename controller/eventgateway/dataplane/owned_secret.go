@@ -53,6 +53,13 @@ func resolveCertificateSecret(
 	_ shareddataplane.ResolvedControlPlane,
 	resolveAutomatic func(ctx context.Context, dp *eventgatewayv1alpha1.KegDataPlane) (op.Result, *corev1.Secret, error),
 ) (op.Result, *corev1.Secret, error) {
+	// Refuse an onpremNamespacedRef before provisioning anything: an
+	// automatic certificate would come from a CA the GWAdmin doesn't trust,
+	// and either mode would report CertificateProvisioned for a data plane
+	// that is never deployed.
+	if err := onPremNotSupported(egdp); err != nil {
+		return op.Noop, nil, err
+	}
 	if isManualProvisioning(egdp) {
 		return shareddataplane.GetManualCertificateSecret(ctx, cl, egdp, egdp.Spec.CertificateSecret.SecretRef.Name, manualCertificateConditions)
 	}

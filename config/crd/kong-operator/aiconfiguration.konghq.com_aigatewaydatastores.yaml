@@ -1,0 +1,1487 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+  name: aigatewaydatastores.aiconfiguration.konghq.com
+spec:
+  group: aiconfiguration.konghq.com
+  names:
+    categories:
+    - kong
+    kind: AIGatewayDatastore
+    listKind: AIGatewayDatastoreList
+    plural: aigatewaydatastores
+    singular: aigatewaydatastore
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Konnect ID
+      jsonPath: .status.id
+      name: ID
+      type: string
+    - description: The Resource is Programmed on Konnect
+      jsonPath: .status.conditions[?(@.type=='Programmed')].status
+      name: Programmed
+      type: string
+    - description: Konnect Organization ID this resource belongs to.
+      jsonPath: .status.organizationID
+      name: OrgID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AIGatewayDatastore is the Schema for the aigatewaydatastores
+          API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AIGatewayDatastoreSpec defines the desired state of AIGatewayDatastore.
+            properties:
+              aiGatewayRef:
+                description: AIGatewayRef is the reference to the parent AI Gateway
+                  (control plane) object.
+                properties:
+                  group:
+                    default: konnect.konghq.com
+                    description: |-
+                      Group is the API group of the referenced AI Gateway (control plane).
+                      Defaults to konnect.konghq.com; an OnPremAIGateway reference must set
+                      it to aigateway.konghq.com explicitly.
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    description: |-
+                      Kind is the kind of the referenced AI Gateway (control plane):
+                      KonnectAIGateway (default) or OnPremAIGateway.
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
+                    type: string
+                  namespacedRef:
+                    description: |-
+                      NamespacedRef references the AI Gateway (control plane) by namespaced
+                      name. When Namespace is unset, the namespace of the referencing entity
+                      is used.
+                    properties:
+                      name:
+                        description: Name is the name of the referred resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referred resource.
+
+                          For namespace-scoped resources if no Namespace is provided then the
+                          namespace of the parent object MUST be used.
+
+                          This field MUST not be set when referring to cluster-scoped resources.
+                        maxLength: 253
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
+                required:
+                - namespacedRef
+                type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway,
+                    and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
+                    : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
+              apiSpec:
+                description: APISpec defines the desired state of the resource's API
+                  spec fields.
+                properties:
+                  redis-ce:
+                    description: RedisCE configuration.
+                    properties:
+                      config:
+                        description: RedisCEDatastoreConfig is a type alias.
+                        properties:
+                          cloudAuthentication:
+                            description: |-
+                              Cloud-managed Redis authentication.
+                              Only the fields relevant to the chosen `auth_provider` need to be set.
+                            properties:
+                              authProvider:
+                                description: |-
+                                  DatastoreRedisCloudAuthenticationAuthProvider represents a union type for auth_provider.
+                                  Only one of the fields should be set based on the Type.
+                                properties:
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    description: Variant1 configuration.
+                                    type: string
+                                  variant2:
+                                    description: Variant2 configuration.
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              awsAccessKeyID:
+                                maxLength: 253
+                                type: string
+                              awsAssumeRoleArn:
+                                maxLength: 253
+                                type: string
+                              awsCacheName:
+                                maxLength: 253
+                                type: string
+                              awsIsServerless:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              awsRegion:
+                                maxLength: 253
+                                type: string
+                              awsRoleSessionName:
+                                maxLength: 253
+                                type: string
+                              awsSecretAccessKey:
+                                description: |-
+                                  SensitiveDataSource holds a sensitive string value that can be provided
+                                  either inline or sourced from a Kubernetes Secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              azureClientID:
+                                maxLength: 253
+                                type: string
+                              azureClientSecret:
+                                description: |-
+                                  SensitiveDataSource holds a sensitive string value that can be provided
+                                  either inline or sourced from a Kubernetes Secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              azureTenantID:
+                                maxLength: 253
+                                type: string
+                              gcpServiceAccountJSON:
+                                description: |-
+                                  SensitiveDataSource holds a sensitive string value that can be provided
+                                  either inline or sourced from a Kubernetes Secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                            type: object
+                          database:
+                            description: The Redis database index to use.
+                            type: integer
+                          host:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          password:
+                            description: |-
+                              SensitiveDataSource holds a sensitive string value that can be provided
+                              either inline or sourced from a Kubernetes Secret.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                          port:
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          serverName:
+                            description: SNI to use when connecting over SSL.
+                            maxLength: 253
+                            type: string
+                          ssl:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sslVerify:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          timeout:
+                            description: |-
+                              Timeout in milliseconds for connecting, reading, and writing to the Redis
+                              server.
+                            type: integer
+                          username:
+                            maxLength: 253
+                            type: string
+                        required:
+                        - host
+                        type: object
+                      description:
+                        description: The description of the Datastore.
+                        maxLength: 1024
+                        type: string
+                      displayName:
+                        description: The display name for this Datastore.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this Datastore, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: name is immutable
+                          rule: self == oldSelf
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
+                  redis-ee:
+                    description: RedisEE configuration.
+                    properties:
+                      config:
+                        description: RedisEEDatastoreConfig is a type alias.
+                        properties:
+                          cloudAuthentication:
+                            description: |-
+                              Cloud-managed Redis authentication.
+                              Only the fields relevant to the chosen `auth_provider` need to be set.
+                            properties:
+                              authProvider:
+                                description: |-
+                                  DatastoreRedisCloudAuthenticationAuthProvider represents a union type for auth_provider.
+                                  Only one of the fields should be set based on the Type.
+                                properties:
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    description: Variant1 configuration.
+                                    type: string
+                                  variant2:
+                                    description: Variant2 configuration.
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              awsAccessKeyID:
+                                maxLength: 253
+                                type: string
+                              awsAssumeRoleArn:
+                                maxLength: 253
+                                type: string
+                              awsCacheName:
+                                maxLength: 253
+                                type: string
+                              awsIsServerless:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              awsRegion:
+                                maxLength: 253
+                                type: string
+                              awsRoleSessionName:
+                                maxLength: 253
+                                type: string
+                              awsSecretAccessKey:
+                                description: |-
+                                  SensitiveDataSource holds a sensitive string value that can be provided
+                                  either inline or sourced from a Kubernetes Secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              azureClientID:
+                                maxLength: 253
+                                type: string
+                              azureClientSecret:
+                                description: |-
+                                  SensitiveDataSource holds a sensitive string value that can be provided
+                                  either inline or sourced from a Kubernetes Secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              azureTenantID:
+                                maxLength: 253
+                                type: string
+                              gcpServiceAccountJSON:
+                                description: |-
+                                  SensitiveDataSource holds a sensitive string value that can be provided
+                                  either inline or sourced from a Kubernetes Secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                            type: object
+                          clusterMaxRedirections:
+                            type: integer
+                          clusterNodes:
+                            items:
+                              description: RedisEEDatastoreConfigClusterNodes is a
+                                type alias.
+                              properties:
+                                ip:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                port:
+                                  maximum: 65535
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - ip
+                              - port
+                              type: object
+                            type: array
+                          connectTimeout:
+                            type: integer
+                          connectionIsProxied:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          database:
+                            description: The Redis database index to use.
+                            type: integer
+                          host:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          keepaliveBacklog:
+                            type: integer
+                          keepalivePoolSize:
+                            type: integer
+                          password:
+                            description: |-
+                              SensitiveDataSource holds a sensitive string value that can be provided
+                              either inline or sourced from a Kubernetes Secret.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                          port:
+                            description: |-
+                              An integer representing a port number between 0 and 65535, inclusive.
+                              This field is
+                              [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                            properties:
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - variant1
+                                - variant2
+                                minLength: 1
+                                type: string
+                              variant1:
+                                description: Variant1 configuration.
+                                type: integer
+                              variant2:
+                                description: Variant2 configuration.
+                                type: string
+                            required:
+                            - type
+                            type: object
+                          readTimeout:
+                            type: integer
+                          sendTimeout:
+                            type: integer
+                          sentinelMaster:
+                            maxLength: 253
+                            type: string
+                          sentinelNodes:
+                            items:
+                              description: RedisEEDatastoreConfigSentinelNodes is
+                                a type alias.
+                              properties:
+                                host:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                port:
+                                  maximum: 65535
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - host
+                              - port
+                              type: object
+                            type: array
+                          sentinelPassword:
+                            description: |-
+                              SensitiveDataSource holds a sensitive string value that can be provided
+                              either inline or sourced from a Kubernetes Secret.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                          sentinelRole:
+                            enum:
+                            - master
+                            - slave
+                            - any
+                            maxLength: 253
+                            type: string
+                          sentinelUsername:
+                            maxLength: 253
+                            type: string
+                          serverName:
+                            description: SNI to use when connecting over SSL.
+                            maxLength: 253
+                            type: string
+                          ssl:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sslVerify:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          username:
+                            maxLength: 253
+                            type: string
+                        required:
+                        - host
+                        type: object
+                      description:
+                        description: The description of the Datastore.
+                        maxLength: 1024
+                        type: string
+                      displayName:
+                        description: The display name for this Datastore.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this Datastore, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: name is immutable
+                          rule: self == oldSelf
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
+                  token-vault:
+                    description: TokenVault configuration.
+                    properties:
+                      config:
+                        description: TokenVaultDatastoreConfig is a type alias.
+                        properties:
+                          currentVersion:
+                            description: The version of the encryption key used to
+                              encrypt new tokens.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          directory:
+                            description: The name of the directory in which tokens
+                              are stored.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          keys:
+                            description: |-
+                              The encryption keys used to protect stored tokens.
+                              Keep previous versions in the list so existing tokens can still be
+                              decrypted.
+                            items:
+                              description: TokenVaultDatastoreKey is a type alias.
+                              properties:
+                                key:
+                                  description: |-
+                                    A [vault
+                                    reference](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault)
+                                    to the encryption key.
+                                    A literal key value is rejected.
+                                  maxLength: 253
+                                  pattern: ^\{vault://.*\}$
+                                  type: string
+                                version:
+                                  description: The identifier of this key version.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - version
+                              type: object
+                            type: array
+                        required:
+                        - currentVersion
+                        - directory
+                        - keys
+                        type: object
+                      description:
+                        description: The description of the Datastore.
+                        maxLength: 1024
+                        type: string
+                      displayName:
+                        description: The display name for this Datastore.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this Datastore, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: name is immutable
+                          rule: self == oldSelf
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
+                  type:
+                    description: Type designates the type of configuration.
+                    enum:
+                    - redis-ce
+                    - redis-ee
+                    - token-vault
+                    - vectordb
+                    minLength: 1
+                    type: string
+                  vectordb:
+                    description: VectorDB configuration.
+                    properties:
+                      config:
+                        description: VectorDBDatastoreConfig is a type alias.
+                        properties:
+                          database:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          host:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          password:
+                            description: |-
+                              SensitiveDataSource holds a sensitive string value that can be provided
+                              either inline or sourced from a Kubernetes Secret.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                          port:
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          ssl:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sslCert:
+                            maxLength: 253
+                            type: string
+                          sslCertKey:
+                            description: |-
+                              SensitiveDataSource holds a sensitive string value that can be provided
+                              either inline or sourced from a Kubernetes Secret.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                          sslRequired:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sslVerify:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sslVersion:
+                            maxLength: 253
+                            type: string
+                          timeout:
+                            description: |-
+                              Timeout in milliseconds for connecting, reading, and writing to the
+                              database.
+                            type: integer
+                          user:
+                            maxLength: 253
+                            type: string
+                        required:
+                        - database
+                        - host
+                        type: object
+                      description:
+                        description: The description of the Datastore.
+                        maxLength: 1024
+                        type: string
+                      displayName:
+                        description: The display name for this Datastore.
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this Datastore, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: name is immutable
+                          rule: self == oldSelf
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
+                required:
+                - type
+                type: object
+            required:
+            - aiGatewayRef
+            type: object
+          status:
+            description: AIGatewayDatastoreStatus defines the observed state of AIGatewayDatastore.
+            properties:
+              conditions:
+                description: Conditions represent the current state of the resource.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              gatewayID:
+                description: GatewayID is the Konnect ID of the parent Gateway.
+                properties:
+                  id:
+                    description: ID is the unique identifier of the Konnect entity
+                      as assigned by Konnect API.
+                    maxLength: 256
+                    type: string
+                type: object
+              id:
+                description: |-
+                  ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                  If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                format: int64
+                type: integer
+              organizationID:
+                description: OrgID is ID of Konnect Org that this entity has been
+                  created in.
+                maxLength: 256
+                type: string
+              serverURL:
+                description: ServerURL is the URL of the Konnect server in which the
+                  entity exists.
+                maxLength: 512
+                type: string
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - message: spec.aiGatewayRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - fieldPath: .spec.apiSpec.type
+          message: type is immutable
+          rule: '!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type)
+            || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type)
+            && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)'
+    served: true
+    storage: true
+    subresources:
+      status: {}

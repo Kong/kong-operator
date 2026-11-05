@@ -207,7 +207,7 @@ func NewMockSDKFactory(t *testing.T) *MockSDKFactory {
 	}
 }
 
-func (m MockSDKFactory) NewKonnectSDK(_ server.Server, _ sdkops.SDKToken) sdkops.SDKWrapper {
+func (m MockSDKFactory) NewKonnectSDK(_ server.Server, _ sdkops.SDKToken) (sdkops.SDKWrapper, error) {
 	require.NotNil(m.t, m.SDK)
-	return *m.SDK
+	return *m.SDK, nil
 }

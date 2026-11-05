@@ -1,0 +1,50 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+  namespace: ($namespace)
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ca
+  namespace: ($namespace)
+spec:
+  isCA: true
+  commonName: listener-test-ca
+  secretName: ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: ca
+  namespace: ($namespace)
+spec:
+  ca:
+    secretName: ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: serving
+  namespace: ($namespace)
+spec:
+  secretName: serving
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  dnsNames:
+    - ($hostname)
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: ca

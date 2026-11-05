@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
   name: watchnamespacegrants.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -53,11 +53,13 @@ spec:
                       description: Group is the group of the referent.
                       enum:
                       - gateway-operator.konghq.com
+                      - aigateway.konghq.com
                       type: string
                     kind:
                       description: Kind is the kind of the referent.
                       enum:
                       - ControlPlane
+                      - OnPremAIGateway
                       type: string
                     namespace:
                       description: Namespace is the namespace of the referent.

@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
   name: portalidentityproviderrequests.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -123,8 +123,8 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      portalSAML:
-                        description: PortalSAML configuration.
+                      sAML:
+                        description: SAML configuration.
                         properties:
                           idpMetadataURL:
                             description: |-
@@ -144,7 +144,7 @@ spec:
                         description: Type designates the type of configuration.
                         enum:
                         - oIDC
-                        - portalSAML
+                        - sAML
                         minLength: 1
                         type: string
                     required:

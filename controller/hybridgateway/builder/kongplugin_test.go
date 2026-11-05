@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -37,53 +38,37 @@ func TestKongPluginBuilder_WithNamespace(t *testing.T) {
 }
 
 func TestKongPluginBuilder_WithLabels(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "default",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	route := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongPlugin().WithLabels(route, parentRef)
 
 	plugin, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, plugin.Labels)
-	assert.NotEmpty(t, plugin.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), plugin.Labels)
 }
 
 func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "default",
-	}
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	route := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongPlugin().WithAnnotations(route, parentRef)
 
 	plugin, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, plugin.Annotations)
-	assert.NotEmpty(t, plugin.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), plugin.Annotations)
 
 	t.Run("route is nil", func(t *testing.T) {
-		parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+		parentRef := newParentRefMetadataFixture()
 		builder := NewKongPlugin().WithAnnotations(nil, parentRef)
 		require.NotEmpty(t, builder.errors)
 		assert.Contains(t, builder.errors[0].Error(), "route cannot be nil")
 	})
 
 	t.Run("parentRef is nil", func(t *testing.T) {
-		route := &gwtypes.HTTPRoute{
-			Name:      "test-route",
-			Namespace: "default",
-		}
+		route := newHTTPRouteMetadataFixture()
 		builder := NewKongPlugin().WithAnnotations(route, nil)
 		require.NotEmpty(t, builder.errors)
 		assert.Contains(t, builder.errors[0].Error(), "parentRef cannot be nil")
@@ -205,6 +190,36 @@ func TestKongPluginBuilder_WithTags(t *testing.T) {
 	})
 }
 
+func TestKongPluginBuilder_WithOrdering(t *testing.T) {
+	tests := []struct {
+		name     string
+		ordering *kong.PluginOrdering
+	}{
+		{
+			name: "sets ordering",
+			ordering: &kong.PluginOrdering{
+				Before: kong.PluginOrderingPhase{"access": {"key-auth"}},
+				After:  kong.PluginOrderingPhase{"access": {"rate-limiting"}},
+			},
+		},
+		{
+			name:     "nil ordering",
+			ordering: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin, err := NewKongPlugin().
+				WithName("test-plugin").
+				WithOrdering(tt.ordering).
+				Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.ordering, plugin.Ordering)
+		})
+	}
+}
+
 func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
 		Name:      "test-route",
@@ -216,6 +231,9 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	}
 
 	config := json.RawMessage(`{"limit": 100}`)
+	ordering := &kong.PluginOrdering{
+		Before: kong.PluginOrderingPhase{"access": {"key-auth"}},
+	}
 
 	plugin := NewKongPlugin().
 		WithName("test-plugin").
@@ -224,6 +242,7 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 		WithAnnotations(route, parentRef).
 		WithPluginName("rate-limiting").
 		WithPluginConfig(config).
+		WithOrdering(ordering).
 		MustBuild()
 
 	assert.Equal(t, "test-plugin", plugin.Name)
@@ -232,6 +251,7 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	assert.NotNil(t, plugin.Labels)
 	assert.NotNil(t, plugin.Annotations)
 	assert.JSONEq(t, string(config), string(plugin.Config.Raw))
+	assert.Equal(t, ordering, plugin.Ordering)
 }
 
 func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {

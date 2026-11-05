@@ -17,10 +17,10 @@ import (
 
 // ToAIGWAuthStrategy converts the AIGatewayAuthStrategy into ai-deck-converter's
 // aigw.AuthStrategy, resolving secretRefs in the config (e.g. the openid-connect
-// clientSecret). It carries no entity references, so unlike the model translation it needs
-// no name resolution.
+// clientSecret) and the datastore references of the key-auth and openid-connect
+// variants.
 func (obj *AIGatewayAuthStrategy) ToAIGWAuthStrategy(ctx context.Context, cl client.Client) (*aigw.AuthStrategy, error) {
-	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAuthStrategy %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
@@ -39,6 +39,10 @@ func (obj *AIGatewayAuthStrategy) ToAIGWAuthStrategy(ctx context.Context, cl cli
 	var strategy aigw.AuthStrategy
 	if err := yaml.Unmarshal(data, &strategy); err != nil {
 		return nil, fmt.Errorf("decoding AIGatewayAuthStrategy %s/%s as aigw.AuthStrategy: %w", obj.Namespace, obj.Name, err)
+	}
+
+	if err := resolveDatastoreRefs(ctx, cl, obj.Namespace, AIGatewayAuthStrategyRefsToAIGatewayDatastore(obj), &strategy.Datastores); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayAuthStrategy %s/%s datastores: %w", obj.Namespace, obj.Name, err)
 	}
 	return &strategy, nil
 }
@@ -66,6 +70,9 @@ func marshalAIGWAuthStrategyPayload(spec *AIGatewayAuthStrategyAPISpec) ([]byte,
 	}
 	// Konnect-only bookkeeping: no on-prem equivalent.
 	delete(variant, "managed_by")
+	// Carries {kind,name} CR references; aigw wants plain resolved names. Stripped here,
+	// re-attached resolved in ToAIGWAuthStrategy.
+	delete(variant, "datastores")
 	cfg := map[string]any{"type": typeDiscriminator}
 	maps.Copy(cfg, variant)
 	return json.Marshal(cfg)

@@ -25,6 +25,11 @@ import "time"
 // ControllerName is the name used for logging.
 const ControllerName = "onprem-eventgateway"
 
+// gwAdminControllerName is the name of the controller provisioning the
+// gw-admin pods of the GWAdmins no OnPremEventGateway may use (see
+// setupGWAdminsWithoutGateways).
+const gwAdminControllerName = ControllerName + "-gwadmin"
+
 // annotationCleanupStarted records on a deleted gateway when its cleanup
 // started: its grace period counts from then, across restarts of the
 // operator.
@@ -49,6 +54,12 @@ const maxConcurrentReconciles = 8
 // gwadminsync.Syncer.TryLock), and a gw-admin pod that doesn't answer delays
 // them, not the gateways of other GWAdmins.
 const lockRetryInterval = 5 * time.Second
+
+// terminatingPodTimeout bounds the requests to a terminating gw-admin pod,
+// told to stop trusting the data plane certificates the configuration no
+// longer holds: it serves no push, and one that doesn't answer would hold the
+// lock of its GWAdmin as long as a pod pushed to.
+const terminatingPodTimeout = 10 * time.Second
 
 // The retries of the pushes to the gw-admin pods still pending, e.g. starting
 // while their image is pulled: nothing tells once they listen, as a gw-admin
@@ -91,13 +102,18 @@ const (
 // OnPremEventGateway - Events
 // -----------------------------------------------------------------------------
 
-// The reasons and actions of the events of a gateway.
+// The reasons and actions of the events of a gateway, and of a GWAdmin.
 const (
 	eventActionPushConfiguration = "PushConfiguration"
 	eventActionDelete            = "Delete"
 	// eventReasonCleanupTimedOut is the reason of the event of a gateway
 	// deleted although some gw-admin pod may still serve it.
 	eventReasonCleanupTimedOut = "GWAdminCleanupTimedOut"
+	// eventActionProvision and eventReasonProvisionFailed are those of the
+	// event of a GWAdmin no OnPremEventGateway may use, whose gw-admin pods
+	// can't be told they serve no gateway.
+	eventActionProvision       = "Provision"
+	eventReasonProvisionFailed = "GWAdminProvisioningFailed"
 )
 
 // maxEventNoteLength bounds the notes of the events: the API server rejects

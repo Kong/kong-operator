@@ -19,6 +19,10 @@ spec:
     `config.allowedVersions` and `config.cache.{discover,toolsList}` fields,
     with the control plane created at minRuntimeVersion 2.1, since Konnect
     rejects those fields below that runtime version.
+
+    The passthrough-listener and conversion-listener variants also set the
+    runtime-2.3 `rateLimiting` field (method and tool limits), so the control
+    plane is created at minRuntimeVersion 2.3.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -58,7 +62,8 @@ spec:
     - name: Create-konnect-aigateway
       description: |
         The listener/conversion-listener config.allowedVersions and
-        config.cache fields set below need a 2.1 runtime.
+        config.cache fields need at least 2.1 runtime, and the
+        passthrough-listener/conversion-listener rateLimiting field needs 2.3.
       bindings:
         - name: auth_name
           value: ($konnect_auth_name)
@@ -67,7 +72,7 @@ spec:
         with:
           bindings:
             - name: min_runtime_version
-              value: "2.1"
+              value: "2.3"
             - name: runtime_auto_upgrade
               value: Enabled
     - name: Create-aigateway-mcpservers
@@ -135,7 +140,7 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
                 (id != null): true
-   
+
   catch:
     - description: Capture debug snapshot on test failure.
       script:

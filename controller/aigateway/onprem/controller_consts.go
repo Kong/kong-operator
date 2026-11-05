@@ -34,3 +34,9 @@ const (
 // requeueAfterBoot is the delay after which an OnPremAIGateway is requeued while its control plane
 // instance is booting.
 const requeueAfterBoot = time.Second
+
+// requeueAfterMissingGrant is the backstop delay after which an OnPremAIGateway
+// whose WatchNamespaceGrants are missing is requeued. The WatchNamespaceGrant
+// watch re-triggers the reconcile when a grant changes, so this only covers an
+// event the watch did not deliver.
+const requeueAfterMissingGrant = 30 * time.Second

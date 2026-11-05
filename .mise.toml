@@ -58,7 +58,7 @@ bin = "ktf"
 
 [tools."github:telepresenceio/telepresence"]
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-version = "2.32.2"
+version = "2.32.3"
 [tools."github:telepresenceio/telepresence".platforms]
 linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
 linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
@@ -70,7 +70,7 @@ version = "4.3.1"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "79b557aa8c8dc08e801a1d3e6109881e3551bf30"
+version = "d90122c89087043556fce3cba41c92bea0d8fd15"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
@@ -79,6 +79,10 @@ version = "v4.54.1"
 [tools."aqua:kyverno/chainsaw"]
 # renovate: datasource=git-refs packageName=https://github.com/kyverno/chainsaw.git
 version = "v0.2.15"
+
+[tools."github:anchore/syft"]
+# renovate: datasource=github-releases depName=anchore/syft
+version = "1.51.1"
 
 ################################################################################
 # Tasks

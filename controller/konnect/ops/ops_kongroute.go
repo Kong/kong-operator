@@ -43,7 +43,10 @@ func createRoute(
 		return nil
 	}
 
-	resp, err := sdk.CreateRoute(ctx, cpID, kongRouteToSDKRouteInput(route))
+	resp, err := sdk.CreateRoute(ctx, sdkkonnectops.CreateRouteRequest{
+		ControlPlaneID: cpID,
+		Route:          kongRouteToSDKRouteInput(route),
+	})
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, route); errWrap != nil {
 		return errWrap
@@ -95,7 +98,10 @@ func deleteRoute(
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	id := route.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.DeleteRoute(ctx, route.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteRoute(ctx, sdkkonnectops.DeleteRouteRequest{
+		ControlPlaneID: route.Status.Konnect.ControlPlaneID,
+		RouteID:        id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrap != nil {
 		return handleDeleteError(ctx, err, route)
 	}
@@ -119,7 +125,10 @@ func adoptRoute(
 	adoptOptions := route.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetRoute(ctx, konnectID, cpID)
+	resp, err := sdk.GetRoute(ctx, sdkkonnectops.GetRouteRequest{
+		RouteID:        konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

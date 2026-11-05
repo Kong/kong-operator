@@ -87,6 +87,27 @@ func Test_resolveCertificateSecret(t *testing.T) {
 			assert.True(t, called)
 		})
 	}
+
+	for name, cs := range map[string]*eventgatewayv1alpha1.CertificateSecret{
+		"Automatic": {Provisioning: new(eventgatewayv1alpha1.AutomaticCertificateProvisioning)},
+		"Manual": {
+			Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+			SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: manualCertSecretName},
+		},
+	} {
+		t.Run(name+" with an onpremNamespacedRef: refused before provisioning", func(t *testing.T) {
+			egdp := newOnPremEGDP()
+			egdp.Spec.CertificateSecret = cs
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(egdp, manualCertSecret(true)).Build()
+
+			res, got, err := resolveCertificateSecret(t.Context(), cl, egdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "an onpremNamespacedRef is not supported by the controller yet")
+			assert.Equal(t, op.Noop, res)
+			assert.Nil(t, got)
+			assert.Empty(t, egdp.Status.Conditions)
+		})
+	}
 }
 
 func Test_cleanupStaleCertificates(t *testing.T) {

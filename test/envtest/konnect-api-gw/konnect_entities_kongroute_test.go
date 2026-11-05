@@ -77,8 +77,11 @@ func TestKongRoute(t *testing.T) {
 		sdk.RoutesSDK.EXPECT().
 			CreateRoute(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Route) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateRouteRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Route
 					return slices.Equal(req.RouteJSON.Paths, []string{"/path"})
 				}),
 			).
@@ -147,8 +150,7 @@ func TestKongRoute(t *testing.T) {
 		sdk.RoutesSDK.EXPECT().
 			DeleteRoute(
 				mock.Anything,
-				cp.GetKonnectID(),
-				routeID,
+				sdkkonnectops.DeleteRouteRequest{ControlPlaneID: cp.GetKonnectID(), RouteID: routeID},
 			).
 			Return(&sdkkonnectops.DeleteRouteResponse{}, nil)
 
@@ -167,8 +169,7 @@ func TestKongRoute(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
 			mock.Anything,
-			routeID,
-			cp.GetKonnectID(),
+			sdkkonnectops.GetRouteRequest{ControlPlaneID: cp.GetKonnectID(), RouteID: routeID},
 		).Return(&sdkkonnectops.GetRouteResponse{
 			Route: &sdkkonnectcomp.Route{
 				Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
@@ -205,7 +206,7 @@ func TestKongRoute(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expectations for route deletion")
-		sdk.RoutesSDK.EXPECT().DeleteRoute(mock.Anything, cp.GetKonnectID(), routeID).Return(nil, nil)
+		sdk.RoutesSDK.EXPECT().DeleteRoute(mock.Anything, sdkkonnectops.DeleteRouteRequest{ControlPlaneID: cp.GetKonnectID(), RouteID: routeID}).Return(nil, nil)
 
 		t.Logf("Deleting KongRoute %s/%s", ns.Name, createdRoute.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, createdRoute))
@@ -222,8 +223,7 @@ func TestKongRoute(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
 			mock.Anything,
-			routeID,
-			cp.GetKonnectID(),
+			sdkkonnectops.GetRouteRequest{ControlPlaneID: cp.GetKonnectID(), RouteID: routeID},
 		).Return(&sdkkonnectops.GetRouteResponse{
 			Route: &sdkkonnectcomp.Route{
 				Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
@@ -266,8 +266,7 @@ func TestKongRoute(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
 			mock.Anything,
-			routeID,
-			cp.GetKonnectID(),
+			sdkkonnectops.GetRouteRequest{ControlPlaneID: cp.GetKonnectID(), RouteID: routeID},
 		).Return(&sdkkonnectops.GetRouteResponse{
 			Route: &sdkkonnectcomp.Route{
 				Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
@@ -347,8 +346,11 @@ func TestKongRoute(t *testing.T) {
 		sdk.RoutesSDK.EXPECT().
 			CreateRoute(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Route) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateRouteRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Route
 					return slices.Equal(req.RouteJSON.Paths, paths)
 				}),
 			).
@@ -459,8 +461,11 @@ func TestKongRoute(t *testing.T) {
 		sdk.RoutesSDK.EXPECT().
 			CreateRoute(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Route) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateRouteRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Route
 					return slices.Equal(req.RouteJSON.Paths, paths)
 				}),
 			).

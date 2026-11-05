@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -168,8 +170,15 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			// KongService with a clientCertificateRef depends on the referenced KongCertificate being Programmed.
 			certName, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "name")
 			if certName != "" {
+				certNamespace, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "namespace")
+				if certNamespace == "" {
+					certNamespace = desired.GetNamespace()
+				}
 				var cert configurationv1alpha1.KongCertificate
-				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: certName}, &cert); err != nil {
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: certNamespace, Name: certName}, &cert); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return false, false, fmt.Errorf("failed to get KongService client certificate %s/%s: %w", certNamespace, certName, err)
+					}
 					log.Debug(logger, "Certificate not found yet for service, waiting", "certificate", certName)
 					objectsSkipped++
 					stopAtKind = "KongCertificate"
@@ -303,6 +312,30 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			continue
 		}
 
+		// A programmed SNI's certificateRef is immutable. Recreate our binding when
+		// switching a Listener between certificates, including Secret-backed ones.
+		if err == nil && desired.GetKind() == "KongSNI" {
+			owner := metav1.GetControllerOf(&desired)
+			if owner != nil && owner.Kind == "Gateway" && k8sutils.IsOwnedByRefUID(existing, owner.UID) {
+				currentRef, _, err := unstructured.NestedMap(existing.Object, "spec", "certificateRef")
+				if err != nil {
+					return false, false, fmt.Errorf("failed to read existing KongSNI certificateRef: %w", err)
+				}
+				desiredRef, _, err := unstructured.NestedMap(desired.Object, "spec", "certificateRef")
+				if err != nil {
+					return false, false, fmt.Errorf("failed to read desired KongSNI certificateRef: %w", err)
+				}
+				if !apiequality.Semantic.DeepEqual(currentRef, desiredRef) {
+					if err := cl.Delete(ctx, existing, client.Preconditions{UID: new(existing.GetUID())}); err != nil && !apierrors.IsNotFound(err) {
+						return false, false, fmt.Errorf("failed to replace Listener KongSNI: %w", err)
+					}
+					objectsSkipped++
+					stopAtKind = desired.GetKind()
+					continue
+				}
+			}
+		}
+
 		// Diff-before-apply against the shared SSA TypeConverter: this fetches the current object
 		// (again; cheap, served from the client's cache) and issues a Server-Side Apply only when
 		// the object doesn't exist yet or a real difference is detected in the fields we own.
@@ -344,6 +377,59 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
 	_, ok := desiredUpstreamNames[name]
 	return ok
+}
+
+// desiredClientCertificateBindingsReady reports whether each desired KongService is programmed
+// for its current generation with the expected client certificate ID.
+func desiredClientCertificateBindingsReady[t converter.RootObject](
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	conv converter.APIConverter[t],
+) (bool, error) {
+	desired, err := conv.GetOutputStore(ctx, logger)
+	if err != nil {
+		return false, err
+	}
+	for _, obj := range desired {
+		if obj.GetKind() != "KongService" {
+			continue
+		}
+		var service configurationv1alpha1.KongService
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(&obj), &service); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, err
+		}
+		certName, _, _ := unstructured.NestedString(obj.Object, "spec", "clientCertificateRef", "name")
+		condition, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &service)
+		if !ok || condition.Status != metav1.ConditionTrue || condition.ObservedGeneration != service.Generation || service.Status.Konnect == nil {
+			return false, nil
+		}
+		expectedID := ""
+		if certName != "" {
+			certNamespace, _, _ := unstructured.NestedString(obj.Object, "spec", "clientCertificateRef", "namespace")
+			if certNamespace == "" {
+				certNamespace = obj.GetNamespace()
+			}
+			var cert configurationv1alpha1.KongCertificate
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: certNamespace, Name: certName}, &cert); err != nil {
+				if apierrors.IsNotFound(err) {
+					return false, nil
+				}
+				return false, err
+			}
+			expectedID = cert.GetKonnectID()
+			if expectedID == "" {
+				return false, nil
+			}
+		}
+		if service.Status.Konnect.CertificateID != expectedID {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // upstreamTargetsProgrammed reports whether every KongTarget in the pre-filtered targets slice is present

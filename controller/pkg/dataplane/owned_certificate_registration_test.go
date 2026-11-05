@@ -75,7 +75,7 @@ func newTestCertSecret() *corev1.Secret {
 	}
 }
 
-func TestEnsureKonnectCertificate(t *testing.T) {
+func TestEnsureCertificateRegistration(t *testing.T) {
 	certName := CertEntityName(newTestAIGWDP().Name, CertificateChecksum(newTestCertSecret()))
 
 	tests := []struct {
@@ -128,7 +128,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 					APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 					Kind:       "AIGatewayDataPlaneCertificate",
-					Name:       certName, Namespace: "default",
+					Name:       certName, Namespace: "default", Generation: 2,
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-aigwcp"},
@@ -147,6 +147,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
 								Status:             metav1.ConditionTrue,
 								Reason:             "Programmed",
+								ObservedGeneration: 2,
 								LastTransitionTime: metav1.NewTime(time.Now()),
 							},
 						},
@@ -156,6 +157,42 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			wantProgrammed: true,
 			wantCondStatus: metav1.ConditionTrue,
 			wantCondReason: string(aigatewayv1alpha1.KonnectCertificateRegisteredReason),
+		},
+		{
+			name: "cert programmed at an earlier generation only: returns not-programmed condition",
+			extraObjs: []client.Object{
+				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+					APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+					Kind:       "AIGatewayDataPlaneCertificate",
+					Name:       certName, Namespace: "default", Generation: 2,
+					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
+						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-aigwcp"},
+						},
+						APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
+							Cert: aiconfigurationv1alpha1.SensitiveDataSource{
+								Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
+							},
+							Title: "test-dp",
+						},
+					},
+					Status: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+								Status:             metav1.ConditionTrue,
+								Reason:             "Programmed",
+								ObservedGeneration: 1,
+								LastTransitionTime: metav1.NewTime(time.Now()),
+							},
+						},
+					},
+				},
+			},
+			wantProgrammed: false,
+			wantCondStatus: metav1.ConditionFalse,
+			wantCondReason: string(aigatewayv1alpha1.KonnectCertificateNotProgrammedReason),
 		},
 		{
 			name: "sets failed condition and returns error on client error",
@@ -258,11 +295,11 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			}
 
 			if tc.preCall {
-				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, CertificateChecksum(certSecret))
+				_, err := r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, CertificateChecksum(certSecret))
 				require.NoError(t, err)
 			}
 
-			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, CertificateChecksum(certSecret))
+			programmed, err := r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, CertificateChecksum(certSecret))
 
 			if tc.wantErrContains != "" {
 				require.Error(t, err)
@@ -286,7 +323,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 	}
 }
 
-func TestEnsureKonnectCertificateAdaptToExisting(t *testing.T) {
+func TestEnsureCertificateRegistrationAdaptToExisting(t *testing.T) {
 	certName := CertEntityName(newTestAIGWDP().Name, CertificateChecksum(newTestCertSecret()))
 	const adaptedLabel = "adapted-from-existing"
 
@@ -321,7 +358,7 @@ func TestEnsureKonnectCertificateAdaptToExisting(t *testing.T) {
 		aigwdp, certSecret := newTestAIGWDP(), newTestCertSecret()
 		cl := newClient([]client.Object{aigwdp}, interceptor.Funcs{})
 		var calls int
-		_, err := newReconciler(cl, &calls).ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		_, err := newReconciler(cl, &calls).ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
 		require.NoError(t, err)
 		assert.Zero(t, calls)
 		assert.NotContains(t, getCert(t, cl).Labels, adaptedLabel)
@@ -333,9 +370,9 @@ func TestEnsureKonnectCertificateAdaptToExisting(t *testing.T) {
 		var calls int
 		r := newReconciler(cl, &calls)
 		// The first call creates the certificate, the second one finds it.
-		_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		_, err := r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
 		require.NoError(t, err)
-		_, err = r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		_, err = r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
 		require.NoError(t, err)
 		assert.Equal(t, 1, calls)
 		assert.Equal(t, certName, getCert(t, cl).Labels[adaptedLabel])
@@ -357,9 +394,171 @@ func TestEnsureKonnectCertificateAdaptToExisting(t *testing.T) {
 			},
 		})
 		var calls int
-		_, err := newReconciler(cl, &calls).ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		_, err := newReconciler(cl, &calls).ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
 		require.ErrorContains(t, err, "failed to get AIGatewayDataPlaneCertificate")
 		assert.Zero(t, calls)
 		assert.False(t, applied)
+	})
+}
+
+// testCertificateRegistration is the CertificateRegistration of a non-Konnect
+// control plane kind, as the OnPremEventGateway kind sets it.
+var testCertificateRegistration = &CertificateRegistrationConditions{
+	Type:                      "CertificateRegistered",
+	RegisteredReason:          "Registered",
+	RegistrationFailedReason:  "RegistrationFailed",
+	NotProgrammedReason:       "NotProgrammed",
+	Target:                    "the control plane",
+	NotProgrammedHint:         " by its controller",
+	ReportProgrammedCondition: true,
+	CreatedEventReason:        "OnPremCertificateCreated",
+	CreatedEventAction:        "CreateOnPremCertificate",
+	UpdatedEventReason:        "OnPremCertificateUpdated",
+	UpdatedEventAction:        "UpdateOnPremCertificate",
+}
+
+func TestEnsureCertificateRegistrationEvents(t *testing.T) {
+	for _, tc := range []struct {
+		name                     string
+		registration             *CertificateRegistrationConditions
+		wantCreated, wantUpdated string
+	}{
+		{
+			name:        "Konnect",
+			wantCreated: "Normal KonnectCertificateCreated AIGatewayDataPlaneCertificate",
+			wantUpdated: "Normal KonnectCertificateUpdated AIGatewayDataPlaneCertificate",
+		},
+		{
+			name:         "a kind with its own certificate registration",
+			registration: testCertificateRegistration,
+			wantCreated:  "Normal OnPremCertificateCreated AIGatewayDataPlaneCertificate",
+			wantUpdated:  "Normal OnPremCertificateUpdated AIGatewayDataPlaneCertificate",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			aigwdp, certSecret := newTestAIGWDP(), newTestCertSecret()
+			cl := fake.NewClientBuilder().
+				WithScheme(managerscheme.Get()).
+				WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}).
+				WithObjects(aigwdp).
+				Build()
+			recorder := events.NewFakeRecorder(10)
+			r := &testReconciler{
+				Config:        testConfig,
+				Client:        cl,
+				TypeConverter: managedfields.NewDeducedTypeConverter(),
+				EventRecorder: recorder,
+			}
+			cp := resolvedTestCP(newTestAIGWCP())
+			cp.CertificateRegistration = tc.registration
+			checksum := CertificateChecksum(certSecret)
+
+			_, err := r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, cp, certSecret, checksum)
+			require.NoError(t, err)
+			require.Len(t, recorder.Events, 1)
+			assert.Contains(t, <-recorder.Events, tc.wantCreated)
+
+			// Another Secret holding the same certificate updates it.
+			certSecret.Name = "another-cert-secret"
+			_, err = r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, cp, certSecret, checksum)
+			require.NoError(t, err)
+			require.Len(t, recorder.Events, 1)
+			assert.Contains(t, <-recorder.Events, tc.wantUpdated)
+		})
+	}
+}
+
+func TestNotProgrammedMessage(t *testing.T) {
+	r := &testReconciler{Config: testConfig}
+	konnect := r.certificateRegistrationConditions(ResolvedControlPlane{})
+	const generation = 3
+	programmed := func(status metav1.ConditionStatus, observedGeneration int64, reason, message string) *metav1.Condition {
+		return &metav1.Condition{
+			Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: status,
+			ObservedGeneration: observedGeneration, Reason: reason, Message: message,
+		}
+	}
+	for _, tc := range []struct {
+		name  string
+		conds CertificateRegistrationConditions
+		cond  *metav1.Condition
+		want  string
+	}{
+		{
+			name:  "Konnect, without a Programmed condition",
+			conds: konnect,
+			want:  "AIGatewayDataPlaneCertificate is not yet programmed on Konnect",
+		},
+		{
+			name:  "Konnect, with a Programmed condition",
+			conds: konnect,
+			cond:  programmed(metav1.ConditionFalse, generation, "FailedToCreate", "Konnect refused it"),
+			want:  "AIGatewayDataPlaneCertificate is not yet programmed on Konnect",
+		},
+		{
+			name:  "without a Programmed condition, the hint tells what programs it",
+			conds: *testCertificateRegistration,
+			want:  "AIGatewayDataPlaneCertificate is not yet programmed on the control plane by its controller",
+		},
+		{
+			name:  "the Programmed condition is passed through",
+			conds: *testCertificateRegistration,
+			cond:  programmed(metav1.ConditionFalse, generation, "LeftOut", "the gateway left it out"),
+			want:  "AIGatewayDataPlaneCertificate is not yet programmed on the control plane: LeftOut: the gateway left it out",
+		},
+		{
+			name:  "the Programmed condition without a message is passed through",
+			conds: *testCertificateRegistration,
+			cond:  programmed(metav1.ConditionFalse, generation, "Pending", ""),
+			want:  "AIGatewayDataPlaneCertificate is not yet programmed on the control plane: Pending",
+		},
+		{
+			name:  "a Programmed condition of an earlier generation is not",
+			conds: *testCertificateRegistration,
+			cond:  programmed(metav1.ConditionTrue, generation-1, "Programmed", ""),
+			want:  "AIGatewayDataPlaneCertificate is not yet programmed on the control plane",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, r.notProgrammedMessage(tc.conds, tc.cond, generation))
+		})
+	}
+
+	t.Run("the registration condition carries the Programmed condition of the certificate", func(t *testing.T) {
+		aigwdp, certSecret := newTestAIGWDP(), newTestCertSecret()
+		cl := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}).
+			WithObjects(aigwdp).
+			Build()
+		r := &testReconciler{
+			Config:        testConfig,
+			Client:        cl,
+			TypeConverter: managedfields.NewDeducedTypeConverter(),
+			EventRecorder: events.NewFakeRecorder(10),
+		}
+		cp := resolvedTestCP(newTestAIGWCP())
+		cp.CertificateRegistration = testCertificateRegistration
+		checksum := CertificateChecksum(certSecret)
+		_, err := r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, cp, certSecret, checksum)
+		require.NoError(t, err)
+
+		var cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate
+		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Namespace: aigwdp.Namespace, Name: CertEntityName(aigwdp.Name, checksum)}, &cert))
+		cert.Status.Conditions = []metav1.Condition{{
+			Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionFalse,
+			ObservedGeneration: cert.Generation, Reason: "LeftOut", Message: "the gateway left it out",
+			LastTransitionTime: metav1.Now(),
+		}}
+		require.NoError(t, cl.Status().Update(t.Context(), &cert))
+
+		programmed, err := r.ensureCertificateRegistration(t.Context(), logr.Discard(), aigwdp, cp, certSecret, checksum)
+		require.NoError(t, err)
+		require.False(t, programmed)
+		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, testCertificateRegistration.Type)
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, testCertificateRegistration.NotProgrammedReason, cond.Reason)
+		assert.Equal(t, "AIGatewayDataPlaneCertificate is not yet programmed on the control plane: LeftOut: the gateway left it out", cond.Message)
 	})
 }

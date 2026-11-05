@@ -55,7 +55,9 @@ jobs:
       github.event.pull_request.draft == true &&
       github.event.pull_request.user.type == 'Bot' &&
       github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: ubuntu-latest
+    # Pin the ubuntu version to 24.04 as KSAI pre v5 doesn't support v26 yet.
+    # Re: https://kongstrong.slack.com/archives/C0C2BNY0GTH/p1793627804750449
+    runs-on: ubuntu-24.04
     permissions: {}
     outputs:
       writes: ${{ steps.writes.outputs.writes }}
@@ -94,7 +96,9 @@ jobs:
       actions: write
     with:
       trigger_phrase: ${{ vars.KSAI_TRIGGER_PHRASE }}
-      runs_on: ubuntu-latest
+      # Pin the ubuntu version to 24.04 as KSAI pre v5 doesn't support v26 yet.
+      # Re: https://kongstrong.slack.com/archives/C0C2BNY0GTH/p1793627804750449
+      runs_on: ubuntu-24.04
       federation_rule_id: fdrl_01S796tfBkuJ9jFRwSeNbZxw
       organization_id: 4ce7a6d3-9549-4842-bd51-1def5eba611b
       service_account_id: svac_01RRiHX67AjG5bKDHhFHbwkF
@@ -111,7 +115,7 @@ jobs:
       attempt: ${{ inputs.attempt }}
       stall: ${{ inputs.stall }}
       prev_remaining: ${{ inputs.prev_remaining }}
-      allowed_models: zai-org/GLM-5.3-Flash,claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,deepseek-ai/DeepSeek-V4.1-Flash
+      allowed_models: zai-org/GLM-5.3-Flash,claude-opus-5-5,claude-sonnet-5-5,claude-haiku-5-5,deepseek-ai/DeepSeek-V4.1-Flash,deepseek-ai/DeepSeek-V4.1-Flash-1017
       client_id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
       anthropic_base_url: ${{ vars.KSAI_ANTHROPIC_BASE_URL }}
     secrets:

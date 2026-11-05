@@ -603,6 +603,9 @@ func (r *HTTPRouteReconciler) setRouteConditionResolvedRefsCondition(
 		Message:            msg,
 	}
 	for _, parentStatus := range parentStatuses {
+		if isForeignParentStatus(parentStatus) {
+			continue
+		}
 		var conditionFound bool
 		for i, cond := range parentStatus.Conditions {
 			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {

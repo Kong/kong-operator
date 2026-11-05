@@ -163,13 +163,17 @@ type EventGatewayBackendClusterAuthentication struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anonymous;saslPlain;saslScram
+	// +kubebuilder:validation:Enum=anonymous;saslAwsIam;saslPlain;saslScram
 	Type EventGatewayBackendClusterAuthenticationType `json:"type,omitempty"`
 
 	// Anonymous configuration.
 	//
 	// +optional
 	Anonymous *BackendClusterAuthenticationAnonymous `json:"anonymous,omitempty"`
+	// SaslAwsIam configuration.
+	//
+	// +optional
+	SaslAwsIam *BackendClusterAuthenticationSaslAwsIam `json:"saslAwsIam,omitempty"`
 	// SaslPlain configuration.
 	//
 	// +optional
@@ -185,19 +189,15 @@ type EventGatewayBackendClusterAuthenticationType string
 
 // EventGatewayBackendClusterAuthenticationType values.
 const (
-	EventGatewayBackendClusterAuthenticationTypeAnonymous EventGatewayBackendClusterAuthenticationType = "anonymous"
-	EventGatewayBackendClusterAuthenticationTypeSaslPlain EventGatewayBackendClusterAuthenticationType = "saslPlain"
-	EventGatewayBackendClusterAuthenticationTypeSaslScram EventGatewayBackendClusterAuthenticationType = "saslScram"
+	EventGatewayBackendClusterAuthenticationTypeAnonymous  EventGatewayBackendClusterAuthenticationType = "anonymous"
+	EventGatewayBackendClusterAuthenticationTypeSaslAwsIam EventGatewayBackendClusterAuthenticationType = "saslAwsIam"
+	EventGatewayBackendClusterAuthenticationTypeSaslPlain  EventGatewayBackendClusterAuthenticationType = "saslPlain"
+	EventGatewayBackendClusterAuthenticationTypeSaslScram  EventGatewayBackendClusterAuthenticationType = "saslScram"
 )
 
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayBackendClusterAuthenticationTypeAnonymous:
 		if u.Anonymous != nil {
@@ -206,6 +206,14 @@ func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) 
 				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication anonymous: %w", err)
 			}
 			m["anonymous"] = raw
+		}
+	case EventGatewayBackendClusterAuthenticationTypeSaslAwsIam:
+		if u.SaslAwsIam != nil {
+			raw, err := json.Marshal(u.SaslAwsIam)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication sasl_aws_iam: %w", err)
+			}
+			m["saslAwsIam"] = raw
 		}
 	case EventGatewayBackendClusterAuthenticationTypeSaslPlain:
 		if u.SaslPlain != nil {
@@ -223,6 +231,13 @@ func (u EventGatewayBackendClusterAuthentication) MarshalJSON() ([]byte, error) 
 			}
 			m["saslScram"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayBackendClusterAuthentication type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -254,6 +269,16 @@ func (u *EventGatewayBackendClusterAuthentication) UnmarshalJSON(data []byte) er
 			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication anonymous: %w", err)
 		}
 		u.Anonymous = &val
+	case "saslAwsIam":
+		payload, ok := raw["saslAwsIam"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationSaslAwsIam
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayBackendClusterAuthentication sasl_aws_iam: %w", err)
+		}
+		u.SaslAwsIam = &val
 	case "saslPlain":
 		payload, ok := raw["saslPlain"]
 		if !ok || len(payload) == 0 {
@@ -289,7 +314,7 @@ func (s *EventGatewayBackendClusterAPISpec) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayBackendClusterAPISpec: %w", err)
 	}
-	if aux.Authentication != nil && aux.Authentication.Type == "" && aux.Authentication.Anonymous == nil && aux.Authentication.SaslPlain == nil && aux.Authentication.SaslScram == nil {
+	if aux.Authentication != nil && aux.Authentication.Type == "" && aux.Authentication.Anonymous == nil && aux.Authentication.SaslAwsIam == nil && aux.Authentication.SaslPlain == nil && aux.Authentication.SaslScram == nil {
 		aux.Authentication = nil
 	}
 	*s = EventGatewayBackendClusterAPISpec(aux)

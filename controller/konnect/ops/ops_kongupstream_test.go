@@ -47,7 +47,7 @@ func TestCreateKongUpstream(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateUpstream(ctx, "123456789", kongUpstreamToSDKUpstreamInput(svc)).
+					CreateUpstream(ctx, sdkkonnectops.CreateUpstreamRequest{ControlPlaneID: "123456789", Upstream: kongUpstreamToSDKUpstreamInput(svc)}).
 					Return(
 						&sdkkonnectops.CreateUpstreamResponse{
 							Upstream: &sdkkonnectcomp.Upstream{
@@ -107,7 +107,7 @@ func TestCreateKongUpstream(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateUpstream(ctx, "123456789", kongUpstreamToSDKUpstreamInput(svc)).
+					CreateUpstream(ctx, sdkkonnectops.CreateUpstreamRequest{ControlPlaneID: "123456789", Upstream: kongUpstreamToSDKUpstreamInput(svc)}).
 					Return(
 						nil,
 						&sdkkonnecterrs.BadRequestError{
@@ -170,7 +170,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteUpstream(ctx, "12345", "123456789").
+					DeleteUpstream(ctx, sdkkonnectops.DeleteUpstreamRequest{ControlPlaneID: "12345", UpstreamID: "123456789"}).
 					Return(
 						&sdkkonnectops.DeleteUpstreamResponse{
 							StatusCode: 200,
@@ -200,7 +200,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteUpstream(ctx, "12345", "123456789").
+					DeleteUpstream(ctx, sdkkonnectops.DeleteUpstreamRequest{ControlPlaneID: "12345", UpstreamID: "123456789"}).
 					Return(
 						nil,
 						&sdkkonnecterrs.BadRequestError{
@@ -232,7 +232,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteUpstream(ctx, "12345", "123456789").
+					DeleteUpstream(ctx, sdkkonnectops.DeleteUpstreamRequest{ControlPlaneID: "12345", UpstreamID: "123456789"}).
 					Return(
 						nil,
 						&sdkkonnecterrs.SDKError{

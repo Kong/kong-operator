@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
   name: konnectapiauthconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -82,6 +82,10 @@ spec:
                 description: |-
                   ServerURL is the URL of the Konnect server.
                   It can be either a full URL with an HTTPs scheme or just a hostname.
+                  The host must belong to one of the domains the operator is allowed to call
+                  (--konnect-server-url-domains, konghq.com and konghq.tech by default): a
+                  value outside the list is reported with an APIAuthValid=False condition
+                  and the operator sends no request to it.
                   Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames.
                 type: string
                 x-kubernetes-validations:

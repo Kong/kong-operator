@@ -454,8 +454,8 @@ type fakeConfigStoreSecretsSDKFactory struct {
 }
 
 // NewKonnectSDK returns the wrapper holding the fake, ignoring credentials.
-func (f fakeConfigStoreSecretsSDKFactory) NewKonnectSDK(server.Server, sdk.SDKToken) sdk.SDKWrapper {
-	return f.wrapper
+func (f fakeConfigStoreSecretsSDKFactory) NewKonnectSDK(server.Server, sdk.SDKToken) (sdk.SDKWrapper, error) {
+	return f.wrapper, nil
 }
 
 // NewFakeConfigStoreSecretsSDKFactory returns an sdk.SDKFactory whose

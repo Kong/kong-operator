@@ -1,0 +1,84 @@
+# A configuration entity whose aiGatewayRef points at an OnPremAIGateway of another
+# namespace needs two grants, one on each side of the boundary:
+#
+#   - the entity's namespace lets the gateway watch it: a WatchNamespaceGrant, and the
+#     namespace listed in the gateway's spec.watchNamespaces;
+#   - the gateway's namespace lets entities of that namespace reference the gateway: a
+#     KongReferenceGrant from the entity kind to the OnPremAIGateway.
+#
+# Without the KongReferenceGrant the gateway reports the entity as Programmed=False and
+# leaves it out of the configuration it pushes to its data planes.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-gateway-consumers
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-refgrant
+  namespace: default
+spec:
+  watchNamespaces:
+    type: list
+    list:
+      - ai-gateway-consumers
+---
+# The ai-gateway-consumers namespace owners allow the gateway of the default namespace
+# to watch it.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: WatchNamespaceGrant
+metadata:
+  name: ai-gw-cp-onprem-refgrant
+  namespace: ai-gateway-consumers
+spec:
+  from:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway
+      namespace: default
+---
+# The default namespace owners allow AIGatewayConsumers of the ai-gateway-consumers
+# namespace to reference this OnPremAIGateway. Omit "name" to allow every
+# OnPremAIGateway of the namespace.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-consumer-to-onprem-aigateway-refgrant
+  namespace: default
+spec:
+  from:
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayConsumer
+      namespace: ai-gateway-consumers
+  to:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway
+      name: ai-gw-cp-onprem-refgrant
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ai-gw-consumer-refgrant
+  namespace: ai-gateway-consumers
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-refgrant
+      namespace: default
+  apiSpec:
+    name: refgrant-consumer
+    displayName: Cross Namespace Consumer
+    type: api-key
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-refgrant
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-refgrant

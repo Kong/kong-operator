@@ -1,0 +1,18 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: konnect-backend-cluster
+spec:
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: konnect
+  apiSpec:
+    name: konnect-backend-cluster
+    bootstrapServers:
+      - kafka:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    tls:
+      enabled: Disabled

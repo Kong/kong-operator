@@ -1484,6 +1484,179 @@ func resolveAIGatewayModelModelAccessAuthStrategies(ctx context.Context, cl clie
 	return resolved, nil
 }
 
+// RefsAtAIGatewayModelAPIDatastores returns the references at spec.apiSpec.api.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayModelAPIDatastores(obj *AIGatewayModel) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayModelConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.API == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayModelConfig.API.Datastores
+}
+
+// resolveAIGatewayModelAPIDatastores resolves the CR references in spec.apiSpec.api.datastores
+// to Konnect names.
+func resolveAIGatewayModelAPIDatastores(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
+	refs := RefsAtAIGatewayModelAPIDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayModelModelDatastores returns the references at spec.apiSpec.model.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayModelModelDatastores(obj *AIGatewayModel) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayModelConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayModelConfig.Model.Datastores
+}
+
+// resolveAIGatewayModelModelDatastores resolves the CR references in spec.apiSpec.model.datastores
+// to Konnect names.
+func resolveAIGatewayModelModelDatastores(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
+	refs := RefsAtAIGatewayModelModelDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// AIGatewayModelRefsToAIGatewayDatastore returns the keys of the AIGatewayDatastore
+// objects obj references through spec.apiSpec.api.datastores, spec.apiSpec.model.datastores, with the default namespace applied.
+func AIGatewayModelRefsToAIGatewayDatastore(obj *AIGatewayModel) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtAIGatewayModelAPIDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtAIGatewayModelModelDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *AIGatewayModel) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
@@ -1516,6 +1689,12 @@ func (obj *AIGatewayModel) ResolveKonnectReferences(ctx context.Context, cl clie
 		errs = append(errs, err)
 	}
 	if _, err := resolveAIGatewayModelModelAccessAuthStrategies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayModelAPIDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayModelModelDatastores(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -1633,13 +1812,13 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 			access = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedAPIAccessAclsAllowAllow, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.allow.allow references: %w", err)
 			}
 			access["acls"] = map[string]any{"allow": resolvedAPIAccessAclsAllowAllow}
-		case acls.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedAPIAccessAclsDenyDeny, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.deny.deny references: %w", err)
@@ -1664,13 +1843,13 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 			access2 = map[string]any{}
 		}
 		switch {
-		case acls2.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls2.Allow != nil:
 			resolvedModelAccessAclsAllowAllow, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.allow.allow references: %w", err)
 			}
 			access2["acls"] = map[string]any{"allow": resolvedModelAccessAclsAllowAllow}
-		case acls2.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls2.Deny != nil:
 			resolvedModelAccessAclsDenyDeny, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.deny.deny references: %w", err)
@@ -1815,6 +1994,48 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 		access2["auth_strategies"] = resolvedModelAccessAuthStrategies
 		model3["access"] = access2
 		payload["model"] = model3
+	}
+	// spec.apiSpec.api.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.API != nil {
+		api4, _ := payload["api"].(map[string]any)
+		if api4 == nil {
+			api4 = map[string]any{}
+		}
+		resolvedAPIDatastores, err := resolveAIGatewayModelAPIDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.api.datastores references: %w", err)
+		}
+		wrappedAPIDatastores := make([]map[string]string, 0, len(resolvedAPIDatastores))
+		for _, v := range resolvedAPIDatastores {
+			wrappedAPIDatastores = append(wrappedAPIDatastores, map[string]string{"name": v})
+		}
+		api4["datastores"] = wrappedAPIDatastores
+		payload["api"] = api4
+	}
+	// spec.apiSpec.model.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.Model != nil {
+		model4, _ := payload["model"].(map[string]any)
+		if model4 == nil {
+			model4 = map[string]any{}
+		}
+		resolvedModelDatastores, err := resolveAIGatewayModelModelDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.model.datastores references: %w", err)
+		}
+		wrappedModelDatastores := make([]map[string]string, 0, len(resolvedModelDatastores))
+		for _, v := range resolvedModelDatastores {
+			wrappedModelDatastores = append(wrappedModelDatastores, map[string]string{"name": v})
+		}
+		model4["datastores"] = wrappedModelDatastores
+		payload["model"] = model4
 	}
 	return spec.toCreateAIGatewayModelRequestFromPayload(payload)
 }
@@ -1842,13 +2063,13 @@ func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl
 			access = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedAPIAccessAclsAllowAllow, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.allow.allow references: %w", err)
 			}
 			access["acls"] = map[string]any{"allow": resolvedAPIAccessAclsAllowAllow}
-		case acls.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedAPIAccessAclsDenyDeny, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.deny.deny references: %w", err)
@@ -1873,13 +2094,13 @@ func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl
 			access2 = map[string]any{}
 		}
 		switch {
-		case acls2.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls2.Allow != nil:
 			resolvedModelAccessAclsAllowAllow, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.allow.allow references: %w", err)
 			}
 			access2["acls"] = map[string]any{"allow": resolvedModelAccessAclsAllowAllow}
-		case acls2.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls2.Deny != nil:
 			resolvedModelAccessAclsDenyDeny, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.deny.deny references: %w", err)
@@ -2024,6 +2245,48 @@ func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl
 		access2["auth_strategies"] = resolvedModelAccessAuthStrategies
 		model3["access"] = access2
 		payload["model"] = model3
+	}
+	// spec.apiSpec.api.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.API != nil {
+		api4, _ := payload["api"].(map[string]any)
+		if api4 == nil {
+			api4 = map[string]any{}
+		}
+		resolvedAPIDatastores, err := resolveAIGatewayModelAPIDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.api.datastores references: %w", err)
+		}
+		wrappedAPIDatastores := make([]map[string]string, 0, len(resolvedAPIDatastores))
+		for _, v := range resolvedAPIDatastores {
+			wrappedAPIDatastores = append(wrappedAPIDatastores, map[string]string{"name": v})
+		}
+		api4["datastores"] = wrappedAPIDatastores
+		payload["api"] = api4
+	}
+	// spec.apiSpec.model.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.Model != nil {
+		model4, _ := payload["model"].(map[string]any)
+		if model4 == nil {
+			model4 = map[string]any{}
+		}
+		resolvedModelDatastores, err := resolveAIGatewayModelModelDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.model.datastores references: %w", err)
+		}
+		wrappedModelDatastores := make([]map[string]string, 0, len(resolvedModelDatastores))
+		for _, v := range resolvedModelDatastores {
+			wrappedModelDatastores = append(wrappedModelDatastores, map[string]string{"name": v})
+		}
+		model4["datastores"] = wrappedModelDatastores
+		payload["model"] = model4
 	}
 	return spec.toUpdateAIGatewayModelRequestFromPayload(payload)
 }

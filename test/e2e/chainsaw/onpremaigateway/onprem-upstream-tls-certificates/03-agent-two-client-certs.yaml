@@ -1,0 +1,26 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: (join('-', [($http_agent_name), 'two-client-certs']))
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: (join('-', [$http_agent_name, 'two-client-certs']))
+    displayName: two-client-certs
+    type: http
+    enabled: Enabled
+    config:
+      url: https://agent.upstream-tls.example
+      # The generated Kong Service presents a single client certificate, so at
+      # most one is allowed.
+      certificates:
+        - ($client_cert_name)
+        - ($client_cert_name)
+      route:
+        paths:
+          - /agents/upstream-tls-two-client-certs

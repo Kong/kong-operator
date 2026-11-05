@@ -79,6 +79,14 @@ type Config struct {
 	// instance: its cache is built at manager start and cannot pick the new
 	// filters up otherwise.
 	SecretLabelFilters map[string]string
+
+	// WatchNamespaces are the namespaces the instance watches for the
+	// configuration entities and the Secrets they reference, resolved from the
+	// OnPremAIGateway's spec.watchNamespaces. A nil list means every namespace.
+	// It's part of the hashed config so that changing it restarts the instance:
+	// its caches are built at manager start and cannot pick the new namespaces
+	// up otherwise.
+	WatchNamespaces []string
 }
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
@@ -102,6 +110,15 @@ func Hash(cfg Config) (string, error) {
 		// Sorted so the hash is stable regardless of map iteration order.
 		for _, k := range slices.Sorted(maps.Keys(cfg.SecretLabelFilters)) {
 			h.Write([]byte("secretFilter:" + k + "=" + cfg.SecretLabelFilters[k]))
+		}
+	}
+	// Only a concrete list is written: an empty list means every namespace, the
+	// zero value, which keeps an empty config hashing to sha256(""). The
+	// controller resolves the list already sorted.
+	if len(cfg.WatchNamespaces) > 0 {
+		h.Write([]byte("watchNamespaces:"))
+		for _, ns := range cfg.WatchNamespaces {
+			h.Write([]byte(ns + ","))
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -180,6 +197,16 @@ type Instance struct {
 	// (translation and push) and serves it to the configuration-entity
 	// reconcilers, which turn it into the entities' Programmed conditions.
 	statusReporter *EntityStatusReporter
+
+	// stateMu guards running and stopped, so Run and markStopped agree on which of
+	// them closes done.
+	stateMu sync.Mutex
+	running bool
+	stopped bool
+	// done is closed once the instance can no longer write: after Run returned,
+	// or on markStopped when Run never started.
+	done     chan struct{}
+	doneOnce sync.Once
 }
 
 var _ instances.Instance = &Instance{}
@@ -199,7 +226,29 @@ func NewInstance(
 		cn:             changenotifier.New(),
 		newPushClient:  newMTLSClientAdapter,
 		statusReporter: NewEntityStatusReporter(env.Scheme),
+		done:           make(chan struct{}),
 	}
+}
+
+// Done returns a channel closed once the instance stopped: its controllers no
+// longer write to the cluster.
+func (i *Instance) Done() <-chan struct{} {
+	return i.done
+}
+
+// markStopped records that the instance was stopped. If Run has not started, it
+// never will, so done is closed here.
+func (i *Instance) markStopped() {
+	i.stateMu.Lock()
+	defer i.stateMu.Unlock()
+	i.stopped = true
+	if !i.running {
+		i.closeDone()
+	}
+}
+
+func (i *Instance) closeDone() {
+	i.doneOnce.Do(func() { close(i.done) })
 }
 
 // ID returns the unique identifier of the instance.
@@ -277,9 +326,9 @@ func (i *Instance) AdminAPIs() sets.Set[adminapi.DiscoveredAdminAPI] {
 
 // newCtrlManager builds the instance's own lightweight controller-runtime manager.
 func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
-	// ponytail: every instance watches all AIGatewayModels with its own informers, unscoped.
-	// Scope the cache once the gateway ref carries namespace/kind semantics and N instances
-	// ever becomes a real cost.
+	// ponytail: every instance runs its own informer set over its watch namespaces (the
+	// entity caches are scoped, see cacheOpts). Share the informers across instances once
+	// N instances ever becomes a real cost.
 	return ctrl.NewManager(i.env.RestConfig, ctrl.Options{
 		Scheme: i.env.Scheme,
 		Logger: i.logger,
@@ -294,28 +343,54 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 }
 
 // cacheOpts scopes the instance manager's per-object caches. The configuration entities
-// (e.g. AIGatewayModels) stay cluster-wide: the translation lists them cluster-wide via
-// the OnOnPremAIGatewayRef field index, and cross-namespace references to the gateway are
-// rejected there (see the translator's appendEntities). EndpointSlices,
-// Secrets and the OnPremAIGateway itself are scoped to the gateway's namespace: the
-// onpremNamespacedRef is same-namespace and only objects in it are read there. Secrets
-// keep a label filter: the instance reads the Admin API client certificate Secret and,
-// through the generated secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc
-// clientSecret and consumer credential apiKeys), user entity Secrets. Both match
-// i.secretSelector(): user Secrets must carry the operator's Secret label selector to
-// be ingestible at all, and the Admin API client certificate Secret carries it too (see
-// the OnPremAIGateway controller's ensureAdminClientCertificateSecret).
+// (e.g. AIGatewayModels) and the Secrets they reference are cached in the gateway's
+// watch namespaces, resolved from spec.watchNamespaces into cfg.WatchNamespaces: the
+// translation lists the entities there via the OnOnPremAIGatewayRef field index, so the
+// cache is what decides which namespaces the gateway serves. A nil list means every
+// namespace. EndpointSlices, the AIGatewayDataPlanes and the OnPremAIGateway itself stay
+// scoped to the gateway's namespace: the onpremNamespacedRef is same-namespace and only
+// objects in it are read there. KongReferenceGrants follow the watch namespaces like the
+// entities: a grant lives in the namespace of what it grants access to, be that a Secret a
+// cross-namespace secretRef points at or the gateway an entity of another namespace
+// references (the gateway's own namespace is always watched). Secrets keep a label filter:
+// the instance reads the Admin API client certificate Secret and, through the generated
+// secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc clientSecret and consumer
+// credential apiKeys), user entity Secrets. Both match i.secretSelector(): user Secrets
+// must carry the operator's Secret label selector to be ingestible at all, and the Admin
+// API client certificate Secret carries it too (see the OnPremAIGateway controller's
+// ensureAdminClientCertificateSecret).
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
 		return opts
 	}
-	namespaces := map[string]cache.Config{i.env.GatewayNN.Namespace: {}}
+	gatewayNamespaces := map[string]cache.Config{i.env.GatewayNN.Namespace: {}}
+
+	// entityNamespaces is nil when the gateway watches every namespace: the
+	// caches then stay cluster-wide, as DefaultNamespaces is unset.
+	var entityNamespaces map[string]cache.Config
+	if len(i.cfg.WatchNamespaces) > 0 {
+		entityNamespaces = make(map[string]cache.Config, len(i.cfg.WatchNamespaces))
+		for _, ns := range i.cfg.WatchNamespaces {
+			entityNamespaces[ns] = cache.Config{}
+		}
+		opts.DefaultNamespaces = entityNamespaces
+	}
+
+	secrets := cache.ByObject{Namespaces: entityNamespaces, Label: i.secretSelector()}
+	// KongReferenceGrants deliberately keep the default scope: a grant lives in the
+	// namespace of what it grants access to, so the translation reads the grants of the
+	// gateway's namespace (an entity of another namespace referencing the gateway) and
+	// those of a Secret's namespace (a cross-namespace secretRef). A cache scoped
+	// narrower than the watch namespaces makes the translation fail on the first
+	// cross-namespace reference: the cached client cannot list another namespace at all
+	// ("unknown namespace for the cache"). TestCacheOpts and the
+	// CrossNamespaceSecretRefGrantOutsideGatewayNamespace envtest pin this.
 	opts.ByObject = map[client.Object]cache.ByObject{
-		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
-		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
-		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: namespaces},
-		&corev1.Secret{}:                        {Namespaces: namespaces, Label: i.secretSelector()},
+		&discoveryv1.EndpointSlice{}:            {Namespaces: gatewayNamespaces},
+		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: gatewayNamespaces},
+		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: gatewayNamespaces},
+		&corev1.Secret{}:                        secrets,
 	}
 	return opts
 }
@@ -395,7 +470,7 @@ func (i *Instance) sendConfig(
 	// The translation outcome is fully known here: report it before the push, so
 	// that push failures - which belong to the DataPlanesConfigured condition -
 	// do not alter it.
-	i.reportTranslationStatus(ctx, *gw, nil, failures, warnings)
+	warnings = i.reportTranslationStatus(ctx, *gw, nil, failures, warnings)
 
 	pushed, err := i.sendConfigToDataPlanes(ctx, *gw, payload)
 	if err != nil {
@@ -456,15 +531,15 @@ func failuresForAll(objs []client.Object, err error) []EntityFailure {
 // conversionIssueKindToCRTypeName maps a conversion issue's Source.Kind (the
 // converter's singular document keys, public API in ai-deck-converter) to the
 // aiconfiguration CR type name (GetTypeName) the entity is translated from.
-// The list is exhaustive for the converter's public API (v0.22.0): every
-// issue-carrying entity kind is covered. The document's remaining translated
-// kinds have no entries because the converter reports no issues for them: model
-// providers are only indexed into the converter's reference registry (their
-// problems surface as issues on the model referencing them, kind "model"), and
-// the certificate and CA certificate conversions are infallible pass-throughs.
-// Kinds with no entry degrade their ERROR issues to warnings.
+// The list is exhaustive for the converter's public API (v0.32.2): every
+// issue-carrying entity kind is covered. Datastores have no entry because the
+// converter only indexes them into its reference registry and reports a
+// datastore's problems on the entity referencing it, and the certificate and CA
+// certificate conversions are infallible pass-throughs. Kinds with no entry
+// degrade their ERROR issues to warnings.
 var conversionIssueKindToCRTypeName = map[string]string{
 	"model":          "AIGatewayModel",
+	"model_provider": "AIGatewayModelProvider",
 	"mcp_server":     "AIGatewayMCPServer",
 	"agent":          "AIGatewayAgent",
 	"policy":         "AIGatewayPolicy",
@@ -634,6 +709,15 @@ func (i *Instance) syncPending(
 
 // Run runs the instance. It blocks until the passed context is cancelled.
 func (i *Instance) Run(ctx context.Context) error {
+	i.stateMu.Lock()
+	if i.stopped {
+		i.stateMu.Unlock()
+		return nil
+	}
+	i.running = true
+	i.stateMu.Unlock()
+	defer i.closeDone()
+
 	i.logger.Info("Running on-prem AI Gateway control plane instance")
 	defer i.cn.Close()
 
@@ -663,6 +747,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		index.OptionsForAIGatewayConsumerGroup(),
 		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayDataPlaneCertificate(),
+		index.OptionsForAIGatewayDatastore(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayModel(),
 		index.OptionsForAIGatewayModelProvider(),
@@ -718,17 +803,11 @@ func (i *Instance) Run(ctx context.Context) error {
 		close(mgrErrCh)
 	}()
 	defer func() {
-		// Drain the manager result so its goroutine never leaks.
-		select {
-		case err, ok := <-mgrErrCh:
-			if !ok {
-				return
-			}
-			if err != nil {
-				i.logger.Error(err, "Instance controller manager failed when draining")
-			}
-
-		default:
+		// Wait for the manager to stop: done must not close while its controllers
+		// can still write. The manager shares ctx, so it stops once Run returns on
+		// ctx.Done; on the other paths it already returned.
+		if err, ok := <-mgrErrCh; ok && err != nil {
+			i.logger.Error(err, "Instance controller manager failed when draining")
 		}
 	}()
 

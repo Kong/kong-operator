@@ -463,40 +463,27 @@ func TestKongRouteBuilder_WithOwner(t *testing.T) {
 }
 
 func TestKongRouteBuilder_WithLabels(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongRoute().WithLabels(httpRoute, parentRef)
 
 	route, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, route.Labels)
-	assert.NotEmpty(t, route.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), route.Labels)
 }
 
 func TestKongRouteBuilder_WithAnnotations(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongRoute().WithAnnotations(httpRoute, parentRef)
 
 	route, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, route.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), route.Annotations)
 }
 
 func TestKongRouteBuilder_Build(t *testing.T) {

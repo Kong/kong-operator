@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
   name: aigatewaypolicies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -146,6 +146,23 @@ spec:
                     required:
                     - name
                     type: object
+                  datastores:
+                    items:
+                      properties:
+                        kind:
+                          default: AIGatewayDatastore
+                          enum:
+                          - AIGatewayDatastore
+                          type: string
+                        name:
+                          minLength: 1
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -155,6 +172,8 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  expressions:
+                    x-kubernetes-preserve-unknown-fields: true
                   global:
                     enum:
                     - Enabled

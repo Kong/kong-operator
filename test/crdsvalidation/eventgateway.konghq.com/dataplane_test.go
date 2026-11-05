@@ -57,6 +57,104 @@ func TestEventGatewayDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("onpremNamespacedRef validation", func(t *testing.T) {
+		onPrem := func(mutate func(*eventgatewayv1alpha1.KegDataPlane)) *eventgatewayv1alpha1.KegDataPlane {
+			dp := &eventgatewayv1alpha1.KegDataPlane{
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+						Type:                eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+						OnPremNamespacedRef: &eventgatewayv1alpha1.OnPremNamespacedRef{Name: "my-onprem-gateway"},
+					},
+				},
+			}
+			if mutate != nil {
+				mutate(dp)
+			}
+			return dp
+		}
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
+			{
+				Name:       "onpremNamespacedRef type with ref set - valid",
+				TestObject: onPrem(nil),
+			},
+			{
+				Name: "onpremNamespacedRef type without ref - invalid",
+				TestObject: onPrem(func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.ControlPlaneRef.OnPremNamespacedRef = nil
+				}),
+				ExpectedErrorMessage: new("onpremNamespacedRef must be set when type is onpremNamespacedRef"),
+			},
+			{
+				Name: "both refs set - invalid",
+				TestObject: onPrem(func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.ControlPlaneRef.KonnectNamespacedRef = &eventgatewayv1alpha1.KonnectNamespacedRef{Name: "my-event-gateway"}
+				}),
+				ExpectedErrorMessage: new("only one of konnectNamespacedRef or onpremNamespacedRef can be set"),
+			},
+			{
+				Name:       "changing the type - invalid",
+				TestObject: validDataPlane(ns.Name),
+				Update: func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
+						Type:                eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+						OnPremNamespacedRef: &eventgatewayv1alpha1.OnPremNamespacedRef{Name: "my-onprem-gateway"},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("type is immutable"),
+			},
+			{
+				Name:       "changing the KonnectEventGateway - valid",
+				TestObject: validDataPlane(ns.Name),
+				Update: func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "another-event-gateway"
+				},
+			},
+			{
+				Name:       "changing the OnPremEventGateway - invalid",
+				TestObject: onPrem(nil),
+				Update: func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name = "another-onprem-gateway"
+				},
+				ExpectedUpdateErrorMessage: new("onpremNamespacedRef is immutable"),
+			},
+			{
+				Name: "konnect domain with an onpremNamespacedRef - invalid",
+				TestObject: onPrem(func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.Config = &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+						Konnect: &eventgatewayv1alpha1.KonnectConfig{Domain: new("konghq.tech")},
+					}
+				}),
+				ExpectedErrorMessage: new("config.konnect.domain can't be set with an onpremNamespacedRef"),
+			},
+			{
+				Name: "konnect request timeout with an onpremNamespacedRef - valid",
+				TestObject: onPrem(func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.Config = &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+						Konnect: &eventgatewayv1alpha1.KonnectConfig{APIRequestTimeoutSeconds: new(int32(10))},
+					}
+				}),
+			},
+			{
+				Name: "manual certificate with an onpremNamespacedRef - valid",
+				TestObject: onPrem(func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: "my-cert"},
+					}
+				}),
+			},
+			{
+				Name: "automatic certificate with an onpremNamespacedRef - valid",
+				TestObject: onPrem(func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.AutomaticCertificateProvisioning),
+					}
+				}),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("service options nodeport validation", func(t *testing.T) {
 		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{

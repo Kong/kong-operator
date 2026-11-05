@@ -82,15 +82,18 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	t.Logf("Create a service by SDK for adoption")
 	server, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err, "Should create a server successfully")
-	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	sdk, err := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NoError(t, err, "Should create an SDK successfully")
 	require.NotNil(t, sdk)
 
-	resp, err := sdk.GetServicesSDK().CreateService(ctx, cpKonnectID,
-		sdkkonnectcomp.CreateServiceRequestServiceWithHost(sdkkonnectcomp.ServiceWithHost{
+	resp, err := sdk.GetServicesSDK().CreateService(ctx, sdkkonnectops.CreateServiceRequest{
+		ControlPlaneID: cpKonnectID,
+		ServiceRequest: sdkkonnectcomp.CreateServiceRequestServiceWithHost(sdkkonnectcomp.ServiceWithHost{
 			Name: new("test-adoption"),
 			URL:  new("http://example.com"),
 			Host: "example.com",
-		}))
+		}),
+	})
 	require.NoError(t, err, "Should create service in Konnect successfully")
 	serviceOutput := resp.GetService()
 	require.NotNil(t, serviceOutput, "Should get a non-nil service in response")
@@ -134,7 +137,10 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 
 	t.Log("Verifying that the service in Konnect is overridden by the KongService when KongService updated")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		resp, err := sdk.GetServicesSDK().GetService(ctx, serviceKonnectID, cp.GetKonnectID())
+		resp, err := sdk.GetServicesSDK().GetService(ctx, sdkkonnectops.GetServiceRequest{
+			ServiceID:      serviceKonnectID,
+			ControlPlaneID: cp.GetKonnectID(),
+		})
 		require.NoError(collect, err, "Should get service from Konnect successfully")
 
 		serviceOutput := resp.GetService()
@@ -151,15 +157,18 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		"Did not see service in Konnect updated to match spec of KongService")
 
 	t.Logf("Creating a route attached to service %s by SDK for adoption", serviceKonnectID)
-	routeResp, err := sdk.GetRoutesSDK().CreateRoute(ctx, cpKonnectID, sdkkonnectcomp.Route{
-		Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
-		RouteJSON: &sdkkonnectcomp.RouteJSON{
-			Name: new("route-test-adopt"),
-			Paths: []string{
-				"/example",
-			},
-			Service: &sdkkonnectcomp.RouteJSONService{
-				ID: new(serviceKonnectID),
+	routeResp, err := sdk.GetRoutesSDK().CreateRoute(ctx, sdkkonnectops.CreateRouteRequest{
+		ControlPlaneID: cpKonnectID,
+		Route: sdkkonnectcomp.Route{
+			Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
+			RouteJSON: &sdkkonnectcomp.RouteJSON{
+				Name: new("route-test-adopt"),
+				Paths: []string{
+					"/example",
+				},
+				Service: &sdkkonnectcomp.RouteJSONService{
+					ID: new(serviceKonnectID),
+				},
 			},
 		},
 	})
@@ -204,7 +213,10 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	// to match the spec of the KongRoute.
 	t.Log("Verifying that the route in Konnect is modified as the spec of the KongRoute")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		getRouteResp, err := sdk.GetRoutesSDK().GetRoute(ctx, routeKonnectID, cpKonnectID)
+		getRouteResp, err := sdk.GetRoutesSDK().GetRoute(ctx, sdkkonnectops.GetRouteRequest{
+			RouteID:        routeKonnectID,
+			ControlPlaneID: cpKonnectID,
+		})
 		assert.NoError(collect, err)
 		assert.NotNil(collect, getRouteResp, "Should get a non-nil response for creating route")
 		if getRouteResp.Route != nil && getRouteResp.Route.RouteJSON != nil {
@@ -251,13 +263,13 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	t.Logf("Create a global plugin by SDK for adoption")
 	server, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err, "Should create a server successfully")
-	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	sdk, err := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NoError(t, err, "Should create an SDK successfully")
 	require.NotNil(t, sdk)
 
-	resp, err := sdk.GetPluginSDK().CreatePlugin(
-		t.Context(),
-		cpKonnectID,
-		sdkkonnectcomp.Plugin{
+	resp, err := sdk.GetPluginSDK().CreatePlugin(t.Context(), sdkkonnectops.CreatePluginRequest{
+		ControlPlaneID: cpKonnectID,
+		Plugin: sdkkonnectcomp.Plugin{
 			Name: "request-transformer",
 			Config: map[string]any{
 				"add": map[string][]string{
@@ -267,7 +279,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 				},
 			},
 		},
-	)
+	})
 	require.NoError(t, err)
 	require.NotNil(t, resp, "Should get a non-nil response for creating a plugin")
 	require.NotNil(t, resp.Plugin, "Should get a non-nil plugin in the response")
@@ -326,10 +338,9 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	serviceKonnectID := ks.GetKonnectID()
 
 	t.Log("Creating a plugin by SDK attached to the service for adopting")
-	resp, err = sdk.GetPluginSDK().CreatePlugin(
-		ctx,
-		cpKonnectID,
-		sdkkonnectcomp.Plugin{
+	resp, err = sdk.GetPluginSDK().CreatePlugin(ctx, sdkkonnectops.CreatePluginRequest{
+		ControlPlaneID: cpKonnectID,
+		Plugin: sdkkonnectcomp.Plugin{
 			Name: "response-transformer",
 			Config: map[string]any{
 				"add": map[string][]string{
@@ -340,7 +351,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 				ID: new(serviceKonnectID),
 			},
 		},
-	)
+	})
 	require.NoError(t, err)
 	require.NotNil(t, resp, "Should get a non-nil response for creating a plugin")
 	require.NotNil(t, resp.Plugin, "Should get a non-nil plugin in the response")
@@ -407,12 +418,16 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 	t.Log("Create a consumer by SDK for adoption")
 	server, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err, "Should create a server successfully")
-	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	sdk, err := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NoError(t, err, "Should create an SDK successfully")
 	require.NotNil(t, sdk)
 
 	consumerUsername := "test-adoption-consumer-" + testID
-	consumerResp, err := sdk.GetConsumersSDK().CreateConsumer(ctx, cpKonnectID, sdkkonnectcomp.Consumer{
-		Username: new(consumerUsername),
+	consumerResp, err := sdk.GetConsumersSDK().CreateConsumer(ctx, sdkkonnectops.CreateConsumerRequest{
+		ControlPlaneID: cpKonnectID,
+		Consumer: sdkkonnectcomp.Consumer{
+			Username: new(consumerUsername),
+		},
 	})
 	require.NoError(t, err, "Should create consumer in Konnect successfully")
 	consumerOutput := consumerResp.GetConsumer()
@@ -547,7 +562,10 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 
 	t.Log("Verifying that the consumer in Konnect is updated")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		resp, err := sdk.GetConsumersSDK().GetConsumer(ctx, consumerKonnectID, cpKonnectID)
+		resp, err := sdk.GetConsumersSDK().GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{
+			ConsumerID:     consumerKonnectID,
+			ControlPlaneID: cpKonnectID,
+		})
 		require.NoError(collect, err, "Should get consumer from Konnect successfully")
 
 		consumerOutput := resp.GetConsumer()

@@ -709,6 +709,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.<br /><br />When runtime_auto_upgrade is enabled (the default), this value is raised automatically to track the minimum runtime version reported across connected data planes, so any value set here may be superseded as the fleet upgrades. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
@@ -787,7 +788,7 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 | `type` _[KonnectAPIAuthType](#konnect-konghq-com-v1alpha1-types-konnectapiauthtype)_ |  |
 | `token` _string_ | Token is the Konnect token used to authenticate with the Konnect API. |
 | `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing the Konnect token. This secret is required to have the konghq.com/credential label set to "konnect". |
-| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. The host must belong to one of the domains the operator is allowed to call (--konnect-server-url-domains, konghq.com and konghq.tech by default): a value outside the list is reported with an APIAuthValid=False condition and the operator sends no request to it. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
 
 _Appears in:_
 
@@ -1646,6 +1647,33 @@ _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 
+#### ManagedBy
+
+_Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
+
+ManagedBy Stores information about what manages this entity, such as the tool
+or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
+#### ManagedByValue
+
+_Underlying type:_ `string`
+
+ManagedByValue is the value type for ManagedBy.
+
+
+
+
+_Appears in:_
+
+- [ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)
+
 #### Menu
 
 
@@ -1728,7 +1756,7 @@ authentication.
 
 _Appears in:_
 
-- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
 
 #### OIDCIdentityProviderClientID
 
@@ -1742,7 +1770,7 @@ the identity provider.
 
 _Appears in:_
 
-- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
 
 #### OIDCIdentityProviderClientSecret
 
@@ -1756,27 +1784,7 @@ application by the identity provider.
 
 _Appears in:_
 
-- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
-
-#### OIDCIdentityProviderConfig
-
-
-OIDCIdentityProviderConfig The identity provider that contains configuration
-data for the OIDC authentication integration.
-
-
-
-| Field | Description |
-| --- | --- |
-| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
-| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
-| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
-| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
-| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
-
-_Appears in:_
-
-- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
 
 #### OIDCIdentityProviderIssuer
 
@@ -1790,7 +1798,7 @@ This is the URL where the provider's metadata can be obtained.
 
 _Appears in:_
 
-- [OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)
+- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
 
 #### PageContent
 
@@ -2139,8 +2147,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
-| `oIDC` _[OIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderconfig)_ | OIDC configuration. |
-| `portalSAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | PortalSAML configuration. |
+| `oIDC` _[PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)_ | OIDC configuration. |
+| `sAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
 
 _Appears in:_
 
@@ -2164,7 +2172,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `oIDC` |  |
-| `portalSAML` |  |
+| `sAML` |  |
 
 
 
@@ -2219,6 +2227,26 @@ _Appears in:_
 
 - [Menu](#konnect-konghq-com-v1alpha1-types-menu)
 - [PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)
+
+#### PortalOIDCIdentityProviderConfig
+
+
+PortalOIDCIdentityProviderConfig The identity provider that contains
+configuration data for the OIDC authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
 
 #### PortalPageAPISpec
 
@@ -2523,7 +2551,7 @@ Theme The theme settings for this portal.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean', 'mesa', and 'grove'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'mesa', 'grove', 'pebble', or 'ocean'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 

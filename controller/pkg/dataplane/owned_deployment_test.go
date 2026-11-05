@@ -522,6 +522,52 @@ func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
 	})
 }
 
+func Test_BuildDeployment_TerminationGracePeriodSeconds(t *testing.T) {
+	tc := managedfields.NewDeducedTypeConverter()
+
+	gracePeriodOf := func(t *testing.T, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, grace func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64) any {
+		t.Helper()
+		cfg := testConfig
+		cfg.Deployment.TerminationGracePeriodSeconds = grace
+		u, err := BuildDeployment(logr.Discard(), tc, aigwdp, resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg.Deployment, cfg.Certificate.ChecksumAnnotation)
+		require.NoError(t, err)
+		got, _, err := unstructured.NestedFieldNoCopy(u.Object, "spec", "template", "spec", "terminationGracePeriodSeconds")
+		require.NoError(t, err)
+		return got
+	}
+	withOverlay := func(seconds int64) *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{TerminationGracePeriodSeconds: new(seconds)},
+					},
+				},
+			},
+		}
+	}
+	seconds := func(v int64) func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64 {
+		return func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64 { return new(v) }
+	}
+
+	t.Run("without the hook, the Kubernetes default is kept", func(t *testing.T) {
+		assert.Nil(t, gracePeriodOf(t, &aigatewayv1alpha1.AIGatewayDataPlane{}, nil))
+	})
+
+	t.Run("a hook returning nil keeps the Kubernetes default", func(t *testing.T) {
+		assert.Nil(t, gracePeriodOf(t, &aigatewayv1alpha1.AIGatewayDataPlane{}, func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64 { return nil }))
+	})
+
+	t.Run("the hook sets the grace period of the pods", func(t *testing.T) {
+		assert.EqualValues(t, 75, gracePeriodOf(t, &aigatewayv1alpha1.AIGatewayDataPlane{}, seconds(75)))
+	})
+
+	t.Run("a grace period the user pod template overlay sets wins", func(t *testing.T) {
+		assert.EqualValues(t, 20, gracePeriodOf(t, withOverlay(20), seconds(75)))
+		assert.EqualValues(t, 120, gracePeriodOf(t, withOverlay(120), seconds(75)))
+	})
+}
+
 // -----------------------------------------------------------------
 // ensureDeployment
 // -----------------------------------------------------------------
@@ -683,6 +729,63 @@ func Test_ensureDeployment_Replicas(t *testing.T) {
 	}
 }
 
+func TestRolloutOntoCertificateComplete(t *testing.T) {
+	const annotation = "test/cert-checksum"
+	deployment := func(checksum string, rolledOut bool) *appsv1.Deployment {
+		d := &appsv1.Deployment{
+			Name: "test-dp", Namespace: "default", Generation: 1,
+			Spec: appsv1.DeploymentSpec{
+				Replicas: new(int32(1)),
+				Template: corev1.PodTemplateSpec{Annotations: map[string]string{annotation: checksum}},
+			},
+		}
+		if rolledOut {
+			d.Status = appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1}
+		}
+		return d
+	}
+	for _, tc := range []struct {
+		name               string
+		deployment         *appsv1.Deployment
+		checksumAnnotation string
+		getErr             error
+		want               bool
+		wantErr            bool
+	}{
+		{name: "no Deployment", checksumAnnotation: annotation},
+		{name: "the Deployment can't be read", checksumAnnotation: annotation, getErr: assert.AnError, wantErr: true},
+		{name: "rolling out", deployment: deployment("current", false), checksumAnnotation: annotation},
+		{name: "rolled out onto another certificate", deployment: deployment("previous", true), checksumAnnotation: annotation},
+		{name: "rolled out onto the certificate", deployment: deployment("current", true), checksumAnnotation: annotation, want: true},
+		{name: "rolled out, without checksum tracking", deployment: deployment("previous", true), want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(managerscheme.Get())
+			if tc.deployment != nil {
+				builder = builder.WithObjects(tc.deployment).WithStatusSubresource(tc.deployment)
+			}
+			cl := interceptor.NewClient(builder.Build(), interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if tc.getErr != nil {
+						return tc.getErr
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			})
+			cfg := testConfig
+			cfg.Certificate.ChecksumAnnotation = tc.checksumAnnotation
+			r := &testReconciler{Client: cl, Config: cfg}
+			got, err := r.rolloutOntoCertificateComplete(t.Context(), newTestAIGWDP(), "current")
+			if tc.wantErr {
+				require.ErrorIs(t, err, tc.getErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
 	const (
 		ns     = "test-ns"
@@ -723,4 +826,28 @@ func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
 
 	require.NoError(t, cl.Get(t.Context(), key, &deploy))
 	assert.Equal(t, new(int32(1)), deploy.Spec.Replicas)
+}
+
+func TestAdminAPIConfig(t *testing.T) {
+	enabled := func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true }
+	adminAPI := AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             enabled,
+		ServiceNameSuffix:   "-admin",
+		ServicePort:         8444,
+		ServicePortName:     "admin",
+		ManagedByLabelValue: "aigwdp-admin",
+		CertificateLabelKey: "test/admin-cert",
+	}
+
+	svcCfg := adminAPI.serviceConfig()
+	assert.Equal(t, "Admin", svcCfg.Description)
+	assert.Equal(t, "-admin", svcCfg.NameSuffix)
+	assert.Equal(t, "admin", svcCfg.DefaultPortName)
+	assert.Equal(t, int32(8444), svcCfg.DefaultPort)
+	assert.Equal(t, "aigwdp-admin", svcCfg.ManagedByLabelValue)
+	require.NotNil(t, svcCfg.Enabled, "the Service is gated like the certificate")
+	assert.True(t, svcCfg.Enabled(newTestAIGWDP(), ResolvedControlPlane{}))
+	assert.Nil(t, svcCfg.SetStatusAddresses, "the admin Service doesn't feed the status")
+
+	assert.Equal(t, "test-dp-admin.default.svc", adminAPI.certificateSubject(newTestAIGWDP()))
 }

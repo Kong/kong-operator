@@ -13,6 +13,8 @@ const (
 	IndexFieldAIGatewayAuthStrategyOnKonnectAIGatewayRef = "aiGatewayAuthStrategyOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef is the index field for AIGatewayAuthStrategy -> OnPremAIGateway.
 	IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef = "aiGatewayAuthStrategyOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayAuthStrategyOnAIGatewayDatastoreRef is the index field for AIGatewayAuthStrategy -> AIGatewayDatastore.
+	IndexFieldAIGatewayAuthStrategyOnAIGatewayDatastoreRef = "aiGatewayAuthStrategyOnAIGatewayDatastoreRef"
 	// IndexFieldAIGatewayAuthStrategyOnSecretRef is the index field for AIGatewayAuthStrategy -> the Secrets it reads.
 	IndexFieldAIGatewayAuthStrategyOnSecretRef = "aiGatewayAuthStrategyOnSecretRef"
 )
@@ -29,6 +31,11 @@ func OptionsForAIGatewayAuthStrategy() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
 			Field:          IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayAuthStrategyOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
+			Field:          IndexFieldAIGatewayAuthStrategyOnAIGatewayDatastoreRef,
+			ExtractValueFn: aiGatewayAuthStrategyOnAIGatewayDatastoreRef,
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
@@ -79,6 +86,35 @@ func aiGatewayAuthStrategyOnOnPremAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayAuthStrategyOnAIGatewayDatastoreRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAuthStrategy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAuthStrategyKeyAuthDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAuthStrategyOpenidConnectDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }
 
 func aiGatewayAuthStrategyOnSecretRef(object client.Object) []string {

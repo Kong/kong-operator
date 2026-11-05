@@ -1,0 +1,212 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-virtualclusterpolicychain-lifecycle
+spec:
+  description: |
+    Reorder the complete cluster-level policy chain, recover remote order drift,
+    and retain the order and policies when only the chain CR is deleted.
+    Check Programmed at the current generation with no independent Konnect ID.
+
+    No Kafka cluster or data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [$test_name, 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [$test_name, 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [$test_name, 'keg']))
+    - name: backend_cluster_name
+      value: chain-backend
+    - name: virtual_cluster_name
+      value: chain-vc
+    - name: dns_label
+      value: chainvc
+    - name: cr_api_version
+      value: configuration.konghq.com/v1alpha1
+    - name: cr_kind
+      value: EventGatewayVirtualClusterPolicy
+    - name: cr_spec
+      value:
+        eventGatewayVirtualClusterRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ($virtual_cluster_name)
+        apiSpec:
+          type: acls
+          acls:
+            config:
+              rules:
+                - action: allow
+                  resourceType: topic
+                  operations:
+                    - name: all
+                  resourceNames:
+                    type: stat
+                    stat:
+                      - match: '*'
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Register-gateway-cleanup
+      try:
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+            content: |
+              test -n "${KONNECT_TOKEN:?KONNECT_TOKEN must be set}"
+      cleanup:
+        - description: Clean the dedicated gateway even if a later assertion fails.
+          script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($keg_cp_name)
+              - name: TEST_NAME
+                value: ($test_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash scripts/cleanup.sh
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: Create-virtual-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: Create-first-policy
+      bindings:
+        - name: cr_name
+          value: first
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Create-second-policy
+      bindings:
+        - name: cr_name
+          value: second
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+
+    - name: Check-chain-lifecycle
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterPolicyChain
+              metadata:
+                name: chain
+                namespace: ($namespace)
+              spec:
+                eventGatewayVirtualClusterRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($virtual_cluster_name)
+                apiSpec:
+                  policies:
+                    - name: second
+                    - name: first
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterPolicyChain
+              metadata:
+                name: chain
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id == null || id == ''): true
+        - description: Observe the complete reverse-creation order and capture the policy identities.
+          script:
+            env: &chain_env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: VIRTUAL_CLUSTER_NAME
+                value: ($virtual_cluster_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash scripts/chain.sh verify
+            outputs:
+              - name: original
+                value: (json_parse($stdout))
+
+        - description: Reorder the chain in Konnect without changing the CR.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($original.chain_path)
+              - name: METHOD
+                value: PUT
+              - name: FIRST_ID
+                value: ($original.first.id)
+              - name: SECOND_ID
+                value: ($original.second.id)
+              - name: BODY
+                value: '{policies: [$ENV.FIRST_ID, $ENV.SECOND_ID]}'
+              - name: EXPECTED_JQ
+                value: .policies == [$ENV.FIRST_ID, $ENV.SECOND_ID]
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - description: Wait for periodic reconciliation to restore and hold the declared order.
+          script:
+            env: *chain_env
+            content: |
+              bash scripts/chain.sh verify
+
+        - description: Delete only the chain CR.
+          delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterPolicyChain
+              name: chain
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterPolicyChain
+              metadata:
+                name: chain
+                namespace: ($namespace)
+        - description: Observe the retained order and unchanged policies after chain deletion.
+          script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: VIRTUAL_CLUSTER_NAME
+                value: ($virtual_cluster_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: ORIGINAL
+                value: (to_string($original))
+            content: |
+              bash scripts/chain.sh retained

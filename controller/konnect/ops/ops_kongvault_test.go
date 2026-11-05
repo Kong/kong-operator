@@ -53,7 +53,7 @@ func TestCreateKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().CreateVault(mock.Anything, "123456789", mustConvertKongVaultToVaultInput(t, vault)).
+				sdk.EXPECT().CreateVault(mock.Anything, sdkkonnectops.CreateVaultRequest{ControlPlaneID: "123456789", Vault: mustConvertKongVaultToVaultInput(t, vault)}).
 					Return(
 						&sdkkonnectops.CreateVaultResponse{
 							Vault: &sdkkonnectcomp.Vault{
@@ -110,7 +110,7 @@ func TestCreateKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().CreateVault(mock.Anything, "123456789", mustConvertKongVaultToVaultInput(t, vault)).
+				sdk.EXPECT().CreateVault(mock.Anything, sdkkonnectops.CreateVaultRequest{ControlPlaneID: "123456789", Vault: mustConvertKongVaultToVaultInput(t, vault)}).
 					Return(
 						&sdkkonnectops.CreateVaultResponse{
 							Vault:      nil,
@@ -283,7 +283,7 @@ func TestAdoptKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().GetVault(mock.Anything, "vault-123", "123456789").
+				sdk.EXPECT().GetVault(mock.Anything, sdkkonnectops.GetVaultRequest{VaultID: "vault-123", ControlPlaneID: "123456789"}).
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
 							ID:     new("vault-123"),
@@ -330,7 +330,7 @@ func TestAdoptKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().GetVault(mock.Anything, "vault-456", "123456789").
+				sdk.EXPECT().GetVault(mock.Anything, sdkkonnectops.GetVaultRequest{VaultID: "vault-456", ControlPlaneID: "123456789"}).
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
 							ID:     new("vault-456"),
@@ -374,7 +374,7 @@ func TestAdoptKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().GetVault(mock.Anything, "vault-789", "123456789").
+				sdk.EXPECT().GetVault(mock.Anything, sdkkonnectops.GetVaultRequest{VaultID: "vault-789", ControlPlaneID: "123456789"}).
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
 							ID:     new("vault-789"),
@@ -417,7 +417,7 @@ func TestAdoptKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().GetVault(mock.Anything, "vault-321", "123456789").
+				sdk.EXPECT().GetVault(mock.Anything, sdkkonnectops.GetVaultRequest{VaultID: "vault-321", ControlPlaneID: "123456789"}).
 					Return(nil, &sdkkonnecterrs.SDKError{
 						Message:    "bad request",
 						StatusCode: http.StatusBadRequest,
@@ -458,7 +458,7 @@ func TestAdoptKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().GetVault(mock.Anything, "vault-654", "123456789").
+				sdk.EXPECT().GetVault(mock.Anything, sdkkonnectops.GetVaultRequest{VaultID: "vault-654", ControlPlaneID: "123456789"}).
 					Return(&sdkkonnectops.GetVaultResponse{
 						Vault: &sdkkonnectcomp.Vault{
 							ID:     new("vault-654"),
@@ -542,7 +542,7 @@ func TestDeleteKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().DeleteVault(mock.Anything, "123456789", "12345").Return(
+				sdk.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: "123456789", VaultID: "12345"}).Return(
 					&sdkkonnectops.DeleteVaultResponse{}, nil,
 				)
 				return sdk, vault
@@ -562,7 +562,7 @@ func TestDeleteKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().DeleteVault(mock.Anything, "123456789", "12345").Return(
+				sdk.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: "123456789", VaultID: "12345"}).Return(
 					nil, &sdkkonnecterrs.BadRequestError{
 						Title: "bad request",
 					},
@@ -585,7 +585,7 @@ func TestDeleteKongVault(t *testing.T) {
 						},
 					},
 				}
-				sdk.EXPECT().DeleteVault(mock.Anything, "123456789", "12345").Return(
+				sdk.EXPECT().DeleteVault(mock.Anything, sdkkonnectops.DeleteVaultRequest{ControlPlaneID: "123456789", VaultID: "12345"}).Return(
 					nil, &sdkkonnecterrs.SDKError{
 						Message:    "not found",
 						StatusCode: http.StatusNotFound,

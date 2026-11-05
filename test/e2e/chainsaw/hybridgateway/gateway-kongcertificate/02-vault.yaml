@@ -1,0 +1,80 @@
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectConfigStoreSync
+metadata:
+  name: serving
+  namespace: ($namespace)
+spec:
+  configStoreRef:
+    name: ($config_store_name)
+  secretRef:
+    name: serving
+  mode: Combined
+  combined:
+    storeKey: serving
+  deletionPolicy: Delete
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: vault-dependencies
+  namespace: ($namespace)
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongVault
+      namespace: ""
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+      name: ($cp_name)
+    - group: konnect.konghq.com
+      kind: KonnectConfigStore
+      name: ($config_store_name)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongVault
+metadata:
+  name: ($vault_name)
+  labels:
+    tls-listener-test: ($test_name)
+spec:
+  backend: konnect
+  prefix: ($vault_name)
+  configStoreRef:
+    name: ($config_store_name)
+    namespace: ($namespace)
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($cp_name)
+      namespace: ($namespace)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: certificate-control-plane
+  namespace: ($namespace)
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongCertificate
+      namespace: ($certificate_namespace)
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+      name: ($cp_name)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCertificate
+metadata:
+  name: serving
+  namespace: ($certificate_namespace)
+spec:
+  type: inline
+  cert: (join('', ['{vault://', $vault_name, '/serving/certificate}']))
+  key: (join('', ['{vault://', $vault_name, '/serving/key}']))
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($cp_name)
+      namespace: ($namespace)

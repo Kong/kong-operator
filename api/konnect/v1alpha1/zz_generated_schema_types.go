@@ -165,6 +165,21 @@ type LabelsUpdateValue string
 // +kubebuilder:validation:MaxProperties=50
 type LabelsUpdate map[string]LabelsUpdateValue
 
+// ManagedByValue is the value type for ManagedBy.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+type ManagedByValue string
+
+// ManagedBy Stores information about what manages this entity, such as the tool
+// or system responsible for its lifecycle (for example, `terraform`).
+//
+// Keys must be 1–63 characters long and start with an alphanumeric character.
+//
+// +kubebuilder:validation:MaxProperties=5
+type ManagedBy map[string]ManagedByValue
+
 // MinRuntimeVersion The minimum runtime version supported by the API.
 // This is the lowest version of the data plane
 // release that can be used with the entity model.
@@ -200,41 +215,6 @@ type OIDCIdentityProviderClientID string
 // OIDCIdentityProviderClientSecret The Client Secret assigned to your
 // application by the identity provider.
 type OIDCIdentityProviderClientSecret string
-
-// OIDCIdentityProviderConfig The identity provider that contains configuration
-// data for the OIDC authentication integration.
-type OIDCIdentityProviderConfig struct {
-	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
-	// used by your application for
-	// authentication.
-	//
-	//
-	// +optional
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
-	// The client ID assigned to your application by the identity provider.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
-	// The Client Secret assigned to your application by the identity provider.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
-	// The issuer URI of the identity provider.
-	// This is the URL where the provider's metadata can be obtained.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
-	// The scopes requested by your application when authenticating with the
-	// identity provider.
-	//
-	// +optional
-	Scopes []string `json:"scopes,omitempty"`
-}
 
 // OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 // This is the URL where the provider's metadata can be obtained.
@@ -302,6 +282,41 @@ type PortalMenuItem struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
 	Visibility string `json:"visibility,omitzero"`
+}
+
+// PortalOIDCIdentityProviderConfig The identity provider that contains
+// configuration data for the OIDC authentication integration.
+type PortalOIDCIdentityProviderConfig struct {
+	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
+	// used by your application for
+	// authentication.
+	//
+	//
+	// +optional
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
+	// The client ID assigned to your application by the identity provider.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
+	// The Client Secret assigned to your application by the identity provider.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
+	// The issuer URI of the identity provider.
+	// This is the URL where the provider's metadata can be obtained.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
+	// The scopes requested by your application when authenticating with the
+	// identity provider.
+	//
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // PortalSAMLIdentityProviderConfig The identity provider that contains

@@ -22,6 +22,7 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
@@ -397,6 +398,7 @@ func TestAttributeConversionIssues(t *testing.T) {
 		// Zero-value CRs suffice: GetTypeName is constant per type.
 		crs := map[string]client.Object{
 			"AIGatewayModel":         new(aiconfigurationv1alpha1.AIGatewayModel),
+			"AIGatewayModelProvider": new(aiconfigurationv1alpha1.AIGatewayModelProvider),
 			"AIGatewayMCPServer":     new(aiconfigurationv1alpha1.AIGatewayMCPServer),
 			"AIGatewayAgent":         new(aiconfigurationv1alpha1.AIGatewayAgent),
 			"AIGatewayPolicy":        new(aiconfigurationv1alpha1.AIGatewayPolicy),
@@ -680,15 +682,69 @@ func TestCacheOpts(t *testing.T) {
 		require.False(t, secretCfg.Label.Matches(labels.Set{"a": "b"}))
 	})
 
-	t.Run("namespace scoping of the other objects", func(t *testing.T) {
+	t.Run("unset watch namespaces: every namespace for the entities and Secrets", func(t *testing.T) {
 		i := Instance{env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}}}
 		opts := i.cacheOpts()
-		for _, obj := range opts.ByObject {
-			require.Equal(t, map[string]cache.Config{"ns": {}}, obj.Namespaces)
+		require.Nil(t, opts.DefaultNamespaces, "no default namespace scoping")
+		for obj, cfg := range opts.ByObject {
+			switch obj.(type) {
+			case *corev1.Secret:
+				require.Nil(t, cfg.Namespaces)
+			default:
+				// The gateway's own objects stay scoped to its namespace.
+				require.Equal(t, map[string]cache.Config{"ns": {}}, cfg.Namespaces)
+			}
 		}
 		require.Len(t, opts.ByObject, 4)
 	})
 
+	t.Run("watch namespaces scope the entities and the Secrets", func(t *testing.T) {
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{WatchNamespaces: []string{"ns", "team-a"}},
+		}
+		opts := i.cacheOpts()
+		want := map[string]cache.Config{"ns": {}, "team-a": {}}
+		require.Equal(t, want, opts.DefaultNamespaces)
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.Equal(t, want, secretCfg.Namespaces)
+	})
+
+	t.Run("KongReferenceGrants keep the watch namespaces, not the gateway's namespace", func(t *testing.T) {
+		// The translation reads the grants of the namespace it resolves against: the
+		// gateway's own namespace for an entity of another namespace referencing the
+		// gateway, and a Secret's namespace for a cross-namespace secretRef. Both are
+		// watched, the gateway's own namespace always so, hence the default scope. A
+		// per-object scope narrower than the watch namespaces breaks the translation of
+		// every cross-namespace secretRef, because the cached client cannot list a
+		// namespace outside its scope, so nothing may narrow this object.
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{WatchNamespaces: []string{"ns", "team-a"}},
+		}
+		opts := i.cacheOpts()
+		for obj := range opts.ByObject {
+			require.IsNotType(t, &configurationv1alpha1.KongReferenceGrant{}, obj)
+		}
+		require.Equal(t, map[string]cache.Config{"ns": {}, "team-a": {}}, opts.DefaultNamespaces)
+	})
+
 	// No gateway namespace: no per-object cache configuration at all.
 	require.Empty(t, (&Instance{}).cacheOpts().ByObject)
+}
+
+func TestHashWatchNamespaces(t *testing.T) {
+	all, err := Hash(Config{})
+	require.NoError(t, err)
+	one, err := Hash(Config{
+		WatchNamespaces: []string{"ns"},
+	})
+	require.NoError(t, err)
+	two, err := Hash(Config{
+		WatchNamespaces: []string{"ns", "team-a"},
+	})
+	require.NoError(t, err)
+	require.NotEqual(t, all, one, "narrowing to a concrete watch set must drift the hash")
+	require.NotEqual(t, one, two, "a widened watch set must drift the hash so the instance restarts with the new caches")
 }

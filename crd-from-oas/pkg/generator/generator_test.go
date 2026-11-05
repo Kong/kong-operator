@@ -2405,6 +2405,45 @@ func TestGenerateSchemaTypes_EmitsTypeMatchCELForSelectedUnions(t *testing.T) {
 
 	assert.Contains(t, content, `// +kubebuilder:validation:XValidation:rule="self.type == 'aws' ? has(self.aws) : !has(self.aws)",message="aws must be set only when type is aws"`)
 	assert.Contains(t, content, `// +kubebuilder:validation:XValidation:rule="self.type == 'static' ? has(self.static) : !has(self.static)",message="static must be set only when type is static"`)
+
+	// MCP server ACLs: the arms flatten onto the union wrapper, and a member of
+	// the wrong type (or no member) must still be rejected.
+	aclsParsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayMCPServerListenerConsumer": {
+				Name: "AIGatewayMCPServerListenerConsumer",
+				Properties: []*parser.Property{{
+					Name:          "acls",
+					Discriminator: "type",
+					OneOf: []*parser.Property{
+						{RefName: "AIGatewayMCPAllowACL"},
+						{RefName: "AIGatewayMCPDenyACL"},
+					},
+					DiscriminatorMapping: map[string]string{
+						"allow": "AIGatewayMCPAllowACL",
+						"deny":  "AIGatewayMCPDenyACL",
+					},
+				}},
+			},
+			"AIGatewayMCPAllowACL": {
+				Name:       "AIGatewayMCPAllowACL",
+				Properties: []*parser.Property{{Name: "allow", Type: "array", Items: &parser.Property{Type: "string"}}},
+			},
+			"AIGatewayMCPDenyACL": {
+				Name:       "AIGatewayMCPDenyACL",
+				Properties: []*parser.Property{{Name: "deny", Type: "array", Items: &parser.Property{Type: "string"}}},
+			},
+		},
+	}
+
+	aclsContent := g.generateSchemaTypes(map[string]bool{
+		"AIGatewayMCPServerListenerConsumer": true,
+	}, aclsParsed, nil)
+
+	assert.Contains(t, aclsContent, `// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'allow' ? has(self.allow) : !has(self.allow))",message="allow must be set only when type is allow"`)
+	assert.Contains(t, aclsContent, `// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'deny' ? has(self.deny) : !has(self.deny))",message="deny must be set only when type is deny"`)
+	// The discriminator stays optional so a pre-union CR keeps its ACLs.
+	assert.Contains(t, aclsContent, "\t// +optional\n\t// +kubebuilder:validation:Enum=allow;deny\n\tType AIGatewayMCPServerListenerConsumerAclsType `json:\"type,omitempty\"`")
 }
 
 func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
@@ -4124,6 +4163,30 @@ func TestGenerateSDKOpsTest_SkipsTypeAssertionsForUpdateMethods(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(content, `Type: "oidc"`))
 }
 
+func TestGenerateSDKOpsTest_NegativeCaseAssertsMissingConfigError(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{RefName: "AIGatewayCustomPolicyInstalledRequest"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayCustomPolicyRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOpsTest("AIGatewayCustomPolicy", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `require.ErrorContains(t, err, "AIGatewayCustomPolicy config is required")`)
+	assert.NotContains(t, content, `require.Error(t, err)`)
+}
+
 func TestParseSDKTypePath(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -4367,6 +4430,8 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		assert.Contains(t, file.Content,
 			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayListenerPolicy(),")
+		assert.NotContains(t, file.Content, "index.OptionsForKonnectOnlyRoot()")
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
 		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
 		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualClusterProducePolicy(),")
@@ -4374,6 +4439,44 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		formatted, err := format.Source([]byte(file.Content))
 		require.NoError(t, err)
 		assert.Equal(t, string(formatted), file.Content)
+	})
+
+	t.Run("parent entities", func(t *testing.T) {
+		infos := []*WatchFileInfo{
+			entity("EventGatewaySchemaRegistry", "KonnectEventGateway", onPrem),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+			entity("EventGatewayVirtualClusterConsumePolicy", "EventGatewayVirtualCluster", nil),
+		}
+
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher(infos)
+		require.NoError(t, err)
+		require.NotNil(t, file)
+
+		assert.Contains(t, file.Content, `	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster](): {
+		{&configurationv1alpha1.EventGatewayBackendCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterList{} },
+			index.IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef},
+	},`)
+		assert.Contains(t, file.Content, `	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyList{} },
+			index.IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef},
+	},`)
+		assert.NotContains(t, file.Content, "reflect.TypeFor[*configurationv1alpha1.EventGatewayBackendCluster]()",
+			"a root's gateway is no parent entity")
+
+		formatted, err := format.Source([]byte(file.Content))
+		require.NoError(t, err)
+		assert.Equal(t, string(formatted), file.Content)
+	})
+
+	t.Run("no parent entities", func(t *testing.T) {
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			entity("EventGatewayListener", "KonnectEventGateway", onPrem),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, file)
+
+		assert.Contains(t, file.Content, "var parentEntities = map[reflect.Type][]parentEntity{}")
 	})
 
 	t.Run("no entity accepts the gateway", func(t *testing.T) {

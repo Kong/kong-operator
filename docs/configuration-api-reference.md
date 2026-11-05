@@ -825,6 +825,94 @@ _Appears in:_
 - [BackendClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
 - [EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
 
+#### BackendClusterAuthenticationSaslAwsIam
+
+
+BackendClusterAuthenticationSaslAwsIam AWS IAM-based OAUTHBEARER
+authentication scheme for the backend cluster, for example when connecting to
+Amazon MSK with IAM authentication.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `saslAwsIam` _[BackendClusterAuthenticationSaslAwsIamSaslAwsIam](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamsaslawsiam)_ |  |
+
+_Appears in:_
+
+- [BackendClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationscheme)
+- [EventGatewayBackendClusterAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthentication)
+
+#### BackendClusterAuthenticationSaslAwsIamAssumeRole
+
+
+BackendClusterAuthenticationSaslAwsIamAssumeRole Configures whether to
+authenticate using credentials obtained by first assuming a role, using the
+AWS default credentials provider chain<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `arn` _string_ | The [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-arns) of the IAM role to assume, formatted as `arn:aws:iam::<account-id>:role/<role-name>`. |
+| `sessionName` _string_ | The session name to attach to the assumed role session. The value becomes part of the assumed role user ARN, queryable as `arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>`. |
+
+_Appears in:_
+
+- [BackendClusterAuthenticationSaslAwsIamSaslAwsIam](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamsaslawsiam)
+
+#### BackendClusterAuthenticationSaslAwsIamDefaultProviderChain
+
+
+BackendClusterAuthenticationSaslAwsIamDefaultProviderChain Configures whether
+to authenticate using credentials obtained from the AWS default credentials
+provider chain<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationSaslAwsIamSaslAwsIam](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamsaslawsiam)
+
+#### BackendClusterAuthenticationSaslAwsIamSaslAwsIam
+
+
+BackendClusterAuthenticationSaslAwsIamSaslAwsIam represents a union type for sasl_aws_iam.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[BackendClusterAuthenticationSaslAwsIamSaslAwsIamType](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamsaslawsiamtype)_ | Type designates the type of configuration. |
+| `assumeRole` _[BackendClusterAuthenticationSaslAwsIamAssumeRole](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamassumerole)_ | AssumeRole configuration. |
+| `defaultProviderChain` _[BackendClusterAuthenticationSaslAwsIamDefaultProviderChain](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamdefaultproviderchain)_ | DefaultProviderChain configuration. |
+
+_Appears in:_
+
+- [BackendClusterAuthenticationSaslAwsIam](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiam)
+
+#### BackendClusterAuthenticationSaslAwsIamSaslAwsIamType
+
+_Underlying type:_ `string`
+
+BackendClusterAuthenticationSaslAwsIamSaslAwsIamType represents the type of sasl_aws_iam.
+
+
+
+
+_Appears in:_
+
+- [BackendClusterAuthenticationSaslAwsIamSaslAwsIam](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiamsaslawsiam)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `assumeRole` |  |
+| `defaultProviderChain` |  |
+
 #### BackendClusterAuthenticationSaslPlain
 
 
@@ -882,6 +970,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `anonymous` |  |
+| `saslAwsIam` |  |
 | `saslPlain` |  |
 | `saslScram` |  |
 
@@ -982,6 +1071,9 @@ _Appears in:_
 - [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
 - [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 - [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
+- [EventGatewayParsedRecordMaskFieldsConsumeConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsconsumeconfig)
+- [EventGatewayParsedRecordTranscodeConsumeConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavro)
+- [EventGatewayParsedRecordTranscodeConsumeConfigJSON](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjson)
 
 #### ConsumeKeyValidationAction
 
@@ -1470,6 +1562,7 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[EventGatewayBackendClusterAuthenticationType](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterauthenticationtype)_ | Type designates the type of configuration. |
 | `anonymous` _[BackendClusterAuthenticationAnonymous](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationanonymous)_ | Anonymous configuration. |
+| `saslAwsIam` _[BackendClusterAuthenticationSaslAwsIam](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslawsiam)_ | SaslAwsIam configuration. |
 | `saslPlain` _[BackendClusterAuthenticationSaslPlain](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslplain)_ | SaslPlain configuration. |
 | `saslScram` _[BackendClusterAuthenticationSaslScram](#configuration-konghq-com-v1alpha1-types-backendclusterauthenticationsaslscram)_ | SaslScram configuration. |
 
@@ -1495,6 +1588,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `anonymous` |  |
+| `saslAwsIam` |  |
 | `saslPlain` |  |
 | `saslScram` |  |
 
@@ -1606,53 +1700,92 @@ of the consume schema validation policy when using an inline schema.<br /><br />
 | Field | Description |
 | --- | --- |
 | `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `key` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkey)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
-| `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `value` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigvalue)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 
 _Appears in:_
 
 - [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
 
-#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey
 
 
-EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
-Only one of the fields should be set based on the Type.
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey represents a union type for key.
+Only one of the fields should be set based on the SchemaType.
 
 
 
 | Field | Description |
 | --- | --- |
-| `type` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistrytype)_ | Type designates the type of configuration. |
-| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
-| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+| `schemaType` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkeytype)_ | SchemaType designates the type of configuration. |
+| `avro` _[SchemaValidationInlineSchemaConfigAvro](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigavro)_ | Avro configuration. |
+| `json` _[SchemaValidationInlineSchemaConfigJSON](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigjson)_ | JSON configuration. |
 
 _Appears in:_
 
 - [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)
 
-#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType
 
 _Underlying type:_ `string`
 
-EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType represents the type of schema_registry.
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType represents the type of key.
 
 
 
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkey)
 
 Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `id` |  |
-| `name` |  |
+| `avro` |  |
+| `json` |  |
+
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue
+
+
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue represents a union type for value.
+Only one of the fields should be set based on the SchemaType.
+
+
+
+| Field | Description |
+| --- | --- |
+| `schemaType` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigvaluetype)_ | SchemaType designates the type of configuration. |
+| `avro` _[SchemaValidationInlineSchemaConfigAvro](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigavro)_ | Avro configuration. |
+| `json` _[SchemaValidationInlineSchemaConfigJSON](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigjson)_ | JSON configuration. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType
+
+_Underlying type:_ `string`
+
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType represents the type of value.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigvalue)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+| `json` |  |
 
 #### EventGatewayConsumeSchemaValidationPolicyJSONConfig
 
@@ -2246,6 +2379,231 @@ _Appears in:_
 
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 
+#### EventGatewayMaskEmailDomainKeepAll
+
+
+EventGatewayMaskEmailDomainKeepAll Keeps the whole domain unmasked.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayMaskEmailDomainStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaildomainstrategy)
+- [EventGatewayMaskStrategyEmailDomain](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaildomain)
+
+
+
+#### EventGatewayMaskEmailDomainStrategyType
+
+_Underlying type:_ `string`
+
+EventGatewayMaskEmailDomainStrategyType represents the type of EventGatewayMaskEmailDomainStrategy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayMaskEmailDomainStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaildomainstrategy)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `keepAll` |  |
+| `keepChars` |  |
+| `replace` |  |
+
+
+
+#### EventGatewayMaskEmailLocalPartStrategyType
+
+_Underlying type:_ `string`
+
+EventGatewayMaskEmailLocalPartStrategyType represents the type of EventGatewayMaskEmailLocalPartStrategy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayMaskEmailLocalPartStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaillocalpartstrategy)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `keepChars` |  |
+| `replace` |  |
+
+
+
+#### EventGatewayMaskStrategyEmail
+
+
+EventGatewayMaskStrategyEmail Masks an email address by applying a separate
+strategy to the local part and to the domain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domain` _[EventGatewayMaskStrategyEmailDomain](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaildomain)_ | The strategy used to redact the domain of an email address. |
+| `localPart` _[EventGatewayMaskStrategyEmailLocalPart](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaillocalpart)_ | The strategy used to redact the local part of an email address. |
+
+_Appears in:_
+
+- [EventGatewayMaskStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategy)
+- [EventGatewayParsedRecordMaskSelectorStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorstrategy)
+
+#### EventGatewayMaskStrategyEmailDomain
+
+
+EventGatewayMaskStrategyEmailDomain represents a union type for domain.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayMaskStrategyEmailDomainType](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaildomaintype)_ | Type designates the type of configuration. |
+| `keepAll` _[EventGatewayMaskEmailDomainKeepAll](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaildomainkeepall)_ | EmailDomainKeepAll configuration. |
+| `keepChars` _[EventGatewayMaskStrategyKeepChars](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategykeepchars)_ | StrategyKeepChars configuration. |
+| `replace` _[EventGatewayMaskStrategyReplace](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyreplace)_ | StrategyReplace configuration. |
+
+_Appears in:_
+
+- [EventGatewayMaskStrategyEmail](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemail)
+
+#### EventGatewayMaskStrategyEmailDomainType
+
+_Underlying type:_ `string`
+
+EventGatewayMaskStrategyEmailDomainType represents the type of domain.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayMaskStrategyEmailDomain](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaildomain)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `keepAll` |  |
+| `keepChars` |  |
+| `replace` |  |
+
+#### EventGatewayMaskStrategyEmailLocalPart
+
+
+EventGatewayMaskStrategyEmailLocalPart represents a union type for local_part.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayMaskStrategyEmailLocalPartType](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaillocalparttype)_ | Type designates the type of configuration. |
+| `keepChars` _[EventGatewayMaskStrategyKeepChars](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategykeepchars)_ | KeepChars configuration. |
+| `replace` _[EventGatewayMaskStrategyReplace](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyreplace)_ | Replace configuration. |
+
+_Appears in:_
+
+- [EventGatewayMaskStrategyEmail](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemail)
+
+#### EventGatewayMaskStrategyEmailLocalPartType
+
+_Underlying type:_ `string`
+
+EventGatewayMaskStrategyEmailLocalPartType represents the type of local_part.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayMaskStrategyEmailLocalPart](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaillocalpart)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `keepChars` |  |
+| `replace` |  |
+
+#### EventGatewayMaskStrategyKeepChars
+
+
+EventGatewayMaskStrategyKeepChars Keeps a number of leading and/or trailing
+characters and replaces the middle with a fixed phrase.
+If `first + last` is greater than or equal to the value length, the whole
+value is replaced with the phrase, so it never shows more characters than the
+original value.
+The phrase is fixed, so the masked output does not leak the value length.
+
+
+
+| Field | Description |
+| --- | --- |
+| `first` _int_ | Number of leading characters to keep unmasked. |
+| `last` _int_ | Number of trailing characters to keep unmasked. |
+| `phrase` _string_ | The phrase that replaces the masked middle of the value. |
+
+_Appears in:_
+
+- [EventGatewayMaskEmailDomainStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaildomainstrategy)
+- [EventGatewayMaskEmailLocalPartStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaillocalpartstrategy)
+- [EventGatewayMaskStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategy)
+- [EventGatewayMaskStrategyEmailDomain](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaildomain)
+- [EventGatewayMaskStrategyEmailLocalPart](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaillocalpart)
+- [EventGatewayParsedRecordMaskSelectorStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorstrategy)
+
+#### EventGatewayMaskStrategyReplace
+
+
+EventGatewayMaskStrategyReplace Replaces the whole value with a fixed phrase.
+The masked length does not reflect the original value length.
+
+
+
+| Field | Description |
+| --- | --- |
+| `phrase` _string_ | The phrase to replace the value with. |
+
+_Appears in:_
+
+- [EventGatewayMaskEmailDomainStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaildomainstrategy)
+- [EventGatewayMaskEmailLocalPartStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskemaillocalpartstrategy)
+- [EventGatewayMaskStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategy)
+- [EventGatewayMaskStrategyEmailDomain](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaildomain)
+- [EventGatewayMaskStrategyEmailLocalPart](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemaillocalpart)
+- [EventGatewayParsedRecordMaskSelectorStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorstrategy)
+
+#### EventGatewayMaskStrategyType
+
+_Underlying type:_ `string`
+
+EventGatewayMaskStrategyType represents the type of EventGatewayMaskStrategy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayMaskStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategy)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `email` |  |
+| `keepChars` |  |
+| `replace` |  |
+
 #### EventGatewayModifyHeaderAction
 
 
@@ -2663,6 +3021,7 @@ _Appears in:_
 
 - [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
+- [EventGatewayParsedRecordMaskSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorpaths)
 
 #### EventGatewayParsedRecordFieldPathsArrayItem
 
@@ -2694,6 +3053,734 @@ _Appears in:_
 
 - [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
+- [EventGatewayParsedRecordMaskSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorpaths)
+
+#### EventGatewayParsedRecordMaskFieldsConsumeConfig
+
+
+EventGatewayParsedRecordMaskFieldsConsumeConfig The configuration of the mask
+parsed record fields consume policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `maskFields` _[][EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)_ | Selects which fields to mask and how to mask them. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskFieldsConsumePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsconsumepolicycreate)
+
+#### EventGatewayParsedRecordMaskFieldsConsumePolicyCreate
+
+
+EventGatewayParsedRecordMaskFieldsConsumePolicyCreate Redacts string fields
+of parsed Kafka records using a configurable masking strategy.<br /><br />Only string fields may be selected.
+Selecting a field that does not exist is ignored;
+selecting a field that is not a string is a policy error handled by
+`failure_mode`.<br /><br />Note this policy can only be used as a child of a
+`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayParsedRecordMaskFieldsConsumeConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsconsumeconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+#### EventGatewayParsedRecordMaskFieldsProduceConfig
+
+
+EventGatewayParsedRecordMaskFieldsProduceConfig The configuration of the mask
+record fields produce policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `maskFields` _[][EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)_ | Selects which fields to mask and how to mask them. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskFieldsProducePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsproducepolicycreate)
+
+#### EventGatewayParsedRecordMaskFieldsProducePolicyCreate
+
+
+EventGatewayParsedRecordMaskFieldsProducePolicyCreate Redacts string fields
+of parsed Kafka records using a configurable masking strategy.<br /><br />Only string fields may be selected.
+Selecting a field that does not exist is ignored;
+selecting a field that is not a string is a policy error handled by
+`failure_mode`.<br /><br />Note this policy can only be used as a child of a
+`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayParsedRecordMaskFieldsProduceConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsproduceconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayParsedRecordMaskSelector
+
+
+EventGatewayParsedRecordMaskSelector Selects fields of a parsed record for
+masking and defines the strategy used to redact them.
+
+
+
+| Field | Description |
+| --- | --- |
+| `paths` _[EventGatewayParsedRecordMaskSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorpaths)_ | Selects which fields of the parsed record to mask. A maximum of 50 path entries are allowed. |
+| `strategy` _[EventGatewayParsedRecordMaskSelectorStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorstrategy)_ | The strategy used to redact a matched field value. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskFieldsConsumeConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsconsumeconfig)
+- [EventGatewayParsedRecordMaskFieldsProduceConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsproduceconfig)
+
+#### EventGatewayParsedRecordMaskSelectorPaths
+
+
+EventGatewayParsedRecordMaskSelectorPaths represents a union type for paths.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordMaskSelectorPathsType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorpathstype)_ | Type designates the type of configuration. |
+| `array` _[EventGatewayParsedRecordFieldPathsArray](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsarray)_ | Array configuration. |
+| `expression` _[EventGatewayParsedRecordFieldPathsExpression](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordfieldpathsexpression)_ | Expression configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)
+
+#### EventGatewayParsedRecordMaskSelectorPathsType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordMaskSelectorPathsType represents the type of paths.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorpaths)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `array` |  |
+| `expression` |  |
+
+#### EventGatewayParsedRecordMaskSelectorStrategy
+
+
+EventGatewayParsedRecordMaskSelectorStrategy represents a union type for strategy.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordMaskSelectorStrategyType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorstrategytype)_ | Type designates the type of configuration. |
+| `email` _[EventGatewayMaskStrategyEmail](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyemail)_ | Email configuration. |
+| `keepChars` _[EventGatewayMaskStrategyKeepChars](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategykeepchars)_ | KeepChars configuration. |
+| `replace` _[EventGatewayMaskStrategyReplace](#configuration-konghq-com-v1alpha1-types-eventgatewaymaskstrategyreplace)_ | Replace configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)
+
+#### EventGatewayParsedRecordMaskSelectorStrategyType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordMaskSelectorStrategyType represents the type of strategy.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordMaskSelectorStrategy](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselectorstrategy)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `email` |  |
+| `keepChars` |  |
+| `replace` |  |
+
+
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigAvro
+
+
+EventGatewayParsedRecordTranscodeConsumeConfigAvro The configuration of the
+transcode parsed record policy when converting consumed records to Avro.
+Avro requires a schema to serialize the record value, so `schema_source` must
+be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
+| `schemaSource` _[EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfig)
+- [EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreateconfig)
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource
+
+
+EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource represents a union type for schema_source.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasourcetype)_ | Type designates the type of configuration. |
+| `inline` _[EventGatewayParsedRecordTranscodeSchemaSourceInline](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourceinline)_ | Inlin configuration. |
+| `reference` _[EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)_ | Referenc configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavro)
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType represents the type of schema_source.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` |  |
+| `reference` |  |
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigJSON
+
+
+EventGatewayParsedRecordTranscodeConsumeConfigJSON The configuration of the
+transcode parsed record policy when converting consumed records to JSON.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
+| `schemaSource` _[EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfig)
+- [EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreateconfig)
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource
+
+
+EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource represents a union type for schema_source.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasourcetype)_ | Type designates the type of configuration. |
+| `inline` _[EventGatewayParsedRecordTranscodeSchemaSourceInline](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourceinline)_ | Inlin configuration. |
+| `reference` _[EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)_ | Referenc configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigJSON](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjson)
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType represents the type of schema_source.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` |  |
+| `reference` |  |
+
+#### EventGatewayParsedRecordTranscodeConsumeConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeConsumeConfigType represents the type of EventGatewayParsedRecordTranscodeConsumeConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+| `json` |  |
+
+#### EventGatewayParsedRecordTranscodeConsumePolicyCreate
+
+
+EventGatewayParsedRecordTranscodeConsumePolicyCreate Converts an already
+schema-validated record value into a different serialization
+format before it is returned to the consumer.<br /><br />Note this policy can only be used as a child of a
+`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreateconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
+
+#### EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig
+
+
+EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig represents a union type for config.
+Only one of the fields should be set based on the OutputFormat.
+
+
+
+| Field | Description |
+| --- | --- |
+| `outputFormat` _[EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreateconfigtype)_ | OutputFormat designates the type of configuration. |
+| `avro` _[EventGatewayParsedRecordTranscodeConsumeConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavro)_ | Avro configuration. |
+| `json` _[EventGatewayParsedRecordTranscodeConsumeConfigJSON](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjson)_ | JSON configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreate)
+
+#### EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreateconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+| `json` |  |
+
+
+
+#### EventGatewayParsedRecordTranscodeProduceConfigAvro
+
+
+EventGatewayParsedRecordTranscodeProduceConfigAvro The configuration of the
+transcode parsed record policy when converting produced records to Avro.
+Avro requires a schema to serialize the record value, so `schema_source` must
+be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
+| `schemaSource` _[EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeProduceConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfig)
+- [EventGatewayParsedRecordTranscodeProducePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreateconfig)
+
+#### EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource
+
+
+EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource represents a union type for schema_source.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasourcetype)_ | Type designates the type of configuration. |
+| `inline` _[EventGatewayParsedRecordTranscodeSchemaSourceInline](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourceinline)_ | Inlin configuration. |
+| `reference` _[EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)_ | Referenc configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeProduceConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavro)
+
+#### EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType represents the type of schema_source.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` |  |
+| `reference` |  |
+
+#### EventGatewayParsedRecordTranscodeProduceConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeProduceConfigType represents the type of EventGatewayParsedRecordTranscodeProduceConfig.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeProduceConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+
+#### EventGatewayParsedRecordTranscodeProducePolicyCreate
+
+
+EventGatewayParsedRecordTranscodeProducePolicyCreate Converts an already
+schema-validated record value into a different serialization
+format before it is produced to the backend cluster.<br /><br />Note this policy can only be used as a child of a
+`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied.<br /><br />When the policy is applied as a child policy of schema_validation, the expression can also reference `record.value` fields. |
+| `config` _[EventGatewayParsedRecordTranscodeProducePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreateconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayParsedRecordTranscodeProducePolicyCreateConfig
+
+
+EventGatewayParsedRecordTranscodeProducePolicyCreateConfig represents a union type for config.
+Only one of the fields should be set based on the OutputFormat.
+
+
+
+| Field | Description |
+| --- | --- |
+| `outputFormat` _[EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreateconfigtype)_ | OutputFormat designates the type of configuration. |
+| `avro` _[EventGatewayParsedRecordTranscodeProduceConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavro)_ | EventGatewayParsedRecordTranscodeProduceConfigAvro configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeProducePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreate)
+
+#### EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType represents the type of config.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeProducePolicyCreateConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreateconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+
+
+
+#### EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+
+
+EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat Prefixes
+the structured data bytes with a reference to the schema.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestination)
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestination)
+
+#### EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+
+
+EventGatewayParsedRecordTranscodeSchemaRefDestinationNone Do not persist the
+schema anywhere.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestination)
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestination)
+
+#### EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+
+
+EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader Puts the
+schema reference in a record header.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | The name is compatible with Confluent's serializer by default but can be changed. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestination)
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestination)
+
+#### EventGatewayParsedRecordTranscodeSchemaRefDestinationType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeSchemaRefDestinationType represents the type of EventGatewayParsedRecordTranscodeSchemaRefDestination.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestination)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `confluentFormat` |  |
+| `none` |  |
+| `recordHeader` |  |
+
+
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceInline
+
+
+EventGatewayParsedRecordTranscodeSchemaSourceInline A schema embedded
+directly in the policy configuration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `inline` _string_ | The raw schema text (e.g. an Avro JSON schema) to use for the transcoded output data. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasource)
+- [EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasource)
+- [EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasource)
+- [EventGatewayParsedRecordTranscodeSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasource)
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceReference
+
+
+EventGatewayParsedRecordTranscodeSchemaSourceReference References a schema
+registered in a schema registry, computing the subject and version to use.
+
+
+
+| Field | Description |
+| --- | --- |
+| `schemaRefDestination` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestination)_ | Defines how to record the schema id for the transcoded output data. See the [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format) for more about the wire format. |
+| `schemaRegistry` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)_ | A reference to a schema Registry. |
+| `subject` _string_ | An expression that computes the schema registry subject of the output data's schema. |
+| `version` _string_ | An expression that computes the schema registry version of the output data's schema. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasource)
+- [EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasource)
+- [EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasource)
+- [EventGatewayParsedRecordTranscodeSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasource)
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination
+
+
+EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination represents a union type for schema_ref_destination.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinationType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestinationtype)_ | Type designates the type of configuration. |
+| `confluentFormat` _[EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestinationconfluentformat)_ | ConfluentFormat configuration. |
+| `none` _[EventGatewayParsedRecordTranscodeSchemaRefDestinationNone](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestinationnone)_ | None configuration. |
+| `recordHeader` _[EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemarefdestinationrecordheader)_ | RecordHeader configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinationType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinationType represents the type of schema_ref_destination.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestination)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `confluentFormat` |  |
+| `none` |  |
+| `recordHeader` |  |
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry
+
+
+EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
+
+#### EventGatewayParsedRecordTranscodeSchemaSourceType
+
+_Underlying type:_ `string`
+
+EventGatewayParsedRecordTranscodeSchemaSourceType represents the type of EventGatewayParsedRecordTranscodeSchemaSource.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` |  |
+| `reference` |  |
 
 
 
@@ -2802,53 +3889,92 @@ of the produce schema validation policy when using an inline schema.<br /><br />
 | Field | Description |
 | --- | --- |
 | `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `key` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkey)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
-| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `value` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvalue)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
 
 _Appears in:_
 
 - [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
 
-#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey
 
 
-EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
-Only one of the fields should be set based on the Type.
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey represents a union type for key.
+Only one of the fields should be set based on the SchemaType.
 
 
 
 | Field | Description |
 | --- | --- |
-| `type` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistrytype)_ | Type designates the type of configuration. |
-| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
-| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+| `schemaType` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkeytype)_ | SchemaType designates the type of configuration. |
+| `avro` _[SchemaValidationInlineSchemaConfigAvro](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigavro)_ | Avro configuration. |
+| `json` _[SchemaValidationInlineSchemaConfigJSON](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigjson)_ | JSON configuration. |
 
 _Appears in:_
 
 - [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
 
-#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType
 
 _Underlying type:_ `string`
 
-EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType represents the type of schema_registry.
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType represents the type of key.
 
 
 
 
 _Appears in:_
 
-- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkey)
 
 Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `id` |  |
-| `name` |  |
+| `avro` |  |
+| `json` |  |
+
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue
+
+
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue represents a union type for value.
+Only one of the fields should be set based on the SchemaType.
+
+
+
+| Field | Description |
+| --- | --- |
+| `schemaType` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvaluetype)_ | SchemaType designates the type of configuration. |
+| `avro` _[SchemaValidationInlineSchemaConfigAvro](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigavro)_ | Avro configuration. |
+| `json` _[SchemaValidationInlineSchemaConfigJSON](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfigjson)_ | JSON configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType represents the type of value.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvalue)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+| `json` |  |
 
 #### EventGatewayProduceSchemaValidationPolicyJSONConfig
 
@@ -3518,9 +4644,11 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayVirtualClusterConsumePolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfigtype)_ | Type designates the type of configuration. |
 | `decrypt` _[EventGatewayDecryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaydecryptpolicy)_ | DecryptPolicy configuration. |
 | `decryptFields` _[EventGatewayParsedRecordDecryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldspolicycreate)_ | ParsedRecordDecryptFieldsPolicyCreate configuration. |
+| `maskFields` _[EventGatewayParsedRecordMaskFieldsConsumePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsconsumepolicycreate)_ | ParsedRecordMaskFieldsConsumePolicyCreate configuration. |
 | `modifyHeaders` _[EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)_ | ModifyHeadersPolicyCreate configuration. |
 | `schemaValidation` _[EventGatewayConsumeSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicy)_ | ConsumeSchemaValidationPolicy configuration. |
 | `skipRecord` _[EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)_ | SkipRecordPolicyCreate configuration. |
+| `transcode` _[EventGatewayParsedRecordTranscodeConsumePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreate)_ | ParsedRecordTranscodeConsumePolicyCreate configuration. |
 
 _Appears in:_
 
@@ -3545,9 +4673,11 @@ Allowed values:
 | --- | --- |
 | `decrypt` |  |
 | `decryptFields` |  |
+| `maskFields` |  |
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
 | `skipRecord` |  |
+| `transcode` |  |
 
 #### EventGatewayVirtualClusterConsumePolicyRef
 
@@ -3784,8 +4914,10 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayVirtualClusterProducePolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfigtype)_ | Type designates the type of configuration. |
 | `encrypt` _[EventGatewayEncryptPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptpolicy)_ | EncryptPolicy configuration. |
 | `encryptFields` _[EventGatewayParsedRecordEncryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldspolicycreate)_ | ParsedRecordEncryptFieldsPolicyCreate configuration. |
+| `maskFields` _[EventGatewayParsedRecordMaskFieldsProducePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsproducepolicycreate)_ | ParsedRecordMaskFieldsProducePolicyCreate configuration. |
 | `modifyHeaders` _[EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)_ | ModifyHeadersPolicyCreate configuration. |
 | `schemaValidation` _[EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)_ | ProduceSchemaValidationPolicy configuration. |
+| `transcode` _[EventGatewayParsedRecordTranscodeProducePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreate)_ | ParsedRecordTranscodeProducePolicyCreate configuration. |
 
 _Appears in:_
 
@@ -3810,8 +4942,10 @@ Allowed values:
 | --- | --- |
 | `encrypt` |  |
 | `encryptFields` |  |
+| `maskFields` |  |
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
+| `transcode` |  |
 
 #### EventGatewayVirtualClusterProducePolicyRef
 
@@ -5433,6 +6567,10 @@ _Appears in:_
 - [EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)
 - [EventGatewayParsedRecordDecryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldspolicycreate)
 - [EventGatewayParsedRecordEncryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldspolicycreate)
+- [EventGatewayParsedRecordMaskFieldsConsumePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsconsumepolicycreate)
+- [EventGatewayParsedRecordMaskFieldsProducePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsproducepolicycreate)
+- [EventGatewayParsedRecordTranscodeConsumePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumepolicycreate)
+- [EventGatewayParsedRecordTranscodeProducePolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproducepolicycreate)
 - [EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
 - [EventGatewayRequestRuleValidatorPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorpolicy)
 - [EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)
@@ -5559,6 +6697,8 @@ failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime v
 _Appears in:_
 
 - [EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)
+- [EventGatewayParsedRecordMaskFieldsProduceConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskfieldsproduceconfig)
+- [EventGatewayParsedRecordTranscodeProduceConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavro)
 - [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
@@ -5702,7 +6842,7 @@ Registry](https://github.com/confluentinc/schema-registry)
 | --- | --- |
 | `authentication` _[SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)_ | The authentication configuration for the schema registry. |
 | `endpoint` _string_ | The endpoint of the Confluent schema registry. |
-| `schemaType` _string_ | The format of the message. |
+| `schemaType` _string_ | The format of the message.<br /><br />**`any` requires a minimum runtime version of `1.3`**. |
 | `timeoutSeconds` _int_ | Total time in seconds from establishing connection to receive a response from schema registry. |
 
 _Appears in:_
@@ -5757,8 +6897,7 @@ SchemaRegistryReferenceByID is a type alias.
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)
-- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 
@@ -5775,10 +6914,71 @@ SchemaRegistryReferenceByName Reference a schema registry by its unique name.
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)
-- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
+
+
+
+#### SchemaValidationInlineSchemaConfigAvro
+
+
+SchemaValidationInlineSchemaConfigAvro The configuration of an inline schema
+when using Avro.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `schema` _string_ | A schema that applies according to `schema_type`. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkey)
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigvalue)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkey)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvalue)
+- [SchemaValidationInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfig)
+
+#### SchemaValidationInlineSchemaConfigJSON
+
+
+SchemaValidationInlineSchemaConfigJSON The configuration of an inline schema
+when using JSON.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `schema` _string_ | A schema that applies according to `schema_type`. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkey)
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigvalue)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkey)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvalue)
+- [SchemaValidationInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfig)
+
+#### SchemaValidationInlineSchemaConfigType
+
+_Underlying type:_ `string`
+
+SchemaValidationInlineSchemaConfigType represents the type of SchemaValidationInlineSchemaConfig.
+
+
+
+
+_Appears in:_
+
+- [SchemaValidationInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-schemavalidationinlineschemaconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `avro` |  |
+| `json` |  |
 
 
 
@@ -5975,6 +7175,25 @@ TargetRefWithGroupKind is a reference based on the object's group, kind, and nam
 _Appears in:_
 
 - [KongPluginBindingTargets](#configuration-konghq-com-v1alpha1-types-kongpluginbindingtargets)
+
+#### TranscodeOnUnknownField
+
+_Underlying type:_ `string`
+
+TranscodeOnUnknownField Describes how to handle JSON fields that are not
+defined in the target schema.
+* `fail` - the transcoding fails.
+The policy `failure_mode` determines how the failure is handled.
+* `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeConsumeConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavro)
+- [EventGatewayParsedRecordTranscodeConsumeConfigJSON](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjson)
+- [EventGatewayParsedRecordTranscodeProduceConfigAvro](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavro)
 
 #### VirtualClusterACLMode
 
@@ -6249,7 +7468,7 @@ consumer group IDs, transaction IDs).
 | --- | --- |
 | `additional` _[VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)_ |  |
 | `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading.<br /><br />Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients.<br /><br />Created resources must include the prefix or the request will fail. |
-| `prefix` _string_ | The namespace is differentiated by this chosen prefix. For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
+| `prefix` _string_ | The namespace is differentiated by this chosen prefix. The prefix is prepended to Kafka topic names, so it can only contain the characters Kafka allows in them: ASCII letters, digits, `.`, `_` and `-`. It must contain at least one character other than `.` and be at most 100 characters long to leave room for the rest of the topic name (Kafka limits topic names to 249 characters). For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
 
 _Appears in:_
 

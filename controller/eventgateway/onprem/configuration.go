@@ -20,7 +20,10 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -40,14 +43,17 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // configuration is what gw-admin must have for a gateway, built from the
-// entities attached to the gateway: the entities it receives, and the
-// entities left out, with the reason.
+// entities attached to the gateway: the entities and the data plane
+// certificates it receives, and the entities left out, with the reason.
 type configuration struct {
 	// entities is sent with PUT .../entities.
-	entities gwadminapi.GatewayEntities
+	entities gwadminapi.GatewayEntitySet
+	// certificates are sent one by one: they are not part of entities.
+	certificates []dataPlaneCertificate
 	// objects names the object each entity of entities comes from, by the
 	// path of the entity in the configuration, e.g. backend_clusters.0, so
 	// that an error gw-admin reports on a field can be traced back to the
@@ -92,6 +98,14 @@ type entityStatus struct {
 	kept bool
 }
 
+// dataPlaneCertificate is a data plane certificate of the gateway.
+type dataPlaneCertificate struct {
+	id   uuid.UUID
+	key  client.ObjectKey
+	body gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem
+	obj  *configurationv1alpha1.EventGatewayDataPlaneCertificate
+}
+
 // excludedEntity is an object left out of the configuration of its gateway.
 type excludedEntity struct {
 	entityStatus
@@ -134,6 +148,9 @@ func buildConfiguration(
 		return configuration{}, err
 	}
 	if err := cfg.addListeners(ctx, resolver, gateway, targets); err != nil {
+		return configuration{}, err
+	}
+	if err := cfg.addCertificates(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
 	key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
@@ -591,7 +608,9 @@ func (r *referenceReader) readAll(obj client.Object, refs []configurationv1alpha
 // "EventGatewayBackendCluster ns/name (backend_clusters.0.name)", or returns
 // the field as it is when it comes from none.
 func (c configuration) describeField(field string) string {
-	for path := field; path != ""; {
+	// The entities are sent under entities, along with the version of the
+	// configuration.
+	for path := strings.TrimPrefix(field, "entities."); path != ""; {
 		if object, ok := c.objects[path]; ok {
 			return fmt.Sprintf("%s (%s)", object, field)
 		}
@@ -738,4 +757,85 @@ func withoutNulls(v any) {
 			withoutNulls(child)
 		}
 	}
+}
+
+// addCertificates adds the data plane certificates attached to the gateway,
+// from the oldest, or leaves them out with a reason. One being deleted is left
+// out without a reason, it is going away: as any certificate the
+// configuration doesn't hold, the push deletes it from gw-admin (see push).
+func (c *configuration) addCertificates(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) error {
+	var list configurationv1alpha1.EventGatewayDataPlaneCertificateList
+	if err := cl.List(ctx, &list, client.MatchingFields{
+		index.IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef: client.ObjectKeyFromObject(gateway).String(),
+	}); err != nil {
+		return fmt.Errorf("failed to list the EventGatewayDataPlaneCertificates of the gateway: %w", err)
+	}
+	certificates := live[configurationv1alpha1.EventGatewayDataPlaneCertificate](list.Items)
+	slices.SortFunc(certificates, byCreation)
+	for _, cert := range certificates {
+		if err := c.addCertificate(ctx, cl, cert); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// addCertificate adds a data plane certificate attached to the gateway, or
+// leaves it out with a reason. One whose Secret is gone is left out, not kept
+// as it was, as other entities are: gw-admin stops trusting it. No
+// certificate is recorded in built, so previous never holds one.
+func (c *configuration) addCertificate(ctx context.Context, cl client.Client, cert *configurationv1alpha1.EventGatewayDataPlaneCertificate) error {
+	conv, ok, err := convertObject[*configurationv1alpha1.EventGatewayDataPlaneCertificate, certificateEntity](
+		ctx, c, cl, cert, "EventGatewayDataPlaneCertificate",
+		func(ctx context.Context, cl client.Client, cert *configurationv1alpha1.EventGatewayDataPlaneCertificate) (any, error) {
+			return cert.ToCreateEventGatewayDataPlaneCertificateRequest(ctx, cl)
+		},
+		func(fields map[string]any) error {
+			// gw-admin accepts any string as a certificate.
+			certificate, _ := fields["certificate"].(string)
+			return validateCertificates(certificate)
+		})
+	if err != nil || !ok {
+		return err
+	}
+	// convertObject checked the UID is a version 4 UUID.
+	id, _ := uidV4(cert)
+	c.certificates = append(c.certificates, dataPlaneCertificate{
+		id: id, key: client.ObjectKeyFromObject(cert), body: conv.entity.UpsertEventGatewayDataPlaneCertificateRequestOnPrem, obj: cert,
+	})
+	c.included = append(c.included, conv.status)
+	return nil
+}
+
+// certificateEntity is a data plane certificate converted as an entity: the
+// request registering it, and its id, which goes in the path of the request.
+type certificateEntity struct {
+	gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem
+
+	ID string `json:"id"`
+}
+
+// validateCertificates checks that data holds at least one PEM certificate,
+// and no PEM block of another type: text around the blocks is ignored.
+func validateCertificates(data string) error {
+	rest := []byte(data)
+	var found int
+	for {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			return fmt.Errorf("the certificate holds a PEM block of type %q", block.Type)
+		}
+		if _, err := x509.ParseCertificate(block.Bytes); err != nil {
+			return fmt.Errorf("the certificate is invalid: %w", err)
+		}
+		found++
+	}
+	if found == 0 {
+		return errors.New("the certificate is not a PEM certificate")
+	}
+	return nil
 }

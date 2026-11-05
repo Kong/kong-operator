@@ -28,6 +28,7 @@ func TestEventGatewayBackendClusterAuthenticationUnmarshalJSON_NilReceiver(t *te
 		payload []byte
 	}{
 		{name: "anonymous", payload: []byte("{\"type\":\"anonymous\",\"anonymous\":{}}")},
+		{name: "sasl_aws_iam", payload: []byte("{\"type\":\"saslAwsIam\",\"saslAwsIam\":{}}")},
 		{name: "sasl_plain", payload: []byte("{\"type\":\"saslPlain\",\"saslPlain\":{}}")},
 		{name: "sasl_scram", payload: []byte("{\"type\":\"saslScram\",\"saslScram\":{}}")},
 	}
@@ -70,6 +71,22 @@ func TestEventGatewayBackendClusterAPISpecUnmarshalJSON_DecodesUnionFields(t *te
 				}
 				if target.Authentication.Anonymous == nil {
 					t.Fatalf("Authentication.Anonymous should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Authentication/sasl_aws_iam",
+			payload: []byte("{\"authentication\":{\"type\":\"saslAwsIam\",\"saslAwsIam\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayBackendClusterAPISpec) {
+				t.Helper()
+				if target.Authentication == nil {
+					t.Fatalf("Authentication should be allocated")
+				}
+				if got, want := target.Authentication.Type, EventGatewayBackendClusterAuthenticationTypeSaslAwsIam; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Authentication.SaslAwsIam == nil {
+					t.Fatalf("Authentication.SaslAwsIam should be allocated")
 				}
 			},
 		},

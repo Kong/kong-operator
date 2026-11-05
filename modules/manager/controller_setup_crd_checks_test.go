@@ -150,6 +150,23 @@ func TestEnsureRequiredCRDsChecksOnPremEventGatewayController(t *testing.T) {
 	}
 }
 
+func TestEnsureRequiredCRDsChecksOnPremAIGatewayController(t *testing.T) {
+	t.Parallel()
+
+	missingGVR := schema.GroupVersionResource{
+		Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+		Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+		Resource: "kongreferencegrants",
+	}
+
+	cfg := defaultConfigWithDisabledControllers()
+	cfg.OnPremAIGatewayControllerEnabled = true
+
+	err := ensureRequiredCRDs(&cfg, crdCheckerMissing(missingGVR))
+	require.Error(t, err)
+	require.ErrorContains(t, err, missingGVR.String())
+}
+
 func TestEnsureRequiredCRDsChecksGWAdminForGWAdminController(t *testing.T) {
 	t.Parallel()
 

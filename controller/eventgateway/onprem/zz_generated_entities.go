@@ -3,6 +3,7 @@
 package onprem
 
 import (
+	"reflect"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -83,4 +84,31 @@ func EntityGroupVersionResources() []schema.GroupVersionResource {
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterpolicies"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),
 	}
+}
+
+// parentEntities are, by kind of entity, its kinds of parent entity, with
+// the list of its kind and the index field that finds the children of a
+// parent. A change to a parent, e.g. its deletion or a new parent
+// reference, is reported on its children, and on their children in turn.
+var parentEntities = map[reflect.Type][]parentEntity{
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayListenerPolicy](): {
+		{&configurationv1alpha1.EventGatewayListener{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayListenerPolicyList{} },
+			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef},
+	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster](): {
+		{&configurationv1alpha1.EventGatewayBackendCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterList{} },
+			index.IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef},
+	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyList{} },
+			index.IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef},
+	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterPolicy](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterPolicyList{} },
+			index.IndexFieldEventGatewayVirtualClusterPolicyOnEventGatewayVirtualClusterRef},
+	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList{} },
+			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef},
+	},
 }

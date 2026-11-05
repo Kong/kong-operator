@@ -309,6 +309,10 @@ func GenerateBaseDeployment[T Object](
 		},
 	}
 
+	if cfg.TerminationGracePeriodSeconds != nil {
+		d.Spec.Template.Spec.TerminationGracePeriodSeconds = cfg.TerminationGracePeriodSeconds(dp)
+	}
+
 	k8sutils.SetOwnerForObject(d, dp)
 	if cfg.LabelManaged != nil {
 		cfg.LabelManaged(d)
@@ -317,6 +321,10 @@ func GenerateBaseDeployment[T Object](
 
 	addAnnotationsForDataPlaneDeployment(logger, d, cfg.DeploymentAnnotations(dp))
 	addLabelsForDataPlaneDeployment(logger, d, cfg.DeploymentLabels(dp))
+
+	if cfg.Customize != nil {
+		cfg.Customize(dp, cp, d)
+	}
 
 	return d, nil
 }

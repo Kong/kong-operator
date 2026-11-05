@@ -17,10 +17,12 @@ limitations under the License.
 package onprem
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,7 +43,7 @@ func TestGatewayConfigHash(t *testing.T) {
 	assert.Equal(t, hash, again, "the same configuration, the same hash")
 
 	withNil := config
-	withNil.Entities = gwadminapi.GatewayEntities{}
+	withNil.Entities = gwadminapi.GatewayEntitySet{}
 	nilHash, err := withNil.hash()
 	require.NoError(t, err)
 	assert.Equal(t, hash, nilHash, "a list missing and an empty one are the same")
@@ -57,6 +59,16 @@ func TestGatewayConfigHash(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, hash, entityHash)
 	assert.Empty(t, config.Entities.BackendClusters, "hashing doesn't change the configuration")
+
+	encoded, err := json.Marshal(config)
+	require.NoError(t, err)
+	assert.NotContains(t, string(encoded), "certificates",
+		"without certificates, the configuration is the one recorded before they were part of it: an upgrade records no new revision")
+	withCertificate := config
+	withCertificate.Certificates = map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem{uuid.NewString(): {Certificate: "pem"}}
+	certificateHash, err := withCertificate.hash()
+	require.NoError(t, err)
+	assert.NotEqual(t, hash, certificateHash)
 }
 
 func TestRecordRevision(t *testing.T) {

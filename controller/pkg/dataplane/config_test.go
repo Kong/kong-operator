@@ -637,3 +637,100 @@ func Test_validateConfig(t *testing.T) {
 		})
 	}
 }
+
+func Test_validateConfig_ControlPlaneKinds(t *testing.T) {
+	dependencies := func(context.Context, client.Client, ControlPlaneObject) (any, error) { return nil, nil }
+	registration := func(mutate func(*CertificateRegistrationConditions)) *CertificateRegistrationConditions {
+		reg := *testCertificateRegistration
+		if mutate != nil {
+			mutate(&reg)
+		}
+		return &reg
+	}
+	kindWith := func(mutate func(*ControlPlaneKindConfig)) ControlPlaneKindConfig {
+		kind := testOnPremControlPlaneKind
+		mutate(&kind)
+		return kind
+	}
+	regKind := func(mutate func(*CertificateRegistrationConditions)) ControlPlaneKindConfig {
+		return kindWith(func(k *ControlPlaneKindConfig) { k.CertificateRegistration = registration(mutate) })
+	}
+
+	type testCfg = Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate]
+	for _, tc := range []struct {
+		name    string
+		kind    ControlPlaneKindConfig
+		mutate  func(*testCfg)
+		wantErr string
+	}{
+		{name: "a kind without optional behaviors", kind: testOnPremControlPlaneKind},
+		{
+			name: "a kind with all its optional behaviors",
+			kind: kindWith(func(k *ControlPlaneKindConfig) {
+				k.DisabledMessage = "disabled"
+				k.Dependencies = dependencies
+				k.CertificateRegistration = registration(nil)
+			}),
+		},
+		{
+			name: "DisabledMessage without NotFoundReason",
+			kind: kindWith(func(k *ControlPlaneKindConfig) {
+				k.DisabledMessage = "disabled"
+				k.Conditions.NotFoundReason = ""
+			}),
+			wantErr: "NotFoundReason",
+		},
+		{
+			name: "Dependencies without NotReadyReason",
+			kind: kindWith(func(k *ControlPlaneKindConfig) {
+				k.Dependencies = dependencies
+				k.Conditions.NotReadyReason = ""
+			}),
+			wantErr: "NotReadyReason",
+		},
+		{
+			name:    "CertificateRegistration without Certificate.Build",
+			kind:    regKind(nil),
+			mutate:  func(cfg *testCfg) { cfg.Certificate.Build = nil },
+			wantErr: "Certificate.Build",
+		},
+		{
+			name:    "CertificateRegistration without CertificateProvisionedType",
+			kind:    regKind(nil),
+			mutate:  func(cfg *testCfg) { cfg.Conditions.CertificateProvisionedType = "" },
+			wantErr: "CertificateProvisionedType",
+		},
+		{
+			name: "CertificateRegistration without NotFoundReason",
+			kind: kindWith(func(k *ControlPlaneKindConfig) {
+				k.CertificateRegistration = registration(nil)
+				k.Conditions.NotFoundReason = ""
+			}),
+			wantErr: "NotFoundReason",
+		},
+		{name: "no Type", kind: regKind(func(c *CertificateRegistrationConditions) { c.Type = "" }), wantErr: "Type must"},
+		{name: "no RegisteredReason", kind: regKind(func(c *CertificateRegistrationConditions) { c.RegisteredReason = "" }), wantErr: "RegisteredReason"},
+		{name: "no RegistrationFailedReason", kind: regKind(func(c *CertificateRegistrationConditions) { c.RegistrationFailedReason = "" }), wantErr: "RegistrationFailedReason"},
+		{name: "no NotProgrammedReason", kind: regKind(func(c *CertificateRegistrationConditions) { c.NotProgrammedReason = "" }), wantErr: "NotProgrammedReason"},
+		{name: "no Target", kind: regKind(func(c *CertificateRegistrationConditions) { c.Target = "" }), wantErr: "Target"},
+		{name: "no CreatedEventReason", kind: regKind(func(c *CertificateRegistrationConditions) { c.CreatedEventReason = "" }), wantErr: "CreatedEventReason"},
+		{name: "no CreatedEventAction", kind: regKind(func(c *CertificateRegistrationConditions) { c.CreatedEventAction = "" }), wantErr: "CreatedEventAction"},
+		{name: "no UpdatedEventReason", kind: regKind(func(c *CertificateRegistrationConditions) { c.UpdatedEventReason = "" }), wantErr: "UpdatedEventReason"},
+		{name: "no UpdatedEventAction", kind: regKind(func(c *CertificateRegistrationConditions) { c.UpdatedEventAction = "" }), wantErr: "UpdatedEventAction"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := testConfig
+			cfg.ControlPlanes = []ControlPlaneKindConfig{tc.kind}
+			if tc.mutate != nil {
+				tc.mutate(&cfg)
+			}
+			err := (&testReconciler{Config: cfg}).validateConfig()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+			require.ErrorContains(t, err, tc.kind.Kind, "the error names the kind")
+		})
+	}
+}

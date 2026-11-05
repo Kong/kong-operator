@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,49 +15,252 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestWatchOptions(t *testing.T) {
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha2.KonnectGatewayControlPlane{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongService{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1.KongConsumer{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1beta1.KongConsumerGroup{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongRoute{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCACertificate{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCertificate{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKey{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongKeySet{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayBackendCluster{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayListener{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayListenerPolicy{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualCluster{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{})
-	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.EventGatewayDataPlaneCertificate{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectEventGateway{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.Portal{})
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.PortalCustomization{})
+	tests := []struct {
+		name                string
+		expectedOptionCount int
+		watchOptions        func(client.Client) []func(*ctrl.Builder) *ctrl.Builder
+	}{
+		{
+			name:                "KongConsumerGroup",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1beta1.KongConsumerGroup{})
+			},
+		},
+		{
+			name:                "KongConsumer",
+			expectedOptionCount: 6,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1.KongConsumer{})
+			},
+		},
+		{
+			name:                "KongRoute",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongRoute{})
+			},
+		},
+		{
+			name:                "KongService",
+			expectedOptionCount: 7,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongService{})
+			},
+		},
+		{
+			name:                "KonnectGatewayControlPlane",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &konnectv1alpha2.KonnectGatewayControlPlane{})
+			},
+		},
+		{
+			name:                "KonnectCloudGatewayNetwork",
+			expectedOptionCount: 2,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &konnectv1alpha1.KonnectCloudGatewayNetwork{})
+			},
+		},
+		{
+			name:                "KonnectCloudGatewayDataPlaneGroupConfiguration",
+			expectedOptionCount: 3,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{})
+			},
+		},
+		{
+			name:                "KonnectCloudGatewayTransitGateway",
+			expectedOptionCount: 2,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &konnectv1alpha1.KonnectCloudGatewayTransitGateway{})
+			},
+		},
+		{
+			// Regression: this entity has the largest handwritten watch set. A
+			// dropped option or an empty result must fail the exact-count and
+			// non-empty assertions below.
+			name:                "KongPluginBinding",
+			expectedOptionCount: 9,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongPluginBinding{})
+			},
+		},
+		{
+			name:                "KongUpstream",
+			expectedOptionCount: 5,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongUpstream{})
+			},
+		},
+		{
+			name:                "KongCredentialBasicAuth",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCredentialBasicAuth{})
+			},
+		},
+		{
+			name:                "KongCredentialAPIKey",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCredentialAPIKey{})
+			},
+		},
+		{
+			name:                "KongCredentialACL",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCredentialACL{})
+			},
+		},
+		{
+			name:                "KongCredentialJWT",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCredentialJWT{})
+			},
+		},
+		{
+			name:                "KongCredentialHMAC",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCredentialHMAC{})
+			},
+		},
+		{
+			name:                "KongCACertificate",
+			expectedOptionCount: 5,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCACertificate{})
+			},
+		},
+		{
+			name:                "KongCertificate",
+			expectedOptionCount: 5,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongCertificate{})
+			},
+		},
+		{
+			name:                "KongTarget",
+			expectedOptionCount: 3,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongTarget{})
+			},
+		},
+		{
+			name:                "KongVault",
+			expectedOptionCount: 5,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongVault{})
+			},
+		},
+		{
+			name:                "KongKey",
+			expectedOptionCount: 5,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongKey{})
+			},
+		},
+		{
+			name:                "KongKeySet",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongKeySet{})
+			},
+		},
+		{
+			name:                "KongSNI",
+			expectedOptionCount: 3,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongSNI{})
+			},
+		},
+		{
+			name:                "KongDataPlaneClientCertificate",
+			expectedOptionCount: 4,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &configurationv1alpha1.KongDataPlaneClientCertificate{})
+			},
+		},
+		{
+			name:                "MCPServer",
+			expectedOptionCount: 2,
+			watchOptions: func(cl client.Client) []func(*ctrl.Builder) *ctrl.Builder {
+				return ReconciliationWatchOptionsForEntity(cl, &konnectv1alpha1.MCPServer{})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertWatchOptions(t, tt.watchOptions, tt.expectedOptionCount)
+		})
+	}
+
+	t.Run("generated fallback", func(t *testing.T) {
+		watchOptions := ReconciliationWatchOptionsForEntity(
+			newFakeClient(t),
+			&konnectv1alpha1.KonnectEventGateway{},
+		)
+		assertWatchOptionsApplicable(t, watchOptions)
+	})
 }
 
-func testReconciliationWatchOptionsForEntity[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](
+func assertWatchOptions(
 	t *testing.T,
-	ent TEnt,
+	watchOptionsForEntity func(client.Client) []func(*ctrl.Builder) *ctrl.Builder,
+	expectedOptionCount int,
 ) {
 	t.Helper()
 
-	tt := *ent
-	t.Run(tt.GetTypeName(), func(t *testing.T) {
-		cl := fakectrlruntimeclient.NewFakeClient()
-		require.NotNil(t, cl)
-		watchOptions := ReconciliationWatchOptionsForEntity(cl, ent)
-		_ = watchOptions
-	})
+	watchOptions := watchOptionsForEntity(newFakeClient(t))
+	// A dropped option silently disables a reconciliation trigger, so assert
+	// both that the primary watch is present and that the exact option set is
+	// unchanged. The count includes the primary For option.
+	require.NotEmpty(t, watchOptions, "entity must expose at least its primary watch")
+	require.Len(t, watchOptions, expectedOptionCount)
+	assertWatchOptionsApplicable(t, watchOptions)
+}
+
+func newFakeClient(t *testing.T) client.Client {
+	t.Helper()
+
+	cl := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+	require.NotNil(t, cl)
+	return cl
+}
+
+func assertWatchOptionsApplicable(
+	t *testing.T,
+	watchOptions []func(*ctrl.Builder) *ctrl.Builder,
+) {
+	t.Helper()
+
+	require.NotEmpty(t, watchOptions, "entity must expose at least its primary watch")
+
+	for i, watchOption := range watchOptions {
+		t.Run(fmt.Sprintf("watch_option_%d", i), func(t *testing.T) {
+			require.NotNil(t, watchOption)
+
+			bldr := ctrl.NewControllerManagedBy(nil)
+			require.NotNil(t, bldr)
+			var applied *ctrl.Builder
+			require.NotPanics(t, func() {
+				applied = watchOption(bldr)
+			})
+			require.NotNil(t, applied, "watch option must return the configured builder")
+			require.Same(t, bldr, applied, "watch option must return the same builder")
+		})
+	}
 }
 
 func TestObjectListToReconcileRequests(t *testing.T) {

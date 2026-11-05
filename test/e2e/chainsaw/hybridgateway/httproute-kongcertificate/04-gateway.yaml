@@ -1,0 +1,87 @@
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: ($gateway_name)
+spec:
+  konnect:
+    authRef:
+      name: ($auth_name)
+    source: Mirror
+    mirror:
+      konnect:
+        id: ($cp_id)
+  dataPlaneOptions:
+    deployment:
+      replicas: 1
+      hardened: disabled
+      podTemplateSpec:
+        metadata:
+          labels:
+            upstream-mtls-test: ($test_name)
+        spec:
+          containers:
+            - name: proxy
+              image: ($gateway_image)
+              env:
+                - name: KONG_LUA_SSL_TRUSTED_CERTIFICATE
+                  value: system,/etc/upstream-ca/ca.crt
+              volumeMounts:
+                - name: upstream-server-ca
+                  mountPath: /etc/upstream-ca
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 768Mi
+          volumes:
+            - name: upstream-server-ca
+              configMap:
+                name: upstream-server-ca
+    network:
+      services:
+        ingress:
+          type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: ($gateway_name)
+spec:
+  controllerName: (env('KONG_CONTROLLER_NAME') || 'konghq.com/gateway-operator')
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: ($gateway_name)
+    namespace: ($namespace)
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+spec:
+  gatewayClassName: ($gateway_name)
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: upstream
+  annotations:
+    konghq.com/preserve-host: "false"
+spec:
+  parentRefs:
+    - name: ($gateway_name)
+  rules:
+    - backendRefs:
+        - name: upstream
+          namespace: ($backend_namespace)
+          port: 443

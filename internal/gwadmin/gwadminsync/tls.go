@@ -23,11 +23,11 @@ import (
 	"crypto/x509"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"slices"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
@@ -99,30 +99,9 @@ func tlsFingerprint(gw *operatorv1alpha1.GWAdmin, serverName string, material ..
 // GWAdmin keeps in the operator namespace is named after the UID of the
 // GWAdmin, and labelled with it: when ownedBy is set, the label must match.
 func (s *Syncer) getSecret(ctx context.Context, key client.ObjectKey, what string, ownedBy *operatorv1alpha1.GWAdmin) (*corev1.Secret, error) {
-	var secret corev1.Secret
-	if err := s.Client.Get(ctx, key, &secret); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, NotReadyError{
-				Message: fmt.Sprintf("The %s Secret %s of the GWAdmin does not exist%s", what, key, SecretHint(s.SecretLabelSelector)),
-				Cause:   CauseTLSNotReady,
-			}
-		}
-		return nil, fmt.Errorf("failed to get the %s Secret %s of the GWAdmin: %w", what, key, err)
+	secret, err := gwadminref.GetSecret(ctx, s.Client, key, what, ownedBy, s.SecretLabelSelector)
+	if notReady, ok := errors.AsType[gwadminref.NotReadyError](err); ok {
+		return nil, NotReadyError{Message: notReady.Message, Cause: CauseTLSNotReady}
 	}
-	if ownedBy != nil && secret.Labels[consts.GWAdminUIDLabel] != string(ownedBy.UID) {
-		return nil, NotReadyError{
-			Message: fmt.Sprintf("The %s Secret %s doesn't belong to the GWAdmin %s", what, key, client.ObjectKeyFromObject(ownedBy)),
-			Cause:   CauseTLSNotReady,
-		}
-	}
-	return &secret, nil
-}
-
-// SecretHint tells how to make a Secret visible to the operator when its
-// Secret cache is filtered by the label selector, or "" when it isn't.
-func SecretHint(selector string) string {
-	if selector == "" {
-		return ""
-	}
-	return fmt.Sprintf(" (it must exist and carry the %q label to be visible to the operator)", selector)
+	return secret, err
 }

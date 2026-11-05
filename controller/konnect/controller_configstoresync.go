@@ -1045,7 +1045,10 @@ func (r *KonnectConfigStoreSyncReconciler) configStoreSecretsSDK(
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse server URL: %w", err)
 	}
-	sdk := r.SDKFactory.NewKonnectSDK(srv, sdkops.SDKToken(token))
+	sdk, err := r.SDKFactory.NewKonnectSDK(srv, sdkops.SDKToken(token))
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Konnect SDK: %w", err)
+	}
 	return sdk.GetConfigStoreSecretsSDK(), nil
 }
 

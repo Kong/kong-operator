@@ -291,6 +291,54 @@ func TestAIGatewayMCPServer(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("rate limiting validation", func(t *testing.T) {
+		limits := []aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit{
+			{Method: "tools/call", Limit: 100, WindowSize: 60},
+			{Tool: "test-tool", Limit: 10, WindowSize: 1},
+		}
+		conversionListener := func(limits ...aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit) *aiconfigurationv1alpha1.AIGatewayMCPServer {
+			obj := validAIGatewayMCPServerConversionListener(ns.Name)
+			obj.Spec.APISpec.ConversionListener.RateLimiting = aiconfigurationv1alpha1.AIGatewayMCPServerRateLimiting{Limits: limits}
+			return obj
+		}
+		passthroughListener := func(limits ...aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit) *aiconfigurationv1alpha1.AIGatewayMCPServer {
+			obj := validAIGatewayMCPServerPassthroughListener(ns.Name)
+			obj.Spec.APISpec.PassthroughListener.RateLimiting = aiconfigurationv1alpha1.AIGatewayMCPServerRateLimiting{Limits: limits}
+			return obj
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayMCPServer]{
+			{
+				Name:       "conversion-listener with method and tool limits is accepted",
+				TestObject: conversionListener(limits...),
+			},
+			{
+				Name:       "passthrough-listener with method and tool limits is accepted",
+				TestObject: passthroughListener(limits...),
+			},
+			{
+				Name:                 "conversion-listener limit of 0 is rejected",
+				TestObject:           conversionListener(aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit{Method: "tools/call", Limit: 0, WindowSize: 60}),
+				ExpectedErrorMessage: new("spec.apiSpec.conversion-listener.rateLimiting.limits[0].limit"),
+			},
+			{
+				Name:                 "passthrough-listener limit above the maximum is rejected",
+				TestObject:           passthroughListener(aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit{Method: "tools/call", Limit: 2147483647, WindowSize: 60}),
+				ExpectedErrorMessage: new("spec.apiSpec.passthrough-listener.rateLimiting.limits[0].limit"),
+			},
+			{
+				Name:                 "conversion-listener tool name with invalid characters is rejected",
+				TestObject:           conversionListener(aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit{Tool: "bad name", Limit: 1, WindowSize: 60}),
+				ExpectedErrorMessage: new("spec.apiSpec.conversion-listener.rateLimiting.limits[0].tool"),
+			},
+			{
+				Name:                 "passthrough-listener missing windowSize is rejected",
+				TestObject:           passthroughListener(aiconfigurationv1alpha1.AIGatewayMCPServerRateLimit{Method: "tools/call", Limit: 1}),
+				ExpectedErrorMessage: new("spec.apiSpec.passthrough-listener.rateLimiting.limits[0].windowSize"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	// Tool names must match ^[A-Za-z0-9._-]+$ and be at most 128 characters
 	// long, for both conversion tools and upstream tools.
 	t.Run("tool name validation", func(t *testing.T) {

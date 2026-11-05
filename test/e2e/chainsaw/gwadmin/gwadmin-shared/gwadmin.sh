@@ -133,6 +133,35 @@ live_count() {
 
 live_rounds() { live_count ROUND; }
 
+# OPERATOR_BLOCK is the NetworkPolicy block_operator applies.
+OPERATOR_BLOCK=gwadmin-operator-blocked
+
+# block_operator: cuts Kong Operator off from the gw-admin pods, so that only
+# the peers provision them. Kong Operator tells the pods of a GWAdmin no
+# OnPremEventGateway may use, like those of these tests, that they serve no
+# gateway, which turns them Ready: a rollout wouldn't stall while the peers
+# are stopped. The pods of the namespace, the peers and gwadmin-dp, still
+# reach them, and so does the kubelet, probing them from their node.
+block_operator() {
+  kubectl apply -n "$(ns)" -f - <<YAML
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: $OPERATOR_BLOCK
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+YAML
+}
+
+# unblock_operator: lets Kong Operator reach the gw-admin pods again.
+unblock_operator() {
+  kubectl delete networkpolicy -n "$(ns)" "$OPERATOR_BLOCK" --ignore-not-found
+}
+
 # no_pods namespace selector: no pod matches the selector.
 no_pods() {
   local out
@@ -437,7 +466,10 @@ wait-rounds) # count timeout: the running peers complete count more rounds
   target=$(($(live_rounds) + $1))
   until_true "$2" "peers completed $1 more round(s)" rounds_at_least "$target"
   ;;
-peers-stop) # timeout: stops the peers so that new gw-admin pods can't turn Ready
+peers-stop) # timeout: stops the peers, Kong Operator blocked, so that new gw-admin pods can't turn Ready
+  # Blocked first: the pods the peers didn't provision yet aren't
+  # provisioned by Kong Operator once they are gone.
+  block_operator
   # The logs of the peers pods are archived first: assert-no-failures reads
   # them, and they are lost once the pods are deleted. The pods must be gone
   # (not just terminating, when they still run) before anything is changed.
@@ -458,7 +490,8 @@ peers-stop) # timeout: stops the peers so that new gw-admin pods can't turn Read
   done
   echo "ok: peers stopped"
   ;;
-peers-start) # timeout: starts the peers again
+peers-start) # timeout: starts the peers again, and unblocks Kong Operator
+  unblock_operator
   kubectl scale deployment -n "$(ns)" gwadmin-peers --replicas=1
   kubectl rollout status deployment -n "$(ns)" gwadmin-peers --timeout="${1}s"
   ;;
@@ -606,6 +639,12 @@ verify-certificate-chains) # gwadmin: every certificate chains to the bundle of 
   sans cp.pem | grep -qx "DNS:$gw-cp.$(ns).svc" || fail "cp certificate SANs: $(sans cp.pem)"
   [ -z "$(sans client.pem)" ] || fail "operator client certificate has DNS names: $(sans client.pem)"
   echo "ok: certificate chains of $gw verified"
+  ;;
+block-operator) # cuts Kong Operator off from the gw-admin pods (see block_operator)
+  block_operator
+  ;;
+unblock-operator) # lets Kong Operator reach the gw-admin pods again
+  unblock_operator
   ;;
 *)
   echo "unknown command $cmd" >&2

@@ -1,0 +1,89 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onpremeventgateway-entities-unreachable
+spec:
+  description: |
+    Kong Operator reports the Event Gateway entities that can't reach their
+    OnPremEventGateway, which no reconcile of a gateway does: the gateway
+    doesn't exist, or one of their parent entities doesn't.
+    1. A backend cluster and a listener reference an OnPremEventGateway that
+       doesn't exist, and a virtual cluster references the backend cluster:
+       none of them is Programmed, as the gateway doesn't exist.
+    2. The gateway is created, with its GWAdmin: it turns Programmed, and so
+       do its entities.
+    3. The gateway is deleted: once it is gone, its entities report it again,
+       over what its cleanup reported while it was being deleted.
+    4. The backend cluster is deleted: the virtual cluster reports it.
+    5. The gateway is created again, with the same name: the listener turns
+       Programmed again, and the virtual cluster stays Detached, as its
+       backend cluster still doesn't exist.
+    6. The virtual cluster moves to a backend cluster of a KonnectEventGateway,
+       which doesn't exist: the Konnect controllers set its Programmed
+       condition, over the one set for its OnPremEventGateway, and nothing
+       sets it back.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin-unreachable
+    - name: gateway_name
+      value: gateway
+  steps:
+    - name: 1-The-gateway-does-not-exist
+      try:
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: 01-assert-entities-gateway-not-found.yaml
+    - name: 2-Create-the-gateway
+      try:
+        - apply:
+            file: 02-gwadmin-and-gateway.yaml
+        - assert:
+            file: 02-assert-gateway-programmed.yaml
+        - assert:
+            file: 02-assert-entities-programmed.yaml
+    - name: 3-Delete-the-gateway
+      try:
+        - delete:
+            ref:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              name: ($gateway_name)
+        - error:
+            file: 03-error-gateway.yaml
+        - assert:
+            file: 01-assert-entities-gateway-not-found.yaml
+    - name: 4-Delete-the-backend-cluster
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              name: backend-cluster
+        - assert:
+            file: 04-assert-virtual-cluster-detached.yaml
+    - name: 5-Create-the-gateway-again
+      try:
+        - apply:
+            file: 05-gateway.yaml
+        - assert:
+            file: 02-assert-gateway-programmed.yaml
+        - assert:
+            file: 05-assert-listener-programmed.yaml
+        - assert:
+            file: 04-assert-virtual-cluster-detached.yaml
+    - name: 6-Move-to-a-KonnectEventGateway
+      try:
+        - apply:
+            file: 06-konnect-backend-cluster.yaml
+        # Allowed while it isn't Programmed.
+        - patch:
+            file: 06-virtual-cluster-to-konnect.yaml
+        - assert:
+            file: 06-assert-virtual-cluster-not-onprem.yaml
+        # Nothing sets it back: the unreachable controller, triggered by the
+        # change, leaves a condition the Konnect controllers set alone.
+        - sleep:
+            duration: 10s
+        - assert:
+            file: 06-assert-virtual-cluster-not-onprem.yaml

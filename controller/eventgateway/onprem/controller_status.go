@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -237,20 +239,55 @@ func pushedMessage(pods int) string {
 	return fmt.Sprintf("Pushed to %d gw-admin pods", pods)
 }
 
+// inConfigurationOfPrefix starts the message of the Programmed condition the
+// controller sets True on an entity: the Konnect controllers use the same
+// reason (see setForOnPremEventGateway).
+const inConfigurationOfPrefix = "In the configuration of the OnPremEventGateway "
+
 // reportEntities sets the Programmed condition of the entities of the
-// gateway, from its configuration and its own Programmed condition: an
-// entity in the configuration is programmed along with the gateway, one left
-// out tells why. The SecretRefValid condition of an entity reading Secrets
-// tells whether they resolve. The status of an entity is patched only when
-// its conditions change.
-func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) error {
+// gateway, from its configuration, its own Programmed condition and the
+// outcome of the push: an entity in the configuration is programmed along
+// with the gateway, one left out tells why. A data plane certificate is
+// programmed once every gw-admin pod the push reached holds it, whatever the
+// rest of the configuration: e.g. one an entity gw-admin rejects doesn't
+// keep a data plane from rolling out onto it. While the push waits for its
+// backoff, nothing tells, and its Programmed condition is left as it is.
+// The SecretRefValid condition of an entity reading Secrets tells whether
+// they resolve. The status of an entity is patched only when its conditions
+// change.
+func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration, result pushResult) error {
 	gatewayKey := client.ObjectKeyFromObject(gateway)
 	programmed := apimeta.FindStatusCondition(gateway.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
+	certificates := make(map[types.UID]dataPlaneCertificate, len(cfg.certificates))
+	for _, cert := range cfg.certificates {
+		certificates[cert.obj.GetUID()] = cert
+	}
 
 	var errs []error
 	for _, e := range cfg.included {
+		if cert, ok := certificates[e.obj.GetUID()]; ok && result.target != nil {
+			if result.certificates == nil {
+				// Nothing was pushed, e.g. while the push waits for its
+				// backoff: the configuration is the one the Programmed
+				// condition tells of, a change to it skipping the backoff,
+				// so the condition is kept, at the generation it applies to.
+				conds := []metav1.Condition{}
+				if e.secretRefValid != nil {
+					conds = append(conds, *e.secretRefValid)
+				}
+				if cond := apimeta.FindStatusCondition(e.obj.GetConditions(), string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)); cond != nil {
+					kept := *cond
+					kept.ObservedGeneration = e.obj.GetGeneration()
+					conds = append(conds, kept)
+				}
+				errs = append(errs, r.setEntityConditions(ctx, e.obj, nil, conds...))
+				continue
+			}
+			errs = append(errs, r.setEntityStatus(ctx, e, certificateCondition(e, gatewayKey, result, cert)))
+			continue
+		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEntityProgrammedReason,
-			fmt.Sprintf("In the configuration of the OnPremEventGateway %s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e))
+			fmt.Sprintf(inConfigurationOfPrefix+"%s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e))
 		if programmed == nil || programmed.Status != metav1.ConditionTrue {
 			message := fmt.Sprintf("In the configuration of the OnPremEventGateway %s, which is not programmed", gatewayKey)
 			if programmed != nil {
@@ -268,6 +305,37 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 	}
 	errs = append(errs, r.reportDetached(ctx, gateway, cfg))
 	return errors.Join(errs...)
+}
+
+// certificateCondition returns the Programmed condition of a data plane
+// certificate in the configuration of the gateway: True once every gw-admin
+// pod the push reached holds it (see certificateOutcome.held).
+func certificateCondition(e entityStatus, gatewayKey client.ObjectKey, result pushResult, cert dataPlaneCertificate) metav1.Condition {
+	held, missing, unconfirmed, rejected := result.certificates.held(result.target, result.pending, cert)
+	if held {
+		return entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEntityProgrammedReason,
+			fmt.Sprintf(inConfigurationOfPrefix+"%s, registered on every gw-admin pod serving it", gatewayKey))
+	}
+	if len(rejected) > 0 {
+		reasons := make([]string, 0, len(rejected))
+		for _, pod := range slices.Sorted(maps.Keys(rejected)) {
+			reasons = append(reasons, fmt.Sprintf("gw-admin pod %s: %s", pod, rejected[pod]))
+		}
+		return entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityInvalidReason,
+			fmt.Sprintf("In the configuration of the OnPremEventGateway %s, rejected by gw-admin: %s", gatewayKey, strings.Join(reasons, "; ")))
+	}
+	var problems []string
+	if len(missing) > 0 {
+		problems = append(problems, "not registered yet on the gw-admin pods "+strings.Join(missing, ", "))
+	}
+	if len(unconfirmed) > 0 {
+		problems = append(problems, "not confirmed on the gw-admin pods "+strings.Join(unconfirmed, ", ")+", whose push failed")
+	}
+	if len(problems) == 0 {
+		problems = append(problems, "no gw-admin pod serves it yet")
+	}
+	message := fmt.Sprintf("In the configuration of the OnPremEventGateway %s, %s", gatewayKey, strings.Join(problems, "; "))
+	return entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityNotRegisteredReason, message)
 }
 
 // reportedEntity is an object whose status was reported for a gateway.
@@ -326,10 +394,17 @@ func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1
 }
 
 // namesGateway tells the message of a Programmed condition the controller
-// set names the gateway, e.g. "In the configuration of the
-// OnPremEventGateway ns/name, ...".
+// set is about the gateway: the first OnPremEventGateway it names, e.g. "In
+// the configuration of the OnPremEventGateway ns/name, ...". One it names
+// after is another one, e.g. the gateway a data plane certificate was pushed
+// to.
 func namesGateway(message string, gateway client.ObjectKey) bool {
-	_, rest, found := strings.Cut(message, "OnPremEventGateway "+gateway.String())
+	const kind = "OnPremEventGateway "
+	_, named, found := strings.Cut(message, kind)
+	if !found {
+		return false
+	}
+	rest, found := strings.CutPrefix(named, gateway.String())
 	return found && (rest == "" || strings.ContainsAny(rest[:1], ",: "))
 }
 

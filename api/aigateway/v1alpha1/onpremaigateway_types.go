@@ -70,6 +70,24 @@ type OnPremAIGatewaySpec struct {
 	//
 	// +optional
 	ObjectFilters *OnPremAIGatewayObjectFilters `json:"objectFilters,omitempty"`
+
+	// WatchNamespaces defines the namespaces the controllers watch for the
+	// configuration entities pushed to this gateway's data planes, and for the
+	// Secrets they reference.
+	//
+	// When unset, only the OnPremAIGateway's own namespace is watched.
+	// When set to `list`, every listed namespace plus the OnPremAIGateway's own
+	// namespace is watched. A WatchNamespaceGrant is required in every listed
+	// namespace that is not the OnPremAIGateway's own.
+	// When set to `all`, every namespace is watched. This requires the operator
+	// to run with an empty `--watch-namespaces`, that is, cluster-wide.
+	//
+	// Changing this field restarts the control plane instance: its caches are
+	// built at start.
+	//
+	// +optional
+	// +kubebuilder:default={type: "own"}
+	WatchNamespaces *OnPremAIGatewayWatchNamespaces `json:"watchNamespaces,omitempty"`
 }
 
 // OnPremAIGatewayObjectFilters defines filters to limit watched objects by the controllers.

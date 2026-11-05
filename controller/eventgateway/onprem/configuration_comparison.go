@@ -29,7 +29,7 @@ import (
 // sameEntities reports whether gw-admin holds the entities pushed, pushedKey
 // being their comparisonKey once withGWAdminDefaults applied: a field left
 // out and the default gw-admin sets on it are the same.
-func sameEntities(held gwadminapi.GatewayEntities, pushedKey []byte) (bool, error) {
+func sameEntities(held gwadminapi.GatewayEntitySet, pushedKey []byte) (bool, error) {
 	heldKey, err := comparisonKey(held)
 	if err != nil {
 		return false, fmt.Errorf("failed to encode the entities gw-admin holds: %w", err)
@@ -46,18 +46,53 @@ func sameEntities(held gwadminapi.GatewayEntities, pushedKey []byte) (bool, erro
 // union such as the destination of a virtual cluster or a policy, keeps its
 // nested fields in the order gw-admin sends them, while editedJSON sorts
 // those it edits.
-func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
-	v, err := jsonValue(withEmptyLists(sortedByID(e)))
+func comparisonKey(e gwadminapi.GatewayEntitySet) ([]byte, error) {
+	v, err := jsonValue(withEmptyLists(sortedByID(withoutDestinationNames(e))))
 	if err != nil {
 		return nil, err
 	}
 	return json.Marshal(v)
 }
 
+// withoutDestinationNames returns the entities without the name of each
+// destination that names its target by id: the backend cluster of a virtual
+// cluster, or the virtual cluster a listener policy forwards to. The id tells
+// the target, and gw-admin returns the name either empty or resolved from the
+// id, depending on its version.
+func withoutDestinationNames(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
+	withoutName := func(destination map[string]any) {
+		if _, ok := destination["id"]; ok {
+			delete(destination, "name")
+		}
+	}
+	e.VirtualClusters = slices.Clone(e.VirtualClusters)
+	for i := range e.VirtualClusters {
+		e.VirtualClusters[i].Destination = editedJSON(e.VirtualClusters[i].Destination, withoutName)
+	}
+	e.Listeners = slices.Clone(e.Listeners)
+	for i := range e.Listeners {
+		l := &e.Listeners[i]
+		policies := make([]gwadminapi.EventGatewayListenerPolicyOnPrem, 0, len(l.Policies))
+		for _, p := range l.Policies {
+			policies = append(policies, editedJSON(p, func(fields map[string]any) {
+				if config, ok := fields["config"].(map[string]any); ok {
+					if destination, ok := config["destination"].(map[string]any); ok {
+						withoutName(destination)
+					}
+				}
+			}))
+		}
+		if l.Policies != nil {
+			l.Policies = policies
+		}
+	}
+	return e
+}
+
 // sortedByID returns the entities with each list sorted by id, the policies
 // of a virtual cluster and of a listener included: gw-admin returns a child
 // policy right after its parent.
-func sortedByID(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
+func sortedByID(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
 	e.BackendClusters = byID(e.BackendClusters, func(bc gwadminapi.EventGatewayBackendClusterOnPrem) gwadminapi.UUIDv4 { return bc.Id })
 	e.TlsTrustBundles = byID(e.TlsTrustBundles, func(b gwadminapi.EventGatewayTLSTrustBundleOnPrem) gwadminapi.UUIDv4 { return b.Id })
 	e.SchemaRegistries = byID(e.SchemaRegistries, func(r gwadminapi.EventGatewaySchemaRegistryOnPrem) gwadminapi.UUIDv4 { return r.Id })
@@ -96,7 +131,7 @@ func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
 // here has the same effect. The value
 // of a static key is compared as it is: gw-admin returns it, and a rotated
 // key must be pushed again.
-func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
+func withGWAdminDefaults(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
 	e.BackendClusters = slices.Clone(e.BackendClusters)
 	for i := range e.BackendClusters {
 		if tls := &e.BackendClusters[i].Tls; tls.TlsVersions == nil {

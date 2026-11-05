@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
   name: konnectaigateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -98,6 +98,21 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     maxProperties: 50
+                    type: object
+                  managedBy:
+                    additionalProperties:
+                      description: ManagedByValue is the value type for ManagedBy.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    description: |-
+                      Stores information about what manages this entity, such as the tool or
+                      system responsible for its lifecycle (for example, `terraform`).
+
+                      Keys must be 1–63 characters long and start with an alphanumeric
+                      character.
+                    maxProperties: 5
                     type: object
                   minRuntimeVersion:
                     description: |-

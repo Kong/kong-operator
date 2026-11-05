@@ -44,6 +44,8 @@ func DeleteGeneratedOps[
 		return deleteAIGatewayCustomPolicy(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return deleteAIGatewayDataPlaneCertificate(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayDatastore:
+		return deleteAIGatewayDatastore(ctx, sdk.GetAIGatewayDatastoresSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return deleteAIGatewayMCPServer(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

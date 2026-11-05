@@ -40,6 +40,8 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayCustomPolicyReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return AIGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
+	case *aiconfigurationv1alpha1.AIGatewayDatastore:
+		return AIGatewayDatastoreReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return AIGatewayMCPServerReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

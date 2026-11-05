@@ -1112,6 +1112,24 @@ func TestParseSchema_AllOfMergesProperties(t *testing.T) {
 	assert.Equal(t, "hosts", schema.Properties[0].Name)
 }
 
+func TestParseProperty_AllOfWrappedRefToUnionPopulatesOneOf(t *testing.T) {
+	aclUnion := &openapi3.Schema{
+		OneOf: openapi3.SchemaRefs{
+			{Ref: "#/components/schemas/AcceptACL", Value: &openapi3.Schema{}},
+			{Ref: "#/components/schemas/RejectACL", Value: &openapi3.Schema{}},
+		},
+	}
+
+	prop := ParseProperty("acls", &openapi3.SchemaRef{Value: &openapi3.Schema{
+		AllOf: openapi3.SchemaRefs{{Ref: "#/components/schemas/ACLs", Value: aclUnion}},
+	}}, 0, map[string]bool{})
+
+	assert.Equal(t, "ACLs", prop.RefName)
+	require.Len(t, prop.OneOf, 2)
+	assert.Equal(t, "AcceptACL", prop.OneOf[0].Name)
+	assert.Equal(t, "RejectACL", prop.OneOf[1].Name)
+}
+
 func TestParseSchema_AllOfDirectPropertiesWinOverAllOf(t *testing.T) {
 	p := NewParser(&openapi3.T{})
 

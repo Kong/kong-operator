@@ -96,10 +96,19 @@ func (r *MCPServerCPReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL %q: %w", apiAuth.Status.ServerURL, err)
 	}
 
+	sdk, err := r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token))
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to build Konnect SDK: %w", err)
+	}
+	sdkForPolling, err := r.SdkFactoryForPolling.NewKonnectSDK(srv, sdkops.SDKToken(token))
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to build Konnect SDK for polling: %w", err)
+	}
+
 	r.SignalManager.EmitControlPlaneEvent(ctx, CPEvent{
 		Type:                    EventTypeRegister,
-		KonnectClient:           r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)),
-		KonnectClientForPolling: r.SdkFactoryForPolling.NewKonnectSDK(srv, sdkops.SDKToken(token)),
+		KonnectClient:           sdk,
+		KonnectClientForPolling: sdkForPolling,
 		ControlPlane:            &controlPlane,
 	})
 

@@ -1047,6 +1047,15 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	}
 {{- else if .DirectScalarRef}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+{{- else if .ItemObjectKey}}
+	// Each item keeps its OAS object shape, with the resolved Konnect value
+	// under "{{.ItemObjectKey}}".
+	wrapped{{.GoResolverName}} := make([]map[string]string, 0, len(resolved{{.GoResolverName}}))
+	for _, v := range resolved{{.GoResolverName}} {
+		wrapped{{.GoResolverName}} = append(wrapped{{.GoResolverName}}, map[string]string{"{{.ItemObjectKey}}": v})
+	}
+	// Always include the resolved list, including an explicit empty list.
+	payload["{{.SDKJSONFieldName}}"] = wrapped{{.GoResolverName}}
 {{- else}}
 	// Always include the resolved list, including an explicit empty list.
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
@@ -1823,6 +1832,12 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	// Konnect value under "{{.ObjectWrapKey}}", leaving reference objects set by
 	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
 	// of the config wasn't set, so the payload is left untouched.
+{{- else if .ItemObjectKey}}
+	// {{.Path}} carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "{{.ItemObjectKey}}". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
@@ -1848,7 +1863,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- if .UnionVar}}
 		switch {
 {{- range .Variants}}
-		case {{$inj.UnionVar}}.Type == {{.TypeConst}}:
+		case {{$inj.UnionVar}}.{{.GoMemberField}} != nil:
 			resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
@@ -1972,7 +1987,15 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		if err != nil {
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
+{{- if $inj.ItemObjectKey}}
+		wrapped{{.ResolverName}} := make([]map[string]string, 0, len(resolved{{.ResolverName}}))
+		for _, v := range resolved{{.ResolverName}} {
+			wrapped{{.ResolverName}} = append(wrapped{{.ResolverName}}, map[string]string{"{{$inj.ItemObjectKey}}": v})
+		}
+		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = wrapped{{.ResolverName}}
+{{- else}}
 		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- range .ParentNavsReversed}}
@@ -2469,7 +2492,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	}
 	result, err := spec.{{.MethodName}}()
 {{- if .ExpectError}}
-	require.Error(t, err)
+	require.ErrorContains(t, err, {{printf "%q" .ExpectedErrorContains}})
 	require.Nil(t, result)
 {{- else}}
 	require.NoError(t, err)
