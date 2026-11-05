@@ -163,7 +163,6 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				continue
 			}
 			upstreamName := upstreamPtr.Name
-			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
 			// TCPRoute has no route-level TLS configuration. certPtr is only the
@@ -178,6 +177,7 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
 				continue
 			}
+			c.outputStore = append(c.outputStore, upstreamPtr)
 			if grantPtr != nil {
 				c.outputStore = append(c.outputStore, grantPtr)
 				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)

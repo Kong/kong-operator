@@ -18,6 +18,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -35,11 +36,11 @@ func tRogue(t *testing.T) (*corev1.Secret, *x509.Certificate) {
 func tTamperBundle(t *testing.T, r *Reconciler, name string, rogue *x509.Certificate) {
 	t.Helper()
 	live := getSecret(t, r, name)
-	live.Data[caBundleKey] = append(live.Data[caBundleKey], encodeCertificates([]*x509.Certificate{rogue})...)
+	live.Data[consts.CACRT] = append(live.Data[consts.CACRT], encodeCertificates([]*x509.Certificate{rogue})...)
 	if live.Annotations == nil {
 		live.Annotations = map[string]string{}
 	}
-	live.Annotations["konghq.com/gw-admin-published-cas"] = `{"` + fingerprint(rogue) + `":"previous"}`
+	live.Annotations["konghq.com/gw-admin-published-cas"] = `{"` + pki.Fingerprint(rogue) + `":"previous"}`
 	require.NoError(t, r.Update(t.Context(), live))
 }
 

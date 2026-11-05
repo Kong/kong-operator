@@ -36,38 +36,27 @@ func TestKongPluginBindingBuilder_WithNamespace(t *testing.T) {
 }
 
 func TestKongPluginBindingBuilder_WithLabels(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "default",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	route := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongPluginBinding().WithLabels(route, parentRef)
 
 	binding, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, binding.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), binding.Labels)
 }
 
 func TestKongPluginBindingBuilder_WithAnnotations(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "default",
-	}
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	route := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongPluginBinding().WithAnnotations(route, parentRef)
 
 	binding, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, binding.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), binding.Annotations)
 }
 
 func TestKongPluginBindingBuilder_WithPluginRef(t *testing.T) {

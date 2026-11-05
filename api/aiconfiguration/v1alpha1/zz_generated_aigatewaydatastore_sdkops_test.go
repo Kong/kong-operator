@@ -11,13 +11,13 @@ import (
 func TestAIGatewayDatastoreAPISpec_ToCreateAIGatewayDatastoreRequest(t *testing.T) {
 	spec := &AIGatewayDatastoreAPISpec{}
 	result, err := spec.ToCreateAIGatewayDatastoreRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "AIGatewayDatastore config is required")
 	require.Nil(t, result)
 }
 
 func TestAIGatewayDatastoreAPISpec_ToUpdateAIGatewayDatastoreRequest(t *testing.T) {
 	spec := &AIGatewayDatastoreAPISpec{}
 	result, err := spec.ToUpdateAIGatewayDatastoreRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "AIGatewayDatastore config is required")
 	require.Nil(t, result)
 }

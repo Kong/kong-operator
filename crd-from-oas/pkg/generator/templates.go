@@ -1863,7 +1863,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- if .UnionVar}}
 		switch {
 {{- range .Variants}}
-		case {{$inj.UnionVar}}.Type == {{.TypeConst}}:
+		case {{$inj.UnionVar}}.{{.GoMemberField}} != nil:
 			resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
@@ -2492,7 +2492,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	}
 	result, err := spec.{{.MethodName}}()
 {{- if .ExpectError}}
-	require.Error(t, err)
+	require.ErrorContains(t, err, {{printf "%q" .ExpectedErrorContains}})
 	require.Nil(t, result)
 {{- else}}
 	require.NoError(t, err)

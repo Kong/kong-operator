@@ -11,13 +11,13 @@ import (
 func TestAIGatewayVaultAPISpec_ToCreateAIGatewayVaultRequest(t *testing.T) {
 	spec := &AIGatewayVaultAPISpec{}
 	result, err := spec.ToCreateAIGatewayVaultRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "AIGatewayVault config is required")
 	require.Nil(t, result)
 }
 
 func TestAIGatewayVaultAPISpec_ToUpdateAIGatewayVaultRequest(t *testing.T) {
 	spec := &AIGatewayVaultAPISpec{}
 	result, err := spec.ToUpdateAIGatewayVaultRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "AIGatewayVault config is required")
 	require.Nil(t, result)
 }

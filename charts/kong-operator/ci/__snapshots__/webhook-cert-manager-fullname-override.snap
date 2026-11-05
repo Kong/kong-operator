@@ -5381,7 +5381,23 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow'' ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny'' ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen'' ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen'' ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 items:
                                   properties:
@@ -5521,7 +5537,23 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow'' ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny'' ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen'' ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen'' ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 items:
                                   properties:
@@ -7114,7 +7146,23 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow'' ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny'' ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen'' ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen'' ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 items:
                                   properties:
@@ -7254,7 +7302,23 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow'' ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny'' ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen'' ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen'' ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 items:
                                   properties:
@@ -8043,7 +8107,23 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow'' ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny'' ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen'' ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen'' ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 items:
                                   properties:
@@ -8183,7 +8263,23 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow'' ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny'' ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen'' ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen'' ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 items:
                                   properties:

@@ -38,40 +38,27 @@ func TestKongServiceBuilder_WithNamespace(t *testing.T) {
 }
 
 func TestKongServiceBuilder_WithLabels(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongService().WithLabels(httpRoute, parentRef)
 
 	service, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, service.Labels)
-	assert.NotEmpty(t, service.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), service.Labels)
 }
 
 func TestKongServiceBuilder_WithAnnotations(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongService().WithAnnotations(httpRoute, parentRef)
 
 	service, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, service.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), service.Annotations)
 }
 
 func TestKongServiceBuilder_WithSpecName(t *testing.T) {
@@ -502,18 +489,23 @@ func TestKongServiceBuilder_MultipleErrors(t *testing.T) {
 func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 	tests := []struct {
 		name        string
-		input       string
+		input       *commonv1alpha1.NamespacedRef
 		expectedRef *commonv1alpha1.NamespacedRef
 	}{
 		{
 			name:        "empty name leaves field nil",
-			input:       "",
+			input:       nil,
 			expectedRef: nil,
 		},
 		{
 			name:        "valid name sets NamespacedRef",
-			input:       "my-cert",
+			input:       &commonv1alpha1.NamespacedRef{Name: "my-cert"},
 			expectedRef: &commonv1alpha1.NamespacedRef{Name: "my-cert"},
+		},
+		{
+			name:        "explicit namespace is preserved",
+			input:       &commonv1alpha1.NamespacedRef{Name: "my-cert", Namespace: new("certificates")},
+			expectedRef: &commonv1alpha1.NamespacedRef{Name: "my-cert", Namespace: new("certificates")},
 		},
 	}
 	for _, tt := range tests {
@@ -524,8 +516,8 @@ func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 				assert.Nil(t, service.Spec.ClientCertificateRef)
 			} else {
 				require.NotNil(t, service.Spec.ClientCertificateRef)
-				assert.Equal(t, tt.expectedRef.Name, service.Spec.ClientCertificateRef.Name)
-				assert.Nil(t, service.Spec.ClientCertificateRef.Namespace)
+				assert.Equal(t, tt.expectedRef, service.Spec.ClientCertificateRef)
+				assert.NotSame(t, tt.input, service.Spec.ClientCertificateRef)
 			}
 		})
 	}

@@ -117,6 +117,7 @@ spec:
         aclAttributeType: consumer
         consumer:
           acls:
+            type: allow
             allow:
               - kind: AIGatewayConsumerGroup
                 name: ai-gw-mcp-consumer-group

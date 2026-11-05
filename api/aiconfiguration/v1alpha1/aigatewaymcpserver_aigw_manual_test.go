@@ -154,7 +154,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 							Schema:   apiextensionsv1.JSON{Raw: []byte(`{"type":"string"}`)},
 						}},
 						Access: AIGatewayMCPToolAccess{
-							Acls: AIGatewayMCPACLs{Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}}},
+							Acls: AIGatewayMCPACLs{Allow: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}}},
 						},
 					}},
 				},
@@ -204,12 +204,13 @@ tools:
 					Access: &AIGatewayMCPServerListenerAccess{
 						AclAttributeType: AIGatewayMCPServerListenerAccessTypeConsumer,
 						Consumer: &AIGatewayMCPServerListenerConsumer{
-							Acls: AIGatewayMCPACLs{
-								Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}},
-								Deny:  []AIGatewayMCPACLRef{{Name: "ai-gw-denied-consumer-group"}},
+							Acls: &AIGatewayMCPServerListenerConsumerAcls{
+								Type:  AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+								Allow: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}},
 							},
 							DefaultToolAcls: AIGatewayMCPACLs{
-								Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}},
+								Allow: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}},
+								Deny:  []AIGatewayACLRef{{Name: "ai-gw-denied-consumer-group"}},
 							},
 							AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
 						},
@@ -262,8 +263,8 @@ config:
   sources: [flights-toolset]
 access:
   acl_attribute_type: consumer
-  acls: {allow: [dev-users], deny: [denied-users]}
-  default_tool_acls: {allow: [dev-users]}
+  acls: {allow: [dev-users]}
+  default_tool_acls: {allow: [dev-users], deny: [denied-users]}
   auth_strategies: [key-auth-1]
 `,
 		},
@@ -280,8 +281,9 @@ access:
 						AclAttributeType: AIGatewayMCPServerPassthroughListenerAccessTypeOauth,
 						Oauth: &AIGatewayMCPServerListenerOauth{
 							AccessTokenClaimField: ".user.email",
-							Acls: AIGatewayMCPACLs{
-								Deny: []AIGatewayMCPACLRef{{Name: "ai-gw-denied-consumer-group"}},
+							Acls: &AIGatewayMCPServerListenerOauthAcls{
+								Type: AIGatewayMCPServerListenerOauthAclsTypeDeny,
+								Deny: []AIGatewayACLRef{{Name: "ai-gw-denied-consumer-group"}},
 							},
 							AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
 							Metadata: AIGatewayMCPServerProtectedResourceMetadata{
@@ -303,7 +305,7 @@ access:
 					},
 					Tools: []AIGatewayMCPPassthroughTool{{
 						Name:   "create_issue",
-						Access: AIGatewayMCPToolAccess{Acls: AIGatewayMCPACLs{Deny: []AIGatewayMCPACLRef{{Name: "ai-gw-denied-consumer-group"}}}},
+						Access: AIGatewayMCPToolAccess{Acls: AIGatewayMCPACLs{Deny: []AIGatewayACLRef{{Name: "ai-gw-denied-consumer-group"}}}},
 					}},
 				},
 			}),
@@ -438,7 +440,10 @@ tools:
 					Access: &AIGatewayMCPServerListenerAccess{
 						AclAttributeType: AIGatewayMCPServerListenerAccessTypeConsumer,
 						Consumer: &AIGatewayMCPServerListenerConsumer{
-							Acls: AIGatewayMCPACLs{Allow: []AIGatewayMCPACLRef{{Name: "does-not-exist"}}},
+							Acls: &AIGatewayMCPServerListenerConsumerAcls{
+								Type:  AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+								Allow: []AIGatewayACLRef{{Name: "does-not-exist"}},
+							},
 						},
 					},
 					Config: AIGatewayMCPServerListenerConfig{Route: AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}}},
@@ -455,7 +460,7 @@ tools:
 					Config: AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "http://upstream:8080"},
 					Tools: []AIGatewayMCPConversionTool{{
 						Name:   "search_flights",
-						Access: AIGatewayMCPToolAccess{Acls: AIGatewayMCPACLs{Allow: []AIGatewayMCPACLRef{{Name: "does-not-exist"}}}},
+						Access: AIGatewayMCPToolAccess{Acls: AIGatewayMCPACLs{Allow: []AIGatewayACLRef{{Name: "does-not-exist"}}}},
 					}},
 				},
 			}),
@@ -511,7 +516,10 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 						Access: &AIGatewayMCPServerConversionListenerAccess{
 							AclAttributeType: AIGatewayMCPServerConversionListenerAccessTypeConsumer,
 							Consumer: &AIGatewayMCPServerListenerConsumer{
-								Acls:           AIGatewayMCPACLs{Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}}},
+								Acls: &AIGatewayMCPServerListenerConsumerAcls{
+									Type:  AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+									Allow: []AIGatewayACLRef{{Name: "ai-gw-consumer-group"}},
+								},
 								AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
 							},
 						},
@@ -580,4 +588,43 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 	require.Len(t, mcp.Tools, 1)
 	require.NotNil(t, mcp.Tools[0].Annotations["read_only_hint"])
 	require.True(t, mcp.Tools[0].Annotations["read_only_hint"].(bool))
+}
+
+// The server-level ACL union is flattened in the CRD, so the SDK payload
+// builder must still produce the keyed member shape for every variant.
+func TestAIGatewayMCPServerSDKPayload_FlattenedACLs(t *testing.T) {
+	obj := &AIGatewayMCPServer{
+		Name: "mcp", Namespace: "default",
+		Spec: AIGatewayMCPServerSpec{APISpec: AIGatewayMCPServerAPISpec{
+			AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+				Type: AIGatewayMCPServerConfigTypeListener,
+				Listener: &AIGatewayMCPServerListener{
+					Name: "mcp",
+					Access: &AIGatewayMCPServerListenerAccess{
+						AclAttributeType: AIGatewayMCPServerListenerAccessTypeConsumer,
+						Consumer: &AIGatewayMCPServerListenerConsumer{
+							Acls: &AIGatewayMCPServerListenerConsumerAcls{
+								Type:      AIGatewayMCPServerListenerConsumerAclsTypeAllowWhen,
+								AllowWhen: []string{"has(principal)"},
+							},
+						},
+					},
+					Config: AIGatewayMCPServerListenerConfig{
+						Route: AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}},
+					},
+				},
+			},
+		}},
+	}
+
+	payload, err := obj.Spec.APISpec.marshalSDKOpsPayload()
+	require.NoError(t, err)
+	acls, ok := payload["listener"].(map[string]any)["access"].(map[string]any)["consumer"].(map[string]any)["acls"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, map[string]any{"allow_when": []any{"has(principal)"}}, acls)
+
+	data, _, err := obj.Spec.APISpec.selectedSDKOpsPayload(payload)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"allow_when":["has(principal)"]`)
+	require.NotContains(t, string(data), `"type":"allowWhen"`)
 }

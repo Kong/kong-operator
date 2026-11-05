@@ -74,10 +74,17 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 	// condition and halts state enforcement until the user fixes the annotation.
 	// The condition is set only while invalid; a valid Route carries no such condition.
 	var invalidConfigCond *metav1.Condition
-	if annotationErr := validateAnnotations(ctx, logger, cl, routeObject); annotationErr != nil {
+	annotationErr := validateAnnotations(ctx, logger, cl, routeObject)
+	if annotationErr != nil {
+		if !hybridgatewayerrors.OnlyClientCertificateRefErrors(annotationErr) &&
+			!errors.Is(annotationErr, hybridgatewayerrors.ErrMalformedAnnotation) {
+			return false, stop, annotationErr
+		}
 		log.Debug(logger, "HTTPRoute has malformed Kong annotations", "error", annotationErr)
 		invalidConfigCond = BuildKongConfigurationInvalidCondition(routeObject, annotationErr)
-		stop = true
+		// Invalid client authentication must also remove already-programmed bindings.
+		// The converter omits those rules and the reconciler runs orphan cleanup.
+		stop = !hybridgatewayerrors.OnlyClientCertificateRefErrors(annotationErr)
 	}
 
 	for _, pRef := range gwtypes.GetSpecParentRefs(*routeObject) {
@@ -127,9 +134,28 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 		// Combine all conditions. The KongConfigurationValid condition is appended only when the
 		// Kong configuration is invalid; when valid it is omitted so SetStatusConditions removes
 		// any stale instance.
-		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
-		if invalidConfigCond != nil {
-			programmedConditions = append(programmedConditions, *invalidConfigCond)
+		parentResolvedRefs := *resolvedRefsCond
+		parentInvalidConfig := invalidConfigCond
+		clientCertErr := annotationErr
+		if clientCertErr == nil {
+			clientCertErr = validateClientCertificateRefs(ctx, logger, cl, routeObject, gateway)
+		}
+		if invalid, ok := errors.AsType[*hybridgatewayerrors.ClientCertificateRefError](clientCertErr); ok {
+			parentResolvedRefs.Status = metav1.ConditionFalse
+			parentResolvedRefs.Reason = invalid.Reason
+			parentResolvedRefs.Message = invalid.Message
+			parentInvalidConfig = BuildKongConfigurationInvalidCondition(routeObject, clientCertErr)
+			programmedConditions = append(programmedConditions, *SetConditionMeta(metav1.Condition{
+				Type: routeconst.ConditionTypeKongServiceProgrammed, Status: metav1.ConditionFalse,
+				Reason: routeconst.ConditionReasonKongServiceNotProgrammed, Message: invalid.Message,
+			}, routeObject))
+			programmedConditions = DeduplicateConditionsByType(programmedConditions)
+		} else if clientCertErr != nil && annotationErr == nil {
+			return false, stop, clientCertErr
+		}
+		programmedConditions = append(programmedConditions, *acceptedCondition, parentResolvedRefs)
+		if parentInvalidConfig != nil {
+			programmedConditions = append(programmedConditions, *parentInvalidConfig)
 		}
 
 		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
@@ -160,6 +186,51 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 
 	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
 	return updated, stop, nil
+}
+
+func validateClientCertificateRefs[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	route TPtr,
+	gateway *gwtypes.Gateway,
+) error {
+	validate := func(backends []gwtypes.BackendRef, protocol string) error {
+		return service.ValidateClientCertificateRefs(ctx, cl, route.GetNamespace(), backends, gateway, protocol, logger)
+	}
+	switch r := any(route).(type) {
+	case *gwtypes.HTTPRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := validate(utils.HTTPBackendRefsToBackendRefs(rule.BackendRefs), "http"); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.GRPCRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := validate(utils.GRPCBackendRefsToBackendRefs(rule.BackendRefs), "grpc"); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.TLSRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := validate(rule.BackendRefs, "tcp"); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.TCPRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := validate(rule.BackendRefs, "tcp"); err != nil {
+				return err
+			}
+		}
+	case *gwtypes.UDPRoute:
+		for _, rule := range r.Spec.Rules {
+			if err := validate(rule.BackendRefs, "udp"); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func routeKindForStatusPhase[T gwtypes.SupportedRoute](routeObject T) string {

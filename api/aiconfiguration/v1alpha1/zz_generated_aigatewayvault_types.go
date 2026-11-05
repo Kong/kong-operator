@@ -147,11 +147,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayVaultConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayVaultConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayVaultConfigTypeAwsSecretsManager:
 		if u.AwsSecretsManager != nil {
@@ -209,6 +204,13 @@ func (u AIGatewayVaultConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["konnect"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayVaultConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }

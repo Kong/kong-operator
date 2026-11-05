@@ -27,6 +27,10 @@ Gateway API core feature. On-premises Gateways still require Secret references.
 Existing Secret references retain their behavior: their certificate material is
 synchronized to a Konnect Certificate and is not hidden through Vault.
 
+For authentication to TLS backends, see
+[upstream mTLS with an existing KongCertificate](gateway-upstream-kongcertificate.md).
+Upstream client authentication and Listener server certificates are independent.
+
 ## Keep private keys out of Certificate fields
 
 Use the following flow:

@@ -57,11 +57,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u BackendClusterAuthenticationSaslAwsIamSaslAwsIam) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeAssumeRole:
 		if u.AssumeRole != nil {
@@ -79,6 +74,13 @@ func (u BackendClusterAuthenticationSaslAwsIamSaslAwsIam) MarshalJSON() ([]byte,
 			}
 			m["defaultProviderChain"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -281,11 +283,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case BackendClusterAuthenticationSchemeTypeAnonymous:
 		if u.Anonymous != nil {
@@ -319,6 +316,13 @@ func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["saslScram"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -554,11 +558,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EncryptionKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EncryptionKey type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EncryptionKeyTypeAWS:
 		if u.AWS != nil {
@@ -576,6 +575,13 @@ func (u EncryptionKey) MarshalJSON() ([]byte, error) {
 			}
 			m["static"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EncryptionKey type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -770,11 +776,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayACLRuleResourceNames) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayACLRuleResourceNames type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayACLRuleResourceNamesTypeStat:
 		if u.Stat != nil {
@@ -792,6 +793,13 @@ func (u EventGatewayACLRuleResourceNames) MarshalJSON() ([]byte, error) {
 			}
 			m["dynam"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayACLRuleResourceNames type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -1162,11 +1170,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayConsumeSchemaValidationPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayConsumeSchemaValidationPolicyConfigTypeSchemaRegistry:
 		if u.SchemaRegistry != nil {
@@ -1192,6 +1195,13 @@ func (u EventGatewayConsumeSchemaValidationPolicyConfig) MarshalJSON() ([]byte, 
 			}
 			m["json"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -1353,11 +1363,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.SchemaType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey schemaType: %w", err)
-	}
-	m["schemaType"] = typeBytes
 	switch u.SchemaType {
 	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro:
 		if u.Avro != nil {
@@ -1375,6 +1380,13 @@ func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey) MarshalJ
 			}
 			m["json"] = raw
 		}
+	}
+	if u.SchemaType != "" {
+		typeBytes, err := json.Marshal(string(u.SchemaType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey schemaType: %w", err)
+		}
+		m["schemaType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -1452,11 +1464,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.SchemaType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue schemaType: %w", err)
-	}
-	m["schemaType"] = typeBytes
 	switch u.SchemaType {
 	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeAvro:
 		if u.Avro != nil {
@@ -1474,6 +1481,13 @@ func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue) Marsha
 			}
 			m["json"] = raw
 		}
+	}
+	if u.SchemaType != "" {
+		typeBytes, err := json.Marshal(string(u.SchemaType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue schemaType: %w", err)
+		}
+		m["schemaType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -1950,11 +1964,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayEncryptConfigEncryptionKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayEncryptConfigEncryptionKey type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayEncryptConfigEncryptionKeyTypeAWS:
 		if u.AWS != nil {
@@ -1972,6 +1981,13 @@ func (u EventGatewayEncryptConfigEncryptionKey) MarshalJSON() ([]byte, error) {
 			}
 			m["static"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayEncryptConfigEncryptionKey type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2256,11 +2272,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayKeySource) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayKeySource type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayKeySourceTypeAWS:
 		if u.AWS != nil {
@@ -2278,6 +2289,13 @@ func (u EventGatewayKeySource) MarshalJSON() ([]byte, error) {
 			}
 			m["static"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayKeySource type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2376,11 +2394,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayMaskEmailDomainStrategy) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayMaskEmailDomainStrategy type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayMaskEmailDomainStrategyTypeEmailDomainKeepAll:
 		if u.EmailDomainKeepAll != nil {
@@ -2406,6 +2419,13 @@ func (u EventGatewayMaskEmailDomainStrategy) MarshalJSON() ([]byte, error) {
 			}
 			m["replace"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayMaskEmailDomainStrategy type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2493,11 +2513,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayMaskEmailLocalPartStrategy) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayMaskEmailLocalPartStrategy type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayMaskEmailLocalPartStrategyTypeKeepChars:
 		if u.KeepChars != nil {
@@ -2515,6 +2530,13 @@ func (u EventGatewayMaskEmailLocalPartStrategy) MarshalJSON() ([]byte, error) {
 			}
 			m["replace"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayMaskEmailLocalPartStrategy type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2597,11 +2619,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayMaskStrategy) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayMaskStrategy type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayMaskStrategyTypeEmail:
 		if u.Email != nil {
@@ -2627,6 +2644,13 @@ func (u EventGatewayMaskStrategy) MarshalJSON() ([]byte, error) {
 			}
 			m["replace"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayMaskStrategy type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2732,11 +2756,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayMaskStrategyEmailDomain) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailDomain type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayMaskStrategyEmailDomainTypeEmailDomainKeepAll:
 		if u.EmailDomainKeepAll != nil {
@@ -2762,6 +2781,13 @@ func (u EventGatewayMaskStrategyEmailDomain) MarshalJSON() ([]byte, error) {
 			}
 			m["replace"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailDomain type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2849,11 +2875,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayMaskStrategyEmailLocalPart) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailLocalPart type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayMaskStrategyEmailLocalPartTypeKeepChars:
 		if u.KeepChars != nil {
@@ -2871,6 +2892,13 @@ func (u EventGatewayMaskStrategyEmailLocalPart) MarshalJSON() ([]byte, error) {
 			}
 			m["replace"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailLocalPart type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -3006,11 +3034,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayModifyHeaderAction) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Op))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayModifyHeaderAction op: %w", err)
-	}
-	m["op"] = typeBytes
 	switch u.Op {
 	case EventGatewayModifyHeaderActionTypeRemove:
 		if u.Remove != nil {
@@ -3028,6 +3051,13 @@ func (u EventGatewayModifyHeaderAction) MarshalJSON() ([]byte, error) {
 			}
 			m["set"] = raw
 		}
+	}
+	if u.Op != "" {
+		typeBytes, err := json.Marshal(string(u.Op))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayModifyHeaderAction op: %w", err)
+		}
+		m["op"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -3375,11 +3405,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordDecryptionSelectorPaths) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordDecryptionSelectorPathsTypeArray:
 		if u.Array != nil {
@@ -3397,6 +3422,13 @@ func (u EventGatewayParsedRecordDecryptionSelectorPaths) MarshalJSON() ([]byte, 
 			}
 			m["expression"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordDecryptionSelectorPaths type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -3582,11 +3614,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordEncryptionSelectorEncryptionKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeAWS:
 		if u.AWS != nil {
@@ -3604,6 +3631,13 @@ func (u EventGatewayParsedRecordEncryptionSelectorEncryptionKey) MarshalJSON() (
 			}
 			m["static"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorEncryptionKey type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -3681,11 +3715,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordEncryptionSelectorPaths) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordEncryptionSelectorPathsTypeArray:
 		if u.Array != nil {
@@ -3703,6 +3732,13 @@ func (u EventGatewayParsedRecordEncryptionSelectorPaths) MarshalJSON() ([]byte, 
 			}
 			m["expression"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordEncryptionSelectorPaths type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -3998,11 +4034,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordMaskSelectorPaths) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorPaths type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordMaskSelectorPathsTypeArray:
 		if u.Array != nil {
@@ -4020,6 +4051,13 @@ func (u EventGatewayParsedRecordMaskSelectorPaths) MarshalJSON() ([]byte, error)
 			}
 			m["expression"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorPaths type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4102,11 +4140,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordMaskSelectorStrategy) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorStrategy type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordMaskSelectorStrategyTypeEmail:
 		if u.Email != nil {
@@ -4132,6 +4165,13 @@ func (u EventGatewayParsedRecordMaskSelectorStrategy) MarshalJSON() ([]byte, err
 			}
 			m["replace"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorStrategy type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4241,11 +4281,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeConsumeConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.OutputFormat))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfig outputFormat: %w", err)
-	}
-	m["outputFormat"] = typeBytes
 	switch u.OutputFormat {
 	case EventGatewayParsedRecordTranscodeConsumeConfigTypeAvro:
 		if u.Avro != nil {
@@ -4263,6 +4298,13 @@ func (u EventGatewayParsedRecordTranscodeConsumeConfig) MarshalJSON() ([]byte, e
 			}
 			m["json"] = raw
 		}
+	}
+	if u.OutputFormat != "" {
+		typeBytes, err := json.Marshal(string(u.OutputFormat))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfig outputFormat: %w", err)
+		}
+		m["outputFormat"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4383,11 +4425,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeInlin:
 		if u.Inlin != nil {
@@ -4405,6 +4442,13 @@ func (u EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource) MarshalJ
 			}
 			m["reference"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4541,11 +4585,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeInlin:
 		if u.Inlin != nil {
@@ -4563,6 +4602,13 @@ func (u EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource) MarshalJ
 			}
 			m["reference"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4708,11 +4754,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.OutputFormat))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig outputFormat: %w", err)
-	}
-	m["outputFormat"] = typeBytes
 	switch u.OutputFormat {
 	case EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeAvro:
 		if u.Avro != nil {
@@ -4730,6 +4771,13 @@ func (u EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig) MarshalJSON(
 			}
 			m["json"] = raw
 		}
+	}
+	if u.OutputFormat != "" {
+		typeBytes, err := json.Marshal(string(u.OutputFormat))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig outputFormat: %w", err)
+		}
+		m["outputFormat"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4820,11 +4868,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeProduceConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.OutputFormat))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfig outputFormat: %w", err)
-	}
-	m["outputFormat"] = typeBytes
 	switch u.OutputFormat {
 	case EventGatewayParsedRecordTranscodeProduceConfigTypeEventGatewayParsedRecordTranscodeProduceConfigAvro:
 		if u.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil {
@@ -4834,6 +4877,13 @@ func (u EventGatewayParsedRecordTranscodeProduceConfig) MarshalJSON() ([]byte, e
 			}
 			m["avro"] = raw
 		}
+	}
+	if u.OutputFormat != "" {
+		typeBytes, err := json.Marshal(string(u.OutputFormat))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfig outputFormat: %w", err)
+		}
+		m["outputFormat"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4941,11 +4991,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeInlin:
 		if u.Inlin != nil {
@@ -4963,6 +5008,13 @@ func (u EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource) MarshalJ
 			}
 			m["reference"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5103,11 +5155,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeProducePolicyCreateConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.OutputFormat))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig outputFormat: %w", err)
-	}
-	m["outputFormat"] = typeBytes
 	switch u.OutputFormat {
 	case EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeEventGatewayParsedRecordTranscodeProduceConfigAvro:
 		if u.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil {
@@ -5117,6 +5164,13 @@ func (u EventGatewayParsedRecordTranscodeProducePolicyCreateConfig) MarshalJSON(
 			}
 			m["avro"] = raw
 		}
+	}
+	if u.OutputFormat != "" {
+		typeBytes, err := json.Marshal(string(u.OutputFormat))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig outputFormat: %w", err)
+		}
+		m["outputFormat"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5207,11 +5261,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeSchemaRefDestination) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaRefDestination type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeConfluentFormat:
 		if u.ConfluentFormat != nil {
@@ -5237,6 +5286,13 @@ func (u EventGatewayParsedRecordTranscodeSchemaRefDestination) MarshalJSON() ([]
 			}
 			m["recordHeader"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaRefDestination type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5346,11 +5402,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeSchemaSource) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSource type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeSchemaSourceTypeInlin:
 		if u.Inlin != nil {
@@ -5368,6 +5419,13 @@ func (u EventGatewayParsedRecordTranscodeSchemaSource) MarshalJSON() ([]byte, er
 			}
 			m["reference"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSource type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5493,11 +5551,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinationTypeConfluentFormat:
 		if u.ConfluentFormat != nil {
@@ -5523,6 +5576,13 @@ func (u EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinati
 			}
 			m["recordHeader"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5610,11 +5670,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeID:
 		if u.ID != nil {
@@ -5632,6 +5687,13 @@ func (u EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry) Ma
 			}
 			m["name"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5846,11 +5908,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayProduceSchemaValidationPolicyConfigTypeSchemaRegistry:
 		if u.SchemaRegistry != nil {
@@ -5876,6 +5933,13 @@ func (u EventGatewayProduceSchemaValidationPolicyConfig) MarshalJSON() ([]byte, 
 			}
 			m["json"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6034,11 +6098,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.SchemaType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey schemaType: %w", err)
-	}
-	m["schemaType"] = typeBytes
 	switch u.SchemaType {
 	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro:
 		if u.Avro != nil {
@@ -6056,6 +6115,13 @@ func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey) MarshalJ
 			}
 			m["json"] = raw
 		}
+	}
+	if u.SchemaType != "" {
+		typeBytes, err := json.Marshal(string(u.SchemaType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey schemaType: %w", err)
+		}
+		m["schemaType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6133,11 +6199,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.SchemaType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue schemaType: %w", err)
-	}
-	m["schemaType"] = typeBytes
 	switch u.SchemaType {
 	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeAvro:
 		if u.Avro != nil {
@@ -6155,6 +6216,13 @@ func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue) Marsha
 			}
 			m["json"] = raw
 		}
+	}
+	if u.SchemaType != "" {
+		typeBytes, err := json.Marshal(string(u.SchemaType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue schemaType: %w", err)
+		}
+		m["schemaType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6315,11 +6383,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID:
 		if u.ID != nil {
@@ -6337,6 +6400,13 @@ func (u EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) Marsh
 			}
 			m["name"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6494,11 +6564,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID:
 		if u.ID != nil {
@@ -6516,6 +6581,13 @@ func (u EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegis
 			}
 			m["name"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6740,11 +6812,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayRequestRules) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayRequestRules type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayRequestRulesTypeAlterClientQuotas:
 		if u.AlterClientQuotas != nil {
@@ -6850,6 +6917,13 @@ func (u EventGatewayRequestRules) MarshalJSON() ([]byte, error) {
 			}
 			m["txnOffsetCommit"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayRequestRules type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7505,11 +7579,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u ForwardToVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling ForwardToVirtualClusterPolicyConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case ForwardToVirtualClusterPolicyConfigTypePortMapping:
 		if u.PortMapping != nil {
@@ -7527,6 +7596,13 @@ func (u ForwardToVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["sni"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling ForwardToVirtualClusterPolicyConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7709,11 +7785,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u SchemaRegistryAuthenticationScheme) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling SchemaRegistryAuthenticationScheme type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case SchemaRegistryAuthenticationSchemeTypeSchemaRegistryAuthenticationBasic:
 		if u.SchemaRegistryAuthenticationBasic != nil {
@@ -7723,6 +7794,13 @@ func (u SchemaRegistryAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["basic"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling SchemaRegistryAuthenticationScheme type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7844,11 +7922,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u SchemaRegistryConfluentConfigAuthentication) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling SchemaRegistryConfluentConfigAuthentication type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case SchemaRegistryConfluentConfigAuthenticationTypeSchemaRegistryAuthenticationBasic:
 		if u.SchemaRegistryAuthenticationBasic != nil {
@@ -7858,6 +7931,13 @@ func (u SchemaRegistryConfluentConfigAuthentication) MarshalJSON() ([]byte, erro
 			}
 			m["basic"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling SchemaRegistryConfluentConfigAuthentication type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7960,11 +8040,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u SchemaValidationInlineSchemaConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.SchemaType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling SchemaValidationInlineSchemaConfig schemaType: %w", err)
-	}
-	m["schemaType"] = typeBytes
 	switch u.SchemaType {
 	case SchemaValidationInlineSchemaConfigTypeAvro:
 		if u.Avro != nil {
@@ -7982,6 +8057,13 @@ func (u SchemaValidationInlineSchemaConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["json"] = raw
 		}
+	}
+	if u.SchemaType != "" {
+		typeBytes, err := json.Marshal(string(u.SchemaType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling SchemaValidationInlineSchemaConfig schemaType: %w", err)
+		}
+		m["schemaType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -8396,11 +8478,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case VirtualClusterAuthenticationSchemeTypeAnonymous:
 		if u.Anonymous != nil {
@@ -8442,6 +8519,13 @@ func (u VirtualClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 			}
 			m["saslScram"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling VirtualClusterAuthenticationScheme type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -8637,11 +8721,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u VirtualClusterNamespaceIDSelector) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling VirtualClusterNamespaceIDSelector type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case VirtualClusterNamespaceIDSelectorTypeExactList:
 		if u.ExactList != nil {
@@ -8659,6 +8738,13 @@ func (u VirtualClusterNamespaceIDSelector) MarshalJSON() ([]byte, error) {
 			}
 			m["glob"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling VirtualClusterNamespaceIDSelector type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -8765,11 +8851,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u VirtualClusterNamespaceTopicSelector) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling VirtualClusterNamespaceTopicSelector type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case VirtualClusterNamespaceTopicSelectorTypeExactList:
 		if u.ExactList != nil {
@@ -8787,6 +8868,13 @@ func (u VirtualClusterNamespaceTopicSelector) MarshalJSON() ([]byte, error) {
 			}
 			m["glob"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling VirtualClusterNamespaceTopicSelector type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
