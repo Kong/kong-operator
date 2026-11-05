@@ -1,7 +1,6 @@
 # The Secrets only Kong Operator uses live in the operator namespace, named
 # after the UID of the GWAdmin: no owner reference can cross namespaces, so
-# they are labeled with it instead. The published cp client CA is one of
-# them: its key never lands in the GWAdmin namespace.
+# they are labeled with it instead.
 apiVersion: v1
 kind: Secret
 metadata:

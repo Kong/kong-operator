@@ -1,3 +1,5 @@
+# The published cp client CA is one of the Secrets only Kong Operator uses:
+# its key never lands in the GWAdmin namespace.
 apiVersion: v1
 kind: Secret
 metadata:

@@ -108,21 +108,28 @@ gwadmin_replaced() {
 # node, which stream the configuration, so the request is cut short once answered.
 # gw-admin answers 400 without the X-Node-Version header keg sends.
 cp_config_status() {
-  local gateway gw_ns gw uid bundle ca
+  local gateway gw_ns gw uid bundle ca pod
   gateway=$(kubectl get onpremeventgateway -n "$(ns)" "$2" -o json)
   uid=$(printf '%s' "$gateway" | jq -r '.metadata.uid')
   gw=$(printf '%s' "$gateway" | jq -r '.spec.gwAdminRef.name')
   gw_ns=$(printf '%s' "$gateway" | jq -r --arg ns "$(ns)" '.spec.gwAdminRef.namespace // $ns')
   bundle=$(kubectl get gwadmin -n "$gw_ns" "$gw" -o json | jq -er '.status.tls.cpServerCABundleSecretName')
   ca=$(kubectl get secret -n "$gw_ns" "$bundle" -o json | jq -er '.data["ca.crt"]')
-  bounded 60 env kubectl run -n "$(ns)" "cp-probe-$(date +%s)-$RANDOM" --image="$PROBE_IMAGE" --rm -i --restart=Never --quiet \
+  pod="cp-probe-$(date +%s)-$RANDOM"
+  # The status is read from the logs of the completed pod: kubectl run --rm -i
+  # loses the output of a container that exits before it attaches, as one
+  # answered 401 does. The probe exits 0, also when curl times out on a stream.
+  kubectl run -n "$(ns)" "$pod" --image="$PROBE_IMAGE" --restart=Never \
     --env="CA=$ca" --env="CRT=$(base64 <"$1/tls.crt" | tr -d '\n')" --env="KEY=$(base64 <"$1/tls.key" | tr -d '\n')" \
     --env="URL=https://$gw-cp.$gw_ns.svc:8099/v1/data-planes/event-gateway/$uid/nodes" \
     --command -- sh -c 'echo "$CA" | base64 -d >/tmp/ca.crt; echo "$CRT" | base64 -d >/tmp/c.crt; echo "$KEY" | base64 -d >/tmp/c.key
       NODE=$(cat /proc/sys/kernel/random/uuid)
       curl -s -o /dev/null -w "%{http_code}" --max-time 5 --cacert /tmp/ca.crt --cert /tmp/c.crt --key /tmp/c.key \
         -H "X-Node-Id: $NODE" -H "X-Node-Version: 1.3.0" \
-        "$URL/$NODE/signals?capabilities%5Bconfig_sync%5D%5Bversion%5D=v1&capabilities%5Bconfig_sync%5D%5Boffset%5D=INIT"' 2>/dev/null
+        "$URL/$NODE/signals?capabilities%5Bconfig_sync%5D%5Bversion%5D=v1&capabilities%5Bconfig_sync%5D%5Boffset%5D=INIT" || true' >/dev/null
+  kubectl wait -n "$(ns)" "pod/$pod" --for=jsonpath='{.status.phase}'=Succeeded --timeout=60s >/dev/null &&
+    kubectl logs -n "$(ns)" "$pod"
+  kubectl delete pod -n "$(ns)" "$pod" --ignore-not-found --wait=false >/dev/null
 }
 
 # cp_config_status_is cert_dir gateway status: gw-admin answers status, or,
@@ -130,8 +137,6 @@ cp_config_status() {
 cp_config_status_is() {
   local got
   got=$(cp_config_status "$1" "$2") || true
-  # kubectl run can print the output of the pod twice.
-  got=${got: -3}
   case $3 in
   !*) [ -n "$got" ] && [ "$got" != 000 ] && [ "$got" != "${3#!}" ] && return 0 ;;
   *) [ "$got" = "$3" ] && return 0 ;;
