@@ -231,10 +231,21 @@ func initializeParentStatusesWithProgrammedCondition[routeT gatewayapi.RouteT](
 	changed := false
 	programmedConditionUnknown := newProgrammedConditionUnknown(route)
 	for _, ps := range parentStatuses {
+		if isForeignParentStatus(ps) {
+			continue
+		}
 		if !parentStatusHasProgrammedCondition(ps) {
 			ps.Conditions = append(ps.Conditions, programmedConditionUnknown)
 			changed = true
 		}
 	}
 	return changed
+}
+
+// isForeignParentStatus returns true if the parent status entry is owned by
+// another controller. Such entries must never be modified (see the
+// HTTPRoutePreserveForeignStatus conformance test). Entries with an empty
+// controller name predate per-controller ownership and are still updated.
+func isForeignParentStatus(ps *gatewayapi.RouteParentStatus) bool {
+	return ps.ControllerName != "" && ps.ControllerName != GetControllerName()
 }
