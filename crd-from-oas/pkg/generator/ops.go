@@ -376,6 +376,9 @@ type parentInfo struct {
 	// SDKFieldName is the field name in the SDK operations request struct for this parent param,
 	// e.g. "GatewayID" or "ListenerID". Derived from pathParamToFieldName or config override.
 	SDKFieldName string
+	// ParamName is the raw path parameter name of this parent, e.g. "portalId".
+	// Used to map OAS delete parameter order onto positional SDK arguments.
+	ParamName string
 }
 
 // resolveParents returns parent info for all parent dependencies of a non-root entity,
@@ -413,6 +416,7 @@ func (g *Generator) resolveParents(entityName string, schema *parser.Schema) ([]
 			IDSetter:     "Set" + dep.EntityName + "ID",
 			VarName:      varName,
 			SDKFieldName: sdkField,
+			ParamName:    dep.ParamName,
 		}
 	}
 	// Single-parent entities use the generic "parentID" var name for backwards compatibility

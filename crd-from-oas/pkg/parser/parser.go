@@ -109,6 +109,10 @@ type Schema struct {
 	DeleteTags            []string // DELETE tags (e.g. ["Portals"])
 	DeletePathParams      []string // ordered path params from the DELETE path (e.g. ["portalId","id"])
 	DeleteQueryParamCount int      // number of query parameters on the DELETE operation (each becomes a nil arg)
+	// DeletePathParamOrder lists the DELETE path params in OAS declaration order.
+	// The SDK codegen uses this order for positional method arguments, which can
+	// differ from the URL order in DeletePathParams.
+	DeletePathParamOrder []string
 
 	// GET operation hints for getForUID ops generation.
 	ListOperationID        string   // GET operationId on the collection path (e.g. "list-portals")
@@ -316,7 +320,7 @@ func (p *Parser) findUpdateOperation(targetPath string) (*openapi3.Operation, st
 // same path or on a sibling path that extends targetPath with one `{<id>}`
 // segment — and populates the Delete* fields of the schema.
 func (p *Parser) extractDeleteOp(targetPath string, schema *Schema) {
-	deleteOp, deletePath := p.findDeleteOperation(targetPath)
+	deleteOp, deletePath, item := p.findDeleteOperation(targetPath)
 	if deleteOp == nil {
 		return
 	}
@@ -324,6 +328,7 @@ func (p *Parser) extractDeleteOp(targetPath string, schema *Schema) {
 	schema.DeleteOperationID = deleteOp.OperationID
 	schema.DeleteTags = append([]string(nil), deleteOp.Tags...)
 	schema.DeletePathParams = extractPathParams(deletePath)
+	schema.DeletePathParamOrder = declaredPathParams(item, deleteOp)
 
 	// Count query parameters so the generator can pass nil for each optional
 	// query param that the SDK codegen promotes to a positional argument.
@@ -334,14 +339,14 @@ func (p *Parser) extractDeleteOp(targetPath string, schema *Schema) {
 	}
 }
 
-// findDeleteOperation returns the DELETE operation and its path for the given
-// POST targetPath. It checks the same path first, then looks for a sibling
-// path that extends targetPath with a single `{<param>}` segment.
-func (p *Parser) findDeleteOperation(targetPath string) (*openapi3.Operation, string) {
+// findDeleteOperation returns the DELETE operation, its path and its path item
+// for the given POST targetPath. It checks the same path first, then looks for
+// a sibling path that extends targetPath with a single `{<param>}` segment.
+func (p *Parser) findDeleteOperation(targetPath string) (*openapi3.Operation, string, *openapi3.PathItem) {
 	// Same path.
 	if item := p.doc.Paths.Find(targetPath); item != nil {
 		if item.Delete != nil {
-			return item.Delete, targetPath
+			return item.Delete, targetPath, item
 		}
 	}
 
@@ -353,11 +358,35 @@ func (p *Parser) findDeleteOperation(targetPath string) (*openapi3.Operation, st
 		rest := pathKey[len(targetPath)+1:]
 		if strings.HasPrefix(rest, "{") && strings.HasSuffix(rest, "}") && !strings.Contains(rest, "/") {
 			if item.Delete != nil {
-				return item.Delete, pathKey
+				return item.Delete, pathKey, item
 			}
 		}
 	}
-	return nil, ""
+	return nil, "", nil
+}
+
+// declaredPathParams returns the path parameter names of an operation in OAS
+// declaration order: path-item level parameters first, then operation level
+// ones. The SDK codegen uses this order for positional method arguments, which
+// can differ from the URL order, e.g. /v3/portals/{portalId}/teams/{teamId}
+// declares teamId before portalId and the SDK takes (teamID, portalID).
+func declaredPathParams(item *openapi3.PathItem, op *openapi3.Operation) []string {
+	var params []string
+	seen := map[string]bool{}
+	add := func(refs openapi3.Parameters) {
+		for _, ref := range refs {
+			if ref.Value == nil || ref.Value.In != "path" || seen[ref.Value.Name] {
+				continue
+			}
+			seen[ref.Value.Name] = true
+			params = append(params, ref.Value.Name)
+		}
+	}
+	if item != nil {
+		add(item.Parameters)
+	}
+	add(op.Parameters)
+	return params
 }
 
 // extractListOp finds the GET operation for the entity collection — i.e. GET

@@ -1272,3 +1272,24 @@ func TestParseSchema_AllOfCompositeMergesProperties(t *testing.T) {
 	assert.False(t, byName["hosts"].Required)
 	assert.False(t, byName["tags"].Required)
 }
+
+func TestDeclaredPathParams(t *testing.T) {
+	pathParam := func(name string) *openapi3.ParameterRef {
+		return &openapi3.ParameterRef{Value: &openapi3.Parameter{Name: name, In: "path"}}
+	}
+	item := &openapi3.PathItem{
+		Parameters: openapi3.Parameters{
+			pathParam("teamId"),
+			pathParam("portalId"),
+			{Value: &openapi3.Parameter{Name: "filter", In: "query"}},
+		},
+	}
+	op := &openapi3.Operation{
+		Parameters: openapi3.Parameters{
+			pathParam("teamId"), // Re-declared: must not appear twice.
+			pathParam("extraId"),
+		},
+	}
+
+	assert.Equal(t, []string{"teamId", "portalId", "extraId"}, declaredPathParams(item, op))
+}
