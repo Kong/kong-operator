@@ -154,43 +154,15 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DATAPLANE
-                value: ($dataplane_name)
-              - name: CP_ENDPOINT
-                value: ($cp_endpoint)
-              - name: TP_ADDRESS
-                value: ($tp_address)
+              - name: DEPLOYMENT_LABEL_SELECTOR
+                value: (join('=', ['app', ($dataplane_name)]))
+              - name: CONTAINER
+                value: proxy
+              - name: EXPECTED_ENV
+                value: (join(';', [join('=', ['KONG_CLUSTER_CONTROL_PLANE', ($cp_endpoint)]), join('=', ['KONG_CLUSTER_SERVER_NAME', 'us.svc.konghq.tech']), join('=', ['KONG_CLUSTER_TELEMETRY_ENDPOINT', ($tp_address)]), join('=', ['KONG_CLUSTER_TELEMETRY_SERVER_NAME', 'us.svc.konghq.tech'])]))
             timeout: 3m
             content: |
-              set -o errexit
-              set -o nounset
-
-              deadline=$((SECONDS + 120))
-              until kubectl -n "$NAMESPACE" get deploy -l "app=$DATAPLANE" -o name | grep -q deployment; do
-                if (( SECONDS >= deadline )); then
-                  echo "the DataPlane Deployment never appeared" >&2
-                  exit 1
-                fi
-                sleep 2
-              done
-
-              env_json=$(kubectl -n "$NAMESPACE" get deploy -l "app=$DATAPLANE" -o json)
-              for want in \
-                "KONG_CLUSTER_CONTROL_PLANE=${CP_ENDPOINT}" \
-                "KONG_CLUSTER_SERVER_NAME=us.svc.konghq.tech" \
-                "KONG_CLUSTER_TELEMETRY_ENDPOINT=${TP_ADDRESS}" \
-                "KONG_CLUSTER_TELEMETRY_SERVER_NAME=us.svc.konghq.tech"
-              do
-                name=${want%%=*}
-                value=${want#*=}
-                got=$(echo "$env_json" | jq -r --arg n "$name" \
-                  '.items[0].spec.template.spec.containers[] | select(.name == "proxy") | .env[] | select(.name == $n) | .value')
-                if [ "$got" != "$value" ]; then
-                  echo "$name is '${got}', expected '${value}'" >&2
-                  exit 1
-                fi
-                echo "ok: $name=$got"
-              done
+              bash ../../common/scripts/assert-deployment-env.sh
       cleanup:
         - script:
             env:
