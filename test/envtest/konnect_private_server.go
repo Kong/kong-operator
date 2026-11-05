@@ -31,7 +31,6 @@ const (
 	KonnectPrivateOrgID                   = "5f9fd312-a987-4628-b4c5-bb4f4fddd5f7"
 	KonnectPrivateControlPlaneID          = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
 	KonnectPrivateNetworkID               = "0d6a9a44-6d3c-4e0e-9a3b-2a3f9c1b7e10"
-	KonnectPrivateDPCertificateID         = "7c3f1d2e-4b5a-4c6d-8e9f-0a1b2c3d4e5f"
 	KonnectPrivateControlPlaneEndpoint    = "https://" + KonnectPrivateRegionalHost + "/cp/abc123"
 	KonnectPrivateTelemetryEndpoint       = "https://" + KonnectPrivateRegionalHost + "/tp/abc123"
 	konnectPrivateControlPlaneSubresource = "/api/v2/control-planes/"
@@ -145,12 +144,11 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 	regional("GET", "/api/v2/control-planes", http.StatusOK, map[string]any{"meta": page, "data": []any{controlPlane}})
 	regional("PATCH", konnectPrivateControlPlaneSubresource+"{id}", http.StatusOK, controlPlane)
 	regional("DELETE", konnectPrivateControlPlaneSubresource+"{id}", http.StatusNoContent, nil)
-	regional("POST", konnectPrivateControlPlaneSubresource+"{id}/dp-client-certificates", http.StatusCreated,
-		map[string]any{"item": map[string]any{"id": KonnectPrivateDPCertificateID}})
-	regional("GET", konnectPrivateControlPlaneSubresource+"{id}/dp-client-certificates", http.StatusOK,
-		map[string]any{"items": []any{}})
-	regional("DELETE", konnectPrivateControlPlaneSubresource+"{id}/dp-client-certificates/{cert}", http.StatusNoContent, nil)
 
+	// The data plane certificate calls are not served here: nothing in this
+	// test attaches a data plane, and the cluster suite covers that flow with
+	// its own fixture (the Kong stub). A call to them lands in the catch-all
+	// below, which is the intent.
 	global("POST", konnectPrivateNetworksPath, http.StatusCreated, network)
 	global("GET", konnectPrivateNetworksPath+"/{id}", http.StatusOK, network)
 	global("DELETE", konnectPrivateNetworksPath+"/{id}", http.StatusNoContent, nil)
