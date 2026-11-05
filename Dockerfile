@@ -49,11 +49,6 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
     make build.operator
 
-# Prepare the license directory in the (native) builder stage so the final UBI
-# stage stays COPY-only and can be cross-built for arm64 without QEMU.
-COPY LICENSE LICENSES /licenses/
-RUN chmod 0755 /licenses && chmod 0444 /licenses/LICENSE /licenses/LICENSES
-
 # ------------------------------------------------------------------------------
 # UBI (Red Hat certification)
 # ------------------------------------------------------------------------------
@@ -81,8 +76,11 @@ LABEL name="${NAME}" \
 
 WORKDIR /
 COPY --from=builder /workspace/bin/manager /manager
-# Red Hat certification requires licensing information in /licenses.
-COPY --from=builder /licenses /licenses
+# Red Hat certification requires licensing information in /licenses. WORKDIR
+# creates the directory with mode 0755, while --chmod makes the files read-only.
+WORKDIR /licenses
+COPY --chmod=0444 LICENSE LICENSES .
+WORKDIR /
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]
