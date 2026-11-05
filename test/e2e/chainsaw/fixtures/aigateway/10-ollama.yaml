@@ -6,6 +6,11 @@ metadata:
   labels: { app: ollama }
 spec:
   replicas: 1
+  # Well above the rollout timeout in prereq.sh: the models are downloaded at
+  # container start, and the transfer has been seen to drop to a few hundred
+  # KB/s. The default 600s cut that download short, so the script's timeout
+  # (which dumps diagnostics) must be the one that decides.
+  progressDeadlineSeconds: 1200
   selector:
     matchLabels: { app: ollama }
   template:
@@ -21,8 +26,15 @@ spec:
               ollama serve &
               pid=$!
               until ollama ls >/dev/null 2>&1; do sleep 1; done
-              ollama pull qwen2.5:0.5b
-              ollama pull gemma3:270m
+              # Retry until each pull succeeds: ollama resumes the partial blob
+              # it keeps in its model store, so a dropped transfer does not
+              # start over.
+              for model in qwen2.5:0.5b gemma3:270m; do
+                until ollama pull "$model"; do
+                  echo "ollama pull $model failed; retrying in 5s" >&2
+                  sleep 5
+                done
+              done
               # llama-server can crash during CPU model load (e.g. the ollama
               # <0.32.7 GCC-11/AMX backend bug); retry until a real
               # completion succeeds, then gate readiness on it.
