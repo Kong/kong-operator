@@ -77,7 +77,7 @@ func deletePortalTeam(
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
-	_, err := sdk.DeletePortalTeam(ctx, parentID, id)
+	_, err := sdk.DeletePortalTeam(ctx, id, parentID)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)
 	}

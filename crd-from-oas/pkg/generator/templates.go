@@ -3097,13 +3097,13 @@ func TestDelete{{.Entity}}_UsesGeneratedSDKOps(t *testing.T) {
 				{{.Name}}: {{.Value}},
 {{- end}}
 			},
-{{- else if .Delete.DeleteOmitsEntityID}}
-			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
-{{- else if .Delete.Parents}}
-			{{(index .Delete.Parents 0).VarName}},
-			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
 {{- else}}
-			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- range $i, $a := .Delete.DeleteArgs}}
+			{{if $a.IsID}}obj.GetKonnectStatus().GetKonnectID(){{else}}{{$a.Expr}}{{end}},
+{{- end}}
+{{- range .Delete.DeleteNilArgs}}
+			mock.Anything,
+{{- end}}
 {{- end}}
 		).
 		Return(&sdkkonnectops.{{.Delete.ResponseType}}{}, nil).
@@ -3171,13 +3171,13 @@ func TestDelete{{.Entity}}_PropagatesSDKError(t *testing.T) {
 				{{.Name}}: {{.Value}},
 {{- end}}
 			},
-{{- else if .Delete.DeleteOmitsEntityID}}
-			{{(index .Delete.Parents 0).VarName}}{{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
-{{- else if .Delete.Parents}}
-			{{(index .Delete.Parents 0).VarName}},
-			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
 {{- else}}
-			obj.GetKonnectStatus().GetKonnectID(){{range .Delete.DeleteNilArgs}}, mock.Anything{{end}},
+{{- range $i, $a := .Delete.DeleteArgs}}
+			{{if $a.IsID}}obj.GetKonnectStatus().GetKonnectID(){{else}}{{$a.Expr}}{{end}},
+{{- end}}
+{{- range .Delete.DeleteNilArgs}}
+			mock.Anything,
+{{- end}}
 {{- end}}
 		).
 		Return(nil, sdkErr).
@@ -3681,15 +3681,9 @@ func delete{{.Entity}}(
 		{{.Name}}: {{.Value}},
 		{{- end}}
 	})
-{{- else if and (not .DeleteAsUpdate) .DeleteOmitsEntityID}}
-
-	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}{{range .DeleteNilArgs}}, nil{{end}})
-{{- else if and (not .DeleteAsUpdate) .Parents}}
-
-	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, id{{range .DeleteNilArgs}}, nil{{end}})
 {{- else if not .DeleteAsUpdate}}
 
-	_, err := sdk.{{.DeleteSDKMethod}}(ctx, id{{range .DeleteNilArgs}}, nil{{end}})
+	_, err := sdk.{{.DeleteSDKMethod}}(ctx, {{range $i, $a := .DeleteArgs}}{{if $i}}, {{end}}{{$a.Expr}}{{end}}{{range .DeleteNilArgs}}, nil{{end}})
 {{- end}}
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)

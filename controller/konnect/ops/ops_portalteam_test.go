@@ -63,7 +63,7 @@ func TestDeletePortalTeam(t *testing.T) {
 	team.SetKonnectID("portal-team-1")
 
 	sdk.EXPECT().
-		DeletePortalTeam(mock.Anything, "portal-1", "portal-team-1").
+		DeletePortalTeam(mock.Anything, "portal-team-1", "portal-1").
 		Return(&sdkkonnectops.DeletePortalTeamResponse{}, nil).
 		Once()
 
