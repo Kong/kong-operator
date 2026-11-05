@@ -5,11 +5,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
@@ -26,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
+	"github.com/kong/kong-operator/v2/test/helpers/eventually"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 )
 
@@ -45,7 +44,7 @@ func TestKonnectPrivatePath(t *testing.T) {
 	defer cancel()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	fake := envtest.StartKonnectPrivateServer(t)
+	fake := envtest.StartKonnectPrivateServer(t, konnectPrivateToken)
 	factory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(fake.HTTPClient()))
 
 	t.Log("Setting up the manager with the real SDK factory")
@@ -136,10 +135,7 @@ func TestKonnectPrivatePath(t *testing.T) {
 
 		t.Log("Deleting the control plane")
 		require.NoError(t, cl.Delete(ctx, cp))
-		require.Eventually(t, func() bool {
-			err := cl.Get(ctx, client.ObjectKeyFromObject(cp), cp)
-			return apierrors.IsNotFound(err)
-		}, 30*time.Second, 100*time.Millisecond, "the control plane must be deleted")
+		eventually.WaitForObjectToNotExist(t, ctx, cl, cp, consts.WaitTime, consts.TickTime)
 	})
 
 	// TODO(#6110): the Dedicated Cloud Gateway calls leave the private path for

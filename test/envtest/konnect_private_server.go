@@ -53,16 +53,18 @@ type KonnectPrivateServer struct {
 	*httptest.Server
 
 	t        *testing.T
+	token    string
 	mu       sync.Mutex
 	requests []KonnectRequest
 	caPEM    []byte
 	listener net.Addr
 }
 
-// StartKonnectPrivateServer starts the fake. Its certificate is signed by a CA
-// generated for the test and covers the two private hostnames only: a client
-// that trusts this CA cannot reach any other host.
-func StartKonnectPrivateServer(t *testing.T) *KonnectPrivateServer {
+// StartKonnectPrivateServer starts the fake, which only answers requests
+// carrying token. Its certificate is signed by a CA generated for the test and
+// covers the two private hostnames only: a client that trusts this CA cannot
+// reach any other host.
+func StartKonnectPrivateServer(t *testing.T, token string) *KonnectPrivateServer {
 	t.Helper()
 
 	ca := certificate.MustGenerateCert(
@@ -76,7 +78,7 @@ func StartKonnectPrivateServer(t *testing.T) *KonnectPrivateServer {
 		certificate.WithDNSNames(KonnectPrivateRegionalHost, KonnectPrivateGlobalHost),
 	)
 
-	s := &KonnectPrivateServer{t: t, caPEM: caPEM}
+	s := &KonnectPrivateServer{t: t, token: token, caPEM: caPEM}
 	s.Server = httptest.NewUnstartedServer(s.handler())
 	s.TLS = &tls.Config{
 		MinVersion:   tls.VersionTLS12,
@@ -168,6 +170,15 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 		s.mu.Lock()
 		s.requests = append(s.requests, req)
 		s.mu.Unlock()
+
+		// The edge requires the token on every call: answering 200 without it
+		// would let a regression that drops the header pass unnoticed.
+		if req.Authorization != "Bearer "+s.token {
+			s.t.Errorf("request without the expected token: %s %s%s", r.Method, r.Host, r.URL.Path)
+			w.Header().Set("Content-Type", "application/problem+json")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		mux.ServeHTTP(w, r)
 	})
 }
