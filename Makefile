@@ -579,6 +579,10 @@ _docker.build:
 docker.build:
 	TAG=$(TAG) TARGET=distroless $(MAKE) _docker.build
 
+.PHONY: docker.build.ubi
+docker.build.ubi:
+	TAG=$(TAG) TARGET=ubi $(MAKE) _docker.build
+
 .PHONY: docker.push
 docker.push:
 	docker push $(IMG):$(TAG)

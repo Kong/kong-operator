@@ -72,6 +72,29 @@ At the moment we're providing images for:
 
 [dockerhub-ko]: https://hub.docker.com/r/kong/kong-operator
 
+### UBI-based images
+
+For Red Hat certification and OpenShift, the operator can be built on top of
+UBI 9 minimal:
+
+```console
+make docker.build.ubi
+```
+
+This is a separate target: `make docker.build` keeps producing the default
+distroless image. The UBI image runs as a non-root user, carries the labels
+required by `preflight`, and includes license files under `/licenses`.
+
+To build the amd64 and arm64 variants with buildx:
+
+```console
+docker buildx build --target ubi \
+  --platform linux/amd64,linux/arm64 \
+  --build-arg GOPATH=/go \
+  --build-arg GOCACHE=/root/.cache/go-build \
+  -t <registry>/<image>:<tag> --push .
+```
+
 ### `main` branch builds
 
 Nightly pre-release builds of the `main` branch are available from the

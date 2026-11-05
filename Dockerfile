@@ -49,6 +49,44 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
     make build.operator
 
+# Prepare the license directory in the (native) builder stage so the final UBI
+# stage stays COPY-only and can be cross-built for arm64 without QEMU.
+COPY LICENSE LICENSES /licenses/
+RUN chmod 0755 /licenses && chmod 0444 /licenses/LICENSE /licenses/LICENSES
+
+# ------------------------------------------------------------------------------
+# UBI (Red Hat certification)
+# ------------------------------------------------------------------------------
+
+# UBI minimal is used instead of UBI micro because it ships the RHEL CA bundle
+# needed for outbound TLS (Konnect, Kubernetes API, OIDC, etc.). Keep this image
+# at the latest UBI 9.8 digest so certification does not detect unapplied errata.
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:4b79c93106c14ad1c234907f83441ff0e4f8d24e78426a36e159098e9f7e6fa5 AS ubi
+
+ARG TAG
+ARG NAME="Kong Operator"
+ARG DESCRIPTION="Kong Operator the ultimate Kubernetes Operator for Kong"
+ARG MAINTAINER="Kong Inc."
+ARG RELEASE="1"
+
+LABEL name="${NAME}" \
+    description="${DESCRIPTION}" \
+    org.opencontainers.image.description="${DESCRIPTION}" \
+    vendor="Kong" \
+    maintainer="${MAINTAINER}" \
+    version="${TAG}" \
+    release="${RELEASE}" \
+    url="https://github.com/kong/kong-operator" \
+    summary="A Kubernetes Operator for the Kong Gateway."
+
+WORKDIR /
+COPY --from=builder /workspace/bin/manager /manager
+# Red Hat certification requires licensing information in /licenses.
+COPY --from=builder /licenses /licenses
+USER 65532:65532
+
+ENTRYPOINT ["/manager"]
+
 # ------------------------------------------------------------------------------
 # Distroless (default)
 # ------------------------------------------------------------------------------
