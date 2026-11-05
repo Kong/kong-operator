@@ -4415,6 +4415,25 @@ func generatedIndexOptionsForKonnectEntities(
 }
 `
 
+// aiGatewayIndexOptionsTemplate renders internal/utils/index/zz_generated_aigateway_index_options.go.
+const aiGatewayIndexOptionsTemplate = sharedGeneratedFilePreamble + `
+
+package index
+
+import "slices"
+
+// OptionsForAIGatewayEntities returns the Index options of every AI Gateway
+// configuration-entity kind. BuildDocument lists every one of those kinds, so
+// every cache serving it must register all of their indexes.
+func OptionsForAIGatewayEntities() []Option {
+	return slices.Concat(
+{{- range .Entities}}
+		OptionsFor{{.}}(),
+{{- end}}
+	)
+}
+`
+
 const rbacTemplate = sharedGeneratedFilePreamble + `
 
 package konnect

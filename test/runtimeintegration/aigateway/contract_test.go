@@ -218,49 +218,7 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	}
 	// BuildDocument lists every entity kind pointing at the gateway, so every
 	// kind's OnOnPremAIGatewayRef index must be registered on the fake client.
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayDatastore() {
+	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()

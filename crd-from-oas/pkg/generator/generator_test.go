@@ -4365,6 +4365,47 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, string(formatted), file.Content)
 }
 
+func TestGenerateAIGatewayIndexOptionsDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity: "AIGatewayVault",
+			Group:  "aiconfiguration.konghq.com",
+		},
+		{
+			Entity: "AIGatewayModel",
+			Group:  "aiconfiguration.konghq.com",
+		},
+		{
+			Entity: "Portal",
+			Group:  "konnect.konghq.com",
+		},
+	}
+
+	file, err := GenerateAIGatewayIndexOptionsDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_aigateway_index_options.go", file.Name)
+	assert.Equal(t, "internal/utils/index", file.RelativeDir)
+	assert.Contains(t, file.Content, "package index")
+	assert.Contains(t, file.Content, "func OptionsForAIGatewayEntities() []Option {")
+	assert.Contains(t, file.Content, "OptionsForAIGatewayModel()")
+	assert.Contains(t, file.Content, "OptionsForAIGatewayVault()")
+	assert.NotContains(t, file.Content, "OptionsForPortal()")
+
+	idxModel := strings.Index(file.Content, "OptionsForAIGatewayModel()")
+	idxVault := strings.Index(file.Content, "OptionsForAIGatewayVault()")
+	assert.Less(t, idxModel, idxVault)
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+
+	empty, err := GenerateAIGatewayIndexOptionsDispatcher(nil)
+	require.NoError(t, err)
+	assert.Nil(t, empty)
+}
+
 func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 	const (
 		group = "configuration.konghq.com"

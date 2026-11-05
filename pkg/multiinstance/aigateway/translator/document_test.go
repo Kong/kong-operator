@@ -416,49 +416,7 @@ func TestBuildDocument(t *testing.T) {
 			authStrategyB, authStrategyA, consumerB, consumerA, certB, certA, sniB, sniA,
 			customPolicyB, customPolicyA, caCertB, caCertA, agentB, agentA, mcpServerB, mcpServerA,
 			vaultB, vaultA)
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayDatastore() {
+	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -638,49 +596,7 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw)
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayDatastore() {
+	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -722,49 +638,7 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, broken, model, brokenCACert)
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayDatastore() {
+	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -810,26 +684,8 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, caCertA, caCertB)
 	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-		index.OptionsForAIGatewayDatastore(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-		}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
 
@@ -869,26 +725,8 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, vaultA, vaultB)
 	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-		index.OptionsForAIGatewayDatastore(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-		}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
 
@@ -936,26 +774,8 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		}
 
 		builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...)
-		for _, opts := range [][]index.Option{
-			index.OptionsForAIGatewayModel(),
-			index.OptionsForAIGatewayModelProvider(),
-			index.OptionsForAIGatewayPolicy(),
-			index.OptionsForAIGatewayConsumerGroup(),
-			index.OptionsForAIGatewayConsumer(),
-			index.OptionsForAIGatewayConsumerCredential(),
-			index.OptionsForAIGatewayAuthStrategy(),
-			index.OptionsForAIGatewayCACertificate(),
-			index.OptionsForAIGatewayCertificate(),
-			index.OptionsForAIGatewaySNI(),
-			index.OptionsForAIGatewayCustomPolicy(),
-			index.OptionsForAIGatewayAgent(),
-			index.OptionsForAIGatewayMCPServer(),
-			index.OptionsForAIGatewayVault(),
-			index.OptionsForAIGatewayDatastore(),
-		} {
-			for _, opt := range opts {
-				builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-			}
+		for _, opt := range index.OptionsForAIGatewayEntities() {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 		}
 		return builder.Build()
 	}
@@ -1139,26 +959,8 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, modelA, modelC, modelD, modelE, modelF, modelG, modelH)
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-		index.OptionsForAIGatewayDatastore(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-		}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
 
@@ -1216,49 +1018,7 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, brokenCert, healthyCert, sniBroken, sniHealthy)
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayDatastore() {
+	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -1512,26 +1272,8 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, consumer, credential, secret)
 	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-		index.OptionsForAIGatewayDatastore(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-		}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
 
@@ -1631,26 +1373,8 @@ func TestBuildDocument_ReportsBrokenCredentialOnTheCredential(t *testing.T) {
 // kind's OnOnPremAIGatewayRef field index registered, ready for the test objects.
 func newTestBuilder(scheme *runtime.Scheme, objs ...client.Object) *fake.ClientBuilder {
 	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...)
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-		index.OptionsForAIGatewayDatastore(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-		}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	return builder
 }
