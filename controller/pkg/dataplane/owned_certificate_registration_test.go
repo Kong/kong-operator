@@ -590,9 +590,16 @@ func TestCheckCertificateProgrammedBeingDeleted(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(cert(tc.deleting)).Build()
 			r := newTestReconciler(cl, events.NewFakeRecorder(1))
-			got, err := r.checkCertificateProgrammed(t.Context(), newTestAIGWDP(), cert(false), conds)
+			dp := newTestAIGWDP()
+			got, err := r.checkCertificateProgrammed(t.Context(), dp, cert(false), conds)
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got)
+			if tc.deleting {
+				cond := apimeta.FindStatusCondition(dp.GetConditions(), conds.Type)
+				require.NotNil(t, cond)
+				assert.Equal(t, metav1.ConditionFalse, cond.Status)
+				assert.Equal(t, "AIGatewayDataPlaneCertificate is being deleted: it is created again once it is gone", cond.Message)
+			}
 		})
 	}
 }

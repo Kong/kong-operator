@@ -42,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -864,6 +865,8 @@ func manualCertificateRequeue(deps *onPremDependencies, now time.Time) time.Dura
 // in before, and warnedExpiring since, as it can be overwritten meanwhile, e.g. by
 // an outage of the GWAdmin.
 func (r *Reconciler) warnManualCertificateExpiring(
+	ctx context.Context,
+	cl client.Client,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	deps *onPremDependencies,
 	secretName string,
@@ -875,7 +878,8 @@ func (r *Reconciler) warnManualCertificateExpiring(
 		return
 	}
 	warned := map[string]struct{}{}
-	if v, ok := r.warnedExpiring.Load(egdp.GetUID()); ok {
+	v, known := r.warnedExpiring.Load(egdp.GetUID())
+	if known {
 		warned, _ = v.(map[string]struct{})
 	}
 	warnings := map[string]struct{}{}
@@ -899,7 +903,35 @@ func (r *Reconciler) warnManualCertificateExpiring(
 		r.warnedExpiring.Delete(egdp.GetUID())
 		return
 	}
+	if !known {
+		// Only a new entry grows warnedExpiring. Failing to drop the old ones
+		// doesn't affect this data plane, and it is tried again on the next one.
+		if err := r.forgetDeletedDataPlanes(ctx, cl); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to drop the certificate expiry warnings of deleted data planes")
+		}
+	}
 	r.warnedExpiring.Store(egdp.GetUID(), warnings)
+}
+
+// forgetDeletedDataPlanes drops from warnedExpiring the data planes that no
+// longer exist. They have no finalizer, so no reconcile sees them go. Dropping
+// one still in use by mistake only reports its warnings again.
+func (r *Reconciler) forgetDeletedDataPlanes(ctx context.Context, cl client.Client) error {
+	var dataPlanes eventgatewayv1alpha1.KegDataPlaneList
+	if err := cl.List(ctx, &dataPlanes); err != nil {
+		return err
+	}
+	existing := make(map[types.UID]struct{}, len(dataPlanes.Items))
+	for i := range dataPlanes.Items {
+		existing[dataPlanes.Items[i].GetUID()] = struct{}{}
+	}
+	r.warnedExpiring.Range(func(uid, _ any) bool {
+		if _, ok := existing[uid.(types.UID)]; !ok {
+			r.warnedExpiring.Delete(uid)
+		}
+		return true
+	})
+	return nil
 }
 
 // cleanupStaleOnPremCertificates deletes the client certificate Secrets of a

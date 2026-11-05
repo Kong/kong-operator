@@ -103,7 +103,7 @@ func (r *Reconciler) resolveCertificateSecret(
 			keepCertificateProvisionedTransition(egdp, before)
 			return copyResult, nil, err
 		}
-		r.warnManualCertificateExpiring(egdp, deps, egdp.Spec.CertificateSecret.SecretRef.Name, before, now)
+		r.warnManualCertificateExpiring(ctx, cl, egdp, deps, egdp.Spec.CertificateSecret.SecretRef.Name, before, now)
 		return res, copied, nil
 	}
 	if deps != nil {

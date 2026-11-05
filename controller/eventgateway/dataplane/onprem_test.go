@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/events"
@@ -1871,6 +1872,35 @@ func TestManualCertificateExpiryIsReported(t *testing.T) {
 		require.Contains(t, cond.Message, `client certificate Secret "user-cert" expires at`)
 		require.Len(t, recorder.Events, 1, "not again on every reconcile")
 		require.Contains(t, <-recorder.Events, "Warning CertificateExpiringSoon")
+	})
+
+	t.Run("a new warning drops the warnings of the data planes that no longer exist", func(t *testing.T) {
+		egdp := withManualCertificate(onPremDataPlane())
+		egdp.UID = "existing"
+		other := onPremDataPlane()
+		other.Name, other.UID = "other", "other"
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(egdp, other).Build()
+		cert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+			certificate.WithValidity(now.Add(-85*day), now.Add(5*day)))
+		block, _ := pem.Decode(cert)
+		parsed, err := x509.ParseCertificate(block.Bytes)
+		require.NoError(t, err)
+		deps := &onPremDependencies{manualCertChain: []*x509.Certificate{parsed}}
+		setCertificateProvisioned(egdp, metav1.ConditionTrue, eventgatewayv1alpha1.CertificateProvisionedReason, "provisioned")
+
+		r := &Reconciler{}
+		warned := map[string]struct{}{"a warning": {}}
+		r.warnedExpiring.Store(types.UID("deleted"), warned)
+		r.warnedExpiring.Store(other.UID, warned)
+
+		r.warnManualCertificateExpiring(t.Context(), cl, egdp, deps, "user-cert", nil, now)
+
+		_, ok := r.warnedExpiring.Load(types.UID("deleted"))
+		require.False(t, ok, "it no longer exists")
+		_, ok = r.warnedExpiring.Load(other.UID)
+		require.True(t, ok, "it still exists")
+		_, ok = r.warnedExpiring.Load(egdp.UID)
+		require.True(t, ok, "reported")
 	})
 
 	t.Run("the certificate authority it depends on expires soon", func(t *testing.T) {
