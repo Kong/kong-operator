@@ -36,11 +36,12 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		obj     *AIGatewayAuthStrategy
-		objects []runtime.Object
-		want    *aigw.AuthStrategy
-		wantErr string
+		name           string
+		obj            *AIGatewayAuthStrategy
+		objects        []runtime.Object
+		want           *aigw.AuthStrategy
+		wantSecretRefs []SensitiveDataSecretRef
+		wantErr        string
 	}{
 		{
 			name: "key-auth lifted to the flat aigw shape, managed_by dropped",
@@ -121,12 +122,12 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 								DisplayName: "My OpenID Connect Identity Provider",
 								Config: AIGWOpenIDConnectGeneratedConfig{
 									ClusterCacheRedis: AIGWOpenIDConnectGeneratedConfigClusterCacheRedis{
-										Password:         redisPasswordRef("oidc-redis", "password"),
-										SentinelPassword: redisPasswordRef("oidc-redis", "sentinelPassword"),
+										Password:         redisPasswordRef("oidc-redis", "clusterPassword"),
+										SentinelPassword: redisPasswordRef("oidc-redis", "clusterSentinelPassword"),
 									},
 									Redis: AIGWOpenIDConnectGeneratedConfigRedis{
-										Password:         redisPasswordRef("oidc-redis", "password"),
-										SentinelPassword: redisPasswordRef("oidc-redis", "sentinelPassword"),
+										Password:         redisPasswordRef("oidc-redis", "redisPassword"),
+										SentinelPassword: redisPasswordRef("oidc-redis", "redisSentinelPassword"),
 									},
 								},
 							},
@@ -137,8 +138,10 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 			objects: []runtime.Object{&corev1.Secret{
 				Name: "oidc-redis", Namespace: "default",
 				Data: map[string][]byte{
-					"password":         []byte("redis-pass"),
-					"sentinelPassword": []byte("sentinel-pass"),
+					"clusterPassword":         []byte("redis-pass"),
+					"clusterSentinelPassword": []byte("sentinel-pass"),
+					"redisPassword":           []byte("redis-pass"),
+					"redisSentinelPassword":   []byte("sentinel-pass"),
 				},
 			}},
 			want: &aigw.AuthStrategy{
@@ -154,6 +157,24 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 						"password":          "redis-pass",
 						"sentinel_password": "sentinel-pass",
 					},
+				},
+			},
+			wantSecretRefs: []SensitiveDataSecretRef{
+				{
+					Name: "oidc-redis",
+					Key:  "clusterPassword",
+				},
+				{
+					Name: "oidc-redis",
+					Key:  "clusterSentinelPassword",
+				},
+				{
+					Name: "oidc-redis",
+					Key:  "redisPassword",
+				},
+				{
+					Name: "oidc-redis",
+					Key:  "redisSentinelPassword",
 				},
 			},
 		},
@@ -248,6 +269,9 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
+			if tt.wantSecretRefs != nil {
+				require.Equal(t, tt.wantSecretRefs, tt.obj.GetSensitiveDataSecretRefs())
+			}
 		})
 	}
 }

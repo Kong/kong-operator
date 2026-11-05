@@ -1,13 +1,22 @@
 package crdsvalidation_test
 
 import (
+	"encoding/json"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/consts"
 )
 
 func TestAIGatewayAuthStrategy(t *testing.T) {
@@ -129,5 +138,105 @@ func TestAIGatewayAuthStrategy(t *testing.T) {
 				}(),
 			},
 		}.RunWithConfig(t, cfg, scheme)
+
+		t.Run("legacy string passwords survive a CRD upgrade", func(t *testing.T) {
+			cl, err := client.New(cfg, client.Options{Scheme: scheme})
+			require.NoError(t, err)
+
+			const crdName = "aigatewayauthstrategies.aiconfiguration.konghq.com"
+			crd := &apiextensionsv1.CustomResourceDefinition{}
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: crdName}, crd))
+			currentSpec := crd.Spec.DeepCopy()
+			for i := range crd.Spec.Versions {
+				schema := crd.Spec.Versions[i].Schema.OpenAPIV3Schema
+				config := schema.Properties["spec"].Properties["apiSpec"].Properties["openid-connect"].Properties["config"]
+				for _, blockName := range []string{"redis", "clusterCacheRedis"} {
+					block := config.Properties[blockName]
+					for _, fieldName := range []string{"password", "sentinelPassword"} {
+						field := block.Properties[fieldName]
+						block.Properties[fieldName] = apiextensionsv1.JSONSchemaProps{
+							Description: field.Description,
+							Type:        "string",
+							MaxLength:   new(int64(253)),
+						}
+					}
+					config.Properties[blockName] = block
+				}
+			}
+			require.NoError(t, cl.Update(t.Context(), crd))
+
+			newLegacy := func() *unstructured.Unstructured {
+				data, err := json.Marshal(redisOIDC())
+				require.NoError(t, err)
+				obj := &unstructured.Unstructured{}
+				require.NoError(t, json.Unmarshal(data, &obj.Object))
+				for _, blockName := range []string{"redis", "clusterCacheRedis"} {
+					for _, fieldName := range []string{"password", "sentinelPassword"} {
+						require.NoError(t, unstructured.SetNestedField(
+							obj.Object,
+							"legacy-password",
+							"spec", "apiSpec", "openid-connect", "config", blockName, fieldName,
+						))
+					}
+				}
+				return obj
+			}
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				assert.NoError(ct, cl.Create(t.Context(), newLegacy(), client.DryRunAll))
+			}, consts.WaitTime, consts.TickTime)
+			legacy := newLegacy()
+			require.NoError(t, cl.Create(t.Context(), legacy))
+
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: crdName}, crd))
+			crd.Spec = *currentSpec
+			require.NoError(t, cl.Update(t.Context(), crd))
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				err := cl.Create(t.Context(), newLegacy(), client.DryRunAll)
+				assert.True(ct, apierrors.IsInvalid(err), "%v", err)
+			}, consts.WaitTime, consts.TickTime)
+
+			legacy.SetLabels(map[string]string{"updated": "true"})
+			err = cl.Update(t.Context(), legacy)
+			require.True(t, apierrors.IsInvalid(err), "%v", err)
+			require.ErrorContains(t, err, "password")
+			require.NoError(t, unstructured.SetNestedSlice(legacy.Object, []any{}, "status", "conditions"))
+			err = cl.Status().Update(t.Context(), legacy)
+			require.True(t, apierrors.IsInvalid(err), "%v", err)
+			require.ErrorContains(t, err, "password")
+
+			stored := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{}
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(legacy), stored))
+			config := stored.Spec.APISpec.OpenIDConnect.Config
+			for _, password := range []aiconfigurationv1alpha1.SensitiveDataSource{
+				config.ClusterCacheRedis.Password,
+				config.ClusterCacheRedis.SentinelPassword,
+				config.Redis.Password,
+				config.Redis.SentinelPassword,
+			} {
+				require.Equal(t, aiconfigurationv1alpha1.SensitiveDataSourceTypeInline, password.Type)
+				require.Equal(t, "legacy-password", password.GetValue())
+			}
+
+			stored.SetLabels(map[string]string{"migrated": "true"})
+			require.NoError(t, cl.Update(t.Context(), stored))
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(legacy), legacy))
+			for _, blockName := range []string{"redis", "clusterCacheRedis"} {
+				for _, fieldName := range []string{"password", "sentinelPassword"} {
+					value, found, err := unstructured.NestedMap(
+						legacy.Object,
+						"spec", "apiSpec", "openid-connect", "config", blockName, fieldName,
+					)
+					require.NoError(t, err)
+					require.True(t, found)
+					require.Equal(t, "inline", value["type"])
+					require.Equal(t, "legacy-password", value["value"])
+				}
+			}
+
+			legacy.SetLabels(map[string]string{"updated-after-migration": "true"})
+			require.NoError(t, cl.Update(t.Context(), legacy))
+			require.NoError(t, unstructured.SetNestedSlice(legacy.Object, []any{}, "status", "conditions"))
+			require.NoError(t, cl.Status().Update(t.Context(), legacy))
+		})
 	})
 }
