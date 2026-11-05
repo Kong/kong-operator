@@ -146,25 +146,8 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		WithTypeConverters(newTestTypeConverter()).
 		WithStatusSubresource(&aigatewayv1alpha1.OnPremAIGateway{}).
 		WithObjects(objs...)
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-		index.OptionsForAIGatewayDatastore(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-		}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
 	i.client = cl
