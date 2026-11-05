@@ -21,6 +21,8 @@ OPERATOR_SELECTOR=app.kubernetes.io/name=kong-operator
 REGIONAL_HOST=us.svc.konghq.tech
 GLOBAL_HOST=global.svc.konghq.tech
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Holds the generated CA and certificate. install regenerates them on every run,
+# so pass WORK_DIR=<dir> to keep one across runs of the same cluster.
 WORK_DIR="${WORK_DIR:-$(mktemp -d)}"
 
 info() { echo "INFO: $*"; }
@@ -218,7 +220,3 @@ uninstall)
   exit 2
   ;;
 esac
-
-# NOTE: WORK_DIR holds the generated CA and certificate. install regenerates
-# them on every run, so the certificate the stub serves changes: pass
-# WORK_DIR=<dir> to keep one across runs of the same cluster.
