@@ -3,6 +3,9 @@ package konnectother
 import (
 	"crypto/tls"
 	"net/http"
+	"strings"
+
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"testing"
 	"time"
 
@@ -54,28 +57,33 @@ func TestKonnectPrivatePath(t *testing.T) {
 			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha2.KonnectGatewayControlPlane](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha2.KonnectGatewayControlPlane](&metricsmocks.MockRecorder{}),
 		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayNetwork](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[konnectv1alpha1.KonnectCloudGatewayNetwork](&metricsmocks.MockRecorder{}),
+		),
 	)
 
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{Scheme: scheme.Get()})
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	t.Run("authenticates and reconciles a control plane over the private host", func(t *testing.T) {
-		authWatch := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
-		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
-			deploy.KonnectAPIAuthConfigurationWithTestToken(konnectPrivateToken, envtest.KonnectPrivateServerURL))
+	t.Log("Creating the authentication pointing at the private serverURL")
+	authWatch := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+	apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced,
+		deploy.KonnectAPIAuthConfigurationWithTestToken(konnectPrivateToken, envtest.KonnectPrivateServerURL))
 
-		t.Log("Waiting for the authentication to resolve the organization")
-		envtest.WatchFor(t, ctx, authWatch, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
-			return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
-				k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, r) &&
-				r.Status.OrganizationID == envtest.KonnectPrivateOrgID
-		}, "KonnectAPIAuthConfiguration did not become valid with the fake organization ID")
+	t.Log("Waiting for the authentication to resolve the organization")
+	envtest.WatchFor(t, ctx, authWatch, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+		return client.ObjectKeyFromObject(r) == client.ObjectKeyFromObject(apiAuth) &&
+			k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, r) &&
+			r.Status.OrganizationID == envtest.KonnectPrivateOrgID
+	}, "KonnectAPIAuthConfiguration did not become valid with the fake organization ID")
 
-		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(apiAuth), apiAuth))
-		assert.Equal(t, envtest.KonnectPrivateServerURL, apiAuth.Status.ServerURL,
-			"the private serverURL must be kept as configured")
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(apiAuth), apiAuth))
+	assert.Equal(t, envtest.KonnectPrivateServerURL, apiAuth.Status.ServerURL,
+		"the private serverURL must be kept as configured")
 
+	t.Run("reconciles a control plane over the private host", func(t *testing.T) {
 		cpWatch := envtest.SetupWatch[konnectv1alpha2.KonnectGatewayControlPlaneList](t, ctx, cl, client.InNamespace(ns.Name))
 		cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, apiAuth)
 
@@ -130,5 +138,33 @@ func TestKonnectPrivatePath(t *testing.T) {
 			err := cl.Get(ctx, client.ObjectKeyFromObject(cp), cp)
 			return apierrors.IsNotFound(err)
 		}, 30*time.Second, 100*time.Millisecond, "the control plane must be deleted")
+	})
+
+	// TODO(#6110): the Dedicated Cloud Gateway calls leave the private path for
+	// the public global API; these assertions fail on purpose once that is fixed.
+	t.Run("sends a cloud gateway network to the public global API, not the private host", func(t *testing.T) {
+		networkWatch := envtest.SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+		network := deploy.KonnectCloudGatewayNetwork(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Waiting for the network to report the failure against the public global API")
+		envtest.WatchFor(t, ctx, networkWatch, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+			if client.ObjectKeyFromObject(n) != client.ObjectKeyFromObject(network) {
+				return false
+			}
+			cond := apimeta.FindStatusCondition(n.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType)
+			return cond != nil &&
+				cond.Status == metav1.ConditionFalse &&
+				strings.Contains(cond.Message, "global.api.konghq.com")
+		}, "KonnectCloudGatewayNetwork did not report a failure against the public global API")
+
+		t.Log("Checking nothing reached the fake on the private host")
+		for _, r := range fake.Requests() {
+			assert.NotContains(t, r.Path, "/api/v2/cloud-gateways/",
+				"a cloud gateway call reached the private host: #6110 is fixed, flip this test to assert the private path")
+		}
+
+		// Deleting the network hits the same wall, so its finalizer stays for as
+		// long as #6110 is open: delete it and let the namespace teardown take it.
+		require.NoError(t, cl.Delete(ctx, network))
 	})
 }
