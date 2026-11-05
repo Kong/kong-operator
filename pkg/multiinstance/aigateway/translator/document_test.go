@@ -1290,16 +1290,56 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	require.Equal(t, 2, failed)
 }
 
-// TestBuildDocument_CrossNamespaceEntityTranslated covers the multi-namespace path: an
-// entity in another namespace that references the OnPremAIGateway is translated like any
-// other entity. The instance cache scopes which namespaces are visible (see
-// spec.watchNamespaces), so the translator has no namespace rule of its own.
-func TestBuildDocument_CrossNamespaceEntityTranslated(t *testing.T) {
-	t.Parallel()
+// newTranslatorTestClient builds a fake client with a scheme holding the OnPremAIGateway,
+// the configuration entities and the KongReferenceGrants a cross-namespace reference is
+// checked against, with every AI Gateway configuration index registered, so that
+// BuildDocument can list entities per gateway.
+func newTranslatorTestClient(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	// The fake tracker stamps resource versions into the objects it is given,
+	// so parallel subtests must not share a fixture.
+	copies := make([]client.Object, 0, len(objs))
+	for _, obj := range objs {
+		copies = append(copies, obj.DeepCopyObject().(client.Object))
+	}
+
+	return newTestBuilder(scheme, copies...).Build()
+}
+
+// crossNamespaceGrant returns a KongReferenceGrant in the gateway's namespace
+// allowing fromKind from the "other" namespace to reference the gateway "gw".
+func crossNamespaceGrant(fromKind string, toName *string) *configurationv1alpha1.KongReferenceGrant {
+	return &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cross-ns", Namespace: "default",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      configurationv1alpha1.Kind(fromKind),
+				Namespace: "other",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aigateway.konghq.com",
+				Kind:  "OnPremAIGateway",
+				Name:  (*configurationv1alpha1.ObjectName)(toName),
+			}},
+		},
+	}
+}
+
+// TestBuildDocument_CrossNamespaceEntityNeedsKongReferenceGrant covers the guard on a
+// cross-namespace aiGatewayRef: an entity in another namespace is translated like any
+// other entity only when a KongReferenceGrant in the gateway's namespace allows its kind,
+// from its namespace, to reference the OnPremAIGateway. The instance cache scopes which
+// namespaces are visible (see spec.watchNamespaces); the grant decides which entities of
+// those namespaces may reference the gateway.
+func TestBuildDocument_CrossNamespaceEntityNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
 	// An AuthStrategy in another namespace explicitly targeting the gateway in "default":
@@ -1312,76 +1352,122 @@ func TestBuildDocument_CrossNamespaceEntityTranslated(t *testing.T) {
 	}
 	sameNamespace := aiGatewayAuthStrategyFixture("same-ns")
 
-	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, crossNamespace, sameNamespace)
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	tests := []struct {
+		name         string
+		grants       []client.Object
+		wantIncluded bool
+	}{
+		{
+			name: "no grant",
+		},
+		{
+			name:         "grant for the kind and the gateway",
+			grants:       []client.Object{crossNamespaceGrant("AIGatewayAuthStrategy", new("gw"))},
+			wantIncluded: true,
+		},
+		{
+			name:         "grant for the kind, any gateway",
+			grants:       []client.Object{crossNamespaceGrant("AIGatewayAuthStrategy", nil)},
+			wantIncluded: true,
+		},
+		{
+			name:   "grant for another kind",
+			grants: []client.Object{crossNamespaceGrant("AIGatewayModel", nil)},
+		},
+		{
+			name:   "grant for another gateway",
+			grants: []client.Object{crossNamespaceGrant("AIGatewayAuthStrategy", new("other-gw"))},
+		},
 	}
-	for _, opt := range index.OptionsForAIGatewayModelProvider() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayConsumer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCACertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCertificate() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewaySNI() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayAgent() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayMCPServer() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayVault() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	for _, opt := range index.OptionsForAIGatewayDatastore() {
-		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	cl := builder.Build()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+			cl := newTranslatorTestClient(t,
+				append([]client.Object{gw, crossNamespace, sameNamespace}, tt.grants...)...,
+			)
+
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+			require.NoError(t, err)
+
+			require.Empty(t, doc.Models)
+			require.Empty(t, doc.ModelProviders)
+			require.Empty(t, doc.Policies)
+			require.Empty(t, doc.ConsumerGroups)
+			require.Empty(t, doc.Consumers)
+			require.Empty(t, doc.CACertificates)
+			require.Empty(t, doc.Certificates)
+			require.Empty(t, doc.SNIs)
+			require.Empty(t, doc.CustomPolicies)
+			require.Empty(t, doc.Vaults)
+
+			// The entity in the gateway's own namespace needs no grant.
+			require.Len(t, statuses, 2)
+			require.Equal(t, "same-ns", statuses[0].Obj.GetName())
+			require.NoError(t, statuses[0].Err)
+			require.Equal(t, "cross-ns", statuses[1].Obj.GetName())
+
+			if !tt.wantIncluded {
+				require.ErrorContains(t, statuses[1].Err, "KongReferenceGrant")
+				require.Len(t, doc.AuthStrategies, 1)
+				require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
+				return
+			}
+			require.NoError(t, statuses[1].Err)
+			require.Len(t, doc.AuthStrategies, 2)
+			require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
+			require.Equal(t, "cross-ns", doc.AuthStrategies[1].Name)
+		})
+	}
+}
+
+// TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant pins that the guard
+// covers the whole consumer, credentials included: credentials are rendered through their
+// consumer, so they are reported failed with the consumer's error rather than keeping a
+// stale Programmed condition.
+func TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumer := aiGatewayConsumerFixture("cross-ns")
+	consumer.Namespace = "other"
+	consumer.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred", Namespace: "other",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: consumer.Name,
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Type: "api-key",
+			},
+		},
+	}
+
+	cl := newTranslatorTestClient(t, gw, consumer, credential)
+
+	_, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 
-	require.Empty(t, doc.Models)
-	require.Empty(t, doc.ModelProviders)
-	require.Empty(t, doc.Policies)
-	require.Empty(t, doc.ConsumerGroups)
-	require.Empty(t, doc.Consumers)
-	require.Empty(t, doc.CACertificates)
-	require.Empty(t, doc.Certificates)
-	require.Empty(t, doc.SNIs)
-	require.Empty(t, doc.CustomPolicies)
-	require.Empty(t, doc.Vaults)
-	require.Len(t, doc.AuthStrategies, 2)
-	require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
-	require.Equal(t, "cross-ns", doc.AuthStrategies[1].Name)
-
-	require.Len(t, statuses, 2)
-	for _, s := range statuses {
-		require.NoError(t, s.Err)
+	var consumerStatus, credentialStatus *EntityStatus
+	for i := range statuses {
+		switch statuses[i].Obj.GetName() {
+		case consumer.Name:
+			consumerStatus = &statuses[i]
+		case credential.Name:
+			credentialStatus = &statuses[i]
+		}
 	}
+	require.NotNil(t, consumerStatus)
+	require.ErrorContains(t, consumerStatus.Err, "KongReferenceGrant")
+	require.NotNil(t, credentialStatus)
+	require.ErrorContains(t, credentialStatus.Err, "KongReferenceGrant")
 }
 
 // TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the

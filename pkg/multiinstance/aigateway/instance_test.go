@@ -22,6 +22,7 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
@@ -708,6 +709,25 @@ func TestCacheOpts(t *testing.T) {
 		secretCfg, ok := secretCacheCfg(opts)
 		require.True(t, ok)
 		require.Equal(t, want, secretCfg.Namespaces)
+	})
+
+	t.Run("KongReferenceGrants keep the watch namespaces, not the gateway's namespace", func(t *testing.T) {
+		// The translation reads the grants of the namespace it resolves against: the
+		// gateway's own namespace for an entity of another namespace referencing the
+		// gateway, and a Secret's namespace for a cross-namespace secretRef. Both are
+		// watched, the gateway's own namespace always so, hence the default scope. A
+		// per-object scope narrower than the watch namespaces breaks the translation of
+		// every cross-namespace secretRef, because the cached client cannot list a
+		// namespace outside its scope, so nothing may narrow this object.
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{WatchNamespaces: []string{"ns", "team-a"}},
+		}
+		opts := i.cacheOpts()
+		for obj := range opts.ByObject {
+			require.IsNotType(t, &configurationv1alpha1.KongReferenceGrant{}, obj)
+		}
+		require.Equal(t, map[string]cache.Config{"ns": {}, "team-a": {}}, opts.DefaultNamespaces)
 	})
 
 	// No gateway namespace: no per-object cache configuration at all.

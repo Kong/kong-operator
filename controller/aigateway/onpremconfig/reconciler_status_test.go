@@ -16,6 +16,7 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 )
@@ -60,6 +61,7 @@ func newReconcilerClient(t *testing.T, objs ...client.Object) client.Client {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayModel{}).Build()
 }
 

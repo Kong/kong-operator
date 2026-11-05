@@ -482,6 +482,13 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Version:  aiconfigurationv1alpha1.SchemeGroupVersion.Version,
 					Resource: "aigatewaymodels",
 				},
+				{
+					// Listed by the instance's translator to check the cross-namespace
+					// references to the gateway, and watched by its grant reconciler.
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
+				},
 			},
 		},
 		{

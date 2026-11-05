@@ -33,9 +33,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
+
+// onPremAIGatewayGVK is the kind a configuration entity's aiGatewayRef points at
+// once it targets an on-prem AI Gateway.
+var onPremAIGatewayGVK = metav1.GroupVersionKind(aigatewayv1alpha1.GroupVersion.WithKind("OnPremAIGateway"))
 
 // defaultMinRuntimeVersion is the minimum AI Gateway runtime version declared for
 // rendered configurations when the caller does not specify one: the oldest release
@@ -112,7 +117,16 @@ func translateKind[
 			// Entities are listed regardless of their namespace: the instance's cache is
 			// scoped to the namespaces of spec.watchNamespaces (see the OnPremAIGateway
 			// controller), so an entity from another namespace reaches this loop only when
-			// that namespace is watched, together with the Secrets it references.
+			// that namespace is watched, together with the Secrets it references. The
+			// gateway's namespace must also grant that namespace the reference, or the
+			// entity is left out of the pushed configuration.
+			if err := checkCrossNamespaceRef(ctx, cl, obj, gw); err != nil {
+				statuses = append(statuses, EntityStatus{
+					Obj: obj,
+					Err: fmt.Errorf("%T %s: %w", obj, client.ObjectKeyFromObject(obj), err),
+				})
+				continue
+			}
 
 			aigwEntity, err := convert(&items[i], ctx, cl)
 			if err != nil {
@@ -127,6 +141,29 @@ func translateKind[
 		}
 		return statuses, nil
 	}
+}
+
+// checkCrossNamespaceRef reports whether obj may reference the on-prem gateway
+// gw: an entity outside the gateway's namespace needs a KongReferenceGrant in
+// the gateway's namespace that allows its kind, from its namespace, to reference
+// the OnPremAIGateway. An entity in the gateway's own namespace needs none.
+func checkCrossNamespaceRef(ctx context.Context, cl client.Client, obj client.Object, gw types.NamespacedName) error {
+	if gw.Namespace == "" || obj.GetNamespace() == gw.Namespace {
+		return nil
+	}
+	fromGVK, err := cl.GroupVersionKindFor(obj)
+	if err != nil {
+		return fmt.Errorf("resolving the kind of %s: %w", client.ObjectKeyFromObject(obj), err)
+	}
+	return crossnamespace.CheckKongReferenceGrantForResource(
+		ctx,
+		cl,
+		obj.GetNamespace(),
+		gw.Namespace,
+		gw.Name,
+		metav1.GroupVersionKind(fromGVK),
+		onPremAIGatewayGVK,
+	)
 }
 
 // credentialEntityStatuses turns the per-credential outcome of a consumer's translation into

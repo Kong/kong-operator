@@ -10,6 +10,11 @@
 # Every watched namespace outside the gateway's own needs a WatchNamespaceGrant.
 # Without it the gateway reports WatchNamespaceGrantValid=False, Ready=False, and
 # its control plane instance does not run.
+#
+# An entity of another namespace also needs a KongReferenceGrant in the gateway's
+# namespace that allows its kind and namespace to reference the OnPremAIGateway.
+# Without it the entity is reported Programmed=False and left out of the pushed
+# configuration.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -44,6 +49,23 @@ spec:
       kind: OnPremAIGateway
       namespace: default
 ---
+# The default namespace owners allow AIGatewayConsumers of the ai-gateway-entities
+# namespace to reference the gateway in the default namespace.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-consumer-to-onprem-aigateway
+  namespace: default
+spec:
+  from:
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayConsumer
+      namespace: ai-gateway-entities
+  to:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway
+      name: ai-gw-cp-onprem-xns
+---
 # A configuration entity that lives in the watched namespace and targets the
 # gateway in the default namespace.
 apiVersion: aiconfiguration.konghq.com/v1alpha1
@@ -53,6 +75,8 @@ metadata:
   namespace: ai-gateway-entities
 spec:
   aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
     namespacedRef:
       name: ai-gw-cp-onprem-xns
       namespace: default

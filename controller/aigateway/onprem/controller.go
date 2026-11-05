@@ -496,7 +496,9 @@ func (r *Reconciler) validateOnPremAIGatewayOptions(onprem *aigatewayv1alpha1.On
 // and mirroring the operator's --secret-label-selector, so only Secrets carrying that
 // selector label are read there
 // (user Secrets must carry it to be ingestible; the Admin API client certificate Secret
-// gets it from ensureAdminClientCertificateSecret).
+// gets it from ensureAdminClientCertificateSecret). The instance also caches the
+// KongReferenceGrants of the watch namespaces: they gate the entities of another
+// namespace that reference the gateway, and the secretRefs into another namespace.
 func (r *Reconciler) scheduleInstance(
 	logger logr.Logger,
 	mgrID manager.ID,
