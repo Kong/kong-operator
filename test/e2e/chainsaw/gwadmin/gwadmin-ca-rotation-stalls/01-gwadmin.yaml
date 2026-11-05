@@ -2,4 +2,15 @@ apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: GWAdmin
 metadata:
   name: ($gwadmin_name)
-spec: {}
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        # A condition nothing sets: the pods never turn Ready, whoever
+        # provisions them, until step 3 removes the gate.
+        readinessGates:
+          - conditionType: e2e.konghq.com/held
+        # Required by the schema, merged by name into the container of the
+        # operator.
+        containers:
+          - name: gw-admin

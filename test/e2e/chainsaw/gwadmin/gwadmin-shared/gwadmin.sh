@@ -657,14 +657,6 @@ verify-certificate-chains) # gwadmin: every certificate chains to the bundle of 
   [ -z "$(sans client.pem)" ] || fail "operator client certificate has DNS names: $(sans client.pem)"
   jq -n --arg gwadmin "$gw" '{gwadmin: $gwadmin, chains_verified: true}'
   ;;
-block-operator) # cuts Kong Operator off from the gw-admin pods (see block_operator)
-  block_operator
-  result network_policy "$OPERATOR_BLOCK"
-  ;;
-unblock-operator) # lets Kong Operator reach the gw-admin pods again
-  unblock_operator
-  result removed_network_policy "$OPERATOR_BLOCK"
-  ;;
 *)
   echo "unknown command $cmd" >&2
   exit 2
