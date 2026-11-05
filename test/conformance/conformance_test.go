@@ -130,6 +130,12 @@ func runConformance(
 	timeoutConfig.GatewayStatusMustHaveListeners = conformanceLooserTimeout
 	timeoutConfig.GatewayListenersMustHaveConditions = conformanceLooserTimeout
 	timeoutConfig.HTTPRouteMustHaveCondition = conformanceLooserTimeout
+	// Since gateway-api v1.7.0 the suite deletes test resources with a bounded
+	// wait (deleteAndWait). Gateways and the conformance namespaces themselves
+	// terminate only after the operator drains their finalizers (DataPlane/
+	// ControlPlane teardown, and in hybrid mode Konnect entity deletion), which
+	// can exceed the 30s default under load.
+	timeoutConfig.DeleteTimeout = conformanceLooserTimeout
 	if gwType == hybridGateway {
 		timeoutConfig.MaxTimeToConsistency = conformanceLooserTimeout
 	}
