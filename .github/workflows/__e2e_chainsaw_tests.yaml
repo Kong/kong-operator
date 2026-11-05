@@ -24,6 +24,7 @@ on:
             {"suite": "hybridgateway"},
             {"suite": "hybridgateway", "ip_family": "ipv6"},
             {"suite": "konnect"},
+            {"suite": "konnect-private"},
             {"suite": "aigateway"},
             {"suite": "onpremaigateway"},
             {"suite": "eventgateway"},
