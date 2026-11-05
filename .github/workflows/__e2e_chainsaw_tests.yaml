@@ -221,5 +221,5 @@ jobs:
     - name: Clean up debug snapshots
       if: ${{ failure() || cancelled() }}
       env:
-        SUITE: ${{ matrix.suite }}
+        SUITE: ${{ matrix.suite }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
       run: rm -rf "/tmp/chainsaw/$SUITE"

@@ -8,8 +8,8 @@ spec:
   replicas: 1
   # Well above the rollout timeout in prereq.sh: the models are downloaded at
   # container start, and the transfer has been seen to drop to a few hundred
-  # KB/s. The default 600s cut that download short, so the script's timeout
-  # (which dumps diagnostics) must be the one that decides.
+  # KB/s. The default 600s progress deadline made `kubectl rollout status` fail
+  # before the script's timeout could decide, so raise it above 900s.
   progressDeadlineSeconds: 1200
   selector:
     matchLabels: { app: ollama }

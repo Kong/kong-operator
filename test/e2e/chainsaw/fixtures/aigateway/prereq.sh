@@ -16,9 +16,8 @@ KONG_MOCK_TIMEOUT="${KONG_MOCK_TIMEOUT:-180s}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Print the mock stack's state and logs when a rollout fails. The CI job runs
-# this script on its own, so without this the job log shows only
-# "deployment exceeded its progress deadline" and the cause stays in the
-# artifact zip.
+# this script on its own, so without this the job log shows only the rollout
+# timeout error; the cause stays in the artifact zip.
 dump_mock_state() {
   echo "[prereq] mock stack state:" >&2
   kubectl -n kong-aigateway-mock get deploy,pods -o wide >&2 || true
