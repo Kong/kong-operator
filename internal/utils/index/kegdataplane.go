@@ -26,6 +26,9 @@ const (
 	// IndexFieldKegDataPlaneOnKonnectEventGateway is the index field for
 	// KegDataPlane -> KonnectEventGateway (via spec.controlPlaneRef.konnectNamespacedRef.name).
 	IndexFieldKegDataPlaneOnKonnectEventGateway = "kegDataPlaneKonnectEventGatewayRef"
+	// IndexFieldKegDataPlaneOnOnPremEventGateway is the index field for
+	// KegDataPlane -> OnPremEventGateway (via spec.controlPlaneRef.onpremNamespacedRef.name).
+	IndexFieldKegDataPlaneOnOnPremEventGateway = "kegDataPlaneOnPremEventGatewayRef"
 	// IndexFieldKegDataPlaneOnCertificateSecret is the index field for
 	// KegDataPlane -> Secret (via spec.certificateSecret.secretRef.name),
 	// used to reconcile when a manually-referenced certificate Secret changes.
@@ -39,6 +42,11 @@ func OptionsForKegDataPlane() []Option {
 			Object:         &eventgatewayv1alpha1.KegDataPlane{},
 			Field:          IndexFieldKegDataPlaneOnKonnectEventGateway,
 			ExtractValueFn: kegDataPlaneKonnectNamespacedRef,
+		},
+		{
+			Object:         &eventgatewayv1alpha1.KegDataPlane{},
+			Field:          IndexFieldKegDataPlaneOnOnPremEventGateway,
+			ExtractValueFn: kegDataPlaneOnPremNamespacedRef,
 		},
 		{
 			Object:         &eventgatewayv1alpha1.KegDataPlane{},
@@ -65,4 +73,12 @@ func kegDataPlaneKonnectNamespacedRef(object client.Object) []string {
 		return nil
 	}
 	return []string{egdp.Namespace + "/" + egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name}
+}
+
+func kegDataPlaneOnPremNamespacedRef(object client.Object) []string {
+	egdp, ok := object.(*eventgatewayv1alpha1.KegDataPlane)
+	if !ok || egdp.Spec.ControlPlaneRef.OnPremNamespacedRef == nil {
+		return nil
+	}
+	return []string{egdp.Namespace + "/" + egdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name}
 }

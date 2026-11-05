@@ -23,6 +23,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -244,7 +245,7 @@ func TestEnsureTLS_ServerManualCertificate(t *testing.T) {
 }
 
 // dRoot returns a root certificate authority Secret that, unlike the ones of
-// generateCA, may sign intermediate ones.
+// pki.GenerateCA, may sign intermediate ones.
 func dRoot(t *testing.T, now time.Time) *corev1.Secret {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -312,7 +313,7 @@ func TestReconcile_ServerManualCertificateExpiringSoon(t *testing.T) {
 	e := newReconcileEnv(t, interceptor.Funcs{}, newGWAdmin(&operatorv1alpha1.GWAdminTLS{CP: manualCP()}), src)
 
 	// Requeued at the warning onset.
-	e.now = warningTime(leaf).Add(-time.Hour)
+	e.now = pki.WarningTime(leaf).Add(-time.Hour)
 	res, gw, err := e.reconcile(t)
 	require.NoError(t, err)
 	assert.Positive(t, res.RequeueAfter)
@@ -320,7 +321,7 @@ func TestReconcile_ServerManualCertificateExpiringSoon(t *testing.T) {
 	assert.NotContains(t, certificateCondition(gw).Message, "expires at")
 	assert.Zero(t, dExpiringEvents(drainEvents(e.rec)))
 
-	e.now = warningTime(leaf).Add(time.Minute)
+	e.now = pki.WarningTime(leaf).Add(time.Minute)
 	_, gw, err = e.reconcile(t)
 	require.NoError(t, err)
 	assert.Contains(t, certificateCondition(gw).Message,
@@ -338,13 +339,13 @@ func TestReconcile_ServerManualClientCAExpiringSoon(t *testing.T) {
 	cert := caCert(t, ca)
 	e := newReconcileEnv(t, interceptor.Funcs{}, newGWAdmin(&operatorv1alpha1.GWAdminTLS{ClientCA: manualCA(userCASecretName)}), ca)
 
-	e.now = warningTime(cert).Add(-time.Hour)
+	e.now = pki.WarningTime(cert).Add(-time.Hour)
 	res, _, err := e.reconcile(t)
 	require.NoError(t, err)
 	assert.LessOrEqual(t, res.RequeueAfter, time.Hour)
 	assert.Zero(t, dExpiringEvents(drainEvents(e.rec)))
 
-	e.now = warningTime(cert).Add(time.Minute)
+	e.now = pki.WarningTime(cert).Add(time.Minute)
 	for i := range 2 {
 		_, gw, err := e.reconcile(t)
 		require.NoError(t, err)

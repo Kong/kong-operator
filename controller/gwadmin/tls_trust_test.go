@@ -111,8 +111,8 @@ func TestEnsureTLS_RogueChainInALeafIsNeverTrusted(t *testing.T) {
 			r := newReconciler(t, &now, gw)
 			m := dSteady(t, r, gw)
 
-			certPEM, keyPEM, err := issueCertificate(rogueSecret, certRequest{
-				commonName: tc.spec.commonName, dnsNames: tc.spec.dnsNames, usages: tc.spec.usages, ttl: time.Hour, now: now,
+			certPEM, keyPEM, err := pki.IssueCertificate(rogueSecret, pki.CertRequest{
+				CommonName: tc.spec.commonName, DNSNames: tc.spec.dnsNames, Usages: tc.spec.usages, TTL: time.Hour, Now: now,
 			})
 			require.NoError(t, err)
 			live := getSecret(t, r, tc.name)
@@ -369,7 +369,7 @@ func TestEnsureTLS_ManualCAClockSkew(t *testing.T) {
 				return
 			}
 			require.ErrorIs(t, err, errStop)
-			assert.Equal(t, tc.notBefore.Add(-clockSkew).Sub(now), stopRequeue(err))
+			assert.Equal(t, tc.notBefore.Add(-pki.ClockSkew).Sub(now), stopRequeue(err))
 			assert.Equal(t, operatorv1alpha1.GWAdminReasonInvalidSecret, certificateCondition(gw).Reason)
 		})
 	}

@@ -296,7 +296,7 @@ func TestEnsureTLS_ManualCPRenewal(t *testing.T) {
 		gw := newGWAdmin(&operatorv1alpha1.GWAdminTLS{CP: manualCP()})
 		r := newReconciler(t, &now, gw, src)
 		m := ensure(t, r, gw, nil)
-		assert.LessOrEqual(t, m.requeueAfter, warningTime(leafCertificate(src)).Sub(now))
+		assert.LessOrEqual(t, m.requeueAfter, pki.WarningTime(leafCertificate(src)).Sub(now))
 	})
 }
 
@@ -429,8 +429,8 @@ func TestEnsureTLS_ManualCPRejected(t *testing.T) {
 	issue := func(t *testing.T, withIssuer bool, usages ...x509.ExtKeyUsage) *corev1.Secret {
 		t.Helper()
 		ca := userCASecret(t, "public")
-		certPEM, keyPEM, err := issueCertificate(ca, certRequest{
-			commonName: "cp.example.com", dnsNames: []string{"cp.example.com"}, usages: usages, ttl: time.Hour,
+		certPEM, keyPEM, err := pki.IssueCertificate(ca, pki.CertRequest{
+			CommonName: "cp.example.com", DNSNames: []string{"cp.example.com"}, Usages: usages, TTL: time.Hour,
 		})
 		require.NoError(t, err)
 		s := &corev1.Secret{
@@ -1200,9 +1200,9 @@ func TestEnsureTLS_IssuedLeaves(t *testing.T) {
 		r := newReconciler(t, &now, gw)
 		m := ensure(t, r, gw, nil)
 		caSecret := getPrivateSecret(t, r, bAPICASecretName)
-		certPEM, keyPEM, err := issueCertificate(caSecret, certRequest{
-			commonName: "gw-api.ns.svc", dnsNames: leafCertificate(m.api).DNSNames,
-			usages: serverUsages, ttl: consts.GWAdminLeafTTL, now: now,
+		certPEM, keyPEM, err := pki.IssueCertificate(caSecret, pki.CertRequest{
+			CommonName: "gw-api.ns.svc", DNSNames: leafCertificate(m.api).DNSNames,
+			Usages: serverUsages, TTL: consts.GWAdminLeafTTL, Now: now,
 		})
 		require.NoError(t, err)
 		live := getSecret(t, r, "gw-api-tls")
@@ -1272,8 +1272,8 @@ func TestLeafNeedsIssue(t *testing.T) {
 	spec := serverLeafSpec("gw-api", "ns", "")
 	issue := func(t *testing.T, cn string, names []string) *corev1.Secret {
 		t.Helper()
-		certPEM, keyPEM, err := issueCertificate(caSecret, certRequest{
-			commonName: cn, dnsNames: names, usages: spec.usages, ttl: consts.GWAdminLeafTTL, now: now,
+		certPEM, keyPEM, err := pki.IssueCertificate(caSecret, pki.CertRequest{
+			CommonName: cn, DNSNames: names, Usages: spec.usages, TTL: consts.GWAdminLeafTTL, Now: now,
 		})
 		require.NoError(t, err)
 		return &corev1.Secret{Data: map[string][]byte{corev1.TLSCertKey: certPEM, corev1.TLSPrivateKeyKey: keyPEM}}
@@ -1345,8 +1345,8 @@ func TestEnsureTLS_TrustDomainsAreSeparate(t *testing.T) {
 			// the cp listener.
 			published := getPrivateSecret(t, r, gwadminref.CPClientCASecretName(gw))
 			issue := func(spec leafSpec) *corev1.Secret {
-				certPEM, keyPEM, err := issueCertificate(published, certRequest{
-					commonName: spec.commonName, dnsNames: spec.dnsNames, usages: spec.usages, ttl: time.Hour, now: now,
+				certPEM, keyPEM, err := pki.IssueCertificate(published, pki.CertRequest{
+					CommonName: spec.commonName, DNSNames: spec.dnsNames, Usages: spec.usages, TTL: time.Hour, Now: now,
 				})
 				require.NoError(t, err)
 				return &corev1.Secret{Data: map[string][]byte{corev1.TLSCertKey: certPEM, corev1.TLSPrivateKeyKey: keyPEM}}

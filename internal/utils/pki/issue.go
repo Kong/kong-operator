@@ -1,25 +1,9 @@
-/*
-Copyright 2026 Kong, Inc.
+package pki
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package gwadmin
-
-// The certificate authorities and certificates of a GWAdmin are generated
-// here, with the standard library only, so that the GWAdmin controller shares
-// no TLS code with the other controllers: changing one can't affect the
-// other.
+// The certificate authorities and certificates the operator manages for
+// gw-admin and for the data planes pulling from it are generated here, with
+// the standard library only: they don't depend on the TLS code of the other
+// controllers (controller/pkg/secrets), so changing that can't affect them.
 
 import (
 	"crypto"
@@ -37,22 +21,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// clockSkew is how far certificates are backdated, and how early a Manual
+// ClockSkew is how far certificates are backdated, and how early a Manual
 // certificate is accepted, to tolerate clock skew between the operator and
 // the peers.
-const clockSkew = 5 * time.Minute
+const ClockSkew = 5 * time.Minute
 
 var certificateSubject = pkix.Name{Organization: []string{"Kong, Inc."}, Country: []string{"US"}}
 
-// generateCA generates a self-signed ECDSA P-256 certificate authority valid
+// GenerateCA generates a self-signed ECDSA P-256 certificate authority valid
 // for ttl from now and returns its certificate and private key, both PEM
 // encoded. It only signs certificates, never other certificate authorities.
-func generateCA(commonName string, now time.Time, ttl time.Duration) (certPEM, keyPEM []byte, err error) {
+func GenerateCA(commonName string, now time.Time, ttl time.Duration) (certPEM, keyPEM []byte, err error) {
 	key, keyPEM, err := generateKey()
 	if err != nil {
 		return nil, nil, err
 	}
-	template, err := certificateTemplate(commonName, now.Add(-clockSkew), now.Add(ttl))
+	template, err := certificateTemplate(commonName, now.Add(-ClockSkew), now.Add(ttl))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,24 +51,24 @@ func generateCA(commonName string, now time.Time, ttl time.Duration) (certPEM, k
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), keyPEM, nil
 }
 
-// certRequest describes a certificate to issue with issueCertificate.
-type certRequest struct {
-	commonName string
-	dnsNames   []string
-	usages     []x509.ExtKeyUsage
-	// ttl is the requested validity, capped at the expiry of the CA.
-	ttl time.Duration
-	// now is when the certificate is issued, the current time when zero.
-	now time.Time
+// CertRequest describes a certificate to issue with IssueCertificate.
+type CertRequest struct {
+	CommonName string
+	DNSNames   []string
+	Usages     []x509.ExtKeyUsage
+	// TTL is the requested validity, capped at the expiry of the CA.
+	TTL time.Duration
+	// Now is when the certificate is issued, the current time when zero.
+	Now time.Time
 }
 
-// issueCertificate issues an ECDSA P-256 certificate for req, signed by the
+// IssueCertificate issues an ECDSA P-256 certificate for req, signed by the
 // certificate authority held in the tls.crt and tls.key of the ca Secret, and
 // returns it with its private key, both PEM encoded. The certificate is
-// backdated by clockSkew, rounded down to the minute.
-func issueCertificate(ca *corev1.Secret, req certRequest) (certPEM, keyPEM []byte, err error) {
-	if req.now.IsZero() {
-		req.now = time.Now()
+// backdated by ClockSkew, rounded down to the minute.
+func IssueCertificate(ca *corev1.Secret, req CertRequest) (certPEM, keyPEM []byte, err error) {
+	if req.Now.IsZero() {
+		req.Now = time.Now()
 	}
 	block, _ := pem.Decode(ca.Data[corev1.TLSCertKey])
 	if block == nil || block.Type != "CERTIFICATE" {
@@ -94,29 +78,29 @@ func issueCertificate(ca *corev1.Secret, req certRequest) (certPEM, keyPEM []byt
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed parsing the certificate authority: %w", err)
 	}
-	caKey, err := parsePrivateKey(ca.Data[corev1.TLSPrivateKeyKey])
+	caKey, err := ParsePrivateKey(ca.Data[corev1.TLSPrivateKeyKey])
 	if err != nil {
 		return nil, nil, err
 	}
-	if !req.now.Before(caCert.NotAfter) {
+	if !req.Now.Before(caCert.NotAfter) {
 		return nil, nil, fmt.Errorf("the certificate authority expired at %s", caCert.NotAfter.UTC().Format(time.RFC3339))
 	}
 	key, keyPEM, err := generateKey()
 	if err != nil {
 		return nil, nil, err
 	}
-	notBefore := req.now.Truncate(time.Minute).Add(-clockSkew)
-	notAfter := notBefore.Add(req.ttl)
+	notBefore := req.Now.Truncate(time.Minute).Add(-ClockSkew)
+	notAfter := notBefore.Add(req.TTL)
 	if notAfter.After(caCert.NotAfter) {
 		notAfter = caCert.NotAfter
 	}
-	template, err := certificateTemplate(req.commonName, notBefore, notAfter)
+	template, err := certificateTemplate(req.CommonName, notBefore, notAfter)
 	if err != nil {
 		return nil, nil, err
 	}
-	template.DNSNames = req.dnsNames
+	template.DNSNames = req.DNSNames
 	template.KeyUsage = x509.KeyUsageDigitalSignature
-	template.ExtKeyUsage = req.usages
+	template.ExtKeyUsage = req.Usages
 	template.BasicConstraintsValid = true
 	der, err := x509.CreateCertificate(rand.Reader, template, caCert, key.Public(), caKey)
 	if err != nil {
@@ -149,9 +133,9 @@ func generateKey() (crypto.Signer, []byte, error) {
 	return key, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}), nil
 }
 
-// parsePrivateKey parses the first private key of keyPEM: SEC 1 EC, PKCS #1
+// ParsePrivateKey parses the first private key of keyPEM: SEC 1 EC, PKCS #1
 // RSA or PKCS #8.
-func parsePrivateKey(keyPEM []byte) (crypto.Signer, error) {
+func ParsePrivateKey(keyPEM []byte) (crypto.Signer, error) {
 	for rest := keyPEM; ; {
 		var block *pem.Block
 		block, rest = pem.Decode(rest)

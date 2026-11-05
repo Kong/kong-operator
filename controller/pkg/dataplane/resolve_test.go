@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -401,8 +402,47 @@ func Test_resolveControlPlane_CertificateConditions(t *testing.T) {
 		aigwdp, err := resolve(t, kind)
 		require.ErrorIs(t, err, assert.AnError)
 		require.NotErrorIs(t, err, errControlPlaneNotReady, "a read error is retried with backoff")
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotReadyReason, err.Error())
 		assertCondition(t, aigwdp, registration.Type, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, err.Error())
 		assertCondition(t, aigwdp, testConfig.Conditions.CertificateProvisionedType, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, err.Error())
+
+		// Its Deployment rolled out, and Ready was True before: Ready doesn't
+		// say the certificate is fine while it can't be told.
+		deployment := &appsv1.Deployment{
+			Namespace: aigwdp.Namespace, Name: aigwdp.Name, Generation: 1,
+			Spec:   appsv1.DeploymentSpec{Replicas: new(int32(1))},
+			Status: appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1, ReadyReplicas: 1},
+		}
+		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(deployment).WithStatusSubresource(deployment).Build()
+		require.NoError(t, (&testReconciler{Client: cl, Config: testConfig}).ensureReadyStatus(t.Context(), aigwdp))
+		assertCondition(t, aigwdp, testConfig.Conditions.ReadyType, metav1.ConditionFalse, testConfig.Conditions.DependenciesNotReadyReason, err.Error())
+	})
+
+	t.Run("a control plane that can't be read", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(onprem).WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+				return assert.AnError
+			},
+		}).Build()
+		read := func(kind ControlPlaneKindConfig) (*aigatewayv1alpha1.AIGatewayDataPlane, error) {
+			cfg := testConfig
+			cfg.ControlPlanes = []ControlPlaneKindConfig{testControlPlaneKind, kind}
+			aigwdp := newAIGWDP()
+			_, err := (&testReconciler{Client: cl, Config: cfg}).resolveControlPlane(t.Context(), zap.New(), aigwdp, ControlPlaneRef{Kind: kind.Kind, Name: onpremNM})
+			return aigwdp, err
+		}
+
+		kind := testOnPremControlPlaneKind
+		kind.CertificateRegistration = registration
+		aigwdp, err := read(kind)
+		require.ErrorIs(t, err, assert.AnError)
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotReadyReason, err.Error())
+		assertCondition(t, aigwdp, registration.Type, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, err.Error())
+
+		// A kind not registering its certificate keeps its conditions.
+		aigwdp, err = read(testOnPremControlPlaneKind)
+		require.ErrorIs(t, err, assert.AnError)
+		require.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, testOnPremControlPlaneKind.Conditions.ResolvedType))
 	})
 
 	t.Run("dependencies telling the control plane is gone", func(t *testing.T) {

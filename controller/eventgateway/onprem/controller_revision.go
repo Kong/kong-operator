@@ -42,17 +42,13 @@ import (
 // changes without a new revision.
 
 // gatewayConfig is the configuration of a gateway Kong Operator pushes to
-// gw-admin.
+// gw-admin. The data plane certificates of the gateway aren't part of it: they
+// are registered one by one, not with the entities.
 type gatewayConfig struct {
 	// Gateway registers the gateway.
 	Gateway gwadminapi.UpsertGatewayRequestOnPrem `json:"gateway"`
 	// Entities are the entities of the gateway, each list sorted.
 	Entities gwadminapi.GatewayEntitySet `json:"entities"`
-	// Certificates are the data plane certificates of the gateway, by id:
-	// they are registered one by one, not with the entities. Left out when
-	// there are none, so that the revision of a gateway without certificates
-	// is the one recorded before they were part of it.
-	Certificates map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem `json:"certificates,omitempty"`
 	// Version is the version of the configuration the entities are sent
 	// with: its revision, once recorded (see configVersion). It isn't part
 	// of the configuration it versions.
@@ -79,18 +75,28 @@ func configVersion(gateway *eventgatewayv1alpha1.OnPremEventGateway) gwadminapi.
 // deriveConfig returns the configuration of the gateway, from the gateway
 // and the configuration built from its entities (see buildConfiguration).
 func deriveConfig(gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) gatewayConfig {
-	certificates := make(map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem, len(cfg.certificates))
-	for _, cert := range cfg.certificates {
-		certificates[cert.id.String()] = cert.body
-	}
 	return gatewayConfig{
 		Gateway: gwadminapi.UpsertGatewayRequestOnPrem{
 			Name:      gateway.Name,
 			CreatedAt: createdAt(gateway),
 		},
-		Entities:     cfg.entities,
-		Certificates: certificates,
+		Entities: cfg.entities,
 	}
+}
+
+// certificatesHash returns the hash of the data plane certificates of the
+// gateway, by id.
+func certificatesHash(certificates []dataPlaneCertificate) (string, error) {
+	byID := make(map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem, len(certificates))
+	for _, cert := range certificates {
+		byID[cert.id.String()] = cert.body
+	}
+	encoded, err := json.Marshal(byID)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode the data plane certificates of the gateway: %w", err)
+	}
+	sum := sha256.Sum256(encoded)
+	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
 // hash returns the hash of the configuration: of its JSON encoding, where a

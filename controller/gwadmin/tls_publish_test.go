@@ -51,9 +51,9 @@ func cIssueDataPlaneCertificate(t *testing.T, r *Reconciler, now time.Time) cDat
 	t.Helper()
 	published := getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca")
 	issuer := caCert(t, published)
-	certPEM, keyPEM, err := issueCertificate(published, certRequest{
-		commonName: "data-plane", usages: operatorClientLeafSpec().usages,
-		ttl: 30 * 24 * time.Hour, now: now,
+	certPEM, keyPEM, err := pki.IssueCertificate(published, pki.CertRequest{
+		CommonName: "data-plane", Usages: operatorClientLeafSpec().usages,
+		TTL: 30 * 24 * time.Hour, Now: now,
 	})
 	require.NoError(t, err)
 	return cDataPlaneCertificate{

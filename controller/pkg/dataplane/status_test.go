@@ -412,6 +412,54 @@ func (f getterFunc) GetLicense() mo.Option[kong.License] {
 	return f()
 }
 
+// Test_ensureReadyStatus_unknownCondition verifies that Ready doesn't say the
+// DataPlane is fine while what a condition reports can't be told, whatever made
+// it Unknown, even when the Deployment rolled out and Ready was True before.
+func Test_ensureReadyStatus_unknownCondition(t *testing.T) {
+	cfg := testConfig
+	cfg.Conditions.LicenseValidType = string(aigatewayv1alpha1.LicenseValidType)
+	deployment := func() *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Namespace: testCASecretNamespace, Name: testDPName, Generation: 1,
+			Spec:   appsv1.DeploymentSpec{Replicas: new(int32(1))},
+			Status: appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1, ReadyReplicas: 1},
+		}
+	}
+	ensure := func(t *testing.T, conditions ...metav1.Condition) metav1.Condition {
+		t.Helper()
+		d := deployment()
+		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(d).WithStatusSubresource(d).Build()
+		dp := &aigatewayv1alpha1.AIGatewayDataPlane{Namespace: testCASecretNamespace, Name: testDPName}
+		dp.Status.Conditions = conditions
+		require.NoError(t, (&testReconciler{Client: cl, Config: cfg}).ensureReadyStatus(t.Context(), dp))
+		ready := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.ReadyType))
+		require.NotNil(t, ready)
+		return *ready
+	}
+	wasReady := metav1.Condition{Type: string(aigatewayv1alpha1.ReadyType), Status: metav1.ConditionTrue, Reason: "Ready", LastTransitionTime: metav1.Now()}
+
+	t.Run("an Unknown condition makes Ready False, with its message", func(t *testing.T) {
+		ready := ensure(t, wasReady, metav1.Condition{
+			Type: "CertificateProvisioned", Status: metav1.ConditionUnknown, Reason: "NotReady", Message: "failed to read", LastTransitionTime: metav1.Now(),
+		})
+		assert.Equal(t, metav1.ConditionFalse, ready.Status)
+		assert.Equal(t, cfg.Conditions.DependenciesNotReadyReason, ready.Reason)
+		assert.Equal(t, "failed to read", ready.Message)
+	})
+	t.Run("an Unknown license condition doesn't gate readiness", func(t *testing.T) {
+		ready := ensure(t, wasReady, metav1.Condition{
+			Type: string(aigatewayv1alpha1.LicenseValidType), Status: metav1.ConditionUnknown, Reason: "Unknown", LastTransitionTime: metav1.Now(),
+		})
+		assert.Equal(t, metav1.ConditionTrue, ready.Status)
+	})
+	t.Run("True conditions and a rolled out Deployment are Ready", func(t *testing.T) {
+		ready := ensure(t, wasReady, metav1.Condition{
+			Type: "CertificateProvisioned", Status: metav1.ConditionTrue, Reason: "Provisioned", LastTransitionTime: metav1.Now(),
+		})
+		assert.Equal(t, metav1.ConditionTrue, ready.Status)
+	})
+}
+
 // Test_ensureReadyStatus_ignoresLicenseCondition verifies that a False license
 // condition does not gate the Ready condition: a missing license is reported
 // in its own condition while the gateway keeps running (and can become Ready).
