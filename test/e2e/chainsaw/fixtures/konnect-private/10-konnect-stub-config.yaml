@@ -1,0 +1,214 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: konnect-stub-config
+  namespace: konnect-private-stub
+data:
+  # A fake Konnect API for the private path. Kong answers instead of Konnect, so
+  # the operator talks to the private hostnames over real TLS with the paths it
+  # would use in a VPC; the values mirror test/envtest/konnect_private_server.go.
+  #
+  # Every route exits from a pre-function: nothing is proxied upstream. The
+  # routes are host-scoped, so a call to another host matches none of them.
+  #
+  # The cloud gateway routes at the bottom are unused until #6110 is fixed:
+  # today those calls leave for the public global API.
+  kong.yml: |
+    _format_version: "3.0"
+
+    services:
+      - name: konnect-stub
+
+        # Never reached: every route answers from a pre-function.
+        url: http://127.0.0.1:1
+
+        routes:
+          - name: organizations-me
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v3/organizations/me$"
+            methods:
+              - GET
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200,
+                        { id = "5f9fd312-a987-4628-b4c5-bb4f4fddd5f7" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: control-planes-create
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes$"
+            methods:
+              - POST
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(201, {
+                        id = "aee0667a-90c6-45a6-a2d8-575e1e487b86",
+                        name = "private",
+                        config = {
+                          cluster_type = "CLUSTER_TYPE_CONTROL_PLANE",
+                          control_plane_endpoint = "https://us.svc.konghq.tech/cp/abc123",
+                          telemetry_endpoint = "https://us.svc.konghq.tech/tp/abc123",
+                        },
+                      }, { ["Content-Type"] = "application/json" })
+
+          - name: control-planes-list
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes$"
+            methods:
+              - GET
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200, {
+                        meta = { page = { number = 1, size = 10, total = 1 } },
+                        data = { {
+                          id = "aee0667a-90c6-45a6-a2d8-575e1e487b86",
+                          name = "private",
+                          config = {
+                            cluster_type = "CLUSTER_TYPE_CONTROL_PLANE",
+                            control_plane_endpoint = "https://us.svc.konghq.tech/cp/abc123",
+                            telemetry_endpoint = "https://us.svc.konghq.tech/tp/abc123",
+                          },
+                        } },
+                      }, { ["Content-Type"] = "application/json" })
+
+          - name: control-planes-update
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes/[^/]+$"
+            methods:
+              - PATCH
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200, {
+                        id = "aee0667a-90c6-45a6-a2d8-575e1e487b86",
+                        name = "private",
+                        config = {
+                          cluster_type = "CLUSTER_TYPE_CONTROL_PLANE",
+                          control_plane_endpoint = "https://us.svc.konghq.tech/cp/abc123",
+                          telemetry_endpoint = "https://us.svc.konghq.tech/tp/abc123",
+                        },
+                      }, { ["Content-Type"] = "application/json" })
+
+          # The finalizer only clears once the delete is answered.
+          - name: control-planes-delete
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes/[^/]+$"
+            methods:
+              - DELETE
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - return kong.response.exit(204)
+
+          - name: dp-client-certificates-create
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes/[^/]+/dp-client-certificates$"
+            methods:
+              - POST
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(201,
+                        { item = { id = "7c3f1d2e-4b5a-4c6d-8e9f-0a1b2c3d4e5f" } },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: dp-client-certificates-list
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes/[^/]+/dp-client-certificates$"
+            methods:
+              - GET
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200, { items = {} },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: dp-client-certificates-delete
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v2/control-planes/[^/]+/dp-client-certificates/[^/]+$"
+            methods:
+              - DELETE
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - return kong.response.exit(204)
+
+          # Unused until the Dedicated Cloud Gateway calls stop leaving for the
+          # public global API: see Kong/kong-operator#6110.
+          - name: cloud-gateways-networks-create
+            hosts:
+              - global.svc.konghq.tech
+            paths:
+              - "~/api/v2/cloud-gateways/networks$"
+            methods:
+              - POST
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(201,
+                        { id = "0d6a9a44-6d3c-4e0e-9a3b-2a3f9c1b7e10", state = "initializing" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: cloud-gateways-networks-get
+            hosts:
+              - global.svc.konghq.tech
+            paths:
+              - "~/api/v2/cloud-gateways/networks/[^/]+$"
+            methods:
+              - GET
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200,
+                        { id = "0d6a9a44-6d3c-4e0e-9a3b-2a3f9c1b7e10", state = "initializing" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: cloud-gateways-networks-delete
+            hosts:
+              - global.svc.konghq.tech
+            paths:
+              - "~/api/v2/cloud-gateways/networks/[^/]+$"
+            methods:
+              - DELETE
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - return kong.response.exit(204)
