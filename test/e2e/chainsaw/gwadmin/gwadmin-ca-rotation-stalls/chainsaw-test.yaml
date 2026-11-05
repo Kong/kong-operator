@@ -130,12 +130,13 @@ spec:
             env: *env
             timeout: 4m
             content: ../gwadmin-shared/gwadmin.sh assert-server-bundle-count "$GWADMIN" 2
-        # The rollout can never complete without the peers, so a fixed
-        # observation window is all a negative check can do here.
+        # The rollout can never complete while the readiness gate holds the
+        # pods, so a fixed observation window is all a negative check can do
+        # here.
         - script:
             env: *env
             timeout: 4m
-            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 60 api operator-client
+            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 20 api operator-client
         - script:
             env: *env
             timeout: 4m
@@ -156,7 +157,9 @@ spec:
                 name: ($gwadmin_name)
               spec:
                 deployment:
-                  podTemplateSpec: null
+                  podTemplateSpec:
+                    spec:
+                      readinessGates: null
         # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
         - script:
             env:

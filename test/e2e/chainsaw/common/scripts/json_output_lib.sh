@@ -45,8 +45,9 @@ result() {
   jq -n "${args[@]}" '$ARGS.named'
 }
 
-# until_true timeout description command...: retries command every 2s, failing
-# after timeout seconds. Only the failures of the last attempt are reported.
+# until_true timeout description command...: retries command every second,
+# failing after timeout seconds. Only the failures of the last attempt are
+# reported.
 until_true() {
   local timeout=$1 what=$2 start=$SECONDS
   shift 2
@@ -58,7 +59,7 @@ until_true() {
       echo "timed out after ${timeout}s waiting for: $what" >&2
       return 1
     fi
-    sleep 2
+    sleep 1
   done
   UNTIL_CONDITION=$what
   UNTIL_WAITED=$((SECONDS - start))

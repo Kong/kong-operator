@@ -10,7 +10,11 @@ spec:
         # provisions them, until step 3 removes the gate.
         readinessGates:
           - conditionType: e2e.konghq.com/held
-        # Required by the schema, merged by name into the container of the
-        # operator.
         containers:
           - name: gw-admin
+            # Readiness probed every second, so the pod turns Ready without
+            # waiting for the default 10s period, and unready after 30s of
+            # failures, as by default.
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30
