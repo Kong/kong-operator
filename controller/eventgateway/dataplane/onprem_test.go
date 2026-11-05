@@ -82,7 +82,16 @@ func TestOnPremCertificateTTL(t *testing.T) {
 	require.Equal(t, 2000*time.Hour, onPremCertificateTTL(consts.DefaultCertTTL, 2000*time.Hour), "as does a longer one")
 	require.Equal(t, 2*time.Hour, onPremCertificateTTL(2*time.Hour, 720*time.Hour), "a shorter --cert-ttl stays")
 	require.Equal(t, minOnPremCertificateTTL, onPremCertificateTTL(time.Second, 0), "a validity too short to roll out onto is raised")
-	require.Equal(t, minOnPremCertificateTTL, onPremCertificateTTL(consts.DefaultCertTTL, consts.GWAdminMinTTL), "as is a short --gwadmin-cert-ttl")
+	require.Equal(t, minOnPremCertificateTTL, onPremCertificateTTL(consts.DefaultCertTTL, consts.GWAdminMinCertTTL), "as is a short --gwadmin-cert-ttl")
+}
+
+// The shortest --gwadmin-ca-ttl leaves time to publish a new certificate
+// authority, and to issue client certificates from it.
+func TestShortestCATTLStillIssuesCertificates(t *testing.T) {
+	now := time.Now()
+	ca := &x509.Certificate{NotAfter: now.Add(consts.GWAdminMinCATTL)}
+	rollout := 30 * time.Minute
+	require.GreaterOrEqual(t, freshOnPremCertificateValidity(ca, minOnPremCertificateTTL, now.Add(rollout)), minOnPremCertificateValidity)
 }
 
 // The GWAdmin controller publishes the cp client CA in the operator namespace,

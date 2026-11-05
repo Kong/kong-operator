@@ -156,17 +156,21 @@ const (
 const (
 	// GWAdminCATTL is the default validity of the certificate authorities
 	// Kong Operator creates for a GWAdmin (--gwadmin-ca-ttl). They are
-	// renewed once two thirds of it have elapsed, so that rotations run
-	// regularly.
-	GWAdminCATTL = 365 * 24 * time.Hour
+	// renewed once two thirds of it have elapsed.
+	GWAdminCATTL = 10 * 365 * 24 * time.Hour
 	// GWAdminLeafTTL is the default validity of the certificates Kong
 	// Operator issues for a GWAdmin (--gwadmin-cert-ttl). They are renewed
 	// once two thirds of it have elapsed.
 	GWAdminLeafTTL = 90 * 24 * time.Hour
-	// GWAdminMinTTL is the shortest validity --gwadmin-ca-ttl and
-	// --gwadmin-cert-ttl accept: certificates are backdated by 5 minutes
-	// against clock skew, which a shorter validity would mostly consume.
-	GWAdminMinTTL = 10 * time.Minute
+	// GWAdminMinCATTL is the shortest validity --gwadmin-ca-ttl accepts: a
+	// data plane of an OnPremEventGateway gets a client certificate from the
+	// certificate authority only while it has at least 10 minutes left, and
+	// a renewed one can take the rollout of the gw-admin pods to be published.
+	GWAdminMinCATTL = time.Hour
+	// GWAdminMinCertTTL is the shortest validity --gwadmin-cert-ttl accepts:
+	// certificates are backdated by 5 minutes against clock skew, which a
+	// shorter validity would mostly consume.
+	GWAdminMinCertTTL = 10 * time.Minute
 	// GWAdminOperatorClientCommonName is the common name of the client
 	// certificate Kong Operator authenticates to gw-admin with.
 	GWAdminOperatorClientCommonName = "kong-operator"

@@ -82,6 +82,13 @@
   authority. Its name must be a valid DNS-1035 label of at most 57 characters.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
 
+### Changed
+
+- `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
+  shorter validity could keep the client certificate of an on-prem `KegDataPlane`
+  from being issued.
+  [#6435](https://github.com/Kong/kong-operator/pull/6435)
+
 ## [v2.4.0-rapid.3.1]
 
 > Release date: 2026-11-04

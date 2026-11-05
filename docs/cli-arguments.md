@@ -167,8 +167,8 @@ rows:
     default: '`""`'
   - flag: '`--gwadmin-ca-ttl`'
     type: '`duration`'
-    description: "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '8760h'). At least 10m."
-    default: '`8760h (1 years)`'
+    description: "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '87600h'). At least 1h."
+    default: '`87600h (10 years)`'
   - flag: '`--gwadmin-cert-ttl`'
     type: '`duration`'
     description: "Validity of the certificates issued for a GWAdmin, renewed once two thirds of it have elapsed, and capped at the expiry of their certificate authority (e.g. '2160h'). At least 10m, and at most gwadmin-ca-ttl."

@@ -93,7 +93,7 @@ func New(m metadata.Info) *CLI {
 
 	// controller for gw-admin, the on-prem control plane of the data planes that do not use Konnect
 	flagSet.BoolVar(&cfg.GWAdminControllerEnabled, "enable-controller-gwadmin", false, "Enable the GWAdmin controller, deploying gw-admin and managing its certificates.")
-	flagSet.DurationVar(&cfg.GWAdminCATTL, "gwadmin-ca-ttl", consts.GWAdminCATTL, "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '8760h'). At least 10m.")
+	flagSet.DurationVar(&cfg.GWAdminCATTL, "gwadmin-ca-ttl", consts.GWAdminCATTL, "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '87600h'). At least 1h.")
 	flagSet.DurationVar(&cfg.GWAdminCertTTL, "gwadmin-cert-ttl", consts.GWAdminLeafTTL, "Validity of the certificates issued for a GWAdmin, renewed once two thirds of it have elapsed, and capped at the expiry of their certificate authority (e.g. '2160h'). At least 10m, and at most gwadmin-ca-ttl.")
 
 	// controllers for AI Gateway APIs
@@ -154,10 +154,10 @@ func validateKonnectSyncPeriod(duration time.Duration) error {
 // validateGWAdminTTLs checks --gwadmin-ca-ttl and --gwadmin-cert-ttl.
 func validateGWAdminTTLs(caTTL, certTTL time.Duration) error {
 	switch {
-	case caTTL < consts.GWAdminMinTTL:
-		return fmt.Errorf("--gwadmin-ca-ttl (%s) must be at least %s", caTTL, consts.GWAdminMinTTL)
-	case certTTL < consts.GWAdminMinTTL:
-		return fmt.Errorf("--gwadmin-cert-ttl (%s) must be at least %s", certTTL, consts.GWAdminMinTTL)
+	case caTTL < consts.GWAdminMinCATTL:
+		return fmt.Errorf("--gwadmin-ca-ttl (%s) must be at least %s", caTTL, consts.GWAdminMinCATTL)
+	case certTTL < consts.GWAdminMinCertTTL:
+		return fmt.Errorf("--gwadmin-cert-ttl (%s) must be at least %s", certTTL, consts.GWAdminMinCertTTL)
 	case certTTL > caTTL:
 		return fmt.Errorf("--gwadmin-cert-ttl (%s) must not exceed --gwadmin-ca-ttl (%s)", certTTL, caTTL)
 	}
