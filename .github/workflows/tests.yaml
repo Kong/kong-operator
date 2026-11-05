@@ -219,7 +219,7 @@ jobs:
     - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster
-      uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+      uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
       with:
         # TODO: remove this hardcode when helm/kind-action defaults to kind v0.32.0
         # Setting this prevents:
@@ -277,7 +277,7 @@ jobs:
     - uses: ./.github/actions/bump-inotify
 
     - name: Create k8s KinD Cluster
-      uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+      uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
       with:
         # TODO: remove this hardcode when helm/kind-action defaults to kind v0.32.0
         # Setting this prevents:
