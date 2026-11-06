@@ -448,7 +448,7 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: parent
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: registry}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: registry}}, valueValidationAction: mark}}
 `)
 		child := consumePolicy("child", `
     type: modifyHeaders

@@ -1454,6 +1454,32 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "unionMember and injectInto are mutually exclusive",
 		},
 		{
+			name: "typedMember accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.TypedMember = "namespacedRef" }),
+		},
+		{
+			name: "typedMember with unionMember rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.TypedMember = "namespacedRef"
+				rc.UnionMember = "namespacedRef"
+			}),
+			wantErr: "typedMember is mutually exclusive with unionMember and injectInto",
+		},
+		{
+			name: "typedMember on a multi-kind reference rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+				rc.RefTypeName = "AIGatewayACLRef"
+				rc.TypedMember = "namespacedRef"
+			}),
+			wantErr: "typedMember requires exactly one kind",
+		},
+		{
+			name:    "typedMember colliding with a field of the ref struct rejected",
+			cfg:     base(func(rc *ReferenceConfig) { rc.TypedMember = "name" }),
+			wantErr: `typedMember "name" collides with a field of the ref struct`,
+		},
+		{
 			name: "reverseWatch on a single-kind reference accepted",
 			cfg:  base(func(rc *ReferenceConfig) { rc.ReverseWatch = true }),
 		},

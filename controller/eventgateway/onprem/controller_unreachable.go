@@ -35,9 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -150,6 +150,36 @@ func (r *Reconciler) setupUnreachable(mgr ctrl.Manager) error {
 
 // programmedChanged lets through the updates that change the Programmed
 // condition of an entity.
+// programmedSetByOthers lets through an update setting the Programmed condition
+// of an entity to one the controller didn't set, e.g. one the Konnect
+// reconciler set while its on-prem ancestor didn't exist yet, read from a cache
+// that didn't hold it: the reconcile of its gateway sets it back, and clears
+// what else the Konnect reconciler set (see setEntityConditions).
+func programmedSetByOthers() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc:  func(event.CreateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldEntity, ok := e.ObjectOld.(entityObject)
+			if !ok {
+				return false
+			}
+			newEntity, ok := e.ObjectNew.(entityObject)
+			if !ok {
+				return false
+			}
+			programmed := string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)
+			newCond := apimeta.FindStatusCondition(newEntity.GetConditions(), programmed)
+			if newCond == nil || ownsEntityCondition(newEntity, programmed) {
+				return false
+			}
+			oldCond := apimeta.FindStatusCondition(oldEntity.GetConditions(), programmed)
+			return oldCond == nil || oldCond.Status != newCond.Status || oldCond.Reason != newCond.Reason || oldCond.Message != newCond.Message
+		},
+	}
+}
+
 func programmedChanged() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc:  func(event.CreateEvent) bool { return false },
@@ -308,20 +338,24 @@ func mapAncestorToDescendants(cl client.Client, target reflect.Type) handler.Map
 
 // reportUnreachable sets the Programmed condition of the entity to false when
 // its OnPremEventGateway doesn't exist, or when its parent entity doesn't and
-// its status was set for an OnPremEventGateway: the entity is then Detached,
+// the controller set its Programmed condition: the entity is then Detached,
 // naming the entity that doesn't exist, also over the Detached condition the
 // reconcile of its gateway set, when it was in its configuration (see
-// reportDetached): it doesn't name the gateway, so that reconcile leaves it
-// alone. The reconcile of a gateway being
-// deleted reports its entities itself. An entity that reaches no
-// OnPremEventGateway anymore, e.g. one now under a KonnectEventGateway, loses
-// the Programmed condition set for one: the Konnect controllers set theirs.
+// reportDetached). The reconcile of a gateway being deleted reports its
+// entities itself. An entity that reaches no OnPremEventGateway anymore, e.g.
+// one now under a KonnectEventGateway, loses the conditions the controller
+// set: the Konnect controllers set theirs. An entity being deleted reports
+// nothing, and is released when it is held for a gateway that can't do it
+// (see releaseOrphan).
 func (r *Reconciler) reportUnreachable(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	if err := r.Get(ctx, key, obj); err != nil {
 		return client.IgnoreNotFound(err)
 	}
+	if !obj.GetDeletionTimestamp().IsZero() {
+		return r.releaseOrphan(ctx, obj)
+	}
 	entity, isEntity := obj.(entityObject)
-	if !isEntity || !obj.GetDeletionTimestamp().IsZero() {
+	if !isEntity {
 		return nil
 	}
 	gatewayKey, ok, missing, err := walkToOnPremEventGateway(ctx, r.Client, obj)
@@ -329,17 +363,16 @@ func (r *Reconciler) reportUnreachable(ctx context.Context, key client.ObjectKey
 	case err != nil:
 		return err
 	case missing != "":
-		if !setForOnPremEventGateway(entity) {
+		if !ownsEntityCondition(entity, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)) {
 			return nil
 		}
-		return r.setEntityConditions(ctx, entity, nil, entityCondition(entity, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+		return r.setUnownedEntityConditions(ctx, entity, nil, entityCondition(entity, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
 			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityDetachedReason,
 			fmt.Sprintf("Not in the configuration of its OnPremEventGateway: %s does not exist", missing)))
 	case !ok:
-		if !setForOnPremEventGateway(entity) {
-			return nil
-		}
-		return r.setEntityConditions(ctx, entity, []string{string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)})
+		return r.setUnownedEntityConditions(ctx, entity, []string{
+			string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType), string(konnectv1alpha1.SecretRefValidConditionType),
+		})
 	}
 	var gateway eventgatewayv1alpha1.OnPremEventGateway
 	switch err := r.Get(ctx, gatewayKey, &gateway); {
@@ -351,29 +384,6 @@ func (r *Reconciler) reportUnreachable(ctx context.Context, key client.ObjectKey
 		return err
 	}
 	return nil
-}
-
-// setForOnPremEventGateway reports whether the Programmed condition of the
-// entity was set by this controller: by its own reasons, or by the reason the
-// Konnect controllers use too, with the message this controller sets with it
-// (see reportEntities).
-func setForOnPremEventGateway(entity entityObject) bool {
-	cond := apimeta.FindStatusCondition(entity.GetConditions(), string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
-	if cond == nil {
-		return false
-	}
-	switch kcfgconsts.ConditionReason(cond.Reason) {
-	case eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason,
-		eventgatewayv1alpha1.OnPremEntityDetachedReason,
-		eventgatewayv1alpha1.OnPremEntityInvalidReason,
-		eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason,
-		eventgatewayv1alpha1.OnPremEntityNotRegisteredReason,
-		eventgatewayv1alpha1.OnPremEntityGatewayNotFoundReason:
-		return true
-	case eventgatewayv1alpha1.OnPremEntityProgrammedReason:
-		return strings.HasPrefix(cond.Message, inConfigurationOfPrefix)
-	}
-	return false
 }
 
 // entitiesOf returns the objects of a list.

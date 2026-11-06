@@ -96,14 +96,14 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 		func(vc *gwadminapi.EventGatewayVirtualClusterOnPrem) *[]gwadminapi.EventGatewayConsumePolicyOnPrem {
 			return &vc.ConsumePolicies
 		},
-		parentPolicyFrom(configurationv1alpha1.RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef,
-			func(r configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef) (string, string) {
-				return r.Namespace, r.Name
-			}),
+		consumeParentOf,
 		entityKind[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy, gwadminapi.EventGatewayConsumePolicyOnPrem]{
 			kind: "EventGatewayVirtualClusterConsumePolicy",
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) (any, error) {
-				req, err := p.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
+				if err := checkPolicyReferences(ctx, cl, p, p.Spec.APISpec); err != nil {
+					return nil, err
+				}
+				req, err := withUIDAsKonnectID(p).ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 				if err != nil {
 					return nil, err
 				}
@@ -120,14 +120,14 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 		func(vc *gwadminapi.EventGatewayVirtualClusterOnPrem) *[]gwadminapi.EventGatewayProducePolicyOnPrem {
 			return &vc.ProducePolicies
 		},
-		parentPolicyFrom(configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef,
-			func(r configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef) (string, string) {
-				return r.Namespace, r.Name
-			}),
+		produceParentOf,
 		entityKind[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, gwadminapi.EventGatewayProducePolicyOnPrem]{
 			kind: "EventGatewayVirtualClusterProducePolicy",
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) (any, error) {
-				req, err := p.ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
+				if err := checkPolicyReferences(ctx, cl, p, p.Spec.APISpec); err != nil {
+					return nil, err
+				}
+				req, err := withUIDAsKonnectID(p).ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
 				if err != nil {
 					return nil, err
 				}
@@ -135,6 +135,21 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 			},
 			adjust: targets.resolveReferences(producePolicyReferences),
 		})
+}
+
+// withUIDAsKonnectID returns a copy of the policy with its UID as its Konnect
+// ID, its id in the configuration. The conversions, written for Konnect, only
+// let a policy created in Konnect use an entity being deleted: on prem, a policy
+// keeps using an entity FinalizerInUse holds, and noNewUserOfDeletedEntities
+// refuses a new one. The policy itself is left as it is, as its status is
+// patched from it.
+func withUIDAsKonnectID[T interface {
+	client.Object
+	SetKonnectID(string)
+}](p T) T {
+	cp := p.DeepCopyObject().(T)
+	cp.SetKonnectID(string(p.GetUID()))
+	return cp
 }
 
 // addPolicies adds the policies of a kind of the virtual clusters, listed by
