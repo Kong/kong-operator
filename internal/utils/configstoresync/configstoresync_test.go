@@ -120,7 +120,7 @@ func TestCombinedValue(t *testing.T) {
 }
 
 func TestValidateX509KeyPair(t *testing.T) {
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat()
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 
 	t.Run("valid pair returns the leaf expiry", func(t *testing.T) {
 		notAfter, err := ValidateX509KeyPair(certPEM, keyPEM)
@@ -129,7 +129,7 @@ func TestValidateX509KeyPair(t *testing.T) {
 	})
 
 	t.Run("mismatched key is rejected", func(t *testing.T) {
-		_, otherKeyPEM := certificate.MustGenerateCertPEMFormat()
+		_, otherKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 		_, err := ValidateX509KeyPair(certPEM, otherKeyPEM)
 		require.Error(t, err)
 	})

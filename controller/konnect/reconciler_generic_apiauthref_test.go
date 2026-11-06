@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -96,8 +95,7 @@ func TestReconcileAIGatewayConsumerCredentialWithMissingGatewayBeforeAPIAuthLook
 			}})
 
 			consumerGets := 0
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(credential, consumer).
 				WithStatusSubresource(credential).
 				WithInterceptorFuncs(interceptor.Funcs{
@@ -213,8 +211,7 @@ func testReconcileWithMissingAncestorBeforeAPIAuthLookup[
 			ent.SetFinalizers([]string{KonnectCleanupFinalizer})
 
 			virtualClusterGets := 0
-			builder := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			builder := newFakeClientBuilder(scheme.Get()).
 				WithObjects(ent, virtualCluster).
 				WithStatusSubresource(ent).
 				WithInterceptorFuncs(interceptor.Funcs{
@@ -293,8 +290,7 @@ func TestReconcileRemovesFinalizerWhenControlPlaneDisappearsBeforeAPIAuthLookup(
 	}
 
 	controlPlaneGets := 0
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithObjects(target, upstream, controlPlane).
 		WithStatusSubresource(target).
 		WithInterceptorFuncs(interceptor.Funcs{
@@ -377,7 +373,7 @@ func TestRemoveCleanupFinalizerIfAncestorIsGone(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			target := newTarget()
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(target).Build()
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(target).Build()
 			if tc.deleting {
 				require.NoError(t, cl.Delete(t.Context(), target))
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(target), target))
@@ -426,8 +422,7 @@ func TestRemoveCleanupFinalizerIfAncestorIsGone(t *testing.T) {
 			if tc.withoutCleanupFinalizer {
 				target.Finalizers = []string{"test.example/other-finalizer"}
 			}
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(target).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
@@ -466,7 +461,7 @@ func TestRemoveCleanupFinalizerIfAncestorIsGone(t *testing.T) {
 
 	t.Run("removes finalizer when control plane is gone", func(t *testing.T) {
 		target := newTarget()
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(target).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(target).Build()
 
 		handled, res, err := removeCleanupFinalizerIfAncestorIsGone[configurationv1alpha1.KongTarget](
 			t.Context(), cl, target, missingControlPlaneErr,
@@ -483,8 +478,7 @@ func TestRemoveCleanupFinalizerIfAncestorIsGone(t *testing.T) {
 
 	t.Run("requeues on update conflict", func(t *testing.T) {
 		target := newTarget()
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithObjects(target).
 			WithInterceptorFuncs(interceptor.Funcs{
 				Update: func(

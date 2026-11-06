@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -41,8 +40,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 	}{
 		{
 			name: "returns correct requests for matching secret",
-			client: fake.NewClientBuilder().
-				WithScheme(s).
+			client: newFakeClientBuilder(s).
 				WithObjects(secret, cert).
 				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				Build(),
@@ -53,8 +51,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 		},
 		{
 			name: "returns nil for non-Secret object",
-			client: fake.NewClientBuilder().
-				WithScheme(s).
+			client: newFakeClientBuilder(s).
 				WithObjects(secret, cert).
 				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				Build(),
@@ -64,8 +61,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 		},
 		{
 			name: "returns empty for no matching certificates",
-			client: fake.NewClientBuilder().
-				WithScheme(s).
+			client: newFakeClientBuilder(s).
 				WithObjects(&corev1.Secret{
 					Name:      "othersecret",
 					Namespace: "ns",
@@ -81,8 +77,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 		},
 		{
 			name: "returns nil if List returns error",
-			client: fake.NewClientBuilder().
-				WithScheme(s).
+			client: newFakeClientBuilder(s).
 				WithObjects(secret, cert).
 				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				WithInterceptorFuncs(interceptor.Funcs{

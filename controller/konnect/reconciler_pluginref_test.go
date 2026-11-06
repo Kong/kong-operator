@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
@@ -519,8 +518,7 @@ func TestHandlePluginRef(t *testing.T) {
 				objs = append(objs, &tc.grants[i])
 			}
 
-			builder := fake.NewClientBuilder().
-				WithScheme(scheme).
+			builder := newFakeClientBuilder(scheme).
 				WithObjects(objs...).
 				WithStatusSubresource(tc.ent)
 			if tc.interceptorFuncs != nil {

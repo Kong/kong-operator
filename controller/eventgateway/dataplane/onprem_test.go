@@ -126,12 +126,12 @@ func onPremFixture(t *testing.T) (*eventgatewayv1alpha1.OnPremEventGateway, *ope
 			TLS: &operatorv1alpha1.GWAdminTLSStatus{CPServerCABundleSecretName: "gw-admin-cp-server-ca-bundle"},
 		},
 	}
-	serverCA, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("cp server CA"), certificate.WithCATrue())
+	serverCA, _ := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("cp server CA"), certificate.WithCATrue())
 	bundle := &corev1.Secret{
 		Name: "gw-admin-cp-server-ca-bundle", Namespace: "default",
 		Data: map[string][]byte{"ca.crt": serverCA},
 	}
-	clientCA, clientCAKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("cp client CA"), certificate.WithCATrue())
+	clientCA, clientCAKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("cp client CA"), certificate.WithCATrue())
 	ca := &corev1.Secret{
 		Name: gwadminref.CPClientCASecretName(gw), Namespace: testOperatorNamespace,
 		Labels: map[string]string{consts.GWAdminUIDLabel: string(gw.UID)},
@@ -462,7 +462,7 @@ func TestEnsureOnPremCertificate(t *testing.T) {
 		_, first, err := r.ensureOnPremCertificate(t.Context(), cl, egdp, resolveOnPremDependencies(t, cl, gateway))
 		require.NoError(t, err)
 
-		rotated, rotatedKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("rotated cp client CA"), certificate.WithCATrue())
+		rotated, rotatedKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("rotated cp client CA"), certificate.WithCATrue())
 		ca.Data = map[string][]byte{"tls.crt": rotated, "tls.key": rotatedKey}
 		require.NoError(t, cl.Update(t.Context(), ca))
 		deps := resolveOnPremDependencies(t, cl, gateway)
@@ -499,7 +499,7 @@ func TestEnsureOnPremCertificate(t *testing.T) {
 		gateway, gw, bundle, ca := onPremFixture(t)
 		now := time.Now()
 		// The CA expires in 2h: certificates are capped to it.
-		caCert, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("cp client CA"), certificate.WithCATrue(),
+		caCert, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("cp client CA"), certificate.WithCATrue(),
 			certificate.WithValidity(now.Add(-time.Hour), now.Add(2*time.Hour)))
 		ca.Data = map[string][]byte{"tls.crt": caCert, "tls.key": caKey}
 		egdp := onPremDataPlane()
@@ -534,7 +534,7 @@ func TestEnsureOnPremCertificate(t *testing.T) {
 	t.Run("no certificate is issued from a CA about to expire", func(t *testing.T) {
 		gateway, gw, bundle, ca := onPremFixture(t)
 		now := time.Now()
-		caCert, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("cp client CA"), certificate.WithCATrue(),
+		caCert, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("cp client CA"), certificate.WithCATrue(),
 			certificate.WithValidity(now.Add(-time.Hour), now.Add(10*time.Minute)))
 		ca.Data = map[string][]byte{"tls.crt": caCert, "tls.key": caKey}
 		egdp := onPremDataPlane()
@@ -554,8 +554,8 @@ func TestEnsureOnPremCertificate(t *testing.T) {
 // chain, the first certificate being the signer and the one gw-admin trusts.
 func TestEnsureOnPremCertificateChainedCPClientCA(t *testing.T) {
 	gateway, gw, bundle, ca := onPremFixture(t)
-	rootPEM, rootKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("root"), certificate.WithCATrue())
-	intermediatePEM, intermediateKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("intermediate"),
+	rootPEM, rootKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("root"), certificate.WithCATrue())
+	intermediatePEM, intermediateKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("intermediate"),
 		certificate.WithCATrue(), certificate.WithParent(keyPair(t, rootPEM, rootKey)))
 	ca.Data[corev1.TLSCertKey] = slices.Concat(intermediatePEM, rootPEM)
 	ca.Data[corev1.TLSPrivateKeyKey] = intermediateKey
@@ -622,7 +622,7 @@ func TestCreateOnPremCertificate(t *testing.T) {
 		require.InDelta(t, cert.NotAfter.Sub(now).Seconds(), freshOnPremCertificateValidity(deps.clientCACert, 2*time.Hour, now).Seconds(), 60)
 
 		shortLived := now.Add(30 * time.Minute)
-		caPEM, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("short lived"), certificate.WithCATrue(),
+		caPEM, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("short lived"), certificate.WithCATrue(),
 			certificate.WithValidity(now.Add(-time.Hour), shortLived))
 		caCert := pki.ParseCertificates(caPEM)[0]
 		secret, err := r.createOnPremCertificate(t.Context(), cl, egdp, &onPremDependencies{
@@ -918,7 +918,7 @@ func TestParseOnPremCertificate(t *testing.T) {
 	notAfter := notBefore.Add(time.Hour)
 	tlsCert := certificate.MustGenerateCert(certificate.WithValidity(notBefore, notAfter))
 	certPEM, keyPEM := certificate.CertToPEMFormat(tlsCert)
-	_, otherKeyPEM := certificate.MustGenerateCertPEMFormat()
+	_, otherKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 	withIssuedAt := func(issuedAt string) *corev1.Secret {
 		return &corev1.Secret{
 			Annotations: map[string]string{onPremCertificateIssuedAtAnnotation: issuedAt},
@@ -1218,10 +1218,10 @@ func withManualCertificate(egdp *eventgatewayv1alpha1.KegDataPlane) *eventgatewa
 func TestManualCertificateIssuer(t *testing.T) {
 	gateway, gw, bundle, ca := onPremFixture(t)
 	published := keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])
-	previousPEM, previousKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("previous cp client CA"), certificate.WithCATrue())
+	previousPEM, previousKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("previous cp client CA"), certificate.WithCATrue())
 	previous := keyPair(t, previousPEM, previousKeyPEM)
 	now := time.Now()
-	expiredPEM, expiredKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("expired cp client CA"), certificate.WithCATrue(),
+	expiredPEM, expiredKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("expired cp client CA"), certificate.WithCATrue(),
 		certificate.WithValidity(now.AddDate(-1, 0, 0), now.Add(-time.Hour)))
 	expired := keyPair(t, expiredPEM, expiredKeyPEM)
 	ca.Data[gwadminref.PreviousCAKey] = slices.Concat(previousPEM, expiredPEM)
@@ -1230,11 +1230,11 @@ func TestManualCertificateIssuer(t *testing.T) {
 	trusted := deps.trustedClientCAs(now)
 	require.Len(t, trusted, 2, "the expired previous CA isn't trusted anymore")
 
-	intermediatePEM, intermediateKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("intermediate"), certificate.WithCATrue(), certificate.WithParent(published))
+	intermediatePEM, intermediateKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("intermediate"), certificate.WithCATrue(), certificate.WithParent(published))
 	intermediate := keyPair(t, intermediatePEM, intermediateKeyPEM)
-	otherPEM, otherKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("another CA"), certificate.WithCATrue())
+	otherPEM, otherKeyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("another CA"), certificate.WithCATrue())
 	issued := func(parent tls.Certificate) ([]byte, []byte) {
-		return certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg.default"), certificate.WithParent(parent))
+		return certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg.default"), certificate.WithParent(parent))
 	}
 
 	for _, tc := range []struct {
@@ -1269,7 +1269,7 @@ func TestManualCertificateIssuer(t *testing.T) {
 		{
 			name: "issued from an expired previous CA",
 			cert: func() ([]byte, []byte) {
-				return certificate.MustGenerateCertPEMFormat(certificate.WithParent(expired),
+				return certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithParent(expired),
 					certificate.WithValidity(now.AddDate(-1, 0, 0), now.AddDate(1, 0, 0)))
 			},
 		},
@@ -1284,7 +1284,7 @@ func TestManualCertificateIssuer(t *testing.T) {
 		{
 			name: "valid in a couple of minutes, within the tolerated clock skew",
 			cert: func() ([]byte, []byte) {
-				return certificate.MustGenerateCertPEMFormat(certificate.WithParent(published),
+				return certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithParent(published),
 					certificate.WithValidity(now.Add(2*time.Minute), now.AddDate(0, 1, 0)))
 			},
 			want: deps.clientCACert,
@@ -1316,7 +1316,7 @@ func TestResolveManualCertificateOnPrem(t *testing.T) {
 		gateway, gw, bundle, ca := onPremFixture(t)
 		egdp := withManualCertificate(onPremDataPlane())
 		egdp.Namespace = "data-planes"
-		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 			certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 		user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, user).Build()
@@ -1351,7 +1351,7 @@ func TestResolveManualCertificateOnPrem(t *testing.T) {
 	t.Run("a certificate gw-admin wouldn't trust isn't used", func(t *testing.T) {
 		gateway, gw, bundle, ca := onPremFixture(t)
 		egdp := withManualCertificate(onPremDataPlane())
-		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"))
+		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"))
 		user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, user).Build()
 		deps := resolveOnPremDependencies(t, cl, gateway)
@@ -1390,7 +1390,7 @@ func TestOnPremManualCertificateCopies(t *testing.T) {
 	scheme := managerscheme.Get()
 	issue := func(t *testing.T, ca *corev1.Secret) ([]byte, []byte) {
 		t.Helper()
-		return certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+		return certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 			certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 	}
 	// resolve reconciles until the Secret of the certificate is resolved.
@@ -1519,7 +1519,7 @@ func TestSecretCopiesAreMarked(t *testing.T) {
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
 	egdp.Namespace = "data-planes"
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, user).Build()
@@ -1573,7 +1573,7 @@ func TestSecretCopiesAreMarked(t *testing.T) {
 func TestManualCertificateConditionKeepsItsTransitionTime(t *testing.T) {
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"))
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca, egdp, user).Build()
 	cp := shareddataplane.ResolvedControlPlane{Dependencies: resolveOnPremDependencies(t, cl, gateway)}
@@ -1641,7 +1641,7 @@ func TestManualCertificateCopyOutlivesAnUnusableSecret(t *testing.T) {
 	scheme := managerscheme.Get()
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, user).Build()
@@ -1666,7 +1666,7 @@ func TestManualCertificateCopyOutlivesAnUnusableSecret(t *testing.T) {
 	}
 
 	t.Run("replaced by a certificate gw-admin wouldn't trust", func(t *testing.T) {
-		untrustedPEM, untrustedKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"))
+		untrustedPEM, untrustedKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"))
 		user.Data = map[string][]byte{"tls.crt": untrustedPEM, "tls.key": untrustedKey}
 		require.NoError(t, cl.Update(t.Context(), user))
 		_, secret := resolve(t)
@@ -1684,7 +1684,7 @@ func TestManualCertificateCopyOutlivesAnUnusableSecret(t *testing.T) {
 func TestSecretCopyFailureIsReported(t *testing.T) {
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca, egdp, user).WithInterceptorFuncs(interceptor.Funcs{
@@ -1787,7 +1787,7 @@ func TestManualCertificateNotRegisteredCondition(t *testing.T) {
 		gateway, gw, bundle, ca := onPremFixture(t)
 		egdp := withManualCertificate(onPremDataPlane())
 		egdp.Status.Conditions = conditions
-		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"))
+		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"))
 		objects := []client.Object{gw, bundle, ca, egdp}
 		if user := secretData(manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)); user != nil {
 			objects = append(objects, user)
@@ -1844,11 +1844,11 @@ func TestManualCertificateExpiryIsReported(t *testing.T) {
 	resolved := func(t *testing.T, caFor, caLeft, leafFor, leafLeft time.Duration) (*eventgatewayv1alpha1.KegDataPlane, *events.FakeRecorder, *corev1.Secret, shareddataplane.ResolvedControlPlane, *Reconciler) {
 		t.Helper()
 		gateway, gw, bundle, ca := onPremFixture(t)
-		caPEM, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user CA"), certificate.WithCATrue(),
+		caPEM, caKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("user CA"), certificate.WithCATrue(),
 			certificate.WithValidity(now.Add(caLeft-caFor), now.Add(caLeft)))
 		ca.Data["tls.crt"], ca.Data["tls.key"] = caPEM, caKey
 		egdp := withManualCertificate(onPremDataPlane())
-		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+		certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 			certificate.WithParent(keyPair(t, caPEM, caKey)), certificate.WithValidity(now.Add(leafLeft-leafFor), now.Add(leafLeft)))
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)).Build()
 		cp := shareddataplane.ResolvedControlPlane{Dependencies: resolveOnPremDependencies(t, cl, gateway)}
@@ -1889,7 +1889,7 @@ func TestManualCertificateExpiryIsReported(t *testing.T) {
 		other := onPremDataPlane()
 		other.Name, other.UID = "other", "other"
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(egdp, other).Build()
-		cert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+		cert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 			certificate.WithValidity(now.Add(-85*day), now.Add(5*day)))
 		block, _ := pem.Decode(cert)
 		parsed, err := x509.ParseCertificate(block.Bytes)
@@ -1972,7 +1972,7 @@ func TestManualSecretCantBeACopy(t *testing.T) {
 		t.Run(kind, func(t *testing.T) {
 			gateway, gw, bundle, ca := onPremFixture(t)
 			egdp := withManualCertificate(onPremDataPlane())
-			certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+			certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 				certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 			user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 			user.Labels = map[string]string{secretCopyLabel: kind}
@@ -2000,9 +2000,9 @@ func TestManualCertificateExpiryOnlyLooksAtTheVerifiedChain(t *testing.T) {
 	now := time.Now()
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
-	expired, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("old cross-sign"), certificate.WithCATrue(),
+	expired, _ := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("old cross-sign"), certificate.WithCATrue(),
 		certificate.WithValidity(now.Add(-48*time.Hour), now.Add(-time.Hour)))
 	user := manualOnPremSecret(egdp.Namespace, slices.Concat(certPEM, expired, ca.Data["tls.crt"]), keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca, egdp, user).Build()
@@ -2024,7 +2024,7 @@ func TestManualCertificateExpiryEventSurvivesAnOverwrittenCondition(t *testing.T
 	now := time.Now()
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])), certificate.WithValidity(now.Add(-85*24*time.Hour), now.Add(5*24*time.Hour)))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca, egdp, user).Build()
@@ -2076,7 +2076,7 @@ func TestSwitchFromManualToAutomaticRemovesTheCopy(t *testing.T) {
 	scheme := managerscheme.Get()
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := withManualCertificate(onPremDataPlane())
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, user).Build()
@@ -2118,7 +2118,7 @@ func TestCleanupStaleCertificatesAfterSwitchToManual(t *testing.T) {
 	scheme := managerscheme.Get()
 	gateway, gw, bundle, ca := onPremFixture(t)
 	egdp := onPremDataPlane()
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("keg"),
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("keg"),
 		certificate.WithParent(keyPair(t, ca.Data["tls.crt"], ca.Data["tls.key"])))
 	user := manualOnPremSecret(egdp.Namespace, certPEM, keyPEM)
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, bundle, ca, egdp, user).Build()

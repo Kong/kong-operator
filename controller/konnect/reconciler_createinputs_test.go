@@ -13,7 +13,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -136,7 +135,7 @@ func testCreateInputs[T constraints.SupportedKonnectEntityType, TEnt constraints
 			ops.SetKonnectEntityProgrammedConditionTrue(ent)
 			setSource(ent, "original-value", tc.secret)
 			secret := &corev1.Secret{Name: "inputs", Namespace: "default", Data: map[string][]byte{"value": []byte("original-value")}}
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent, secret).WithStatusSubresource(ent).Build()
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent, secret).WithStatusSubresource(ent).Build()
 			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(ent), ent))
 			inputs := any(ent).(createInputsAware)
 			hash, err := inputs.CalculateCreateInputsHash(ctx, cl)
@@ -196,7 +195,7 @@ func TestCreateInputsConditionDoesNotBlockProgrammed(t *testing.T) {
 		konnectv1alpha1.CreateInputsAppliedConditionType, metav1.ConditionFalse,
 		konnectv1alpha1.CreateInputsReasonValueChanged, "changed", 0,
 	), ent)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).Build()
+	cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).Build()
 	_, err := patchWithProgrammedStatusConditionBasedOnOtherConditions(t.Context(), cl, ent)
 	require.NoError(t, err)
 	programmed, _ := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
@@ -228,7 +227,7 @@ func TestCreateInputsResolutionError(t *testing.T) {
 			}
 			ent.SetKonnectID("konnect-id")
 			ent.SetCreateInputsHash("sha256:original-request")
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 						if _, secret := obj.(*corev1.Secret); secret {
@@ -281,7 +280,7 @@ func TestRecoverPendingCreateInputsHash(t *testing.T) {
 				ent.SetCreateInputsHash("sha256:previous-request")
 				ops.SetKonnectEntityCreateInputsAppliedConditionTrue(ent)
 				failedWrites := 2
-				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).
+				cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).
 					WithInterceptorFuncs(interceptor.Funcs{
 						SubResourcePatch: func(ctx context.Context, cl client.Client, subResource string, obj client.Object, p client.Patch, opts ...client.SubResourcePatchOption) error {
 							if failedWrites > 0 {

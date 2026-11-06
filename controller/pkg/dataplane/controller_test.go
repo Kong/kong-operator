@@ -226,7 +226,7 @@ func TestReconcile_CertificateRequeue(t *testing.T) {
 
 	t.Run("user-owned certificate requeues at its expiry even on an early exit", func(t *testing.T) {
 		now := time.Now()
-		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
+		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
 		userSecret := &corev1.Secret{
 			Namespace: reconcileTestNS, Name: "user-cert",
 			Data: map[string][]byte{corev1.TLSCertKey: crt, corev1.TLSPrivateKeyKey: key},

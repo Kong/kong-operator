@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -293,8 +292,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 			require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
 			require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
-			fakeClient := fake.NewClientBuilder().
-				WithScheme(scheme).
+			fakeClient := newFakeClientBuilder(scheme).
 				WithObjects(tc.vault).
 				WithObjects(tc.objects...).
 				WithInterceptorFuncs(tc.interceptors).

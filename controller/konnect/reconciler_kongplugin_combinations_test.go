@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -721,8 +720,7 @@ func TestGroupByControlPlane(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := tt.objects
 			objects = append(objects, cpWithName("cp1"), cpWithName("cp2"))
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(objects...).
 				Build()
 			got, err := tt.args.relations.GroupByControlPlane(t.Context(), cl)

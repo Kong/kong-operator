@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -114,8 +113,7 @@ func TestHandleConfigMapRef(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(append([]client.Object{tc.obj}, tc.objs...)...).
 				WithStatusSubresource(tc.obj).
 				Build()

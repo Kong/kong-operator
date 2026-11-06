@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -85,7 +84,7 @@ func dpCertTestReconciler(t *testing.T, secretCert string, extra ...client.Objec
 			},
 		},
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithObjects(append(extra,
 			secret, ext,
 			&konnectv1alpha2.KonnectGatewayControlPlane{

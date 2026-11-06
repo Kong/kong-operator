@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -427,7 +426,7 @@ func sharedSecretCleanupFixture(t *testing.T, controlPlane, deletingSecret, dele
 			},
 		)
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+	cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).
 		WithStatusSubresource(first, second).
 		WithIndex(&operatorv1beta1.DataPlane{}, index.KonnectExtensionIndex, func(client.Object) []string { return nil }).
 		WithIndex(&gwtypes.ControlPlane{}, index.KonnectExtensionIndex, func(client.Object) []string { return nil }).
@@ -534,7 +533,7 @@ func TestKonnectExtensionFinalizerPrecedesSecretFinalizers(t *testing.T) {
 			},
 		},
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithObjects(
 			secret,
 			ext,

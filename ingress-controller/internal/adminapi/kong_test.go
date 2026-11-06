@@ -23,7 +23,7 @@ import (
 
 func TestAdminAPIClientWithTLSOpts(t *testing.T) {
 	const hostname = "localhost"
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(hostname))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithDNSNames(hostname))
 	caCert := cert
 
 	opts := managercfg.AdminAPIClientConfig{
@@ -49,7 +49,7 @@ func TestAdminAPIClientWithTLSOpts(t *testing.T) {
 
 func TestAdminAPIClientWithTLSOptsAndFilePaths(t *testing.T) {
 	const hostname = "localhost"
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(hostname))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithDNSNames(hostname))
 	caCert := cert
 
 	certDir := t.TempDir()
