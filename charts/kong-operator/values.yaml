@@ -130,6 +130,16 @@ global:
     serviceAnnotations:
       # Enable validation on annotations of Services.
       enabled: true
+    podDisruptionBudgetReplicas:
+      # Enable validation of PodDisruptionBudget against the DataPlane replica floor
+      # (replicas or scaling.horizontal.minReplicas must be >= 2 when a PodDisruptionBudget is set).
+      enabled: true
+      # Actions of the policy bindings. Set to [Deny] to reject incompatible objects.
+      # With Deny, pre-existing non-compliant GatewayConfigurations make Gateway
+      # reconciliation fail when the operator creates or updates their DataPlane.
+      validationActions:
+        - Warn
+        - Audit
   webhooks:
     options:
       certManager:
