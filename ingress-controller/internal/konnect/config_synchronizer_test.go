@@ -356,31 +356,37 @@ func runSynchronizer(ctx context.Context, t *testing.T, s *konnect.ConfigSynchro
 	}()
 }
 
-// konnectConfigSyncRecorder is a metrics recorder capturing recorded Konnect config sync rounds.
+// recordedSyncRound is a Konnect config sync round captured by konnectConfigSyncRecorder.
+type recordedSyncRound struct {
+	sync metrics.KonnectConfigSync
+	// err is nil for successful rounds.
+	err error
+}
+
+// konnectConfigSyncRecorder is a metrics recorder capturing recorded Konnect config sync rounds in order.
 type konnectConfigSyncRecorder struct {
 	mocks.MetricsRecorder
 
-	lock      sync.Mutex
-	successes []metrics.KonnectConfigSync
-	failures  []metrics.KonnectConfigSync
+	lock   sync.Mutex
+	rounds []recordedSyncRound
 }
 
 func (r *konnectConfigSyncRecorder) RecordKonnectConfigSyncSuccess(s metrics.KonnectConfigSync) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	r.successes = append(r.successes, s)
+	r.rounds = append(r.rounds, recordedSyncRound{sync: s})
 }
 
-func (r *konnectConfigSyncRecorder) RecordKonnectConfigSyncFailure(s metrics.KonnectConfigSync, _ error) {
+func (r *konnectConfigSyncRecorder) RecordKonnectConfigSyncFailure(s metrics.KonnectConfigSync, err error) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	r.failures = append(r.failures, s)
+	r.rounds = append(r.rounds, recordedSyncRound{sync: s, err: err})
 }
 
-func (r *konnectConfigSyncRecorder) recorded() (successes, failures []metrics.KonnectConfigSync) {
+func (r *konnectConfigSyncRecorder) recorded() []recordedSyncRound {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	return slices.Clone(r.successes), slices.Clone(r.failures)
+	return slices.Clone(r.rounds)
 }
 
 func TestConfigSynchronizer_RecordsSyncRoundMetrics(t *testing.T) {
@@ -389,20 +395,21 @@ func TestConfigSynchronizer_RecordsSyncRoundMetrics(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		configurationChanged bool
-		returnErrorOnUpdate  bool
-		expectSuccess        bool
-		expectFailure        bool
+		// returnErrorOnUpdate makes the first update fail. Later updates succeed as the mock returns
+		// the queued error only once, so only the first recorded round is checked.
+		returnErrorOnUpdate bool
+		expectRecorded      bool
 	}{
 		{
 			name:                 "success",
 			configurationChanged: true,
-			expectSuccess:        true,
+			expectRecorded:       true,
 		},
 		{
 			name:                 "failure",
 			configurationChanged: true,
 			returnErrorOnUpdate:  true,
-			expectFailure:        true,
+			expectRecorded:       true,
 		},
 		{
 			name:                 "no configuration change is not recorded",
@@ -445,30 +452,28 @@ func TestConfigSynchronizer_RecordsSyncRoundMetrics(t *testing.T) {
 				},
 			}, false)
 
-			if !tc.expectSuccess && !tc.expectFailure {
+			if !tc.expectRecorded {
 				asserts.Never(t, func(_ context.Context) bool {
-					successes, failures := recorder.recorded()
-					return len(successes) != 0 || len(failures) != 0
+					return len(recorder.recorded()) != 0
 				}, testSendConfigNeverTimeout, testSendConfigAssertionTick,
 					"should not record sync rounds when configuration was not synchronized")
 				return
 			}
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				successes, failures := recorder.recorded()
-				recorded := successes
-				if tc.expectFailure {
-					require.Empty(t, successes, "should not record successful sync rounds")
-					recorded = failures
+				rounds := recorder.recorded()
+				require.NotEmpty(t, rounds, "should record sync rounds")
+				// Sync rounds run sequentially, so the first recorded round is the first upload.
+				first := rounds[0]
+				if tc.returnErrorOnUpdate {
+					require.ErrorContains(t, first.err, "error on update", "first sync round should be recorded as failed")
 				} else {
-					require.Empty(t, failures, "should not record failed sync rounds")
+					require.NoError(t, first.err, "first sync round should be recorded as successful")
 				}
-				require.NotEmpty(t, recorded, "should record sync rounds")
-				syncRound := recorded[0]
-				require.Equal(t, testKonnectClient.BaseRootURL(), syncRound.ServerURL)
-				require.Equal(t, konnectConcurrency, syncRound.Concurrency)
-				require.Equal(t, 1, syncRound.EntityCount)
-				require.Positive(t, syncRound.Duration)
+				require.Equal(t, testKonnectClient.BaseRootURL(), first.sync.ServerURL)
+				require.Equal(t, konnectConcurrency, first.sync.Concurrency)
+				require.Equal(t, 1, first.sync.EntityCount)
+				require.Positive(t, first.sync.Duration)
 			}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
 		})
 	}
