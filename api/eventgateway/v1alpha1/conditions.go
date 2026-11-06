@@ -108,6 +108,11 @@ const (
 	// KonnectEventGatewayNotProgrammedReason indicates the referenced
 	// KonnectEventGateway exists but is not yet Programmed on Konnect.
 	KonnectEventGatewayNotProgrammedReason consts.ConditionReason = "NotProgrammed"
+	// KonnectEventGatewayEndpointMismatchReason indicates the referenced
+	// KonnectEventGateway cannot be reached with its serverURL: it carries a
+	// path, and the Event Gateway composes a public Konnect host from the
+	// region and the domain the data plane derives from it.
+	KonnectEventGatewayEndpointMismatchReason consts.ConditionReason = "EndpointMismatch"
 )
 
 // -----------------------------------------------------------------------------

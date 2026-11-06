@@ -149,7 +149,7 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 	// cannot use: holding it here keeps a data plane from booting against the
 	// wrong Konnect endpoint.
 	if cpKindCfg.EndpointCheck != nil {
-		if err := cpKindCfg.EndpointCheck(cp); err != nil {
+		if err := cpKindCfg.EndpointCheck(dp, cp); err != nil {
 			log.Debug(logger, "referenced "+cpKindCfg.Kind+" has unusable endpoints",
 				"ref", ref.Name, "error", err.Error())
 

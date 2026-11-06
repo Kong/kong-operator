@@ -426,8 +426,9 @@ func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp sharedda
 
 // checkKonnectAIGatewayEndpoints reports whether the endpoints of a resolved
 // KonnectAIGateway can be used: a nil Status.Endpoints is left to
-// buildAIGatewayEnvVars, which refuses it with its own message.
-func checkKonnectAIGatewayEndpoints(cp shareddataplane.ControlPlaneObject) error {
+// buildAIGatewayEnvVars, which refuses it with its own message. The verdict
+// does not depend on the AIGatewayDataPlane spec.
+func checkKonnectAIGatewayEndpoints(_ shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	aigw, ok := cp.(*konnectv1alpha1.KonnectAIGateway)
 	if !ok {
 		return fmt.Errorf("unexpected control plane object %T", cp)

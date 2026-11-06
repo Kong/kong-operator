@@ -120,3 +120,49 @@ func TestKonnectEventGatewayUpdate5xxDoesNotHotLoop(t *testing.T) {
 		"UpdateEventGateway called too many times: reconciler is hot-looping on 5xx errors")
 	t.Logf("UpdateEventGateway calls before window: %d, total: %d", callsBefore, updateCalls.Load())
 }
+
+// TestKonnectEventGatewayKeepsAPrivateServerURL pins the field the KegDataPlane
+// verdict reads: a private serverURL must reach the entity status with its path,
+// or that verdict would never fire and the data plane would reach Konnect over
+// the public internet.
+func TestKonnectEventGatewayKeepsAPrivateServerURL(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := envtest.Context(t, t.Context())
+	defer cancel()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
+	factory := sdkmocks.NewMockSDKFactory(t)
+	sdk := factory.SDK
+	envtest.StartReconcilers(ctx, t, mgr, logs,
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectEventGateway](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[konnectv1alpha1.KonnectEventGateway](&metricsmocks.MockRecorder{}),
+		),
+	)
+
+	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+
+	sdk.EventGatewaysSDK.EXPECT().
+		CreateEventGateway(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.CreateEventGatewayResponse{
+			EventGatewayInfo: &sdkkonnectcomp.EventGatewayInfo{ID: "event-gateway-private"},
+		}, nil)
+
+	t.Log("Creating KonnectAPIAuthConfiguration on the private serverURL and KonnectEventGateway")
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced,
+		deploy.KonnectAPIAuthConfigurationWithTestToken("kpat_privatepathfaketoken", envtest.KonnectPrivateServerURL))
+	gateway := deploy.KonnectEventGateway(t, ctx, clientNamespaced, apiAuth)
+
+	t.Log("Waiting for KonnectEventGateway to be Programmed with the private serverURL in status")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		var got konnectv1alpha1.KonnectEventGateway
+		if !assert.NoError(c, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(gateway), &got)) {
+			return
+		}
+		assert.True(c, k8sutils.IsProgrammed(&got))
+		assert.Equal(c, envtest.KonnectPrivateServerURL, got.Status.ServerURL,
+			"the private serverURL must reach the entity status with its path")
+	}, consts.WaitTime, consts.TickTime)
+}
