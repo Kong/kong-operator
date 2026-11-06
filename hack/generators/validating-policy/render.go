@@ -56,7 +56,7 @@ func renderChartTemplate(kustomized, helmValueName string, overrides []policyOve
 			continue
 		}
 		if d.Kind == "ValidatingAdmissionPolicyBinding" {
-			templated, err := templateValidationActions(doc, overrides[i].helmValueName)
+			templated, err := templateValidationActions(doc, overrides[i].helmValueName, overrides[i].policyName)
 			if err != nil {
 				return "", err
 			}
@@ -88,9 +88,9 @@ func wrapBlockInIfEnabled(valueName string, docs []string) string {
 		valueName, strings.Join(docs, "\n---\n"))
 }
 
-func templateValidationActions(doc, valueName string) (string, error) {
+func templateValidationActions(doc, valueName, policyName string) (string, error) {
 	if !validationActionsRe.MatchString(doc) {
-		return "", fmt.Errorf("validationActions not found in binding for %q", valueName)
+		return "", fmt.Errorf("validationActions not found in binding for %q", policyName)
 	}
 	return validationActionsRe.ReplaceAllStringFunc(doc, func(m string) string {
 		r := fmt.Sprintf("  validationActions:\n  {{- toYaml .Values.global.validatingPolicies.%s.validationActions | nindent 2 }}", valueName)

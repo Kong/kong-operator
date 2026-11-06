@@ -666,6 +666,7 @@ func TestDataPlanePDBReplicasValidatingAdmissionPolicyDeny(t *testing.T) {
 		require.NoError(t, cl.Create(ctx, dp))
 	})
 
+	// The subtests below share and mutate `existing`: order-dependent, must run sequentially.
 	t.Run("metadata-only update of existing non-compliant object is allowed", func(t *testing.T) {
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(existing), existing))
 		existing.Labels = map[string]string{"ratchet": "true"}
