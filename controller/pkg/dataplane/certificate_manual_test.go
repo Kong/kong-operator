@@ -79,8 +79,8 @@ func tlsSecret(name string, crt, key []byte) *corev1.Secret {
 }
 
 func TestCertificateChecksum(t *testing.T) {
-	crt, key := certificate.MustGenerateCertPEMFormat()
-	_, otherKey := certificate.MustGenerateCertPEMFormat()
+	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
+	_, otherKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 
 	base := CertificateChecksum(tlsSecret("s", crt, key))
 	assert.Len(t, base, 64)
@@ -114,9 +114,9 @@ func TestCertEntityName(t *testing.T) {
 
 func TestValidateManualCertificate(t *testing.T) {
 	now := time.Now()
-	crt, key := certificate.MustGenerateCertPEMFormat()
-	_, otherKey := certificate.MustGenerateCertPEMFormat()
-	expiredCrt, expiredKey := certificate.MustGenerateCertPEMFormat(certificate.WithAlreadyExpired())
+	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
+	_, otherKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
+	expiredCrt, expiredKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithAlreadyExpired())
 
 	tests := []struct {
 		name        string
@@ -158,13 +158,13 @@ func TestValidateManualCertificate(t *testing.T) {
 	}
 
 	t.Run("NotBefore within the clock skew allowance is accepted", func(t *testing.T) {
-		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(time.Minute), now.Add(time.Hour)))
+		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.Add(time.Minute), now.Add(time.Hour)))
 		require.NoError(t, validateManualCertificate(tlsSecret("s", crt, key), now))
 	})
 
 	t.Run("NotBefore beyond the clock skew allowance is rejected with a requeue", func(t *testing.T) {
 		notBefore := now.Add(time.Hour)
-		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(notBefore, now.Add(2*time.Hour)))
+		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(notBefore, now.Add(2*time.Hour)))
 		err := validateManualCertificate(tlsSecret("s", crt, key), now)
 
 		var requeue *RequeueAfterError
@@ -175,7 +175,7 @@ func TestValidateManualCertificate(t *testing.T) {
 	})
 
 	t.Run("far-future NotBefore requeues after at most maxCertificateRequeue", func(t *testing.T) {
-		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.AddDate(70, 0, 0), now.AddDate(71, 0, 0)))
+		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.AddDate(70, 0, 0), now.AddDate(71, 0, 0)))
 		var requeue *RequeueAfterError
 		require.ErrorAs(t, validateManualCertificate(tlsSecret("s", crt, key), now), &requeue)
 		assert.Equal(t, maxCertificateRequeue, requeue.After)
@@ -184,8 +184,8 @@ func TestValidateManualCertificate(t *testing.T) {
 
 func TestManualCertificateExpiryRequeue(t *testing.T) {
 	now := time.Now()
-	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
-	expiredCrt, expiredKey := certificate.MustGenerateCertPEMFormat(certificate.WithAlreadyExpired())
+	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
+	expiredCrt, expiredKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithAlreadyExpired())
 
 	automatic := tlsSecret("s", crt, key)
 	automatic.Labels = map[string]string{consts.SecretProvisioningLabelKey: consts.SecretProvisioningAutomaticLabelValue}
@@ -197,17 +197,17 @@ func TestManualCertificateExpiryRequeue(t *testing.T) {
 	assert.Zero(t, manualCertificateExpiryRequeue(tlsSecret("s", []byte("x"), []byte("y")), now), "unparsable")
 	assert.Zero(t, manualCertificateExpiryRequeue(nil, now))
 
-	longLivedCrt, longLivedKey := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), now.Add(48*time.Hour)))
+	longLivedCrt, longLivedKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.Add(-time.Hour), now.Add(48*time.Hour)))
 	assert.Equal(t, maxCertificateRequeue, manualCertificateExpiryRequeue(tlsSecret("s", longLivedCrt, longLivedKey), now),
 		"long-lived certificates are re-validated at most a day apart")
-	noExpiryCrt, noExpiryKey := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)))
+	noExpiryCrt, noExpiryKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.Add(-time.Hour), time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)))
 	assert.Equal(t, maxCertificateRequeue, manualCertificateExpiryRequeue(tlsSecret("s", noExpiryCrt, noExpiryKey), now),
 		"a 9999-12-31 NotAfter must not overflow into a negative delay")
 }
 
 func TestCertificateRequeue(t *testing.T) {
 	now := time.Now()
-	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
+	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
 	manual := tlsSecret("s", crt, key)
 	automatic := tlsSecret("s", crt, key)
 	automatic.Labels = map[string]string{consts.SecretProvisioningLabelKey: consts.SecretProvisioningAutomaticLabelValue}
@@ -248,8 +248,8 @@ func TestCertificateRequeue(t *testing.T) {
 
 func TestGetManualCertificateSecret(t *testing.T) {
 	scheme := managerscheme.Get()
-	crt, key := certificate.MustGenerateCertPEMFormat()
-	_, otherKey := certificate.MustGenerateCertPEMFormat()
+	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
+	_, otherKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 
 	operatorManaged := tlsSecret(manualTestSecretName, crt, key)
 	operatorManaged.Labels = map[string]string{
@@ -310,7 +310,7 @@ func TestGetManualCertificateSecret(t *testing.T) {
 
 	t.Run("not yet valid certificate: InvalidSecret and a requeue for when it becomes valid", func(t *testing.T) {
 		dp := newManualTestDP()
-		notYetCrt, notYetKey := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(time.Now().Add(time.Hour), time.Now().Add(2*time.Hour)))
+		notYetCrt, notYetKey := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithValidity(time.Now().Add(time.Hour), time.Now().Add(2*time.Hour)))
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tlsSecret(manualTestSecretName, notYetCrt, notYetKey)).Build()
 
 		_, secret, err := GetManualCertificateSecret(t.Context(), cl, dp, manualTestSecretName, manualTestConditions)

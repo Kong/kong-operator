@@ -14,12 +14,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/pki"
-	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -936,7 +934,7 @@ func TestEnsureTLS_SecretHiddenFromTheCache(t *testing.T) {
 			// Without the operator's secret label, the Secret is not cached:
 			// Get misses it, Create runs into it.
 			foreign := &corev1.Secret{Name: key.Name, Namespace: key.Namespace, Data: map[string][]byte{"k": []byte("v")}}
-			base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, foreign).Build()
+			base := newFakeClientBuilder().WithObjects(gw, foreign).Build()
 			r := reconcilerWith(hidingClient(base, key.Name), &now)
 
 			_, err := r.ensureTLS(t.Context(), gw, nil)

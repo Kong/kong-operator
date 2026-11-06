@@ -24,7 +24,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -51,9 +53,20 @@ func newGWAdmin(tlsSpec *operatorv1alpha1.GWAdminTLS) *operatorv1alpha1.GWAdmin 
 	}
 }
 
+// newFakeClientBuilder returns a fake client builder whose plain object tracker
+// skips client-go's per-call static REST mapper rebuild, which dominates the
+// cost of the TLS suite. Apply does not work over it: use
+// newReconcileClient for the tests that apply objects.
+func newFakeClientBuilder() *fake.ClientBuilder {
+	sm := managerscheme.Get()
+	return fake.NewClientBuilder().
+		WithScheme(sm).
+		WithObjectTracker(k8stesting.NewObjectTracker(sm, serializer.NewCodecFactory(sm).UniversalDecoder()))
+}
+
 func newReconciler(t *testing.T, now *time.Time, objs ...client.Object) *Reconciler {
 	t.Helper()
-	return reconcilerWith(fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(objs...).Build(), now)
+	return reconcilerWith(newFakeClientBuilder().WithObjects(objs...).Build(), now)
 }
 
 // userCASecretName is the name of the Secret userCASecret returns.

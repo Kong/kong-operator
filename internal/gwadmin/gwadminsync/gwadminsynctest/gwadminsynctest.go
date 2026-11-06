@@ -72,7 +72,7 @@ func NewGWAdmin(t *testing.T, namespace string, endpoints ...discoveryv1.Endpoin
 	gw.Status.API = &operatorv1alpha1.GWAdminAPIStatus{ServiceName: APIServiceName, PortName: consts.GWAdminAPIPortName, Port: APIPort}
 	gw.Status.CP = &operatorv1alpha1.GWAdminCPStatus{ServerURL: ServerURL(namespace)}
 	gw.Status.TLS = &operatorv1alpha1.GWAdminTLSStatus{APICABundleSecretName: APIBundleSecret}
-	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("kong-operator"))
+	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("kong-operator"))
 	return &GWAdmin{
 		GWAdmin: gw,
 		Bundle: &corev1.Secret{
@@ -158,7 +158,7 @@ type CA struct {
 // NewCA returns a certificate authority.
 func NewCA(t *testing.T, commonName string) CA {
 	t.Helper()
-	ca := certificate.MustGenerateCert(certificate.WithCATrue(), certificate.WithCommonName(commonName))
+	ca := certificate.MustGenerateCert(certificate.WithKeyType(certificate.ECDSA), certificate.WithCATrue(), certificate.WithCommonName(commonName))
 	cert, err := x509.ParseCertificate(ca.Certificate[0])
 	require.NoError(t, err)
 	certPEM, _ := certificate.CertToPEMFormat(ca)
@@ -168,5 +168,5 @@ func NewCA(t *testing.T, commonName string) CA {
 // Issue returns a certificate issued by the CA, with its key, in PEM.
 func (ca CA) Issue(commonName string, dnsNames ...string) (certPEM, keyPEM []byte) {
 	return certificate.MustGenerateCertPEMFormat(
-		certificate.WithParent(ca.tls), certificate.WithCommonName(commonName), certificate.WithDNSNames(dnsNames...))
+		certificate.WithKeyType(certificate.ECDSA), certificate.WithParent(ca.tls), certificate.WithCommonName(commonName), certificate.WithDNSNames(dnsNames...))
 }

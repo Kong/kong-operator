@@ -3,11 +3,13 @@ package ipfamily_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -96,6 +98,7 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("auto returns an error when detection fails", func(t *testing.T) {
+		t.Cleanup(ipfamily.SetDetectBackoff(wait.Backoff{Duration: time.Millisecond, Factor: 1, Steps: 6}))
 		cl := newFakeClient(t).Build()
 		got, err := ipfamily.Resolve(t.Context(), ipfamily.Auto, cl, log)
 		require.Error(t, err)
