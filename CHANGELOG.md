@@ -110,7 +110,7 @@
   example `https://global.svc.konghq.com/api` for
   `https://us.svc.konghq.com/api`) instead of the public global host, so they
   can be managed over AWS PrivateLink by adding a `GLOBAL` VPC endpoint.
-  [#6110](https://github.com/Kong/kong-operator/issues/6110)
+  [#6313](https://github.com/Kong/kong-operator/pull/6313)
 
 ### Changed
 
