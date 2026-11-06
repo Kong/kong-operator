@@ -1,0 +1,229 @@
+# The private path, exercised without AWS: a fake Konnect API answers on the
+# private hostnames (us.svc.konghq.tech, global.svc.konghq.tech) inside the
+# cluster, the cluster DNS points at it, and the operator trusts its
+# certificate. The fixture is test/e2e/chainsaw/fixtures/konnect-private.
+#
+# What it proves: the operator authenticates and reconciles over the private
+# hostname, and the data plane it renders carries the private control plane and
+# telemetry endpoints. Deviation, on purpose: the certificate is a test one,
+# injected into the operator, while the endpoint Kong serves over PrivateLink is
+# publicly trusted.
+#
+# The Dedicated Cloud Gateway calls are not covered here: they leave the private
+# path today (Kong/kong-operator#6110), which the envtest layer pins.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnect-private-path
+spec:
+  description: |
+    Runs the operator against a fake Konnect API on the private hostnames:
+    1. A KonnectAPIAuthConfiguration with a private serverURL becomes valid and
+       resolves the organization.
+    2. A KonnectGatewayControlPlane reconciles and reports the private control
+       plane and telemetry endpoints.
+    3. A KonnectExtension becomes ready.
+    4. A DataPlane gets the private endpoints in its environment.
+    5. The fake received the calls on the private paths.
+
+  bindings:
+    # The hosts, the /api prefix and the endpoint shapes were observed on
+    # Konnect dev on 2026-10-13; the identifiers and the abc123 suffix are placeholders.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: kpat_privatepathfaketoken
+    - name: konnect_url
+      value: us.svc.konghq.tech/api
+    - name: konnect_org_id
+      value: 5f9fd312-a987-4628-b4c5-bb4f4fddd5f7
+    - name: control_plane_id
+      value: aee0667a-90c6-45a6-a2d8-575e1e487b86
+    # What Konnect returns, and what the operator renders from it for the data
+    # plane: the port lands before the path in the rendered form.
+    - name: cp_endpoint
+      value: us.svc.konghq.tech/cp/abc123
+    - name: tp_endpoint
+      value: us.svc.konghq.tech/tp/abc123
+    - name: tp_address
+      value: us.svc.konghq.tech:443/tp/abc123
+    - name: auth_name
+      value: (join('-', [($namespace), 'konnect-api-auth']))
+    - name: cp_name
+      value: (join('-', [($namespace), 'cp']))
+    - name: extension_name
+      value: (join('-', [($namespace), 'extension']))
+    - name: dataplane_name
+      value: (join('-', [($namespace), 'dp']))
+    - name: dataplane_image
+      value: (env('GATEWAY_IMAGE'))
+
+  steps:
+    - name: Create-api-auth
+      description: A private serverURL authenticates.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: Assert-api-auth-resolved-the-organization
+      description: The private serverURL resolved the organization.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAPIAuthConfiguration
+              metadata:
+                name: ($auth_name)
+                namespace: ($namespace)
+              status:
+                organizationID: ($konnect_org_id)
+
+    - name: Create-control-plane
+      description: The control plane reconciles over the private host.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+      bindings:
+        - {name: cp_name, value: ($cp_name)}
+        - {name: cp_namespace, value: ($namespace)}
+        - {name: auth_name, value: ($auth_name)}
+
+    - name: Assert-control-plane-endpoints
+      description: The control plane reports the private control plane and telemetry endpoints.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              status:
+                (konnectEndpoints.controlPlane): (join('', ['https://', ($cp_endpoint)]))
+                (konnectEndpoints.telemetry): (join('', ['https://', ($tp_endpoint)]))
+
+    - name: Create-extension
+      description: The KonnectExtension becomes ready against the fake Konnect.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectExtension.yaml
+      bindings:
+        - {name: extension_name, value: ($extension_name)}
+        - {name: extension_namespace, value: ($namespace)}
+        - {name: cp_name, value: ($cp_name)}
+
+    - name: Assert-extension-endpoints
+      description: The extension carries the private control plane endpoint.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($extension_name)
+                namespace: ($namespace)
+              status:
+                (konnect.endpoints.controlPlane): (join('', ['https://', ($cp_endpoint)]))
+
+    - name: Create-data-plane
+      description: The DataPlane carries the private control plane and telemetry endpoints.
+      try:
+        # Not the shared data plane template: it asserts Ready, and a data plane
+        # cannot become ready against a fake control plane that does not speak
+        # the Konnect protocol. The environment is what matters here.
+        - apply:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1beta1
+              kind: DataPlane
+              metadata:
+                name: ($dataplane_name)
+                namespace: ($namespace)
+              spec:
+                extensions:
+                  - kind: KonnectExtension
+                    name: ($extension_name)
+                    group: konnect.konghq.com
+                deployment:
+                  replicas: 1
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: proxy
+                          image: ($dataplane_image)
+                          readinessProbe:
+                            initialDelaySeconds: 1
+                            periodSeconds: 1
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_LABEL_SELECTOR
+                value: (join('=', ['app', ($dataplane_name)]))
+              - name: CONTAINER
+                value: proxy
+              - name: EXPECTED_ENV
+                value: (join(';', [join('=', ['KONG_CLUSTER_CONTROL_PLANE', ($cp_endpoint)]), join('=', ['KONG_CLUSTER_SERVER_NAME', 'us.svc.konghq.tech']), join('=', ['KONG_CLUSTER_TELEMETRY_ENDPOINT', ($tp_address)]), join('=', ['KONG_CLUSTER_TELEMETRY_SERVER_NAME', 'us.svc.konghq.tech'])]))
+            timeout: 3m
+            content: |
+              bash ../../common/scripts/assert-deployment-env.sh
+      cleanup:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DATAPLANE
+                value: ($dataplane_name)
+            content: |
+              kubectl -n "$NAMESPACE" delete deploy -l "app=$DATAPLANE" --ignore-not-found
+
+    - name: Assert-the-fake-received-the-private-calls
+      description: The fake Konnect logged the calls on the private paths.
+      try:
+        - script:
+            timeout: 2m
+            content: |
+              set -o errexit
+              set -o nounset
+
+              deadline=$((SECONDS + 60))
+              logs=""
+              until logs=$(kubectl -n konnect-private-stub logs deploy/konnect-stub --tail=-1 2>/dev/null) &&
+                echo "$logs" | grep -q "POST /api/v2/control-planes"; do
+                if (( SECONDS >= deadline )); then
+                  echo "the fake Konnect never logged the control plane create" >&2
+                  echo "$logs" | tail -20 >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+
+              # Every one of these has to have been served: a 404 means the
+              # operator called a path the fake does not know.
+              for want in \
+                "GET /api/v3/organizations/me" \
+                "POST /api/v2/control-planes" \
+                "POST /api/v2/control-planes/aee0667a-90c6-45a6-a2d8-575e1e487b86/dp-client-certificates"
+              do
+                line=$(echo "$logs" | grep -F "\"$want" | head -1)
+                if [ -z "$line" ]; then
+                  echo "the fake Konnect never served: $want" >&2
+                  echo "$logs" | tail -20 >&2
+                  exit 1
+                fi
+                case "$line" in
+                  *" 404 "*) echo "the fake Konnect answered 404 to: $want" >&2; exit 1 ;;
+                esac
+                echo "ok: $line"
+              done
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+          - name: ADDITIONAL_NAMESPACES
+            value: konnect-private-stub
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
