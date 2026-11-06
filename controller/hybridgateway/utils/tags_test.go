@@ -71,6 +71,18 @@ func TestTagsFromBackendRefs(t *testing.T) {
 			expected: []string{"c"},
 		},
 		{
+			name:     "reserved tags are dropped",
+			objects:  []runtime.Object{tagsSvc("svc-a", map[string]string{"konghq.com/tags": "a,k8s-uid:1234,managed-by:someone-else"})},
+			refs:     []gwtypes.BackendRef{backendRef("svc-a")},
+			expected: []string{"a"},
+		},
+		{
+			name:     "service with only reserved tags does not shadow the next tagged service",
+			objects:  []runtime.Object{tagsSvc("svc-a", map[string]string{"konghq.com/tags": "k8s-name:other"}), tagsSvc("svc-b", map[string]string{"konghq.com/tags": "c"})},
+			refs:     []gwtypes.BackendRef{backendRef("svc-a"), backendRef("svc-b")},
+			expected: []string{"c"},
+		},
+		{
 			name:     "missing service is skipped",
 			objects:  nil,
 			refs:     []gwtypes.BackendRef{backendRef("ghost")},
