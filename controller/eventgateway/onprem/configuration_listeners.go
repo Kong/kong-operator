@@ -60,7 +60,8 @@ func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gatewa
 		},
 		nil,
 		entityKind[*configurationv1alpha1.EventGatewayListenerPolicy, gwadminapi.EventGatewayListenerPolicyOnPrem]{
-			kind: "EventGatewayListenerPolicy",
+			kind:   "EventGatewayListenerPolicy",
+			unique: policyName[gwadminapi.EventGatewayListenerPolicyOnPrem],
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayListenerPolicy) (any, error) {
 				if err := checkPolicyReferences(ctx, cl, p, p.Spec.APISpec); err != nil {
 					return nil, err
