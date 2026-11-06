@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -239,17 +238,17 @@ func TestMapKongReferenceGrantToEntities(t *testing.T) {
 	grant := secretReferenceGrant("secrets", "AIGatewayAuthStrategy")
 
 	strategies := mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](cl)(t.Context(), grant)
-	require.Equal(t, []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cross-ns-strat"}}}, strategies)
+	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cross-ns-strat"}}, strategies)
 
 	// A credential has no aiGatewayRef: its reconciler checks the ownership itself.
 	creds := mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl)(t.Context(), grant)
-	require.Equal(t, []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cred"}}}, creds)
+	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cred"}}, creds)
 
 	// A grant in the gateway's namespace governs the entities of another namespace
 	// that reference the gateway, not the ones of the gateway's namespace.
 	gatewayGrant := referenceGrant("default", "other", "AIGatewayModel", toOnPremAIGateway)
 	models := mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayModelList](cl)(t.Context(), gatewayGrant)
-	require.Equal(t, []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: "other", Name: "cross-ns-model"}}}, models)
+	require.Equal(t, []reconcile.Request{{Namespace: "other", Name: "cross-ns-model"}}, models)
 	require.Empty(t, mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayModelList](cl)(t.Context(), grant))
 
 	// Another object kind enqueues nothing.

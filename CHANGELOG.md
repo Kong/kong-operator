@@ -83,7 +83,7 @@
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
 - On-prem AI Gateway: an entity with a cross-namespace reference now reports a
   `ResolvedRefs` condition for cross-namespace `aiGatewayRef` and `secretRef`.
-  [#6454](https://github.com/Kong/kong-operator/issues/6454)
+  [#6457](https://github.com/Kong/kong-operator/pull/6457)
 
 ### Changed
 
