@@ -56,7 +56,7 @@ func TestListenerTLSPassthroughIgnoresCertificateRefs(t *testing.T) {
 				},
 			}).Build()
 			kinds, condition, err := getSupportedKindsWithResolvedRefsCondition(t.Context(), cl, referencegranthelpers.V1(),
-				*gateway, gateway.Generation, gateway.Spec.Listeners[0])
+				*gateway, gateway.Generation, gateway.Spec.Listeners[0], nil)
 			require.NoError(t, err)
 			require.Equal(t, []gatewayv1.RouteGroupKind{{Group: new(gatewayv1.Group(gatewayv1.GroupName)), Kind: "TLSRoute"}}, kinds)
 			require.Equal(t, metav1.ConditionTrue, condition.Status)
@@ -153,7 +153,7 @@ func TestListenerKongCertificateInvalidStatus(t *testing.T) {
 	_, condition, err := getSupportedKindsWithResolvedRefsCondition(t.Context(), cl, referencegranthelpers.V1(),
 		gwtypes.Gateway{Namespace: "gateways"}, 3, gatewayv1.Listener{
 			Protocol: gatewayv1.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{CertificateRefs: []gatewayv1.SecretObjectReference{ref}},
-		})
+		}, nil)
 	require.NoError(t, err)
 	require.Equal(t, metav1.ConditionFalse, condition.Status)
 	require.Equal(t, string(gatewayv1.ListenerReasonInvalidCertificateRef), condition.Reason)
