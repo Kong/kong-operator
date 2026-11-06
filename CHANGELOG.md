@@ -89,6 +89,15 @@
   from being issued.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
 
+### Fixes
+
+- `Gateway`: Missing route CRDs are now skipped when counting attached routes, and
+  listener `supportedKinds` reflects the route CRDs installed in the cluster.
+  Listeners whose protocol has no installed route kind at all report `ResolvedRefs=False`
+  with reason `InvalidRouteKinds`, and so do listeners that explicitly allow a
+  route kind whose CRD is not installed in the cluster.
+  [#6482](https://github.com/Kong/kong-operator/pull/6482)
+
 ## [v2.4.0-rapid.3.1]
 
 > Release date: 2026-11-04

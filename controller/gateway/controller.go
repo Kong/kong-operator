@@ -88,6 +88,10 @@ type Reconciler struct {
 	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
 	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
 	ReferenceGrantVersion schema.GroupVersion
+
+	// installedRouteKinds holds the route kinds whose CRDs exist at startup.
+	// The watches use the same set, so a CRD installed later needs an operator restart.
+	installedRouteKinds routeKindSet
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -167,17 +171,18 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
-	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
-	tlsRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "tlsroutes",
-	}
-	tlsRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tlsRouteGVR)
+	// Detect the route kinds whose CRDs the cluster serves: they gate the route
+	// watches, the AttachedRoutes counting and the supportedKinds status. Watching
+	// a resource that does not exist would trigger reconciliation for all the
+	// Gateways on every event in the cluster.
+	var err error
+	r.installedRouteKinds, err = detectInstalledRouteKinds(r.RESTMapper())
 	if err != nil {
-		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
+		return err
 	}
-	if tlsRouteExist {
+
+	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster.
+	if r.installedRouteKinds.has("TLSRoute") {
 		blder.Watches(
 			&gatewayv1.TLSRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
@@ -187,16 +192,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "TLSRoute CRD not found in cluster, skipping watch for TLSRoute resources")
 	}
 
-	grpcRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "grpcroutes",
-	}
-	grpcRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), grpcRouteGVR)
-	if err != nil {
-		return fmt.Errorf("failed to check if GRPCRoute CRD exists: %w", err)
-	}
-	if grpcRouteExist {
+	if r.installedRouteKinds.has("GRPCRoute") {
 		blder.Watches(
 			&gatewayv1.GRPCRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByGRPCRoute),
@@ -206,16 +202,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "GRPCRoute CRD not found in cluster, skipping watch for GRPCRoute resources")
 	}
 
-	udpRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "udproutes",
-	}
-	udpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), udpRouteGVR)
-	if err != nil {
-		return fmt.Errorf("failed to check if UDPRoute CRD exists: %w", err)
-	}
-	if udpRouteExist {
+	if r.installedRouteKinds.has("UDPRoute") {
 		blder.Watches(
 			&gwtypes.UDPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByUDPRoute),
@@ -225,16 +212,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "UDPRoute CRD not found in cluster, skipping watch for UDPRoute resources")
 	}
 
-	tcpRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupName,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "tcproutes",
-	}
-	tcpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tcpRouteGVR)
-	if err != nil {
-		return err
-	}
-	if tcpRouteExist {
+	if r.installedRouteKinds.has("TCPRoute") {
 		blder.Watches(
 			&gatewayv1.TCPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
@@ -314,12 +292,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	log.Trace(logger, "resource is supported that it gets marked as accepted")
 	gwConditionAware.initListenersStatus()
 	gwConditionAware.setConflicted()
-	if err = gwConditionAware.setAcceptedAndAttachedRoutes(ctx, r.Client); err != nil {
+	if err = gwConditionAware.setAcceptedAndAttachedRoutes(ctx, r.Client, r.installedRouteKinds); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	gwConditionAware.initProgrammedAndListenersStatus()
-	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion); err != nil {
+	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion, r.installedRouteKinds); err != nil {
 		return ctrl.Result{}, err
 	}
 	// Validate the infrastructure.parametersRef early. If it references an
