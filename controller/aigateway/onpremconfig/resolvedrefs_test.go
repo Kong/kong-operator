@@ -1,6 +1,8 @@
 package onpremconfig
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -9,10 +11,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
@@ -314,4 +318,67 @@ func TestCredentialReconcilerWritesResolvedRefsCondition(t *testing.T) {
 	require.NotNil(t, cond)
 	require.Equal(t, metav1.ConditionFalse, cond.Status)
 	require.Equal(t, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted, cond.Reason)
+}
+
+// errGrantListOutsideCache is what the instance's cache returns when it lists the
+// KongReferenceGrants of a namespace the gateway does not watch.
+var errGrantListOutsideCache = errors.New("unable to list: unwatched because of unknown namespace for the cache")
+
+// failingGrantListClient fails every KongReferenceGrant list with errGrantListOutsideCache.
+func failingGrantListClient(base client.Client) client.Client {
+	return interceptor.NewClient(base.(client.WithWatch), interceptor.Funcs{
+		List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+			if _, ok := list.(*configurationv1alpha1.KongReferenceGrantList); ok {
+				return errGrantListOutsideCache
+			}
+			return c.List(ctx, list, opts...)
+		},
+	})
+}
+
+// A failed KongReferenceGrant check must not hold back the Programmed condition, which
+// reports the translation's failure; the error is still returned, so the check retries.
+func TestReconcilerWritesProgrammedWhenGrantCheckFails(t *testing.T) {
+	t.Parallel()
+
+	strategy := authStrategyWithSecretRefNamespace("strat", new("unwatched"))
+	cl := failingGrantListClient(newReconcilerClient(t, strategy))
+	rec := &AIGatewayAuthStrategyReconciler{}
+	rec.SetCommonFields(
+		cl, nil, logr.Discard(), 0, changenotifier.New(),
+		&stubStatusClient{configStatus: status.ConfigurationStatusFailed, message: "grant check failed", enableState: true},
+		nil,
+	)
+
+	_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(strategy)})
+	require.ErrorIs(t, err, errGrantListOutsideCache)
+
+	stored := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{}
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(strategy), stored))
+	programmed := apimeta.FindStatusCondition(stored.Status.Conditions, string(configurationv1.ConditionProgrammed))
+	require.NotNil(t, programmed)
+	require.Equal(t, metav1.ConditionFalse, programmed.Status)
+	require.Equal(t, "grant check failed", programmed.Message)
+	// The check did not conclude, so no ResolvedRefs condition is invented.
+	require.Nil(t, resolvedRefsCondition(stored.Status.Conditions))
+}
+
+func TestCredentialReconcilerWritesProgrammedWhenGrantCheckFails(t *testing.T) {
+	t.Parallel()
+
+	cred := consumerCredential("cred", "consumer", "api-key")
+	cred.Spec.APISpec.APIKey.SecretRef.Namespace = new("unwatched")
+	cl := failingGrantListClient(newCredentialReconcilerClient(t, cred, onPremConsumer("consumer", "gw")))
+	rec := &AIGatewayConsumerCredentialReconciler{
+		Client:       cl,
+		Log:          logr.Discard(),
+		StatusClient: &stubStatusClient{configStatus: status.ConfigurationStatusFailed, message: "grant check failed", enableState: true},
+	}
+
+	_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
+	require.ErrorIs(t, err, errGrantListOutsideCache)
+
+	programmed := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
+	require.NotNil(t, programmed)
+	require.Equal(t, "grant check failed", programmed.Message)
 }

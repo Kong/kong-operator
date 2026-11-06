@@ -385,7 +385,7 @@ func BuildDocument(
 	outcomes := make(entityOutcomes)
 	// translatedMCPCRByName maps a translated MCPServer's entity name to its original CR, so
 	// the same-kind sources post-pass can attribute a dropped listener's failure to the CR
-	// whose EntityStatus already reported success (the maps store the same pointers
+	// whose EntityStatus already reported success (it stores the same pointer
 	// translateKind put into the statuses).
 	translatedMCPCRByName := make(map[string]client.Object)
 

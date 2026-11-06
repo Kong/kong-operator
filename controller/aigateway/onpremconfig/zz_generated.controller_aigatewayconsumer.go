@@ -218,10 +218,11 @@ func (r *AIGatewayConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			ctrlutils.WithFailedMessage(r.StatusClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
-		resolvedRefsChanged, err := ensureResolvedRefsCondition(ctx, r.Client, obj, obj.Generation, &obj.Status.Conditions)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		// A failed KongReferenceGrant check (for example a list in a namespace the
+		// instance does not watch) must not hold back the Programmed condition, which
+		// reports the translation's failure: write the status first, then return the
+		// error so that the check is retried.
+		resolvedRefsChanged, resolvedRefsErr := ensureResolvedRefsCondition(ctx, r.Client, obj, obj.Generation, &obj.Status.Conditions)
 		updateNeeded = updateNeeded || resolvedRefsChanged
 		if updateNeeded {
 			if err := r.Status().Update(ctx, obj); err != nil {
@@ -232,10 +233,16 @@ func (r *AIGatewayConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 				}
 				return ctrl.Result{}, err
 			}
+			if resolvedRefsErr != nil {
+				return ctrl.Result{}, resolvedRefsErr
+			}
 
 			return ctrl.Result{
 				RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 			}, nil
+		}
+		if resolvedRefsErr != nil {
+			return ctrl.Result{}, resolvedRefsErr
 		}
 
 		logger.Info("Status update not needed")

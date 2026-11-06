@@ -152,12 +152,20 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			if tc.konnectID {
 				cred.Status.ID = "konnect-id"
 			}
-			cred.Status.Conditions = []metav1.Condition{{
-				Type:    string(configurationv1.ConditionProgrammed),
-				Status:  metav1.ConditionTrue,
-				Reason:  string(configurationv1.ReasonProgrammed),
-				Message: seeded,
-			}}
+			cred.Status.Conditions = []metav1.Condition{
+				{
+					Type:    string(configurationv1.ConditionProgrammed),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(configurationv1.ReasonProgrammed),
+					Message: seeded,
+				},
+				{
+					Type:    configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+					Status:  metav1.ConditionTrue,
+					Reason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+					Message: seeded,
+				},
+			}
 			objs := append([]client.Object{cred}, tc.objs...)
 			cl := newCredentialReconcilerClient(t, objs...)
 			rec := &AIGatewayConsumerCredentialReconciler{
@@ -169,13 +177,20 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
 			require.NoError(t, err)
 
-			cond := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
-			if tc.wantCleared {
-				require.Nil(t, cond, "the condition of a credential whose consumer is gone must be cleared")
-				return
+			stored := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{}
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(cred), stored))
+			for _, conditionType := range []string{
+				string(configurationv1.ConditionProgrammed),
+				configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+			} {
+				cond := apimeta.FindStatusCondition(stored.Status.Conditions, conditionType)
+				if tc.wantCleared {
+					require.Nil(t, cond, "the %s condition of a credential whose consumer is gone must be cleared", conditionType)
+					continue
+				}
+				require.NotNil(t, cond, "no %s condition must be written on a credential the on-prem machinery does not own", conditionType)
+				require.Equal(t, seeded, cond.Message, "the %s condition the reconciler found must be left as it was", conditionType)
 			}
-			require.NotNil(t, cond, "no condition must be written on a credential the on-prem machinery does not own")
-			require.Equal(t, seeded, cond.Message, "the condition the reconciler found must be left as it was")
 		})
 	}
 }
