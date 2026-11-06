@@ -89,6 +89,17 @@
   from being issued.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
 
+### Fixes
+
+- Embedded ingress controller: when several `KongConsumer`s share a `username`
+  or a `custom_id`, only one of them is translated: the one created earliest,
+  ties broken by namespace and then name. The others get a translation failure.
+  Before, all of them were translated and Kong rejected the whole
+  configuration. This could happen when the consumers were created before the
+  admission webhook could see the first one in Kong, or when the webhook was
+  not in use.
+  [#6458](https://github.com/Kong/kong-operator/pull/6458)
+
 ## [v2.4.0-rapid.3.1]
 
 > Release date: 2026-11-04
