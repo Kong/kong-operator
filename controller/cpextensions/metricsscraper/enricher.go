@@ -79,19 +79,25 @@ const (
 func (me metricsEnricher) Consume(ctx context.Context, m Metrics) error {
 	// TODO: Potentially, create a watch which will get notifications on new
 	// endpoints for a DataPlane.
-	addrs, err := me.adminAPIAddressProvider.AdminAddressesForDP(ctx, me.dataplane)
+	endpoints, err := me.adminAPIAddressProvider.AdminAddressesForDP(ctx, me.dataplane)
 	if err != nil {
 		return fmt.Errorf("failed fetching Admin API addresses for DataPlane %s error: %w",
 			client.ObjectKeyFromObject(me.dataplane), err,
 		)
 	}
-	if len(addrs) == 0 {
+	if len(endpoints) == 0 {
 		return nil
 	}
 
 	// A DataPlane has homogenous configuration so we just take the first
 	// address available and use it to get the Kong services from the configuration.
-	kongClient, err := kong.NewClient(&addrs[0], me.httpClient)
+	httpClient, err := httpClientForEndpoint(me.httpClient, endpoints[0].TLSServerName)
+	if err != nil {
+		return fmt.Errorf("failed creating HTTP client for DataPlane %s error: %w",
+			client.ObjectKeyFromObject(me.dataplane), err,
+		)
+	}
+	kongClient, err := kong.NewClient(&endpoints[0].Address, httpClient)
 	if err != nil {
 		return fmt.Errorf("failed creating kong.Client for DataPlane %s error: %w", client.ObjectKeyFromObject(me.dataplane), err)
 	}

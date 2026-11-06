@@ -1,6 +1,7 @@
 package metricsscraper
 
 import (
+	"crypto/tls"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 )
 
@@ -110,7 +112,10 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			adminAPIMetricsServer := kongMetricsServer(t)
 			addressProvider := &metricsmocks.MockAdminAPIAddressProvider{
-				Addresses: []string{adminAPIMetricsServer.URL},
+				Endpoints: []adminapi.DiscoveredAdminAPI{{
+					Address:       adminAPIMetricsServer.URL,
+					TLSServerName: "pod.dataplane-admin.default.svc",
+				}},
 			}
 
 			httpClient := http.DefaultClient
@@ -124,4 +129,33 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 			require.Equal(t, expected, metrics)
 		})
 	}
+}
+
+func TestPrometheusMetricsScraper_UsesEndpointTLSServerName(t *testing.T) {
+	const serverName = "pod.dataplane-admin.default.svc"
+	sni := make(chan string, 1)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sni <- r.TLS.ServerName
+	}))
+	t.Cleanup(server.Close)
+
+	addressProvider := &metricsmocks.MockAdminAPIAddressProvider{
+		Endpoints: []adminapi.DiscoveredAdminAPI{{
+			Address:       server.URL,
+			TLSServerName: serverName,
+		}},
+	}
+	httpClient := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // test server certificate
+	}}
+	scraper := NewPrometheusMetricsScraper(
+		logr.Discard(),
+		&operatorv1beta1.DataPlane{Name: "dataplane-1", Namespace: "default"},
+		httpClient,
+		addressProvider,
+	)
+
+	_, err := scraper.Scrape(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, serverName, <-sni)
 }

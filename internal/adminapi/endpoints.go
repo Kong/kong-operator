@@ -94,7 +94,7 @@ func (d *Discoverer) AdminAPIsFromEndpointSlice(
 			continue
 		}
 
-		if !d.portNames.Has(*p.Name) {
+		if !d.portNames.Has(*p.Name) || p.Port == nil {
 			continue
 		}
 

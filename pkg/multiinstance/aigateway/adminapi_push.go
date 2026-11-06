@@ -19,12 +19,14 @@ package aigateway
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"slices"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +40,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
+	dataplanepush "github.com/kong/kong-operator/v2/ingress-controller/pkg/dataplane/push"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -47,6 +50,7 @@ import (
 // configuration. It is implemented by *kong.Client.
 type pusher interface {
 	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash, flattenErrors bool) error
+	Status(context.Context) (*kong.Status, error)
 }
 
 // newPushClientFunc builds the Admin API client used to push configuration to a
@@ -113,13 +117,15 @@ func (i *Instance) sendConfigToDataPlanes(
 ) (pushed bool, err error) {
 	endpoints := i.AdminAPIs()
 	if endpoints.Len() == 0 {
+		clear(i.pushClients)
+		clear(i.lastSuccessfulConfigSHAs)
 		log.Info(i.logger, "no Admin API endpoints discovered for the gateway, skipping configuration push",
 			"namespace", gwNN.Namespace, "name", gwNN.Name)
 		// Report anyway: the last push may have left DataPlanesConfigured=False
 		// behind, and nothing else clears it while the set is empty. A reporting
 		// failure must not fail the sync: the push was skipped, and the next
 		// sync re-reports it.
-		if err := i.reportPushStatus(ctx, gwNN, 0, nil); err != nil {
+		if err := i.reportPushStatus(ctx, gwNN, 0, 0, nil); err != nil {
 			log.Error(i.logger, err, "failed to report the configuration push result on the OnPremAIGateway status")
 		}
 		return false, nil
@@ -135,9 +141,19 @@ func (i *Instance) sendConfigToDataPlanes(
 		return false, i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("loading Admin API mTLS client certificate: %w", err))
 	}
 
+	configSHA := sha256.Sum256(payload)
+	changeDetector := dataplanepush.NewKongGatewayConfigurationChangeDetector(i.logger)
+
+	if i.lastSuccessfulConfigSHAs == nil {
+		i.lastSuccessfulConfigSHAs = map[adminapi.DiscoveredAdminAPI][]byte{}
+	}
+
 	var failures []string
+	pushedCount := 0
 	currentKeys := sets.New[string]()
+	currentEndpoints := sets.New[adminapi.DiscoveredAdminAPI]()
 	for endpoint := range endpoints {
+		currentEndpoints.Insert(endpoint)
 		desc := endpointDesc(endpoint)
 		key := pushClientCacheKey(endpoint, certPEM, keyPEM, caPEM)
 		currentKeys.Insert(key)
@@ -153,11 +169,27 @@ func (i *Instance) sendConfigToDataPlanes(
 			}
 			i.pushClients[key] = pushClient
 		}
+
+		configurationChanged, err := changeDetector.HasConfigurationChanged(
+			ctx,
+			i.lastSuccessfulConfigSHAs[endpoint],
+			configSHA[:],
+			false,
+			pushClient,
+		)
+		if err != nil {
+			failures = append(failures, fmt.Sprintf("%s: failed to check configuration change: %s", desc, err))
+			continue
+		}
+		if !configurationChanged {
+			log.Debug(i.logger, "configuration unchanged on Admin API endpoint, skipping push",
+				"endpoint", desc, "address", endpoint.Address)
+			continue
+		}
+
 		if err := pushClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(payload), true, true); err != nil {
 			errKong, ok := errors.AsType[*kong.APIError](err)
 			if ok {
-				// TODO: surface the detailed configuration error information
-				// to the user through events and status conditions.
 				log.Error(i.logger, errKong,
 					"failed to push configuration to Admin API endpoint",
 					"endpoint", desc,
@@ -165,19 +197,30 @@ func (i *Instance) sendConfigToDataPlanes(
 					"details", errKong.Details(),
 					"raw", string(errKong.Raw()),
 				)
+				if details := formatFlatEntityErrors(i.logger, errKong.Raw()); details != "" {
+					failures = append(failures, fmt.Sprintf("%s: %s: %s", desc, err, details))
+					continue
+				}
 			}
 			failures = append(failures, fmt.Sprintf("%s: %s", desc, err))
 			continue
 		}
+		i.lastSuccessfulConfigSHAs[endpoint] = configSHA[:]
+		pushedCount++
 		log.Debug(i.logger, "pushed configuration to Admin API endpoint",
 			"endpoint", desc, "address", endpoint.Address)
 	}
 
 	// Prune the clients of endpoints that are no longer discovered (e.g. pod
-	// IPs that churn over time), so the cache does not grow without bound.
+	// IPs that churn over time), so the caches do not grow without bound.
 	for key := range i.pushClients {
 		if !currentKeys.Has(key) {
 			delete(i.pushClients, key)
+		}
+	}
+	for endpoint := range i.lastSuccessfulConfigSHAs {
+		if !currentEndpoints.Has(endpoint) {
+			delete(i.lastSuccessfulConfigSHAs, endpoint)
 		}
 	}
 
@@ -186,7 +229,7 @@ func (i *Instance) sendConfigToDataPlanes(
 	// retries - the endpoints come from a set, so their iteration order is not.
 	slices.Sort(failures)
 
-	if err := i.reportPushStatus(ctx, gwNN, endpoints.Len(), failures); err != nil {
+	if err := i.reportPushStatus(ctx, gwNN, pushedCount, endpoints.Len(), failures); err != nil {
 		// The push itself is what matters: a status patch failure must not fail
 		// the sync (it would be retried together with the next push anyway), so
 		// only log it.
@@ -204,7 +247,7 @@ func (i *Instance) sendConfigToDataPlanes(
 // (e.g. missing certificate material) on the gateway status and returns the error
 // for the sync loop to retry.
 func (i *Instance) failPush(ctx context.Context, gwNN types.NamespacedName, total int, err error) error {
-	if reportErr := i.reportPushStatus(ctx, gwNN, total, []string{err.Error()}); reportErr != nil {
+	if reportErr := i.reportPushStatus(ctx, gwNN, 0, total, []string{err.Error()}); reportErr != nil {
 		log.Error(i.logger, reportErr, "failed to report the configuration push result on the OnPremAIGateway status")
 	}
 	return err
@@ -237,13 +280,59 @@ func endpointDesc(endpoint adminapi.DiscoveredAdminAPI) string {
 	return endpoint.Address
 }
 
+// formatFlatEntityErrors decodes the flattened entity errors of a failed Admin API
+// push into a stable, human-readable string. It returns an empty string when the
+// response has no entity errors or cannot be decoded.
+func formatFlatEntityErrors(logger logr.Logger, body []byte) string {
+	entities, err := dataplanepush.ParseFlatEntityErrors(body, logger)
+	if err != nil {
+		log.Error(logger, err, "failed to parse flattened configuration errors")
+		return ""
+	}
+
+	var details []string
+	for _, entity := range entities {
+		desc := entity.Type
+		if entity.Name != "" {
+			if desc != "" {
+				desc += "/"
+			}
+			desc += entity.Name
+		}
+		if desc == "" {
+			desc = "entity"
+		}
+		for _, fieldErr := range entity.Errors {
+			switch {
+			case fieldErr.Message != "" && fieldErr.Field != "":
+				details = append(details, fmt.Sprintf("%s: %s: %s", desc, fieldErr.Field, fieldErr.Message))
+			case fieldErr.Message != "":
+				details = append(details, fmt.Sprintf("%s: %s", desc, fieldErr.Message))
+			}
+			for i, message := range fieldErr.Messages {
+				if message == "" {
+					continue
+				}
+				field := fieldErr.Field
+				if field == "" {
+					field = "value"
+				}
+				details = append(details, fmt.Sprintf("%s: %s[%d]: %s", desc, field, i, message))
+			}
+		}
+	}
+	return strings.Join(details, "; ")
+}
+
 // reportPushStatus patches the DataPlanesConfigured condition of the OnPremAIGateway
 // with the outcome of the configuration push and, when the condition changed to a
-// failure, emits a Warning event listing the failing endpoints.
+// failure, emits a Warning event listing the failing endpoints. pushed counts the
+// endpoints whose payload was actually sent (the up-to-date ones are skipped), and
+// total the endpoints discovered at snapshot time.
 func (i *Instance) reportPushStatus(
 	ctx context.Context,
 	gwNN types.NamespacedName,
-	total int,
+	pushed, total int,
 	failures []string,
 ) error {
 	// The report must land even when the sync deadline expired: a status patch
@@ -252,11 +341,22 @@ func (i *Instance) reportPushStatus(
 	ctx = context.WithoutCancel(ctx)
 	var condition metav1.Condition
 	if len(failures) == 0 {
+		var message string
+		switch {
+		case total == 0:
+			message = "No Admin API endpoints discovered"
+		case pushed == total:
+			message = fmt.Sprintf("Configuration pushed to %d Admin API endpoints", total)
+		case pushed == 0:
+			message = fmt.Sprintf("Configuration unchanged on all %d Admin API endpoints, push skipped", total)
+		default:
+			message = fmt.Sprintf("Configuration pushed to %d of %d Admin API endpoints, the rest were unchanged", pushed, total)
+		}
 		condition = k8sutils.NewCondition(
 			aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType,
 			metav1.ConditionTrue,
 			aigatewayv1alpha1.OnPremAIGatewayConfigurationPushSucceededReason,
-			fmt.Sprintf("Configuration pushed to %d Admin API endpoints", total),
+			message,
 		)
 	} else {
 		condition = k8sutils.NewCondition(

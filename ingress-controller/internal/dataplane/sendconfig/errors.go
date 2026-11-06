@@ -4,6 +4,7 @@ import (
 	"github.com/samber/mo"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
+	dataplanepush "github.com/kong/kong-operator/v2/ingress-controller/pkg/dataplane/push"
 )
 
 // UpdateError wraps several pieces of error information relevant to a failed Kong update attempt.
@@ -59,20 +60,9 @@ func (e UpdateError) Unwrap() error {
 }
 
 // ResponseParsingError is an error type that is returned when the response from Kong is not in the expected format.
-type ResponseParsingError struct {
-	responseBody []byte
-}
+type ResponseParsingError = dataplanepush.ResponseParsingError
 
+// NewResponseParsingError creates a ResponseParsingError for the given response body.
 func NewResponseParsingError(responseBody []byte) ResponseParsingError {
-	return ResponseParsingError{responseBody: responseBody}
-}
-
-// Error implements the Error interface.
-func (e ResponseParsingError) Error() string {
-	return "failed to parse Kong error response"
-}
-
-// ResponseBody returns the raw HTTP response body from Kong that could not be parsed.
-func (e ResponseParsingError) ResponseBody() []byte {
-	return e.responseBody
+	return dataplanepush.NewResponseParsingError(responseBody)
 }

@@ -64,7 +64,7 @@ func PerformUpdate(
 	//
 	// We do this because in db mode, when applying fails, some entities are applied successfully, then the Kong gateway may be in a "partial success" state.
 	if !config.EnableReverseSync && (config.InMemory || !isFallback) {
-		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client.AdminAPIClient())
+		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, deckgen.IsContentEmpty(targetContent), client.AdminAPIClient())
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect configuration change: %w", err)
 		}

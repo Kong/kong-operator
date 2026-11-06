@@ -1,4 +1,4 @@
-package sendconfig_test
+package push_test
 
 import (
 	"context"
@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
-	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	dataplanepush "github.com/kong/kong-operator/v2/ingress-controller/pkg/dataplane/push"
 )
 
 type statusClientMock struct {
@@ -30,25 +29,12 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 		[]byte("82e35a63ceba37e9646434c5dd412ea577147f1e4a41ccde1614253187e3dbf9"),
 	}
 
-	createConfigContent := func() *file.Content {
-		return &file.Content{
-			FormatVersion: "1.1",
-			Services: []file.FService{
-				{
-					ID:   new("id"),
-					Name: new("name"),
-				},
-			},
-		}
-	}
-
 	testCases := []struct {
-		name           string
-		oldSHA, newSHA []byte
-		targetConfig   *file.Content
-		statusSHA      string
-		isKonnect      bool
-		statusError    error
+		name              string
+		oldSHA, newSHA    []byte
+		targetConfigEmpty bool
+		statusSHA         string
+		statusError       error
 
 		expectedResult bool
 		expectError    bool
@@ -57,32 +43,27 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			name:           "oldSHA != newSHA",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[1],
-			targetConfig:   createConfigContent(),
 			expectedResult: true,
 		},
 		{
 			name:           "oldSHA == newSHA, but status signals crash",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
-			targetConfig:   createConfigContent(),
-			statusSHA:      sendconfig.WellKnownInitialHash,
+			statusSHA:      dataplanepush.WellKnownInitialHash,
 			expectedResult: true,
 		},
 		{
-			name:   "oldSHA == newSHA, status signals init hash and we're trying to push empty config",
-			oldSHA: testSHAs[0],
-			newSHA: testSHAs[0],
-			targetConfig: &file.Content{
-				FormatVersion: "1.1",
-			},
-			statusSHA:      sendconfig.WellKnownInitialHash,
-			expectedResult: false,
+			name:              "oldSHA == newSHA, status signals init hash and we're trying to push empty config",
+			oldSHA:            testSHAs[0],
+			newSHA:            testSHAs[0],
+			targetConfigEmpty: true,
+			statusSHA:         dataplanepush.WellKnownInitialHash,
+			expectedResult:    false,
 		},
 		{
 			name:           "oldSHA == newSHA and status signals same",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
-			targetConfig:   createConfigContent(),
 			statusSHA:      string(testSHAs[0]),
 			expectedResult: false,
 		},
@@ -90,17 +71,15 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			name:           "oldSHA == newSHA and status signals other",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
-			targetConfig:   createConfigContent(),
 			statusSHA:      string(testSHAs[1]),
 			expectedResult: false,
 		},
 		{
-			name:         "oldSHA == newSHA, status returns error",
-			oldSHA:       testSHAs[0],
-			newSHA:       testSHAs[0],
-			targetConfig: createConfigContent(),
-			statusError:  errors.New("getting kong status failure"),
-			expectError:  true,
+			name:        "oldSHA == newSHA, status returns error",
+			oldSHA:      testSHAs[0],
+			newSHA:      testSHAs[0],
+			statusError: errors.New("getting kong status failure"),
+			expectError: true,
 		},
 	}
 
@@ -112,9 +91,9 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 				},
 				expectedError: tc.statusError,
 			}
-			detector := sendconfig.NewKongGatewayConfigurationChangeDetector(zapr.NewLogger(zap.NewNop()))
+			detector := dataplanepush.NewKongGatewayConfigurationChangeDetector(zapr.NewLogger(zap.NewNop()))
 
-			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfig, statusClient)
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfigEmpty, statusClient)
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -137,7 +116,6 @@ func TestKonnectConfigurationChangeDetector(t *testing.T) {
 		name           string
 		oldSHA, newSHA []byte
 		expectedResult bool
-		expectError    bool
 	}{
 		{
 			name:           "oldSHA != newSHA",
@@ -155,10 +133,9 @@ func TestKonnectConfigurationChangeDetector(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			detector := sendconfig.NewKonnectConfigurationChangeDetector()
+			detector := dataplanepush.NewKonnectConfigurationChangeDetector()
 
-			// Passing nil for content and status client explicitly, as they are not used in this detector.
-			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, nil, nil)
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, false, nil)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedResult, result)
 		})

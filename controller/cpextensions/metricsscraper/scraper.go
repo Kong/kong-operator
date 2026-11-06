@@ -74,27 +74,31 @@ func NewPrometheusMetricsScraper(
 // Scrape scrapes metrics from the Admin API endpoints of the configured DataPlane.
 func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) {
 	// TODO: watch for changes in admin API addresses, do not query every scrape.
-	urls, err := p.adminAPIAddressProvider.AdminAddressesForDP(ctx, p.dp)
+	endpoints, err := p.adminAPIAddressProvider.AdminAddressesForDP(ctx, p.dp)
 	if err != nil {
 		return Metrics{}, err
 	}
-	if len(urls) == 0 {
+	if len(endpoints) == 0 {
 		return Metrics{}, nil
 	}
 
-	log.Debug(p.logger, "scraping DataPlane metrics", "DataPlane", p.dp, "urls", urls)
+	log.Debug(p.logger, "scraping DataPlane metrics", "DataPlane", p.dp, "endpoints", endpoints)
 
 	metrics := Metrics{
 		metrics: make(metricsMap),
 	}
 
-	for _, u := range urls {
-		metricFamilies, err := p.scrapeURL(ctx, u)
+	for _, endpoint := range endpoints {
+		httpClient, err := httpClientForEndpoint(p.httpClient, endpoint.TLSServerName)
+		if err != nil {
+			return Metrics{}, err
+		}
+		metricFamilies, err := p.scrapeURL(ctx, httpClient, endpoint.Address)
 		if err != nil {
 			return Metrics{}, err
 		}
 
-		adminAPIURL := adminAPIEndpointURL(u)
+		adminAPIURL := adminAPIEndpointURL(endpoint.Address)
 		m := metrics.metrics[adminAPIURL]
 		for name, metricFamily := range metricFamilies {
 			if m == nil {
@@ -116,13 +120,17 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 	return metrics, nil
 }
 
-func (p *PrometheusMetricsScraper) scrapeURL(ctx context.Context, u string) (map[string]*prometheus.MetricFamily, error) {
+func (p *PrometheusMetricsScraper) scrapeURL(
+	ctx context.Context,
+	httpClient *http.Client,
+	u string,
+) (map[string]*prometheus.MetricFamily, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u+"/metrics", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := p.httpClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics from %s: %w", u, err)
 	}
