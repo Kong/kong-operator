@@ -183,11 +183,12 @@ type ControlPlaneKindConfig struct {
 	// control plane is considered resolved as soon as it exists.
 	ReadinessConditionType string
 	// EndpointCheck reports whether the control plane's endpoints are usable
-	// with its serverURL, naming the offending endpoint in the error. A
-	// non-nil error holds the DataPlane: it sets Resolved=False with
+	// with its serverURL, naming the offending endpoint in the error. dp is
+	// the reconciled DataPlane, for kinds whose verdict depends on its spec.
+	// A non-nil error holds the DataPlane: it sets Resolved=False with
 	// Conditions.EndpointMismatchReason and returns errEndpointsMismatch.
 	// Nil for kinds that have no such endpoints.
-	EndpointCheck func(cp ControlPlaneObject) error
+	EndpointCheck func(dp Object, cp ControlPlaneObject) error
 	// Conditions carries the control plane resolution condition types, reasons
 	// and messages for this kind.
 	Conditions ControlPlaneConditions
