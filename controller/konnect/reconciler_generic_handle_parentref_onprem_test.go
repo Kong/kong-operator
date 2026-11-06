@@ -282,7 +282,56 @@ func TestHandleParentRef_OnPremEventGatewayParentInAnotherNamespace(t *testing.T
 // Konnect reconciler set on an entity before it turned out not to be
 // Konnect-managed are removed, while a Programmed condition set by another
 // controller is kept.
-func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
+// TestHandleParentRef_LeavesOnPremEventGatewayEntitiesStatusAlone verifies
+// that the Konnect reconciler doesn't write the status of an entity under an
+// OnPremEventGateway: the OnPremEventGateway controller owns it, and clears
+// what the Konnect reconciler set on it before.
+func TestHandleParentRef_LeavesOnPremEventGatewayEntitiesStatusAlone(t *testing.T) {
+	const ns = "default"
+	backend := newTestOnPremEventGatewayBackendCluster(ns, "backend", "onprem-gw")
+	virtualCluster := newTestEventGatewayVirtualCluster(ns, "virtual-cluster", backend.Name)
+	policy := newTestEventGatewayProducePolicy(ns, "policy", virtualCluster.Name)
+	policy.Status.Conditions = []metav1.Condition{
+		{
+			Type: policy.GetStatusConditionTypeParentRefValid(), Status: metav1.ConditionFalse,
+			Reason: policy.GetStatusConditionReasonParentRefNotProgrammed(), LastTransitionTime: metav1.Now(),
+		},
+		{
+			// E.g. a parent policy being deleted the OnPremEventGateway
+			// controller keeps in the configuration while child policies name it.
+			Type: "Programmed", Status: metav1.ConditionTrue, Reason: konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked,
+			Message: "In the configuration of the OnPremEventGateway default/onprem-gw", LastTransitionTime: metav1.Now(),
+		},
+	}
+	policy.SetKonnectID("policy-konnect-id")
+
+	var statusWrites int
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithStatusSubresource(policy).
+		WithObjects(backend, virtualCluster, policy).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+				statusWrites++
+				return c.SubResource(subResourceName).Patch(ctx, obj, patch, opts...)
+			},
+			SubResourceUpdate: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+				statusWrites++
+				return c.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+
+	handler := parentRefHandler[configurationv1alpha1.EventGatewayVirtualCluster, *configurationv1alpha1.EventGatewayVirtualCluster]{}
+	_, err := handler.handleParentRef(t.Context(), cl, policy)
+	require.ErrorAs(t, err, new(ReferencedObjectNotKonnectManagedError))
+	assert.Zero(t, statusWrites, "the status isn't written")
+}
+
+// TestRemoveKonnectConditions verifies what the Konnect reconciler clears on an
+// entity under an on-prem gateway whose controller doesn't, e.g. an
+// OnPremAIGateway.
+func TestRemoveKonnectConditions(t *testing.T) {
 	const ns = "default"
 	condition := func(conditionType, reason string) metav1.Condition {
 		return metav1.Condition{
@@ -338,9 +387,8 @@ func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
 				WithObjects(backend, virtualCluster, policy).
 				Build()
 
-			handler := parentRefHandler[configurationv1alpha1.EventGatewayVirtualCluster, *configurationv1alpha1.EventGatewayVirtualCluster]{}
-			_, err := handler.handleParentRef(t.Context(), cl, policy)
-			require.ErrorAs(t, err, new(ReferencedObjectNotKonnectManagedError))
+			_, err := removeKonnectConditions(t.Context(), cl, policy)
+			require.NoError(t, err)
 
 			updated := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{}
 			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(policy), updated))

@@ -137,10 +137,13 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	// whose parent reference changes, which the CRDs only allow while it is not
 	// Programmed, triggers both gateways. A delete is mapped for the deleted
 	// object. GenerationChangedPredicate ignores the status writes on the
-	// entities, e.g. the Programmed condition the gateway reconcile will set.
+	// entities, e.g. the Programmed condition the gateway reconcile will set,
+	// but for a Programmed condition someone else set (see
+	// programmedSetByOthers).
 	mapToGateway := handler.EnqueueRequestsFromMapFunc(mapEntityToOnPremEventGateway(mgr.GetClient()))
 	for _, entity := range entityTypes() {
-		b = b.Watches(entity, mapToGateway, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		b = b.Watches(entity, mapToGateway, builder.WithPredicates(
+			predicate.Or[client.Object](predicate.GenerationChangedPredicate{}, programmedSetByOthers())))
 	}
 
 	// A change to the GWAdmin of a gateway, to its Secrets or to its gw-admin
@@ -218,6 +221,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
 	r.lastEntities.Store(gateway.UID, cfg.built)
+	// An entity that can't be held or released doesn't hold back the
+	// configuration, nor what the status tells of it: it is tried again after
+	// the push.
+	holdRes, held, holdErr := r.holdEntities(ctx, gateway, cfg.entitiesInUse)
+	cfg.refreshResourceVersions(held)
 	config := deriveConfig(gateway, cfg)
 	if err := r.recordRevision(ctx, gateway, config); err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
@@ -236,8 +244,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if statusErr := r.reportEntities(ctx, gateway, cfg, result); statusErr != nil {
 		err = errors.Join(err, statusErr)
 	}
+	err = errors.Join(err, holdErr)
 	switch {
 	case err != nil:
+	case !holdRes.IsZero():
+		// An entity changed since it was read: it is tried again right away, a
+		// push that failed still waiting for its backoff.
+		log.Debug(logger, "an entity of the OnPremEventGateway changed while being held or released, trying again")
 	case result.retryAfter > 0:
 		// A push, or a removal, that failed is tried again after its backoff,
 		// not right away: it isn't returned as an error. One that failed
@@ -261,7 +274,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		// Secrets or to its pods triggers the gateway again.
 		log.Debug(logger, "reconciliation complete for OnPremEventGateway resource")
 	}
-	return requeueOnConflict(logger, ctrl.Result{}, err)
+	if err != nil {
+		// A result returned with an error is ignored.
+		return requeueOnConflict(logger, ctrl.Result{}, err)
+	}
+	return holdRes, nil
 }
 
 // invalidUIDError tells the UID of a gateway is not a version 4 UUID, which
@@ -324,9 +341,29 @@ func (r *Reconciler) event(gateway *eventgatewayv1alpha1.OnPremEventGateway, eve
 func requeueOnConflict(logger logr.Logger, res ctrl.Result, err error) (ctrl.Result, error) {
 	if err != nil && apierrors.IsConflict(err) {
 		log.Debug(logger, "conflict while reconciling, requeueing", "reason", err.Error())
+		// The other errors joined with the conflict aren't returned: they are
+		// logged, as the reconcile that comes next may not meet them again.
+		for _, other := range joinedErrors(err) {
+			if !apierrors.IsConflict(other) {
+				log.Error(logger, other, "failed while reconciling, requeueing on a conflict")
+			}
+		}
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 	return res, err
+}
+
+// joinedErrors returns the errors joined in err, at any depth, or err.
+func joinedErrors(err error) []error {
+	joined, ok := err.(interface{ Unwrap() []error })
+	if !ok {
+		return []error{err}
+	}
+	var errs []error
+	for _, e := range joined.Unwrap() {
+		errs = append(errs, joinedErrors(e)...)
+	}
+	return errs
 }
 
 // pushResult is what a push of the configuration of a gateway got to.
@@ -515,6 +552,17 @@ func (r *Reconciler) cleanup(ctx context.Context, logger logr.Logger, gateway *e
 	if err := r.reportEntitiesNotProgrammed(ctx, gateway, fmt.Sprintf("The OnPremEventGateway %s is being deleted", client.ObjectKeyFromObject(gateway))); err != nil {
 		log.Error(logger, err, "failed to report the deletion of the OnPremEventGateway on its entities")
 	}
+	// The entities of the gateway are released: no reconcile of the gateway
+	// would release them once it is gone. One that changed since it was read is
+	// tried again, but an error doesn't hold the deletion of the gateway: an
+	// entity left held is released once it is deleted (see releaseOrphan).
+	res, _, err := r.holdEntities(ctx, gateway, nil)
+	if err != nil {
+		log.Error(logger, err, "failed to release the entities of the deleted OnPremEventGateway")
+	}
+	if !res.IsZero() {
+		return res, nil
+	}
 	started, err := r.cleanupStarted(ctx, gateway)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -530,7 +578,7 @@ func (r *Reconciler) cleanup(ctx context.Context, logger logr.Logger, gateway *e
 			return ctrl.Result{RequeueAfter: max(min(remaining, cleanupRetryInterval), minCleanupRetryInterval)}, nil
 		}
 	}
-	_, res, err := patch.WithoutFinalizer(ctx, r.Client, gateway, FinalizerGWAdminCleanup)
+	_, res, err = patch.WithoutFinalizer(ctx, r.Client, gateway, FinalizerGWAdminCleanup)
 	if apierrors.IsNotFound(err) {
 		// Deleted already, e.g. by a reconcile of a stale gateway.
 		return ctrl.Result{}, nil

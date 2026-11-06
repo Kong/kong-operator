@@ -327,4 +327,11 @@ const (
 	// OnPremEntityGatewayNotFoundReason indicates the OnPremEventGateway of
 	// the entity, directly or through its parent entities, doesn't exist.
 	OnPremEntityGatewayNotFoundReason consts.ConditionReason = "GatewayNotFound"
+	// OnPremEntityDeletionBlockedReason indicates the entity is being deleted,
+	// and stays in the configuration of its OnPremEventGateway while policies
+	// reference it: the message names them. The status of the condition tells
+	// whether it is programmed, along with its gateway. The Konnect controllers
+	// use the same reason, with the status False, for an entity whose deletion
+	// Konnect refuses.
+	OnPremEntityDeletionBlockedReason consts.ConditionReason = "DeletionBlocked"
 )

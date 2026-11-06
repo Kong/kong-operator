@@ -18,6 +18,7 @@ package onprem
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -29,8 +30,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
@@ -240,8 +244,7 @@ func pushedMessage(pods int) string {
 }
 
 // inConfigurationOfPrefix starts the message of the Programmed condition the
-// controller sets True on an entity: the Konnect controllers use the same
-// reason (see setForOnPremEventGateway).
+// controller sets on an entity of the configuration of a gateway.
 const inConfigurationOfPrefix = "In the configuration of the OnPremEventGateway "
 
 // reportEntities sets the Programmed condition of the entities of the
@@ -287,14 +290,20 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 			continue
 		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEntityProgrammedReason,
-			fmt.Sprintf(inConfigurationOfPrefix+"%s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e))
+			fmt.Sprintf(inConfigurationOfPrefix+"%s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e)+heldMessage(cfg, e))
 		if programmed == nil || programmed.Status != metav1.ConditionTrue {
 			message := fmt.Sprintf("In the configuration of the OnPremEventGateway %s, which is not programmed", gatewayKey)
 			if programmed != nil {
 				message += ": " + programmed.Message
 			}
 			cond = entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse,
-				eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message+keptMessage(e))
+				eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message+keptMessage(e)+heldMessage(cfg, e))
+		}
+		// An entity kept for the policies using it reports that its deletion is
+		// blocked. Its status is left as it is: it is in the configuration, so it
+		// is programmed along with the gateway, as is anything else in it.
+		if heldMessage(cfg, e) != "" {
+			cond.Reason = string(eventgatewayv1alpha1.OnPremEntityDeletionBlockedReason)
 		}
 		errs = append(errs, r.setEntityStatus(ctx, e, cond))
 	}
@@ -346,10 +355,13 @@ type reportedEntity struct {
 
 // reportDetached sets the Programmed condition of the objects reported last
 // for the gateway and no longer in its configuration to False, e.g. a virtual
-// cluster whose backend cluster was deleted: nothing else reports them. An
-// object whose Programmed condition another gateway set since, e.g. it moved
-// to it, is left alone, and so is one being deleted. One that fails to be
-// read or patched is kept in the objects reported, to be tried again.
+// cluster whose backend cluster was deleted: nothing else reports them. One
+// whose parent chain leads to another gateway now is that gateway's to report,
+// one that reaches no OnPremEventGateway anymore, e.g. now under a
+// KonnectEventGateway, loses the conditions the controller set, and one whose
+// Programmed condition someone else set since, or that is being deleted, is
+// left alone. One that fails to be read or patched is kept in the objects
+// reported, to be tried again.
 func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) error {
 	current := map[reportedEntity]struct{}{}
 	for _, e := range cfg.included {
@@ -378,34 +390,32 @@ func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1
 			}
 			continue
 		}
-		programmed := apimeta.FindStatusCondition(obj.GetConditions(), string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
-		if !obj.GetDeletionTimestamp().IsZero() || programmed == nil || !namesGateway(programmed.Message, gatewayKey) {
+		programmed := string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)
+		if !obj.GetDeletionTimestamp().IsZero() || !ownsEntityCondition(obj, programmed) {
 			continue
 		}
-		if err := r.setEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
-			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityDetachedReason,
-			fmt.Sprintf("No longer in the configuration of the OnPremEventGateway %s: it doesn't belong to it anymore, e.g. its parent was deleted", gatewayKey))); err != nil {
+		reached, ok, missing, err := walkToOnPremEventGateway(ctx, r.Client, obj)
+		switch {
+		case err != nil:
+			current[e] = struct{}{}
+			errs = append(errs, err)
+			continue
+		case ok && reached != gatewayKey:
+			continue
+		case !ok && missing == "":
+			err = r.setUnownedEntityConditions(ctx, obj, []string{programmed, string(konnectv1alpha1.SecretRefValidConditionType)})
+		default:
+			err = r.setUnownedEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+				metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityDetachedReason,
+				fmt.Sprintf("No longer in the configuration of the OnPremEventGateway %s: it doesn't belong to it anymore, e.g. its parent was deleted", gatewayKey)))
+		}
+		if err != nil {
 			current[e] = struct{}{}
 			errs = append(errs, err)
 		}
 	}
 	r.reported.Store(gateway.UID, current)
 	return errors.Join(errs...)
-}
-
-// namesGateway tells the message of a Programmed condition the controller
-// set is about the gateway: the first OnPremEventGateway it names, e.g. "In
-// the configuration of the OnPremEventGateway ns/name, ...". One it names
-// after is another one, e.g. the gateway a data plane certificate was pushed
-// to.
-func namesGateway(message string, gateway client.ObjectKey) bool {
-	const kind = "OnPremEventGateway "
-	_, named, found := strings.Cut(message, kind)
-	if !found {
-		return false
-	}
-	rest, found := strings.CutPrefix(named, gateway.String())
-	return found && (rest == "" || strings.ContainsAny(rest[:1], ",: "))
 }
 
 // reportEntitiesNotProgrammed sets the Programmed condition of the entities
@@ -471,29 +481,225 @@ func entityCondition[T, R ~string](obj entityObject, conditionType T, status met
 		k8sutils.TruncateMessage(message, maxConditionMessageLength), obj.GetGeneration())
 }
 
-// setEntityConditions sets the conditions on the entity and removes those of
-// the removed types, patching its status when they change, with an
-// optimistic lock: a cache behind the API server could otherwise set back the
-// conditions someone else set. An entity deleted meanwhile is left alone.
+// entityStatusFieldManager is the field manager the controller applies the
+// status of the entities with: the conditions it owns are those it applied,
+// whatever their reason or message.
+const entityStatusFieldManager = "kong-operator-onprem-eventgateway"
+
+// setEntityConditions sets the conditions on an entity of a gateway, whose
+// status the controller owns, and removes those of the removed types it set.
+// What else is in its status was set by the Konnect reconciler, e.g. while its
+// on-prem ancestor did not exist yet, or under a Konnect gateway before it
+// moved: it is cleared, but for the conditions of the types set, which the
+// controller takes over.
 func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
-	conditions := slices.Clone(obj.GetConditions())
-	changed := false
-	for _, conditionType := range removed {
-		changed = apimeta.RemoveStatusCondition(&conditions, conditionType) || changed
+	desired := desiredEntityConditions(obj, removed, conds)
+	if err := r.clearForeignStatus(ctx, obj, desired); err != nil {
+		return err
 	}
-	for _, cond := range conds {
-		changed = apimeta.SetStatusCondition(&conditions, cond) || changed
-	}
-	if !changed {
+	return r.applyEntityConditions(ctx, obj, true, desired)
+}
+
+// setUnownedEntityConditions sets the conditions on an entity that may not be
+// of a gateway, e.g. one detached from it, which may be under a Konnect
+// gateway now, and removes those of the removed types it set: what someone
+// else set is left alone, and a condition someone else took over since isn't
+// set.
+func (r *Reconciler) setUnownedEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
+	err := r.applyEntityConditions(ctx, obj, false, desiredEntityConditions(obj, removed, conds))
+	if apierrors.IsConflict(err) {
+		// Someone else set one of them since: it is theirs.
 		return nil
 	}
-	old, ok := obj.DeepCopyObject().(client.Object)
-	if !ok {
-		return fmt.Errorf("failed to copy %T", obj)
+	return err
+}
+
+// ownsEntityCondition tells whether the controller set the condition of the
+// type on the entity, and nobody else changed what it tells since.
+func ownsEntityCondition(obj client.Object, conditionType string) bool {
+	return entityConditionOwnership(obj)[conditionType]
+}
+
+// entityConditionOwnership returns, by type, the conditions of the entity the
+// controller applied, from its managed fields: true when it still owns what
+// the condition tells, its status, reason and message, false when someone
+// else changed some of them since and owns those, while the controller keeps
+// the rest, the condition itself included.
+func entityConditionOwnership(obj client.Object) map[string]bool {
+	ownership := map[string]bool{}
+	for _, entry := range obj.GetManagedFields() {
+		// The API server records them under the status subresource; only the
+		// status fields matter whatever the subresource.
+		if entry.Manager != entityStatusFieldManager || entry.Operation != metav1.ManagedFieldsOperationApply || entry.FieldsV1 == nil {
+			continue
+		}
+		var fields struct {
+			Status struct {
+				Conditions map[string]map[string]json.RawMessage `json:"f:conditions"`
+			} `json:"f:status"`
+		}
+		if err := json.Unmarshal(entry.FieldsV1.GetRawBytes(), &fields); err != nil {
+			continue
+		}
+		for key, owned := range fields.Status.Conditions {
+			var item struct {
+				Type string `json:"type"`
+			}
+			rest, ok := strings.CutPrefix(key, "k:")
+			if !ok || json.Unmarshal([]byte(rest), &item) != nil || item.Type == "" {
+				continue
+			}
+			_, status := owned["f:status"]
+			_, reason := owned["f:reason"]
+			_, message := owned["f:message"]
+			ownership[item.Type] = ownership[item.Type] || (status && reason && message)
+		}
 	}
-	obj.SetConditions(conditions)
-	if err := r.Status().Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil && !apierrors.IsNotFound(err) {
+	return ownership
+}
+
+// desiredEntityConditions returns the conditions the controller applies on the
+// entity: those it set, but for the removed types, with the conditions set,
+// whose lastTransitionTime only changes with their status. A condition whose
+// status, reason or message someone else changed since is applied as it is:
+// left out, the server would remove it, theirs included. So is one of a removed
+// type: it is theirs now.
+func desiredEntityConditions(obj entityObject, removed []string, conds []metav1.Condition) []metav1.Condition {
+	ownership := entityConditionOwnership(obj)
+	var desired []metav1.Condition
+	for _, c := range obj.GetConditions() {
+		owned, applied := ownership[c.Type]
+		if applied && (!owned || !slices.Contains(removed, c.Type)) {
+			desired = append(desired, c)
+		}
+	}
+	for _, cond := range conds {
+		if existing := apimeta.FindStatusCondition(obj.GetConditions(), cond.Type); existing != nil && apimeta.FindStatusCondition(desired, cond.Type) == nil {
+			// Someone else's: it is taken over, keeping its lastTransitionTime
+			// when the status is the same.
+			desired = append(desired, *existing)
+		}
+		apimeta.SetStatusCondition(&desired, cond)
+	}
+	return desired
+}
+
+// clearForeignStatus removes from the status of an entity the controller owns
+// what someone else set: the conditions of other types than the desired ones
+// that the controller didn't set, and the fields other than the conditions,
+// with an optimistic lock, so that a cache behind the API server doesn't set
+// back what someone else set meanwhile.
+func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, desired []metav1.Condition) error {
+	ownership := entityConditionOwnership(obj)
+	remaining := slices.DeleteFunc(slices.Clone(obj.GetConditions()), func(c metav1.Condition) bool {
+		_, applied := ownership[c.Type]
+		return !applied && apimeta.FindStatusCondition(desired, c.Type) == nil
+	})
+	cleared, err := otherStatusFields(obj)
+	if err != nil {
+		return err
+	}
+	if len(remaining) == len(obj.GetConditions()) && len(cleared) == 0 {
+		return nil
+	}
+	status := map[string]any{"conditions": remaining}
+	for _, field := range cleared {
+		status[field] = nil
+	}
+	patch, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{"resourceVersion": obj.GetResourceVersion()},
+		"status":   status,
+	})
+	if err != nil {
+		return err
+	}
+	if err := r.Status().Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch), client.FieldOwner(entityStatusFieldManager)); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to clear the status someone else set on the entity %s: %w", client.ObjectKeyFromObject(obj), err)
+	}
+	return nil
+}
+
+// applyEntityConditions applies the conditions as the ones the controller sets
+// on the entity, when they differ from those it set: the server removes those
+// it set and no longer applies, and leaves what someone else set. With force,
+// it takes over a condition someone else set; without, it returns a conflict.
+// An entity deleted meanwhile is left alone.
+func (r *Reconciler) applyEntityConditions(ctx context.Context, obj entityObject, force bool, desired []metav1.Condition) error {
+	if !entityConditionsChange(obj, desired) {
+		return nil
+	}
+	gvk, err := apiutil.GVKForObject(obj, r.Scheme())
+	if err != nil {
+		return err
+	}
+	conditions := make([]any, 0, len(desired))
+	for _, c := range desired {
+		u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&c)
+		if err != nil {
+			return err
+		}
+		conditions = append(conditions, u)
+	}
+	// The UID is a precondition: an entity deleted, or deleted and created
+	// again, since it was read isn't written; its creation triggers its
+	// gateway.
+	u := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": obj.GetName(), "namespace": obj.GetNamespace(), "uid": string(obj.GetUID())},
+		"status":   map[string]any{"conditions": conditions},
+	}}
+	u.SetGroupVersionKind(gvk)
+	opts := []client.SubResourceApplyOption{client.FieldOwner(entityStatusFieldManager)}
+	if force {
+		opts = append(opts, client.ForceOwnership)
+	}
+	if err := r.Status().Apply(ctx, client.ApplyConfigurationFromUnstructured(u), opts...); err != nil {
+		if apierrors.IsNotFound(err) || (force && apierrors.IsConflict(err)) {
+			// Forced, only the UID precondition conflicts.
+			return nil
+		}
 		return fmt.Errorf("failed to set the conditions of the entity %s: %w", client.ObjectKeyFromObject(obj), err)
 	}
 	return nil
+}
+
+// entityConditionsChange tells whether applying the desired conditions changes
+// those the controller set on the entity: one differs, someone else set it, or
+// the controller set one it no longer applies.
+func entityConditionsChange(obj entityObject, desired []metav1.Condition) bool {
+	ownership := entityConditionOwnership(obj)
+	for _, cond := range desired {
+		existing := apimeta.FindStatusCondition(obj.GetConditions(), cond.Type)
+		if _, applied := ownership[cond.Type]; existing == nil || !applied ||
+			existing.Status != cond.Status || existing.Reason != cond.Reason || existing.Message != cond.Message ||
+			existing.ObservedGeneration != cond.ObservedGeneration || !existing.LastTransitionTime.Equal(&cond.LastTransitionTime) {
+			return true
+		}
+	}
+	for conditionType := range ownership {
+		if apimeta.FindStatusCondition(desired, conditionType) == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// otherStatusFields returns the fields set in the status of the entity other
+// than its conditions.
+func otherStatusFields(obj entityObject) ([]string, error) {
+	fields, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the status of the entity %s: %w", client.ObjectKeyFromObject(obj), err)
+	}
+	status, _ := fields["status"].(map[string]any)
+	var other []string
+	for field := range status {
+		if field != "conditions" {
+			other = append(other, field)
+		}
+	}
+	slices.Sort(other)
+	return other, nil
 }

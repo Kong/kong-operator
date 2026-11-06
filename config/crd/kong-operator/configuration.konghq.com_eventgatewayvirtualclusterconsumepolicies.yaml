@@ -682,8 +682,9 @@ spec:
                   parentPolicyRef:
                     description: |-
                       ParentPolicyRef references a schemaValidation consume policy in the same
-                      namespace and virtual cluster. Required for decryptFields and optional
-                      for modifyHeaders and skipRecord. It is immutable once this policy exists
+                      namespace and virtual cluster. Required for decryptFields, maskFields and
+                      transcode, and optional for modifyHeaders and skipRecord.
+                      It is immutable once this policy exists
                       in Konnect.
                       Deleting a parent is blocked while child policy objects reference it.
                     properties:
@@ -759,26 +760,67 @@ spec:
                                 description: A reference to a schema Registry.
                                 properties:
                                   kind:
-                                    default: EventGatewaySchemaRegistry
-                                    description: Kind is the kind of the referenced
-                                      object.
+                                    description: |-
+                                      Kind is the kind of the referenced object, when its name is set
+                                      directly.
                                     enum:
                                     - EventGatewaySchemaRegistry
                                     type: string
                                   name:
                                     description: Name is the name of the referenced
-                                      object.
+                                      object, set directly.
                                     minLength: 1
                                     type: string
                                   namespace:
                                     description: |-
-                                      Namespace defaults to the referrer's namespace. If set, it must be
-                                      the same as the referrer's namespace; cross-namespace references are
-                                      not supported.
+                                      Namespace defaults to the referrer's namespace, when the name is set
+                                      directly. If set, it must be the same as the referrer's namespace.
                                     type: string
-                                required:
-                                - name
+                                  namespacedRef:
+                                    description: NamespacedRef references the object,
+                                      with type namespacedRef.
+                                    properties:
+                                      kind:
+                                        default: EventGatewaySchemaRegistry
+                                        description: Kind is the kind of the referenced
+                                          object.
+                                        enum:
+                                        - EventGatewaySchemaRegistry
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referenced
+                                          object.
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace defaults to the referrer's namespace. If set, it must be
+                                          the same as the referrer's namespace; cross-namespace references are
+                                          not supported.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    description: |-
+                                      Type selects the namespacedRef form. It is left unset when name is set
+                                      directly.
+                                    enum:
+                                    - namespacedRef
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: exactly one of name and namespacedRef must
+                                    be set
+                                  rule: has(self.name) != has(self.namespacedRef)
+                                - message: type namespacedRef must be set with namespacedRef,
+                                    and only with it
+                                  rule: has(self.type) == has(self.namespacedRef)
+                                - message: 'kind and namespace must not be set next
+                                    to namespacedRef: remove kind, and set the namespace
+                                    in namespacedRef'
+                                  rule: '!has(self.namespacedRef) || (!has(self.kind)
+                                    && !has(self.__namespace__))'
                               validateKey:
                                 description: |-
                                   If true, validate the record key.
@@ -1003,26 +1045,67 @@ spec:
                                 description: A reference to a schema Registry.
                                 properties:
                                   kind:
-                                    default: EventGatewaySchemaRegistry
-                                    description: Kind is the kind of the referenced
-                                      object.
+                                    description: |-
+                                      Kind is the kind of the referenced object, when its name is set
+                                      directly.
                                     enum:
                                     - EventGatewaySchemaRegistry
                                     type: string
                                   name:
                                     description: Name is the name of the referenced
-                                      object.
+                                      object, set directly.
                                     minLength: 1
                                     type: string
                                   namespace:
                                     description: |-
-                                      Namespace defaults to the referrer's namespace. If set, it must be
-                                      the same as the referrer's namespace; cross-namespace references are
-                                      not supported.
+                                      Namespace defaults to the referrer's namespace, when the name is set
+                                      directly. If set, it must be the same as the referrer's namespace.
                                     type: string
-                                required:
-                                - name
+                                  namespacedRef:
+                                    description: NamespacedRef references the object,
+                                      with type namespacedRef.
+                                    properties:
+                                      kind:
+                                        default: EventGatewaySchemaRegistry
+                                        description: Kind is the kind of the referenced
+                                          object.
+                                        enum:
+                                        - EventGatewaySchemaRegistry
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referenced
+                                          object.
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace defaults to the referrer's namespace. If set, it must be
+                                          the same as the referrer's namespace; cross-namespace references are
+                                          not supported.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    description: |-
+                                      Type selects the namespacedRef form. It is left unset when name is set
+                                      directly.
+                                    enum:
+                                    - namespacedRef
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: exactly one of name and namespacedRef must
+                                    be set
+                                  rule: has(self.name) != has(self.namespacedRef)
+                                - message: type namespacedRef must be set with namespacedRef,
+                                    and only with it
+                                  rule: has(self.type) == has(self.namespacedRef)
+                                - message: 'kind and namespace must not be set next
+                                    to namespacedRef: remove kind, and set the namespace
+                                    in namespacedRef'
+                                  rule: '!has(self.namespacedRef) || (!has(self.kind)
+                                    && !has(self.__namespace__))'
                               validateKey:
                                 description: |-
                                   If true, validate the record key.
@@ -1066,6 +1149,10 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: 'json.schemaRegistry can not be set with the type
+                            json, which parses without a schema: use the type confluentSchemaRegistry'
+                          rule: '!has(self.json) || !has(self.json.schemaRegistry)'
                       description:
                         description: A human-readable description of the policy.
                         maxLength: 512
@@ -1258,6 +1345,15 @@ spec:
                                         properties:
                                           id:
                                             description: ID configuration.
+                                            properties:
+                                              id:
+                                                description: The unique identifier
+                                                  of the schema registry.
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - id
                                             type: object
                                           name:
                                             description: Name configuration.
@@ -1271,17 +1367,58 @@ spec:
                                             required:
                                             - name
                                             type: object
+                                          namespacedRef:
+                                            description: |-
+                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
+                                              resolved to its Konnect name.
+                                              It is mutually exclusive with the other fields.
+                                            properties:
+                                              kind:
+                                                default: EventGatewaySchemaRegistry
+                                                description: Kind is the kind of the
+                                                  referenced object.
+                                                enum:
+                                                - EventGatewaySchemaRegistry
+                                                type: string
+                                              name:
+                                                description: Name is the name of the
+                                                  referenced object.
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                description: |-
+                                                  Namespace defaults to the referrer's namespace. If set, it must be
+                                                  the same as the referrer's namespace; cross-namespace references are
+                                                  not supported.
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
                                           type:
                                             description: Type designates the type
                                               of configuration.
                                             enum:
                                             - id
                                             - name
+                                            - namespacedRef
                                             minLength: 1
                                             type: string
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: id must be set only when type is
+                                            id
+                                          rule: 'self.type == ''id'' ? has(self.id)
+                                            : !has(self.id)'
+                                        - message: name must be set only when type
+                                            is name
+                                          rule: 'self.type == ''name'' ? has(self.name)
+                                            : !has(self.name)'
+                                        - message: namespacedRef must be set only
+                                            when type is namespacedRef
+                                          rule: 'self.type == ''namespacedRef'' ?
+                                            has(self.namespacedRef) : !has(self.namespacedRef)'
                                       subject:
                                         description: |-
                                           An expression that computes the schema registry subject of the output data's
@@ -1417,6 +1554,15 @@ spec:
                                         properties:
                                           id:
                                             description: ID configuration.
+                                            properties:
+                                              id:
+                                                description: The unique identifier
+                                                  of the schema registry.
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - id
                                             type: object
                                           name:
                                             description: Name configuration.
@@ -1430,17 +1576,58 @@ spec:
                                             required:
                                             - name
                                             type: object
+                                          namespacedRef:
+                                            description: |-
+                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
+                                              resolved to its Konnect name.
+                                              It is mutually exclusive with the other fields.
+                                            properties:
+                                              kind:
+                                                default: EventGatewaySchemaRegistry
+                                                description: Kind is the kind of the
+                                                  referenced object.
+                                                enum:
+                                                - EventGatewaySchemaRegistry
+                                                type: string
+                                              name:
+                                                description: Name is the name of the
+                                                  referenced object.
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                description: |-
+                                                  Namespace defaults to the referrer's namespace. If set, it must be
+                                                  the same as the referrer's namespace; cross-namespace references are
+                                                  not supported.
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
                                           type:
                                             description: Type designates the type
                                               of configuration.
                                             enum:
                                             - id
                                             - name
+                                            - namespacedRef
                                             minLength: 1
                                             type: string
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: id must be set only when type is
+                                            id
+                                          rule: 'self.type == ''id'' ? has(self.id)
+                                            : !has(self.id)'
+                                        - message: name must be set only when type
+                                            is name
+                                          rule: 'self.type == ''name'' ? has(self.name)
+                                            : !has(self.name)'
+                                        - message: namespacedRef must be set only
+                                            when type is namespacedRef
+                                          rule: 'self.type == ''namespacedRef'' ?
+                                            has(self.namespacedRef) : !has(self.namespacedRef)'
                                       subject:
                                         description: |-
                                           An expression that computes the schema registry subject of the output data's
@@ -1715,18 +1902,18 @@ spec:
             == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) ||
             !has(oldSelf.spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is required for decryptFields
+          message: parentPolicyRef is required for decryptFields, maskFields and transcode
           optionalOldSelf: true
-          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type
-            != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue()
-            && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
-            && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type
+            in [''decryptFields'', ''maskFields'', ''transcode'']) || has(self.spec.apiSpec.parentPolicyRef)
+            || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
+            && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is only supported for decryptFields, modifyHeaders
-            and skipRecord
+          message: parentPolicyRef is only supported for decryptFields, modifyHeaders,
+            skipRecord, maskFields and transcode
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
             || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'',
-            ''modifyHeaders'', ''skipRecord''])'
+            ''modifyHeaders'', ''skipRecord'', ''maskFields'', ''transcode''])'
         - message: parentPolicyRef must not reference the EventGatewayVirtualClusterConsumePolicy
             itself
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)

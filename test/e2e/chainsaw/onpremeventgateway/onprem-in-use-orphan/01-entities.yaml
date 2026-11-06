@@ -1,0 +1,40 @@
+# Schema registries left held by the OnPremEventGateway gone, which doesn't
+# exist: as when its cleanup finalizer was removed by hand and it was deleted
+# while Kong Operator was stopped, so nothing released them.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewaySchemaRegistry
+metadata:
+  name: deleted-first
+  finalizers:
+    - ($in_use_finalizer)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: gone
+  apiSpec:
+    type: confluent
+    confluent:
+      name: deleted-first
+      config:
+        endpoint: https://registry.example.com
+        schemaType: avro
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewaySchemaRegistry
+metadata:
+  name: deleted-after
+  finalizers:
+    - ($in_use_finalizer)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: gone
+  apiSpec:
+    type: confluent
+    confluent:
+      name: deleted-after
+      config:
+        endpoint: https://registry.example.com
+        schemaType: avro

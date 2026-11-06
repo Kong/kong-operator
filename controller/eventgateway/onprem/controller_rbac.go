@@ -31,6 +31,7 @@ package onprem
 // +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=gwadmins,verbs=get;list;watch
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongreferencegrants,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+
 // +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
 
 // A gateway reports a failed push, and its deletion although gw-admin may
@@ -39,6 +40,11 @@ package onprem
 
 // The entities of a gateway report whether they are in its configuration.
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/status;eventgatewaydataplanecertificates/status;eventgatewaylistenerpolicies/status;eventgatewaylisteners/status;eventgatewayschemaregistries/status;eventgatewaystatickeys/status;eventgatewaytlstrustbundles/status;eventgatewayvirtualclusterconsumepolicies/status;eventgatewayvirtualclusterpolicies/status;eventgatewayvirtualclusterproducepolicies/status;eventgatewayvirtualclusters/status,verbs=patch
+
+// The entities of a gateway its policies use, parent policies included, are
+// held with a finalizer, added and removed with a patch.
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusterconsumepolicies,verbs=patch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries/finalizers;eventgatewaystatickeys/finalizers;eventgatewaytlstrustbundles/finalizers;eventgatewayvirtualclusterproducepolicies/finalizers;eventgatewayvirtualclusterconsumepolicies/finalizers,verbs=update
 
 // The RBAC to read the entities that can belong to an OnPremEventGateway is in
 // zz_generated_entities.go.

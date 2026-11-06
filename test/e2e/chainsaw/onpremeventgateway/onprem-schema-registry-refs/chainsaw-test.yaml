@@ -1,0 +1,195 @@
+# Policies of an OnPremEventGateway naming their schema registry by object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-schema-registry-refs
+spec:
+  description: |
+    An OnPremEventGateway with a schema registry, and a produce and a consume
+    schema validation policy, a produce transcode policy and a consume
+    transcode policy naming it by object (type namespacedRef):
+    1. gw-admin accepts the configuration: every policy is Programmed, and
+       what gw-admin serves references the registry by its UID. The registry is
+       held by the in-use finalizer.
+    2. The registry is deleted: it stays, in the configuration, while the
+       policies reference it, still Programmed, with the reason DeletionBlocked.
+       The policies stay Programmed.
+    3. Once the policies referencing it are deleted, the registry goes.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: registry_name
+      value: orders-registry
+    - name: in_use_finalizer
+      value: gateway-operator.konghq.com/onprem-eventgateway-in-use
+
+  steps:
+    - name: 1-Policies-name-their-registry
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate-json
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate-confluent
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: transcode-avro
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: transcode-json
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: validate-consume-confluent
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: ($registry_name)
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+              - name: REGISTRY
+                value: ($registry_name)
+            timeout: 3m
+            content: |
+              REG_ID=$(kubectl get eventgatewayschemaregistry -n "$NAMESPACE" "$REGISTRY" -o jsonpath='{.metadata.uid}')
+              ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 "([.entities.virtual_clusters[0].produce_policies[] | select(.name == \"validate-confluent\") | .config.schema_registry.id] == [\"$REG_ID\"]) and ([.entities.virtual_clusters[0].produce_policies[] | select(.name == \"transcode-avro\") | .config.schema_source.schema_registry.id] == [\"$REG_ID\"]) and ([.entities.virtual_clusters[0].consume_policies[] | select(.name == \"transcode-json\") | .config.schema_source.schema_registry.id] == [\"$REG_ID\"]) and ([.entities.virtual_clusters[0].consume_policies[] | select(.name == \"validate-consume-confluent\") | .config.schema_registry.id] == [\"$REG_ID\"])"
+
+    - name: 2-Deleted-registry-held-while-in-use
+      try:
+        # Not waited for: the registry stays while the policies use it.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: REGISTRY
+                value: ($registry_name)
+            content: kubectl delete eventgatewayschemaregistry -n "$NAMESPACE" "$REGISTRY" --wait=false
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: ($registry_name)
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'being deleted, it is kept while these policies reference it: EventGatewayVirtualClusterConsumePolicy transcode-json, EventGatewayVirtualClusterConsumePolicy validate-consume-confluent, EventGatewayVirtualClusterProducePolicy transcode-avro, EventGatewayVirtualClusterProducePolicy validate-confluent'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate-confluent
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+
+    - name: 3-Registry-goes-with-its-policies
+      try:
+        # The children first, then their parent.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: transcode-avro
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: transcode-json
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: validate-consume-confluent
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: validate-confluent
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: validate-json
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: ($registry_name)
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities.schema_registries | length == 0"
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

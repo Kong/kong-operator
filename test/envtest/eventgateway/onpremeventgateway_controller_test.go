@@ -445,8 +445,10 @@ spec:`+onPremEventGatewayParentRef(gatewayB.Name)+`
 		// The CRDs allow changing the parent reference of a child only when it
 		// has status conditions and is not Programmed: their rule fails to
 		// evaluate on an object without status. Write the status the gateway
-		// reconcile will write on an entity it can't push. A status write on
-		// an entity reconciles no gateway.
+		// reconcile will write on an entity it can't push. A Programmed
+		// condition someone else sets reconciles the gateway of the entity,
+		// which sets its own back: not Programmed either, its gateway having
+		// no GWAdmin.
 		expectReconciled(t, func() {
 			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(virtualCluster), virtualCluster))
 			virtualCluster.Status.Conditions = []metav1.Condition{{
@@ -454,7 +456,7 @@ spec:`+onPremEventGatewayParentRef(gatewayB.Name)+`
 				Reason: "Pending", Message: "not pushed", LastTransitionTime: metav1.Now(),
 			}}
 			require.NoError(t, cl.Status().Update(ctx, virtualCluster))
-		})
+		}, gatewayA)
 		expectReconciled(t, func() {
 			require.NoError(t, cl.Patch(ctx, virtualCluster, client.RawPatch(types.MergePatchType, []byte(
 				`{"spec":{"eventGatewayBackendClusterRef":{"namespacedRef":{"name":"`+backendClusterB.Name+`"}}}}`,

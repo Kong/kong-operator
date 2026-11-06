@@ -49,6 +49,26 @@ func EventGatewaySchemaRegistryReconciliationWatchOptions(
 				),
 			)
 		},
+		// EventGatewayVirtualClusterConsumePolicy objects reference EventGatewaySchemaRegistry (reverseWatch):
+		// re-reconcile the ones EventGatewayVirtualClusterConsumePolicy objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewaySchemaRegistryForEventGatewayVirtualClusterConsumePolicy(cl),
+				),
+			)
+		},
+		// EventGatewayVirtualClusterProducePolicy objects reference EventGatewaySchemaRegistry (reverseWatch):
+		// re-reconcile the ones EventGatewayVirtualClusterProducePolicy objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewaySchemaRegistryForEventGatewayVirtualClusterProducePolicy(cl),
+				),
+			)
+		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
@@ -83,5 +103,43 @@ func enqueueEventGatewaySchemaRegistryForKonnectEventGateway(
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+// enqueueEventGatewaySchemaRegistryForEventGatewayVirtualClusterConsumePolicy enqueues the EventGatewaySchemaRegistry objects
+// EventGatewayVirtualClusterConsumePolicy objects use.
+func enqueueEventGatewaySchemaRegistryForEventGatewayVirtualClusterConsumePolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRefsToEventGatewaySchemaRegistry(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+	}
+}
+
+// enqueueEventGatewaySchemaRegistryForEventGatewayVirtualClusterProducePolicy enqueues the EventGatewaySchemaRegistry objects
+// EventGatewayVirtualClusterProducePolicy objects use.
+func enqueueEventGatewaySchemaRegistryForEventGatewayVirtualClusterProducePolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
 	}
 }

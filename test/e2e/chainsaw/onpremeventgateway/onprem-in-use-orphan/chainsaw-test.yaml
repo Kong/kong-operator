@@ -1,0 +1,115 @@
+# An entity held for a gateway that can't release it anymore is released once it
+# is deleted: nothing else would, and it would stay forever.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-in-use-orphan
+spec:
+  description: |
+    1. Schema registries are left held by a gateway that doesn't exist, as when
+       its cleanup finalizer was removed by hand and it was deleted while Kong
+       Operator was stopped. The finalizer is set by hand rather than by
+       stopping Kong Operator, which other tests share.
+    2. The one deleted goes. The other one, not being deleted, keeps the
+       finalizer.
+    3. Deleted too, the other one goes.
+    4. A schema registry moved to a gateway that doesn't exist, and deleted, goes.
+  bindings:
+    - name: in_use_finalizer
+      value: gateway-operator.konghq.com/onprem-eventgateway-in-use
+
+  steps:
+    - name: 1-Left-held
+      try:
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: deleted-first
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+
+    - name: 2-Released-once-deleted
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              name: deleted-first
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: deleted-first
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: deleted-after
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+
+    - name: 3-The-other-one-too
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              name: deleted-after
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: deleted-after
+
+    - name: 4-Moved-to-a-gateway-that-does-not-exist
+      try:
+        - apply:
+            file: 02-no-gwadmin.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: moved
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: moved
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -e
+              kubectl patch eventgatewayschemaregistry -n "$NAMESPACE" moved --type=merge -p '{"spec":{"parentRef":{"name":"no-such-gateway"}}}'
+              kubectl delete eventgatewayschemaregistry -n "$NAMESPACE" moved --wait=false
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: moved
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
