@@ -17,7 +17,8 @@ import (
 var discardTerratestLogsOnce sync.Once
 
 // ApplyTemplate applies templated resources to the cluster using the given rest.Config.
-func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPath string, templates []string) {
+// extraHelmArgs are passed to helm template, e.g. "--set", "key=value".
+func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPath string, templates []string, extraHelmArgs ...string) {
 	t.Helper()
 
 	helmArgs := []string{
@@ -26,6 +27,7 @@ func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPat
 		"--api-versions",
 		"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding",
 	}
+	helmArgs = append(helmArgs, extraHelmArgs...)
 
 	data := renderTemplate(ctx, t, chartPath, templates, helmArgs...)
 	res, err := apply.Apply(ctx, cfg, []byte(data))
