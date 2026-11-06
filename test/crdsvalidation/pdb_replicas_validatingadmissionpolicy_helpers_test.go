@@ -58,7 +58,6 @@ func (c pdbReplicasCase) deploymentOptionsV1beta1() operatorv1beta1.DeploymentOp
 	return opts
 }
 
-//nolint:unused // used by the GatewayConfiguration policy test.
 func (c pdbReplicasCase) deploymentOptionsV2beta1() operatorv2beta1.DeploymentOptions {
 	opts := operatorv2beta1.DeploymentOptions{Replicas: c.replicas}
 	if hs := c.horizontalScaling(); hs != nil {
