@@ -22,7 +22,8 @@ spec:
         has(object.spec.dataPlaneOptions) &&
         has(object.spec.dataPlaneOptions.resources) &&
         has(object.spec.dataPlaneOptions.resources.podDisruptionBudget)
-    # Same defaulting as the operator: replicas, then HPA minReplicas, then 1.
+    # Matches the operator's floor: replicas and scaling are mutually exclusive (CRD rule),
+    # so checking replicas before HPA minReplicas gives the same result. Defaults to 1.
     - name: replicaFloor
       expression: |
         !has(object.spec.dataPlaneOptions.deployment) ? 1 :
