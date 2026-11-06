@@ -739,6 +739,12 @@ test.integration-ko:
 		COVERPROFILE="coverage.integration.ko.out" \
 		GOTESTPATH=./test/integration/ko/
 
+.PHONY: test.integration-ko-isolated
+test.integration-ko-isolated:
+	@$(MAKE) _test.integration \
+		COVERPROFILE="coverage.integration.ko-isolated.out" \
+		GOTESTPATH=./test/integration/isolated/
+
 .PHONY: test.integration-konnect
 test.integration-konnect:
 	@$(MAKE) _test.integration \

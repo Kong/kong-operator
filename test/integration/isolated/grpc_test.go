@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	pb "github.com/moul/pb/grpcbin/go-grpc"
 	"github.com/stretchr/testify/assert"
@@ -37,8 +35,10 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
-		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTP", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup(
+			withGatewayListeners(builder.NewListener("grpc").HTTP().WithPort(80).Build()),
+		)).
+		Assess("deploying example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTP", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
@@ -48,21 +48,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, gatewayClient)
 
-			t.Log("deploying a new gatewayClass")
-			gatewayClassName := uuid.NewString()
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			assert.NoError(t, err)
-			cleaner.Add(gwc)
-
-			t.Log("deploying a new gateway")
-			gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Spec.Listeners = builder.NewListener("grpc").
-					HTTP().
-					WithPort(ktfkong.DefaultProxyHTTPPort).
-					IntoSlice()
-			})
-			assert.NoError(t, err)
-			cleaner.Add(gateway)
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 
 			t.Log("deploying a minimal GRPC container deployment to test Ingress routes")
 			container := generators.NewContainer("grpcbin", test.GRPCBinImage, test.GRPCBinPort)
