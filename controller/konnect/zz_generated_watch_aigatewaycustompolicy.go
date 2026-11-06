@@ -53,13 +53,16 @@ func AIGatewayCustomPolicyReconciliationWatchOptions(
 			)
 		},
 		// AIGatewayPolicy objects reference AIGatewayCustomPolicy (reverseWatch):
-		// re-reconcile the ones AIGatewayPolicy objects use whenever they change or are deleted.
+		// re-reconcile the ones AIGatewayPolicy objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayPolicy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayCustomPolicyForAIGatewayPolicy(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {

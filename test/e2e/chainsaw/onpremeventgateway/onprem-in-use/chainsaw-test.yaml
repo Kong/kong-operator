@@ -1,14 +1,14 @@
 # What the policies of an OnPremEventGateway use is held while they use it: a
-# schema registry, a static key, a TLS trust bundle, and a parent policy.
+# schema registry, a static key, a TLS trust bundle and a virtual cluster.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: eventgateway-onprem-in-use
 spec:
   description: |
-    An OnPremEventGateway whose policies use a schema registry, a static key and
-    a TLS trust bundle, by object, and a policy a child policy names as its
-    parent:
+    An OnPremEventGateway whose policies use a schema registry, a static key, a
+    TLS trust bundle and a virtual cluster, by object, and a policy a child
+    policy names as its parent:
     1. gw-admin accepts them, each held by the in-use finalizer.
     2. Policies referencing them by id or by name are left out, reporting
        namespacedRef is the only reference allowed, until they are deleted.
@@ -78,6 +78,15 @@ spec:
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: forward
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
               kind: EventGatewaySchemaRegistry
               metadata:
                 name: held-registry
@@ -103,6 +112,13 @@ spec:
               metadata:
                 name: held-bundle
                 (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
         - script:
             env:
               - name: NAMESPACE
@@ -110,7 +126,7 @@ spec:
               - name: GATEWAY
                 value: ($gateway_name)
             timeout: 3m
-            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\"))"
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\")) and ([.virtual_clusters[].name] | index(\"held-vc\"))"
 
     - name: 2-Only-by-object
       try:
@@ -176,6 +192,26 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: "False"
                     (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: by-name-destination
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: by-id-destination
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
         # The policies left out don't hold back the others.
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
@@ -186,7 +222,7 @@ spec:
               - name: GATEWAY
                 value: ($gateway_name)
             timeout: 3m
-            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\"))"
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\")) and ([.virtual_clusters[].name] | index(\"held-vc\"))"
         - delete:
             file: 02-not-by-object.yaml
         - assert:
@@ -204,6 +240,7 @@ spec:
               kubectl delete -n "$NAMESPACE" eventgatewayschemaregistry held-registry --wait=false
               kubectl delete -n "$NAMESPACE" eventgatewaystatickey held-key --wait=false
               kubectl delete -n "$NAMESPACE" eventgatewaytlstrustbundle held-bundle --wait=false
+              kubectl delete -n "$NAMESPACE" eventgatewayvirtualcluster held-vc --wait=false
               kubectl delete -n "$NAMESPACE" eventgatewayvirtualclusterproducepolicy validate --wait=false
         - assert:
             resource:
@@ -256,6 +293,18 @@ spec:
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayListenerPolicy forward'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
               kind: EventGatewayVirtualClusterProducePolicy
               metadata:
                 name: validate
@@ -281,6 +330,15 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: "True"
         - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: forward
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
         - script:
             env:
@@ -289,7 +347,7 @@ spec:
               - name: GATEWAY
                 value: ($gateway_name)
             timeout: 3m
-            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\"))"
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\")) and ([.virtual_clusters[].name] | index(\"held-vc\"))"
 
     - name: 4-No-new-policy-while-being-deleted
       try:
@@ -329,6 +387,16 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: "False"
                     (contains(message, 'which is being deleted')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: late-destination
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'which is being deleted')): true
         # The policies left out don't hold back the others.
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
@@ -348,6 +416,18 @@ spec:
                   - status: "True"
                     reason: DeletionBlocked
                     "(contains(message, 'it is kept while these policies reference it: EventGatewayVirtualClusterProducePolicy validate'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayListenerPolicy forward'))": true
 
     - name: 5-Gone-with-their-policies
       try:
@@ -372,6 +452,11 @@ spec:
               apiVersion: configuration.konghq.com/v1alpha1
               kind: EventGatewayListenerPolicy
               name: mtls
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              name: forward
         - error:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -390,6 +475,12 @@ spec:
               kind: EventGatewayTLSTrustBundle
               metadata:
                 name: held-bundle
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
         - script:
@@ -399,7 +490,7 @@ spec:
               - name: GATEWAY
                 value: ($gateway_name)
             timeout: 3m
-            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | (([.schema_registries[].name] | index(\"held-registry\")) or ([.static_keys[].name] | index(\"held-key\")) or ([.tls_trust_bundles[].name] | index(\"held-bundle\"))) | not"
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | (([.schema_registries[].name] | index(\"held-registry\")) or ([.static_keys[].name] | index(\"held-key\")) or ([.tls_trust_bundles[].name] | index(\"held-bundle\")) or ([.virtual_clusters[].name] | index(\"held-vc\"))) | not"
 
   catch:
     - description: Capture debug snapshot on test failure.

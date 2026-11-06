@@ -1339,6 +1339,18 @@ apiGroupVersions:
             # blocked deletion), and a trust bundle being deleted is not
             # resolved for policies not created in Konnect yet.
             reverseWatch: true
+          # Additive: Konnect virtual cluster IDs/names keep working;
+          # namespacedRef references an EventGatewayVirtualCluster in the cluster
+          # instead, by its object name rather than the name of its API entity.
+          # It resolves to the Konnect ID, so renaming a virtual cluster can't
+          # rebind the policy to another one.
+          # Konnect refuses to delete a virtual cluster a listener policy forwards
+          # to: the virtual cluster is reconciled again once they stop using it.
+          - path: spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
+            kinds: [EventGatewayVirtualCluster]
+            resolvesTo: id
+            unionMember: namespacedRef
+            reverseWatch: true
         dataSources:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret

@@ -14,7 +14,7 @@ import (
 
 // EventGatewayEntityInUseError is returned when Konnect refuses to delete an
 // Event Gateway entity that policy objects of the cluster still reference by
-// object, e.g. a schema registry. Deletion is blocked
+// object, e.g. a schema registry or a virtual cluster. Deletion is blocked
 // until those policies are deleted or stop referencing it: the entity's
 // controller watches them, so the deletion is retried once one changes.
 type EventGatewayEntityInUseError struct {
@@ -86,4 +86,95 @@ func deleteEventGatewaySchemaRegistryGuarded(
 	}
 	slices.Sort(users)
 	return EventGatewayEntityInUseError{What: "schema registry", Users: users, Err: err}
+}
+
+// deleteEventGatewayVirtualClusterGuarded deletes a virtual cluster. When
+// Konnect refuses it, as listener policies still forward to it, and listener
+// policy objects of its namespace reference it, it returns an
+// EventGatewayEntityInUseError naming them. Otherwise Konnect's error is
+// returned as it is.
+func deleteEventGatewayVirtualClusterGuarded(
+	ctx context.Context,
+	sdk sdkkonnectgo.EventGatewayVirtualClustersSDK,
+	cl client.Client,
+	obj *configurationv1alpha1.EventGatewayVirtualCluster,
+) error {
+	err := deleteEventGatewayVirtualCluster(ctx, sdk, obj)
+	if err == nil || !errorIsBadRequest(err) {
+		return err
+	}
+	key := client.ObjectKeyFromObject(obj)
+	var policies configurationv1alpha1.EventGatewayListenerPolicyList
+	if listErr := cl.List(ctx, &policies, client.InNamespace(obj.Namespace)); listErr != nil {
+		return fmt.Errorf("%w; failed to list the EventGatewayListenerPolicy objects using it: %w", err, listErr)
+	}
+	var users []string
+	for i := range policies.Items {
+		if slices.Contains(configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(&policies.Items[i]), key) {
+			users = append(users, "EventGatewayListenerPolicy "+client.ObjectKeyFromObject(&policies.Items[i]).String())
+		}
+	}
+	if len(users) == 0 {
+		return err
+	}
+	slices.Sort(users)
+	return EventGatewayEntityInUseError{What: "virtual cluster", Users: users, Err: err}
+}
+
+// deleteEventGatewayBackendClusterGuarded deletes a backend cluster. Konnect
+// deletes its virtual clusters with it, but refuses while listener policies
+// forward to one of them: when listener policy objects of its namespace do,
+// it returns an EventGatewayEntityInUseError naming them. Otherwise Konnect's
+// error is returned as it is.
+func deleteEventGatewayBackendClusterGuarded(
+	ctx context.Context,
+	sdk sdkkonnectgo.EventGatewayBackendClustersSDK,
+	cl client.Client,
+	obj *configurationv1alpha1.EventGatewayBackendCluster,
+) error {
+	err := deleteEventGatewayBackendCluster(ctx, sdk, obj)
+	if err == nil || !errorIsBadRequest(err) {
+		return err
+	}
+	var virtualClusters configurationv1alpha1.EventGatewayVirtualClusterList
+	if listErr := cl.List(ctx, &virtualClusters, client.InNamespace(obj.Namespace)); listErr != nil {
+		return fmt.Errorf("%w; failed to list the EventGatewayVirtualCluster objects of the backend cluster: %w", err, listErr)
+	}
+	key := client.ObjectKeyFromObject(obj)
+	var ofBackendCluster []client.ObjectKey
+	for i := range virtualClusters.Items {
+		vc := &virtualClusters.Items[i]
+		ref := vc.Spec.EventGatewayBackendClusterRef.NamespacedRef
+		if ref == nil {
+			continue
+		}
+		namespace := vc.Namespace
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			namespace = *ref.Namespace
+		}
+		if (client.ObjectKey{Namespace: namespace, Name: ref.Name}) == key {
+			ofBackendCluster = append(ofBackendCluster, client.ObjectKeyFromObject(vc))
+		}
+	}
+	if len(ofBackendCluster) == 0 {
+		return err
+	}
+	var policies configurationv1alpha1.EventGatewayListenerPolicyList
+	if listErr := cl.List(ctx, &policies, client.InNamespace(obj.Namespace)); listErr != nil {
+		return fmt.Errorf("%w; failed to list the EventGatewayListenerPolicy objects using it: %w", err, listErr)
+	}
+	var users []string
+	for i := range policies.Items {
+		for _, vc := range configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(&policies.Items[i]) {
+			if slices.Contains(ofBackendCluster, vc) {
+				users = append(users, "EventGatewayListenerPolicy "+client.ObjectKeyFromObject(&policies.Items[i]).String())
+				break
+			}
+		}
+	}
+	if len(users) == 0 {
+		return err
+	}
+	slices.Sort(users)
+	return EventGatewayEntityInUseError{What: "backend cluster", Users: users, Err: err}
 }

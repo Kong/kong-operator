@@ -37383,6 +37383,21 @@ spec:
                                     type: string
                                   name:
                                     type: string
+                                  namespacedRef:
+                                    properties:
+                                      kind:
+                                        default: EventGatewayVirtualCluster
+                                        enum:
+                                        - EventGatewayVirtualCluster
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
                                 type: object
                               minBrokerID:
                                 type: integer
