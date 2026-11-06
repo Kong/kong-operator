@@ -24,6 +24,9 @@ import (
 
 const (
 
+	// ValidationPolicyGatewayConfiguration contains gateway configuration validation policies path relative to the kong-operator chart.
+	ValidationPolicyGatewayConfiguration = "templates/validation-policy-gatewayconfiguration.yaml"
+
 	// ValidationPolicyDataplane contains data plane validation policies path relative to the kong-operator chart.
 	ValidationPolicyDataplane = "templates/validation-policy-dataplane.yaml"
 

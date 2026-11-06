@@ -36,6 +36,16 @@ func main() {
 			},
 		},
 		{
+			validatingPoliciesSubPath:     "gatewayconfiguration",
+			chartValidatingPolicyFileName: "validation-policy-gatewayconfiguration.yaml",
+			policyOverrides: []policyOverride{
+				{
+					policyName:    "pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com",
+					helmValueName: "podDisruptionBudgetReplicas",
+				},
+			},
+		},
+		{
 			validatingPoliciesSubPath:     "service",
 			chartValidatingPolicyFileName: "validation-policy-service-annotations.yaml",
 			helmValueName:                 "serviceAnnotations",
