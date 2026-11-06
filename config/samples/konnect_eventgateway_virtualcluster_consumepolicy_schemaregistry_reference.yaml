@@ -239,7 +239,7 @@ spec:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
           # The EventGatewaySchemaRegistry object, named directly. It can also be
-          # written as in the other policies, which an OnPremEventGateway requires:
+          # written as in the other policies:
           #   schemaRegistry:
           #     type: namespacedRef
           #     namespacedRef:

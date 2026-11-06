@@ -227,8 +227,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	// An entity that can't be held or released doesn't hold back the
 	// configuration, nor what the status tells of it: one that changed since it
 	// was read triggers the gateway again, and an error is returned after the
-	// push.
+	// push. Not pushing wouldn't protect it either: the configuration pushed
+	// last uses it all the same. Until it is held, though, deleting it takes
+	// the policies using it out of the configuration, e.g. an encryptFields
+	// policy: a Warning event tells.
 	held, _, holdErr := r.holdEntities(ctx, gateway, cfg.entitiesInUse)
+	if holdErr != nil {
+		r.event(gateway, corev1.EventTypeWarning, eventReasonHoldFailed, eventActionHold,
+			fmt.Sprintf("Entities its policies use may not be protected from deletion: %v", holdErr))
+	}
 	cfg.refreshResourceVersions(held)
 	config := deriveConfig(gateway, cfg)
 	if len(cfg.invalidChains) == 0 {

@@ -1808,6 +1808,23 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	{{- end}}
 	return checks
 }
+{{- $hasObjectRefs := false}}
+{{- range $.References}}{{if or .UnionMember .TypedMember}}{{$hasObjectRefs = true}}{{end}}{{end}}
+{{- if $hasObjectRefs}}
+
+// ObjectReferencePaths returns the paths of the references of the
+// {{$.EntityName}} that name another object either by object, with namespacedRef, or
+// otherwise, e.g. by its Konnect ID or name.
+func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
+	return []ObjectReferencePath{
+	{{- range $.References}}
+	{{- if or .UnionMember .TypedMember}}
+		{Path: "{{.Path}}", Kind: "{{.DefaultKind}}", NameIsObject: {{if .TypedMember}}true{{else}}false{{end}}},
+	{{- end}}
+	{{- end}}
+	}
+}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- define "sdkOpsRefInjections"}}
@@ -4603,6 +4620,11 @@ const (
 // for callers outside this package to check against KongReferenceGrant
 // before calling ResolveKonnectReferences.
 type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
+
+// ObjectReferencePath is the path of a reference that names another object
+// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
+// or name.
+type ObjectReferencePath = commonv1alpha1.ObjectReferencePath
 
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError

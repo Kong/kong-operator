@@ -3,6 +3,9 @@ package configuration_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
+
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -242,6 +245,56 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 			{
 				Name:                 "namespacedRef with an empty name fails",
 				TestObject:           withTrustBundles(byNamespacedRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{})),
+				ExpectedErrorMessage: new("should be at least 1 chars long"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("forwardToVirtualCluster portMapping destination", func(t *testing.T) {
+		withDestination := func(destination string) *configurationv1alpha1.EventGatewayListenerPolicy {
+			obj := validListenerPolicy(ns.Name)
+			obj.Spec.APISpec = configurationv1alpha1.EventGatewayListenerPolicyAPISpec{}
+			require.NoError(t, yaml.UnmarshalStrict([]byte(`
+type: forwardToVirtualCluster
+forwardToVirtualCluster:
+  name: forward
+  config:
+    type: portMapping
+    portMapping: {advertisedHost: localhost, destination: `+destination+`}
+`), &obj.Spec.APISpec))
+			return obj
+		}
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayListenerPolicy]{
+			{
+				Name:       "namespacedRef to an EventGatewayVirtualCluster passes",
+				TestObject: withDestination(`{namespacedRef: {name: orders-vc}}`),
+			},
+			{
+				Name:       "Konnect virtual cluster ID passes",
+				TestObject: withDestination(`{id: 7f3c2a6e-1b9d-4c8e-9f0a-2d4b6c8e0a1f}`),
+			},
+			{
+				Name:       "Konnect virtual cluster name passes",
+				TestObject: withDestination(`{name: orders}`),
+			},
+			{
+				Name:                 "setting both a name and a namespacedRef fails",
+				TestObject:           withDestination(`{name: orders, namespacedRef: {name: orders-vc}}`),
+				ExpectedErrorMessage: new("Too many: 2: must have at most 1 item"),
+			},
+			{
+				Name:                 "an empty reference fails",
+				TestObject:           withDestination(`{}`),
+				ExpectedErrorMessage: new("should have at least 1 properties"),
+			},
+			{
+				Name:                 "namespacedRef with an unsupported kind fails",
+				TestObject:           withDestination(`{namespacedRef: {kind: EventGatewaySchemaRegistry, name: orders-vc}}`),
+				ExpectedErrorMessage: new(`supported values: "EventGatewayVirtualCluster"`),
+			},
+			{
+				Name:                 "namespacedRef without a name fails",
+				TestObject:           withDestination(`{namespacedRef: {name: ""}}`),
 				ExpectedErrorMessage: new("should be at least 1 chars long"),
 			},
 		}.RunWithConfig(t, cfg, scheme)

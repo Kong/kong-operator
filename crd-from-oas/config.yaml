@@ -1339,6 +1339,18 @@ apiGroupVersions:
             # blocked deletion), and a trust bundle being deleted is not
             # resolved for policies not created in Konnect yet.
             reverseWatch: true
+          # Additive: Konnect virtual cluster IDs/names keep working;
+          # namespacedRef references an EventGatewayVirtualCluster in the cluster
+          # instead, by its object name rather than the name of its API entity.
+          # It resolves to the Konnect ID, so renaming a virtual cluster can't
+          # rebind the policy to another one.
+          # Konnect refuses to delete a virtual cluster a listener policy forwards
+          # to: the virtual cluster is reconciled again once they stop using it.
+          - path: spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
+            kinds: [EventGatewayVirtualCluster]
+            resolvesTo: id
+            unionMember: namespacedRef
+            reverseWatch: true
         dataSources:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret
@@ -1497,6 +1509,11 @@ apiGroupVersions:
           # _validations below), but a stored object may still set it: its
           # reference is kept so that it is resolved, watched and holds the
           # registry like any other.
+          # Resolved to the Konnect name, unlike a virtual cluster (resolved to
+          # its id), as the consume schema validation references, released
+          # before, already were: both kinds of policy send the same. The policy
+          # sends the current name of the registry each time it is created or
+          # updated in Konnect.
           - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name

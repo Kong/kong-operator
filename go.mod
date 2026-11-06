@@ -64,6 +64,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
 	k8s.io/kubectl v0.37.2
 	k8s.io/kubernetes v1.37.2
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	oras.land/oras-go/v2 v2.6.4
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/controller-tools v0.23.0
@@ -311,7 +312,6 @@ require (
 	k8s.io/controller-manager v0.0.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/streaming v0.37.2 // indirect
-	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0 // indirect
 	sigs.k8s.io/gateway-api-conformance-images v0.2.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect

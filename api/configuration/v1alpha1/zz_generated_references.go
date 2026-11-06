@@ -39,6 +39,11 @@ const (
 // before calling ResolveKonnectReferences.
 type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
 
+// ObjectReferencePath is the path of a reference that names another object
+// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
+// or name.
+type ObjectReferencePath = commonv1alpha1.ObjectReferencePath
+
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 
@@ -230,6 +235,30 @@ type EventGatewayVirtualClusterProducePolicyRef struct {
 	// +optional
 	// +kubebuilder:validation:Enum=EventGatewayVirtualClusterProducePolicy
 	// +kubebuilder:default=EventGatewayVirtualClusterProducePolicy
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// EventGatewayVirtualClusterRef references an EventGatewayVirtualCluster in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayVirtualClusterRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayVirtualCluster
+	// +kubebuilder:default=EventGatewayVirtualCluster
 	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the referenced object.

@@ -19,8 +19,6 @@ package onprem
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -37,10 +35,7 @@ import (
 // Konnect, resolve such a reference to the Konnect ID or to the name of the
 // entity. Converted through uidResolver, both are the UID of its object, which
 // is its id in the configuration, and the reference is then checked to be to
-// an entity of the configuration of the gateway (see resolveReferences). The
-// virtual cluster a listener policy forwards to is the exception: the
-// conversion leaves it named, and resolveReferences sends it by its id (see
-// virtualClusterAt).
+// an entity of the configuration of the gateway (see resolveReferences).
 
 // uidResolver reads the entities the policies reference with their UID as
 // their Konnect ID and as their name. It records the objects it reads by UID,
@@ -106,9 +101,7 @@ type referenceTargets struct {
 	schemaRegistries entityIDs
 	staticKeys       entityIDs
 	tlsTrustBundles  entityIDs
-	// virtualClusters are the virtual clusters of the configuration, by name:
-	// a listener policy forwards to one by its name.
-	virtualClusters map[string]uuid.UUID
+	virtualClusters  entityIDs
 	// read names the objects uidResolver read, by UID.
 	read map[uuid.UUID]client.ObjectKey
 }
@@ -120,7 +113,7 @@ func referenceTargetsOf(c *configuration, read map[uuid.UUID]client.ObjectKey) r
 		schemaRegistries: entityIDs{kind: "EventGatewaySchemaRegistry", names: map[uuid.UUID]string{}},
 		staticKeys:       entityIDs{kind: "EventGatewayStaticKey", names: map[uuid.UUID]string{}, withName: true},
 		tlsTrustBundles:  entityIDs{kind: "EventGatewayTLSTrustBundle", names: map[uuid.UUID]string{}},
-		virtualClusters:  map[string]uuid.UUID{},
+		virtualClusters:  entityIDs{kind: "EventGatewayVirtualCluster", names: map[uuid.UUID]string{}},
 		read:             read,
 	}
 	for _, e := range c.entities.SchemaRegistries {
@@ -133,7 +126,7 @@ func referenceTargetsOf(c *configuration, read map[uuid.UUID]client.ObjectKey) r
 		t.tlsTrustBundles.names[e.Id] = e.Name
 	}
 	for _, e := range c.entities.VirtualClusters {
-		t.virtualClusters[e.Name] = e.Id
+		t.virtualClusters.names[e.Id] = e.Name
 	}
 	return t
 }
@@ -205,32 +198,12 @@ func tlsTrustBundleAt(path ...string) entityReference {
 	}}
 }
 
-// virtualClusterAt is the virtual cluster a destination at the path names,
-// by the name of its entity: it is sent by its id instead, as gw-admin keeps
-// the name but gives the data planes an empty id for it. A destination by id
-// is refused, a Konnect id meaning nothing to gw-admin, unless it is the id
-// of a virtual cluster of the configuration, as in a policy kept from the
-// last configuration.
+// virtualClusterAt is the virtual cluster a destination at the path names. It
+// is sent by its id: gw-admin keeps a destination by name, but gives the data
+// planes an empty id for it.
 func virtualClusterAt(path ...string) entityReference {
 	return entityReference{path: path, resolve: func(t referenceTargets, destination map[string]any) error {
-		if v, ok := destination["id"]; ok {
-			s, _ := v.(string)
-			if id, err := uuid.Parse(s); err == nil && slices.Contains(slices.Collect(maps.Values(t.virtualClusters)), id) {
-				return nil
-			}
-			return fmt.Errorf("it forwards to a virtual cluster by id: name a virtual cluster of the gateway instead")
-		}
-		name, ok := destination["name"].(string)
-		if !ok {
-			return nil
-		}
-		id, ok := t.virtualClusters[name]
-		if !ok {
-			return fmt.Errorf("it forwards to the virtual cluster %q, which isn't in the configuration of the gateway", name)
-		}
-		clear(destination)
-		destination["id"] = id.String()
-		return nil
+		return t.resolve(t.virtualClusters, destination)
 	}}
 }
 
@@ -271,103 +244,95 @@ var (
 
 // namespacedRefMember is the only way a policy of an OnPremEventGateway can
 // reference another entity: as the type of a tagged union, or as the member of
-// one without a type.
+// one without a type, unless a name set directly names the object itself.
 const namespacedRefMember = "namespacedRef"
+
+// objectReferrer is a policy referencing other entities, which may name them
+// by object or otherwise, at the paths it returns.
+type objectReferrer interface {
+	entityObject
+	ObjectReferencePaths() []configurationv1alpha1.ObjectReferencePath
+}
 
 // checkPolicyReferences returns why a policy can't reference what it does, on
 // prem: see referencesByObject and noNewUserOfDeletedEntities.
-func checkPolicyReferences(ctx context.Context, cl client.Client, policy entityObject, apiSpec any) error {
-	if err := referencesByObject(apiSpec); err != nil {
+func checkPolicyReferences(ctx context.Context, cl client.Client, policy objectReferrer) error {
+	if err := referencesByObject(policy); err != nil {
 		return err
 	}
 	return noNewUserOfDeletedEntities(ctx, cl, policy)
 }
 
-// referencesByObject returns an error when the API spec of a policy references
-// a schema registry, a static key or a TLS trust bundle other than by object:
-// an id or a name means nothing to gw-admin, whose entities are identified by
-// the UID of their object, and such a reference wouldn't hold the entity (see
-// entitiesInUse). It must be called on the spec, before the conversion turns a
-// reference by object into a reference by id or by name.
-func referencesByObject(apiSpec any) error {
-	value, err := jsonValue(apiSpec)
+// referencesByObject returns an error when a policy references another entity
+// other than by object, at the paths of its references (see
+// ObjectReferencePaths): an id or a name means nothing to gw-admin, whose
+// entities are identified by the UID of their object, and such a reference
+// wouldn't hold the entity (see entitiesInUse). It must be called on the
+// policy, before the conversion turns a reference by object into a reference
+// by id or by name.
+func referencesByObject(policy objectReferrer) error {
+	value, err := jsonValue(policy)
 	if err != nil {
 		return fmt.Errorf("failed to read the references of the policy: %w", err)
 	}
-	return referencesByObjectIn(value, "spec.apiSpec")
-}
-
-// referencesByObjectIn is referencesByObject for the JSON value at the path.
-// Only the union members in use are encoded, so one left set in another member
-// doesn't count.
-func referencesByObjectIn(v any, path string) error {
-	switch v := v.(type) {
-	case map[string]any:
-		for _, key := range slices.Sorted(maps.Keys(v)) {
-			field := path + "." + key
-			var err error
-			switch {
-			case key == "labels":
-				// Labels are user data: a label key isn't a reference.
-				continue
-			case key == "schemaRegistry":
-				err = notByObjectError(field, "its schema registry", schemaRegistryRefForm(v[key]))
-			case key == "key" && strings.HasSuffix(path, ".static"):
-				err = notByObjectError(field, "its static key", untypedRefForm(v[key]))
-			case key == "tlsTrustBundles":
-				bundles, _ := v[key].([]any)
-				for i, bundle := range bundles {
-					if err = notByObjectError(fmt.Sprintf("%s.%d", field, i), "a TLS trust bundle", untypedRefForm(bundle)); err != nil {
-						break
-					}
-				}
-			default:
-				err = referencesByObjectIn(v[key], field)
-			}
-			if err != nil {
-				return err
-			}
-		}
-	case []any:
-		for i, item := range v {
-			if err := referencesByObjectIn(item, fmt.Sprintf("%s.%d", path, i)); err != nil {
-				return err
-			}
+	for _, ref := range policy.ObjectReferencePaths() {
+		if err := referencesByObjectAt(value, strings.Split(ref.Path, "."), "", ref); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-// notByObjectError returns the error of a reference at the field in the form,
-// or nil for the empty form of a reference by object.
-func notByObjectError(field, what, form string) error {
-	if form == "" {
+// referencesByObjectAt is referencesByObject for the reference at the path
+// segments under the JSON value at the field. An array on the way holds a
+// reference in each of its items. Only the union members in use are encoded,
+// so a reference left set in another member doesn't count.
+func referencesByObjectAt(v any, segments []string, field string, ref configurationv1alpha1.ObjectReferencePath) error {
+	if items, ok := v.([]any); ok {
+		for i, item := range items {
+			if err := referencesByObjectAt(item, segments, fmt.Sprintf("%s.%d", field, i), ref); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
-	return fmt.Errorf("%s references %s by %s: with an OnPremEventGateway, only %s is allowed", field, what, form, namespacedRefMember)
+	if len(segments) == 0 {
+		form := referenceForm(v, ref.NameIsObject)
+		if form == "" {
+			return nil
+		}
+		return fmt.Errorf("%s references an %s by %s: with an OnPremEventGateway, only %s is allowed", field, ref.Kind, form, namespacedRefMember)
+	}
+	fields, ok := v.(map[string]any)
+	if !ok {
+		return nil
+	}
+	next, ok := fields[segments[0]]
+	if !ok {
+		return nil
+	}
+	if field != "" {
+		field += "."
+	}
+	return referencesByObjectAt(next, segments[1:], field+segments[0], ref)
 }
 
-// schemaRegistryRefForm returns how a reference to a schema registry that isn't
-// by namespacedRef names it, or "". One without a type, as a consume schema
-// validation policy may set, names the object directly: it means the same, but
-// with an OnPremEventGateway every reference is written with namespacedRef.
-func schemaRegistryRefForm(ref any) string {
+// referenceForm returns how a reference names the entity when it isn't by
+// object, or "". A tagged union tells it with its type. One without a type
+// tells it with the member set: a name set directly names the object itself
+// when nameIsObject, as in a consume schema validation policy.
+func referenceForm(ref any, nameIsObject bool) string {
 	fields, _ := ref.(map[string]any)
-	switch refType, _ := fields["type"].(string); refType {
-	case namespacedRefMember:
-		return ""
-	case "":
-		return "a name set directly"
-	default:
+	if refType, _ := fields["type"].(string); refType != "" {
+		if refType == namespacedRefMember {
+			return ""
+		}
 		return refType
 	}
-}
-
-// untypedRefForm returns how a reference without a type, whose set member tells
-// its form, names the entity when it isn't by object, or "".
-func untypedRefForm(ref any) string {
-	fields, _ := ref.(map[string]any)
 	if _, ok := fields[namespacedRefMember]; ok {
+		return ""
+	}
+	if _, ok := fields["name"]; ok && nameIsObject {
 		return ""
 	}
 	for _, form := range []string{"id", "name"} {

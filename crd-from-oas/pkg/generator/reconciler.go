@@ -27,6 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- if .ReverseRefs}}
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -69,13 +72,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		{{- end}}
 		{{- range .ReverseRefs}}
 		// {{.Referrer}} objects reference {{$.EntityName}} (reverseWatch):
-		// re-reconcile the ones {{.Referrer}} objects use whenever they change or are deleted.
+		// re-reconcile the ones {{.Referrer}} objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&{{$.APIGroupPackageAlias}}.{{.Referrer}}{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueue{{$.EntityName}}For{{.Referrer}}(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		{{- end}}
@@ -418,6 +424,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- if .ReverseRefs}}
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 {{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -499,13 +508,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		{{- end}}
 		{{- range .ReverseRefs}}
 		// {{.Referrer}} objects reference {{$.EntityName}} (reverseWatch):
-		// re-reconcile the ones {{.Referrer}} objects use whenever they change or are deleted.
+		// re-reconcile the ones {{.Referrer}} objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&{{$.APIGroupPackageAlias}}.{{.Referrer}}{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueue{{$.EntityName}}For{{.Referrer}}(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		{{- end}}

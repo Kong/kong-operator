@@ -662,8 +662,9 @@ type EncryptionKeyStaticReference struct {
 	ID *string `json:"id,omitempty"`
 	// +optional
 	Name *string `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayStaticKey object,
-	// resolved to its Konnect id.
+	// NamespacedRef references an in-cluster EventGatewayStaticKey object: with a
+	// Konnect gateway, it is resolved to the Konnect id of the object, and with an
+	// on-prem gateway, to its UID.
 	// It is mutually exclusive with the other fields.
 	//
 	// +optional
@@ -5673,8 +5674,9 @@ type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry struct
 	//
 	// +optional
 	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
-	// resolved to its Konnect name.
+	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
+	// with a Konnect gateway, it is resolved to the Konnect name of the object,
+	// and with an on-prem gateway, to its UID.
 	// It is mutually exclusive with the other fields.
 	//
 	// +optional
@@ -6416,8 +6418,9 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry struct {
 	//
 	// +optional
 	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
-	// resolved to its Konnect name.
+	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
+	// with a Konnect gateway, it is resolved to the Konnect name of the object,
+	// and with an on-prem gateway, to its UID.
 	// It is mutually exclusive with the other fields.
 	//
 	// +optional
@@ -6626,8 +6629,9 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
 	//
 	// +optional
 	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
-	// resolved to its Konnect name.
+	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
+	// with a Konnect gateway, it is resolved to the Konnect name of the object,
+	// and with an on-prem gateway, to its UID.
 	// It is mutually exclusive with the other fields.
 	//
 	// +optional
@@ -8287,8 +8291,9 @@ type TLSTrustBundleReference struct {
 	ID *string `json:"id,omitempty"`
 	// +optional
 	Name *TLSTrustBundleName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object,
-	// resolved to its Konnect id.
+	// NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object:
+	// with a Konnect gateway, it is resolved to the Konnect id of the object, and
+	// with an on-prem gateway, to its UID.
 	// It is mutually exclusive with the other fields.
 	//
 	// +optional
@@ -9086,6 +9091,13 @@ type VirtualClusterReference struct {
 	ID *string `json:"id,omitempty"`
 	// +optional
 	Name *VirtualClusterName `json:"name,omitempty"`
+	// NamespacedRef references an in-cluster EventGatewayVirtualCluster object:
+	// with a Konnect gateway, it is resolved to the Konnect id of the object, and
+	// with an on-prem gateway, to its UID.
+	// It is mutually exclusive with the other fields.
+	//
+	// +optional
+	NamespacedRef *EventGatewayVirtualClusterRef `json:"namespacedRef,omitempty"`
 }
 
 // VirtualClusterReferenceByID Reference a virtual cluster by its unique

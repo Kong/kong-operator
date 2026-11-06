@@ -304,8 +304,9 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 				eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message+keptMessage(e)+held)
 		}
 		// An entity kept for the policies using it reports that its deletion is
-		// blocked. Its status is left as it is: it is in the configuration, so it
-		// is programmed along with the gateway, as is anything else in it.
+		// blocked, as with Konnect. Its status is left as it is: it is in the
+		// configuration, so it is programmed along with the gateway, as is
+		// anything else in it.
 		if held != "" {
 			cond.Reason = string(eventgatewayv1alpha1.OnPremEntityDeletionBlockedReason)
 		}
@@ -488,11 +489,16 @@ func entityCondition[T, R ~string](obj entityObject, conditionType T, status met
 
 // entityStatusFieldManager is the field manager the controller applies the
 // status of the entities with: the conditions it owns are those it applied,
-// whatever their reason or message. It reads them from the managed fields of
-// the entities, so the cache of the manager must keep them: a cache transform
-// stripping them, e.g. cache.TransformStripManagedFields, would leave every
-// condition unowned.
+// whatever their reason or message. They are read from the managed fields of
+// the entities, which the cache of the manager must therefore keep (see
+// entityConditionOwnership).
 const entityStatusFieldManager = "kong-operator-onprem-eventgateway"
+
+// entityStatusClearFieldManager is the field manager of the patch clearing
+// what someone else set in the status of an entity (see clearForeignStatus):
+// not entityStatusFieldManager, so that its update entry isn't mistaken for
+// the conditions the controller applied.
+const entityStatusClearFieldManager = "kong-operator-onprem-eventgateway-clear"
 
 // setEntityConditions sets the conditions on an entity of a gateway, whose
 // status the controller owns, and removes those of the removed types it set.
@@ -501,11 +507,14 @@ const entityStatusFieldManager = "kong-operator-onprem-eventgateway"
 // moved: it is cleared, but for the conditions of the types set, which the
 // controller takes over.
 func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
-	desired := desiredEntityConditions(obj, removed, conds)
-	if err := r.clearForeignStatus(ctx, obj, desired); err != nil {
+	// Clearing what someone else set doesn't change what the controller
+	// applied: the ownership read once holds for both writes.
+	ownership := entityConditionOwnership(obj)
+	desired := desiredEntityConditions(obj, ownership, removed, conds)
+	if err := r.clearForeignStatus(ctx, obj, ownership, desired); err != nil {
 		return err
 	}
-	return r.applyEntityConditions(ctx, obj, true, desired)
+	return r.applyEntityConditions(ctx, obj, ownership, true, desired)
 }
 
 // setUnownedEntityConditions sets the conditions on an entity that may not be
@@ -514,7 +523,8 @@ func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, 
 // else set is left alone, and a condition someone else took over since isn't
 // set.
 func (r *Reconciler) setUnownedEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
-	err := r.applyEntityConditions(ctx, obj, false, desiredEntityConditions(obj, removed, conds))
+	ownership := entityConditionOwnership(obj)
+	err := r.applyEntityConditions(ctx, obj, ownership, false, desiredEntityConditions(obj, ownership, removed, conds))
 	if apierrors.IsConflict(err) {
 		// Someone else set one of them since: it is theirs.
 		return nil
@@ -532,7 +542,10 @@ func ownsEntityCondition(obj client.Object, conditionType string) bool {
 // controller applied, from its managed fields: true when it still owns what
 // the condition tells, its status, reason and message, false when someone
 // else changed some of them since and owns those, while the controller keeps
-// the rest, the condition itself included.
+// the rest, the condition itself included. The managed fields must be kept in
+// the cache: stripped, e.g. by cache.TransformStripManagedFields, the
+// controller would own no condition (see TestCacheKeepsManagedFields in
+// modules/manager).
 func entityConditionOwnership(obj client.Object) map[string]bool {
 	ownership := map[string]bool{}
 	for _, entry := range obj.GetManagedFields() {
@@ -572,8 +585,7 @@ func entityConditionOwnership(obj client.Object) map[string]bool {
 // status, reason or message someone else changed since is applied as it is:
 // left out, the server would remove it, theirs included. So is one of a removed
 // type: it is theirs now.
-func desiredEntityConditions(obj entityObject, removed []string, conds []metav1.Condition) []metav1.Condition {
-	ownership := entityConditionOwnership(obj)
+func desiredEntityConditions(obj entityObject, ownership map[string]bool, removed []string, conds []metav1.Condition) []metav1.Condition {
 	var desired []metav1.Condition
 	for _, c := range obj.GetConditions() {
 		owned, applied := ownership[c.Type]
@@ -597,8 +609,7 @@ func desiredEntityConditions(obj entityObject, removed []string, conds []metav1.
 // that the controller didn't set, and the fields other than the conditions,
 // with an optimistic lock, so that a cache behind the API server doesn't set
 // back what someone else set meanwhile.
-func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, desired []metav1.Condition) error {
-	ownership := entityConditionOwnership(obj)
+func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, ownership map[string]bool, desired []metav1.Condition) error {
 	remaining := slices.DeleteFunc(slices.Clone(obj.GetConditions()), func(c metav1.Condition) bool {
 		_, applied := ownership[c.Type]
 		return !applied && apimeta.FindStatusCondition(desired, c.Type) == nil
@@ -621,7 +632,7 @@ func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, d
 	if err != nil {
 		return err
 	}
-	if err := r.Status().Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch), client.FieldOwner(entityStatusFieldManager)); err != nil {
+	if err := r.Status().Patch(ctx, obj, client.RawPatch(types.MergePatchType, patch), client.FieldOwner(entityStatusClearFieldManager)); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -635,8 +646,8 @@ func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, d
 // it set and no longer applies, and leaves what someone else set. With force,
 // it takes over a condition someone else set; without, it returns a conflict.
 // An entity deleted meanwhile is left alone.
-func (r *Reconciler) applyEntityConditions(ctx context.Context, obj entityObject, force bool, desired []metav1.Condition) error {
-	if !entityConditionsChange(obj, desired) {
+func (r *Reconciler) applyEntityConditions(ctx context.Context, obj entityObject, ownership map[string]bool, force bool, desired []metav1.Condition) error {
+	if !entityConditionsChange(obj, ownership, desired) {
 		return nil
 	}
 	gvk, err := apiutil.GVKForObject(obj, r.Scheme())
@@ -676,8 +687,7 @@ func (r *Reconciler) applyEntityConditions(ctx context.Context, obj entityObject
 // entityConditionsChange tells whether applying the desired conditions changes
 // those the controller set on the entity: one differs, someone else set it, or
 // the controller set one it no longer applies.
-func entityConditionsChange(obj entityObject, desired []metav1.Condition) bool {
-	ownership := entityConditionOwnership(obj)
+func entityConditionsChange(obj entityObject, ownership map[string]bool, desired []metav1.Condition) bool {
 	for _, cond := range desired {
 		existing := apimeta.FindStatusCondition(obj.GetConditions(), cond.Type)
 		if _, applied := ownership[cond.Type]; existing == nil || !applied ||

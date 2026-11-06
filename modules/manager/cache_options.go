@@ -37,6 +37,11 @@ func createCacheOptions(l logr.Logger, cfg Config) (cache.Options, error) {
 	}
 	cacheOptions.ByObject = cacheByObject
 
+	// NOTE: No DefaultTransform strips the managed fields, e.g.
+	// cache.TransformStripManagedFields: the OnPremEventGateway controller reads
+	// from them which conditions it set on its entities (see
+	// TestCacheKeepsManagedFields).
+
 	return cacheOptions, nil
 }
 

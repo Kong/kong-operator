@@ -100,7 +100,7 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 		entityKind[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy, gwadminapi.EventGatewayConsumePolicyOnPrem]{
 			kind: "EventGatewayVirtualClusterConsumePolicy",
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) (any, error) {
-				if err := checkPolicyReferences(ctx, cl, p, p.Spec.APISpec); err != nil {
+				if err := checkPolicyReferences(ctx, cl, p); err != nil {
 					return nil, err
 				}
 				req, err := withUIDAsKonnectID(p).ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
@@ -124,7 +124,7 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 		entityKind[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, gwadminapi.EventGatewayProducePolicyOnPrem]{
 			kind: "EventGatewayVirtualClusterProducePolicy",
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) (any, error) {
-				if err := checkPolicyReferences(ctx, cl, p, p.Spec.APISpec); err != nil {
+				if err := checkPolicyReferences(ctx, cl, p); err != nil {
 					return nil, err
 				}
 				req, err := withUIDAsKonnectID(p).ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
@@ -146,8 +146,9 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 func withUIDAsKonnectID[T interface {
 	client.Object
 	SetKonnectID(string)
+	DeepCopy() T
 }](p T) T {
-	cp := p.DeepCopyObject().(T)
+	cp := p.DeepCopy()
 	cp.SetKonnectID(string(p.GetUID()))
 	return cp
 }
