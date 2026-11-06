@@ -157,6 +157,12 @@
   `/tmp/k8s-webhook-server/serving-certs`, where OLM mounts the webhook
   certificate without a subfolder.
   [#6515](https://github.com/Kong/kong-operator/pull/6515)
+- Add `ValidatingAdmissionPolicies` warning when a `DataPlane` or
+  `GatewayConfiguration` sets a `PodDisruptionBudget` while its replica floor
+  (`replicas`, or `scaling.horizontal.minReplicas`) is lower than 2.
+  Set the chart value
+  `global.validatingPolicies.podDisruptionBudgetReplicas.validationActions`
+  to `[Deny]` to reject such objects instead.
 
 ### Changed
 
