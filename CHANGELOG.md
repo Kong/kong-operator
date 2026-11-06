@@ -81,6 +81,14 @@
   certificate authority rotations wait for the data plane to move to the new
   authority. Its name must be a valid DNS-1035 label of at most 57 characters.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
+- Konnect: the Cloud Gateway resources `KonnectCloudGatewayNetwork`,
+  `KonnectCloudGatewayTransitGateway` and
+  `KonnectCloudGatewayDataPlaneGroupConfiguration` now send their API calls to
+  the global form of the `KonnectAPIAuthConfiguration` `serverURL` (for
+  example `https://global.svc.konghq.com/api` for
+  `https://us.svc.konghq.com/api`) instead of the public global host, so they
+  can be managed over AWS PrivateLink by adding a `GLOBAL` VPC endpoint.
+  [#6110](https://github.com/Kong/kong-operator/issues/6110)
 
 ### Changed
 
@@ -796,14 +804,6 @@
   TLS Passthrough Listeners ignore certificate references without creating or
   waiting for certificate bindings.
   [#6233](https://github.com/Kong/kong-operator/pull/6233)
-- Konnect: the Cloud Gateway resources `KonnectCloudGatewayNetwork`,
-  `KonnectCloudGatewayTransitGateway` and
-  `KonnectCloudGatewayDataPlaneGroupConfiguration` now send their API calls to
-  the global form of the `KonnectAPIAuthConfiguration` `serverURL` (for
-  example `https://global.svc.konghq.com/api` for
-  `https://us.svc.konghq.com/api`) instead of the public global host, so they
-  can be managed over AWS PrivateLink by adding a `GLOBAL` VPC endpoint.
-  [#6110](https://github.com/Kong/kong-operator/issues/6110)
 - Added `AIGatewayDatastore` CRD: a datastore that AI Gateway entities share.
   The backend is Redis CE (`redis-ce`), Redis EE (`redis-ee`), a vector
   database (`vectordb`) or a token vault (`token-vault`). `spec.apiSpec.type`
