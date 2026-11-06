@@ -9086,6 +9086,12 @@ type VirtualClusterReference struct {
 	ID *string `json:"id,omitempty"`
 	// +optional
 	Name *VirtualClusterName `json:"name,omitempty"`
+	// NamespacedRef references an in-cluster EventGatewayVirtualCluster object,
+	// resolved to its Konnect id.
+	// It is mutually exclusive with the other fields.
+	//
+	// +optional
+	NamespacedRef *EventGatewayVirtualClusterRef `json:"namespacedRef,omitempty"`
 }
 
 // VirtualClusterReferenceByID Reference a virtual cluster by its unique

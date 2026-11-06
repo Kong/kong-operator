@@ -108,4 +108,70 @@ spec:
 			assert.ErrorIs(t, err, badRequest)
 		})
 	})
+
+	t.Run("backend cluster", func(t *testing.T) {
+		t.Parallel()
+
+		bc := &configurationv1alpha1.EventGatewayBackendCluster{Name: "bc", Namespace: "default"}
+		bc.SetGatewayID(gatewayID)
+		bc.SetKonnectID("bc-id")
+		vc := fromYAML(t, &configurationv1alpha1.EventGatewayVirtualCluster{}, `
+metadata: {name: orders, namespace: default}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc}}
+`)
+		forward := fromYAML(t, &configurationv1alpha1.EventGatewayListenerPolicy{}, `
+metadata: {name: forward, namespace: default}
+spec:
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: orders}}}}
+`)
+		sdk := sdkmocks.NewMockEventGatewayBackendClustersSDK(t)
+		sdk.EXPECT().DeleteEventGatewayBackendCluster(mock.Anything, gatewayID, "bc-id").Return(nil, badRequest).Once()
+		err := deleteEventGatewayBackendClusterGuarded(t.Context(), sdk, newClient(t, vc, forward), bc.DeepCopy())
+		inUse, ok := errors.AsType[EventGatewayEntityInUseError](err)
+		require.True(t, ok, "expected EventGatewayEntityInUseError, got %v", err)
+		assert.Equal(t, []string{"EventGatewayListenerPolicy default/forward"}, inUse.Users)
+		assert.Equal(t, "backend cluster", inUse.What)
+	})
+
+	t.Run("virtual cluster", func(t *testing.T) {
+		t.Parallel()
+
+		vc := &configurationv1alpha1.EventGatewayVirtualCluster{Name: "orders", Namespace: "default"}
+		vc.SetGatewayID(gatewayID)
+		vc.SetKonnectID("vc-id")
+		forward := fromYAML(t, &configurationv1alpha1.EventGatewayListenerPolicy{}, `
+metadata: {name: forward, namespace: default}
+spec:
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: orders}}}}
+`)
+		expectDelete := func(t *testing.T, err error) *sdkmocks.MockEventGatewayVirtualClustersSDK {
+			sdk := sdkmocks.NewMockEventGatewayVirtualClustersSDK(t)
+			sdk.EXPECT().DeleteEventGatewayVirtualCluster(mock.Anything, gatewayID, "vc-id").Return(nil, err).Once()
+			return sdk
+		}
+
+		t.Run("reports the listener policies forwarding to it when Konnect refuses the deletion", func(t *testing.T) {
+			err := deleteEventGatewayVirtualClusterGuarded(t.Context(), expectDelete(t, badRequest), newClient(t, forward), vc.DeepCopy())
+			inUse, ok := errors.AsType[EventGatewayEntityInUseError](err)
+			require.True(t, ok, "expected EventGatewayEntityInUseError, got %v", err)
+			assert.Equal(t, []string{"EventGatewayListenerPolicy default/forward"}, inUse.Users)
+			assert.Equal(t, "virtual cluster", inUse.What)
+		})
+
+		t.Run("returns any other error as it is", func(t *testing.T) {
+			other := errors.New("unavailable")
+			err := deleteEventGatewayVirtualClusterGuarded(t.Context(), expectDelete(t, other), newClient(t, forward), vc.DeepCopy())
+			_, blocked := errors.AsType[DeletionBlockedError](err)
+			assert.False(t, blocked)
+		})
+	})
 }

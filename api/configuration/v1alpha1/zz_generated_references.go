@@ -222,6 +222,30 @@ type EventGatewayVirtualClusterProducePolicyRef struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// EventGatewayVirtualClusterRef references an EventGatewayVirtualCluster in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayVirtualClusterRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayVirtualCluster
+	// +kubebuilder:default=EventGatewayVirtualCluster
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // EventGatewaySchemaRegistryRefWithNamespacedRef references an EventGatewaySchemaRegistry in the cluster, in either
 // of two forms naming the same object: its name, with kind and namespace, set
 // directly, or type namespacedRef with the namespacedRef member, as written in the

@@ -527,7 +527,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
+        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: virtual-cluster}}}
 `)
 		var virtualCluster configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "virtual-cluster"}, &virtualCluster))
@@ -888,7 +888,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
+        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: virtual-cluster}}}
 `)
 		for _, obj := range []client.Object{virtualCluster, listener, forward} {
 			require.NoError(t, cl.Create(ctx, obj))
@@ -1066,11 +1066,11 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {name: missing}}
+        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: missing}}}
 `)
 		require.NoError(t, cl.Create(ctx, other))
 		require.NoError(t, cl.Create(ctx, policy))
-		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `it forwards to the virtual cluster "missing"`)
+		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `EventGatewayVirtualCluster `+ns.Name+`/missing`)
 		require.NoError(t, cl.Delete(ctx, other))
 		expectStatusOf(t, policy, metav1.ConditionFalse, "Detached", "its EventGatewayListener "+ns.Name+"/other-listener does not exist")
 	})

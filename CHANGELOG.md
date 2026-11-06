@@ -148,6 +148,14 @@
     `DeletionBlocked`. The `OnPremEventGateway` controller owns the status of
     its entities, and clears what the Konnect controllers set on them.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy can
+  reference its virtual cluster by object, with `destination.namespacedRef`. A
+  virtual cluster, or its backend cluster, that listener policies forward to
+  isn't deleted until they stop: it reports `DeletionBlocked`, naming them.
+  With an `OnPremEventGateway`, only `namespacedRef` is allowed, and both are
+  held by the finalizer `gateway-operator.konghq.com/onprem-eventgateway-in-use`
+  while in use.
+  [#6492](https://github.com/Kong/kong-operator/pull/6492)
 
 ### Changed
 

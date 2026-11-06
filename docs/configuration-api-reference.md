@@ -5032,6 +5032,24 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 
+#### EventGatewayVirtualClusterRef
+
+
+EventGatewayVirtualClusterRef references an EventGatewayVirtualCluster in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)
+
 #### EventGatewayVirtualClusterSpec
 
 
@@ -7640,6 +7658,7 @@ VirtualClusterReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ |  |
+| `namespacedRef` _[EventGatewayVirtualClusterRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterref)_ | NamespacedRef references an in-cluster EventGatewayVirtualCluster object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 

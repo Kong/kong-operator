@@ -329,6 +329,112 @@ spec:
 `)
 }
 
+func (f schemaRegistryFixture) forward(name, destination string, minutes int) *configurationv1alpha1.EventGatewayListenerPolicy {
+	return fromYAML[configurationv1alpha1.EventGatewayListenerPolicy](f.t, f.at(minutes), `
+metadata: {name: `+name+`}
+spec:
+  eventGatewayListenerRef: {type: namespacedRef, namespacedRef: {name: listener}}
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: `+name+`
+      config:
+        type: portMapping
+        portMapping: {advertisedHost: localhost, destination: `+destination+`}
+`)
+}
+
+// namedVirtualCluster is a virtual cluster of the backend cluster of
+// virtualCluster, whose object name differs from the name of its entity.
+func (f schemaRegistryFixture) namedVirtualCluster(name, apiName string, minutes int) *configurationv1alpha1.EventGatewayVirtualCluster {
+	return fromYAML[configurationv1alpha1.EventGatewayVirtualCluster](f.t, f.at(minutes), `
+metadata: {name: `+name+`}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc}}
+  apiSpec:
+    name: `+apiName+`
+    aclMode: passthrough
+    authentication: [{type: anonymous}]
+    dnsLabel: `+apiName+`
+`)
+}
+
+func TestBuildConfigurationVirtualClusterInUse(t *testing.T) {
+	f := newSchemaRegistryFixture(t)
+	orders := f.namedVirtualCluster("orders-vc", "orders", 2)
+	forward := f.forward("forward", `{namespacedRef: {name: orders-vc}}`, 3)
+
+	destinationOf := func(t *testing.T, cfg configuration) any {
+		t.Helper()
+		got, err := json.Marshal(cfg.entities)
+		require.NoError(t, err)
+		var entities struct {
+			Listeners []struct {
+				Policies []map[string]any `json:"policies"`
+			} `json:"listeners"`
+		}
+		require.NoError(t, json.Unmarshal(got, &entities))
+		require.Len(t, entities.Listeners, 1)
+		require.Len(t, entities.Listeners[0].Policies, 1)
+		return at(t, entities.Listeners[0].Policies[0], "config", "destination")
+	}
+
+	t.Run("it is named by its object name, sent by its id, and held", func(t *testing.T) {
+		cfg, err := buildConfiguration(t.Context(), f.objects(orders, f.listener(), forward), f.gateway, "", nil)
+		require.NoError(t, err)
+		assert.Empty(t, excludedMessages(cfg))
+		assert.Equal(t, map[string]any{"id": string(orders.UID)}, destinationOf(t, cfg))
+		assert.Equal(t, []string{"EventGatewayListenerPolicy forward"}, policiesUsing(cfg, orders))
+	})
+
+	t.Run("being deleted while held, it stays with the policy", func(t *testing.T) {
+		held := orders.DeepCopy()
+		held.SetFinalizers([]string{FinalizerInUse})
+		held.SetDeletionTimestamp(new(metav1.NewTime(f.at(fixtureDeletion))))
+		cfg, err := buildConfiguration(t.Context(), f.objects(held, f.listener(), forward), f.gateway, "", nil)
+		require.NoError(t, err)
+		assert.Empty(t, excludedMessages(cfg))
+		assert.Equal(t, map[string]any{"id": string(orders.UID)}, destinationOf(t, cfg))
+		assert.Equal(t, "; being deleted, it is kept while these policies reference it: EventGatewayListenerPolicy forward",
+			heldMessage(cfg, keptStatus(t, cfg, orders)))
+	})
+
+	t.Run("being deleted without the finalizer, the policy is left out", func(t *testing.T) {
+		gone := orders.DeepCopy()
+		gone.SetFinalizers([]string{"example.com/hold"})
+		gone.SetDeletionTimestamp(new(metav1.NewTime(f.at(fixtureDeletion))))
+		cfg, err := buildConfiguration(t.Context(), f.objects(gone, f.listener(), forward), f.gateway, "", nil)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"EventGatewayListenerPolicy forward": "it references the EventGatewayVirtualCluster " + ns + "/orders-vc, which isn't in the configuration of the gateway",
+		}, excludedMessages(cfg))
+		assert.Empty(t, cfg.entitiesInUse)
+	})
+
+	t.Run("a virtual cluster of another gateway is reported", func(t *testing.T) {
+		otherBackend := fromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, f.at(1), `
+metadata: {name: other-bc}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: other-gateway}
+  apiSpec:
+    name: other-bc
+    authentication: {type: anonymous, anonymous: {}}
+    bootstrapServers: ["kafka:9092"]
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls: {enabled: Disabled}
+`)
+		elsewhere := f.namedVirtualCluster("elsewhere", "elsewhere", 2)
+		elsewhere.Spec.EventGatewayBackendClusterRef.NamespacedRef.Name = "other-bc"
+		policy := f.forward("forward", `{namespacedRef: {name: elsewhere}}`, 3)
+		cfg, err := buildConfiguration(t.Context(), f.objects(otherBackend, elsewhere, f.listener(), policy), f.gateway, "", nil)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{
+			"EventGatewayListenerPolicy forward": "it references the EventGatewayVirtualCluster " + ns + "/elsewhere, which isn't in the configuration of the gateway",
+		}, excludedMessages(cfg))
+		assert.Empty(t, cfg.entitiesInUse)
+	})
+}
+
 func TestBuildConfigurationStaticKeysAndTrustBundlesInUse(t *testing.T) {
 	f := newSchemaRegistryFixture(t)
 	key := f.staticKey("key", 2)
@@ -608,6 +714,9 @@ func TestReleaseOrphan(t *testing.T) {
 		{name: "a registry whose gateway doesn't exist", entity: deleted(f.registry("orders", "gateway", 1)), wantReleased: true},
 		{name: "a static key whose gateway doesn't exist", entity: deleted(f.staticKey("key", 1)), wantReleased: true},
 		{name: "a TLS trust bundle whose gateway doesn't exist", entity: deleted(f.trustBundle("bundle", 1)), wantReleased: true},
+		{name: "a virtual cluster whose gateway doesn't exist", entity: deleted(f.namedVirtualCluster("orders-vc", "orders", 1)), objects: f.virtualCluster()[:1], wantReleased: true},
+		{name: "a virtual cluster whose backend cluster doesn't exist", entity: deleted(f.namedVirtualCluster("orders-vc", "orders", 1)), objects: []client.Object{gateway(false)}, wantReleased: true},
+		{name: "a virtual cluster whose gateway is there", entity: deleted(f.namedVirtualCluster("orders-vc", "orders", 1)), objects: append(f.virtualCluster()[:1:1], gateway(false))},
 		{name: "a registry whose gateway is being deleted", entity: deleted(f.registry("orders", "gateway", 1)), objects: []client.Object{gateway(true)}, wantReleased: true},
 		{name: "a registry whose gateway is there: its reconcile decides", entity: deleted(f.registry("orders", "gateway", 1)), objects: []client.Object{gateway(false)}},
 		{name: "a registry moved to a gateway that doesn't exist, another being there", entity: deleted(f.registry("orders", "ghost", 1)), objects: []client.Object{gateway(false)}, wantReleased: true},
@@ -672,11 +781,15 @@ func TestHoldEntities(t *testing.T) {
 	usedKey := f.staticKey("used-key", 5)
 	unusedKey := f.staticKey("unused-key", 6)
 	unusedKey.SetFinalizers([]string{FinalizerInUse})
+	backendCluster := f.virtualCluster()[0]
+	usedVC := f.namedVirtualCluster("used-vc", "used", 9)
+	unusedVC := f.namedVirtualCluster("unused-vc", "unused", 10)
+	unusedVC.SetFinalizers([]string{FinalizerInUse})
 	usedBundle := f.trustBundle("used-bundle", 7)
 	unusedBundle := f.trustBundle("unused-bundle", 8)
 	unusedBundle.SetFinalizers([]string{FinalizerInUse})
 
-	cl := newFakeClient(t, used, unused, deleting, ofAnotherGateway, usedKey, unusedKey, usedBundle, unusedBundle)
+	cl := newFakeClient(t, used, unused, deleting, ofAnotherGateway, usedKey, unusedKey, usedBundle, unusedBundle, backendCluster, usedVC, unusedVC)
 	r := &Reconciler{Client: cl}
 	policy := reportedEntity{typ: reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](), key: client.ObjectKey{Namespace: ns, Name: "policy"}}
 
@@ -685,6 +798,7 @@ func TestHoldEntities(t *testing.T) {
 		{typ: schemaRegistryType, key: client.ObjectKeyFromObject(deleting)}:   {policy},
 		{typ: staticKeyType, key: client.ObjectKeyFromObject(usedKey)}:         {policy},
 		{typ: tlsTrustBundleType, key: client.ObjectKeyFromObject(usedBundle)}: {policy},
+		{typ: virtualClusterType, key: client.ObjectKeyFromObject(usedVC)}:     {policy},
 		// A registry named as an entity of another kind in use isn't in use.
 		{typ: staticKeyType, key: client.ObjectKeyFromObject(unused)}: {policy},
 	})
@@ -693,6 +807,8 @@ func TestHoldEntities(t *testing.T) {
 	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, unusedKey), FinalizerInUse), "a static key no policy uses is released")
 	assert.True(t, controllerutil.ContainsFinalizer(read(t, cl, usedBundle), FinalizerInUse), "a TLS trust bundle in use is held")
 	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, unusedBundle), FinalizerInUse), "a TLS trust bundle no policy uses is released")
+	assert.True(t, controllerutil.ContainsFinalizer(read(t, cl, usedVC), FinalizerInUse), "a virtual cluster in use is held, reached through its backend cluster")
+	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, unusedVC), FinalizerInUse), "a virtual cluster no policy uses is released")
 	assert.True(t, res.IsZero())
 	assert.True(t, controllerutil.ContainsFinalizer(read(t, cl, used), FinalizerInUse), "a registry in use is held")
 	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, unused), FinalizerInUse), "a registry no policy uses is released")
@@ -705,6 +821,7 @@ func TestHoldEntities(t *testing.T) {
 	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, used), FinalizerInUse), "every entity of the gateway is released")
 	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, usedKey), FinalizerInUse), "every entity of the gateway is released")
 	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, usedBundle), FinalizerInUse), "every entity of the gateway is released")
+	assert.False(t, controllerutil.ContainsFinalizer(read(t, cl, usedVC), FinalizerInUse), "every entity of the gateway is released")
 	err = cl.Get(t.Context(), client.ObjectKeyFromObject(deleting), &configurationv1alpha1.EventGatewaySchemaRegistry{})
 	assert.True(t, apierrors.IsNotFound(err), "a registry being deleted goes away once released, got %v", err)
 }
@@ -824,6 +941,16 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 			},
 			kind:    "EventGatewayListenerPolicy p",
 			message: "it references the EventGatewayTLSTrustBundle " + ns + "/entity, which is being deleted",
+		},
+		{
+			name:    "virtual cluster",
+			entity:  func() client.Object { return f.namedVirtualCluster("entity", "entity", 1) },
+			objects: func() []client.Object { return []client.Object{f.listener()} },
+			policy: func(minutes int) client.Object {
+				return f.forward("p", `{namespacedRef: {name: entity}}`, minutes)
+			},
+			kind:    "EventGatewayListenerPolicy p",
+			message: "it references the EventGatewayVirtualCluster " + ns + "/entity, which is being deleted",
 		},
 	}
 	for _, k := range kinds {
@@ -1182,4 +1309,60 @@ func TestHoldingDoesNotConflictWithTheStatus(t *testing.T) {
 	cond := apimeta.FindStatusCondition(held.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
 	require.NotNil(t, cond, "its status is set in the same reconcile")
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+}
+
+// A backend cluster is held while a listener policy forwards to one of its
+// virtual clusters, which can't be sent without it, as Konnect refuses to
+// delete it then.
+func TestBackendClusterHeldByForwardedVirtualClusters(t *testing.T) {
+	s := newSchemaRegistryFixture(t)
+	forward := fromYAML[configurationv1alpha1.EventGatewayListenerPolicy](t, s.at(5), `
+metadata: {name: forward}
+spec:
+  eventGatewayListenerRef: {type: namespacedRef, namespacedRef: {name: listener}}
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: vc}}}}
+`)
+	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+		return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), s.listener(), forward)...)
+	})
+	reconcile := func(t *testing.T) {
+		t.Helper()
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+	}
+	bc := &configurationv1alpha1.EventGatewayBackendCluster{}
+	bcKey := client.ObjectKey{Namespace: ns, Name: "bc"}
+
+	reconcile(t)
+	require.NoError(t, f.cl.Get(t.Context(), bcKey, bc))
+	assert.Contains(t, bc.GetFinalizers(), FinalizerInUse, "the backend cluster is held")
+
+	require.NoError(t, f.cl.Delete(t.Context(), bc))
+	reconcile(t)
+	require.NoError(t, f.cl.Get(t.Context(), bcKey, bc))
+	require.False(t, bc.GetDeletionTimestamp().IsZero())
+	assert.Len(t, f.pod().gateways[f.gatewayID].VirtualClusters, 1, "its virtual cluster stays in the configuration")
+	cond := apimeta.FindStatusCondition(bc.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
+	require.NotNil(t, cond)
+	assert.Equal(t, string(eventgatewayv1alpha1.OnPremEntityDeletionBlockedReason), cond.Reason)
+	assert.Contains(t, cond.Message, "EventGatewayListenerPolicy forward")
+	assert.Empty(t, cfgExcluded(t, f), "nothing is left out")
+
+	require.NoError(t, f.cl.Delete(t.Context(), read(t, f.cl, forward)))
+	reconcile(t)
+	err := f.cl.Get(t.Context(), bcKey, &configurationv1alpha1.EventGatewayBackendCluster{})
+	assert.True(t, apierrors.IsNotFound(err), "released once nothing forwards to it: %v", err)
+}
+
+// cfgExcluded returns the entities left out of the configuration of the
+// gateway of the fixture, with why.
+func cfgExcluded(t *testing.T, f *pushFixture) map[string]string {
+	t.Helper()
+	cfg, err := buildConfiguration(t.Context(), f.cl, read(t, f.cl, f.gateway), "", nil)
+	require.NoError(t, err)
+	return excludedMessages(cfg)
 }
