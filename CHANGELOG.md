@@ -162,7 +162,8 @@
   (`replicas`, or `scaling.horizontal.minReplicas`) is lower than 2.
   Set the chart value
   `global.validatingPolicies.podDisruptionBudgetReplicas.validationActions`
-  to `[Deny]` to reject such objects instead.
+  to `[Deny]` to reject such objects instead. Changes made through the
+  `DataPlane` scale subresource (e.g. `kubectl scale`) are not validated.
   [#6490](https://github.com/Kong/kong-operator/pull/6490)
 
 ### Changed
