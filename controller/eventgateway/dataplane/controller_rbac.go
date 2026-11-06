@@ -23,6 +23,9 @@ package dataplane
 // +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=kegdataplanes,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=kegdataplanes/status,verbs=update;patch
 // +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnecteventgateways,verbs=get;list;watch
+// +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=gwadmins,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongreferencegrants,verbs=get;list;watch
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaydataplanecertificates,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch;delete

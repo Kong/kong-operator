@@ -61,6 +61,21 @@ const (
 	// For testing only.
 	EnvKonnectInsecureSkipVerify = "KONG_KONNECT_INSECURE_SKIP_VERIFY"
 
+	// EnvSSLCertFile is the file of the certificate authorities keg trusts
+	// for every TLS connection. The keg image sets it to its system trust
+	// store (see onPremEnvVars).
+	EnvSSLCertFile = "SSL_CERT_FILE"
+
+	// EnvSSLCertDir is a directory of certificate authorities keg trusts for
+	// every TLS connection, in addition to those of EnvSSLCertFile, e.g. the
+	// cp server CA bundle of the GWAdmin of an OnPremEventGateway (see
+	// onPremEnvVars).
+	EnvSSLCertDir = "SSL_CERT_DIR"
+
+	// SystemTrustStorePath is the system trust store of the keg image, the
+	// value it sets EnvSSLCertFile to.
+	SystemTrustStorePath = "/etc/ssl/certs/ca-certificates.crt"
+
 	// EnvConfigPollInterval is the keg environment variable for the config poll interval.
 	EnvConfigPollInterval = "KEG__CONFIG_POLL_INTERVAL"
 	// EnvEnableDebugEndpoints is the keg environment variable to enable debug endpoints.

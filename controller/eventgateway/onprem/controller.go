@@ -54,6 +54,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -212,7 +213,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 
 	// The revision of the configuration is recorded before it is pushed.
 	previous, _ := r.lastEntities.Load(gateway.UID)
-	cfg, err := buildConfiguration(ctx, r.Client, gateway, gwadminsync.SecretHint(r.GWAdminSync.SecretLabelSelector), asEntities(previous))
+	cfg, err := buildConfiguration(ctx, r.Client, gateway, gwadminref.SecretHint(r.GWAdminSync.SecretLabelSelector), asEntities(previous))
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
@@ -381,7 +382,11 @@ func (r *Reconciler) pushConfiguration(
 	// gw-admin is told to stop serving it.
 	r.removedFromGWAdmin.Delete(gateway.UID)
 
-	inputs := pushInputs(target, gateway, expected)
+	certificatesKey, err := certificatesHash(cfg.certificates)
+	if err != nil {
+		return result, nil, err
+	}
+	inputs := pushInputs(target, gateway, expected, certificatesKey)
 	if wait, lastErr := r.backoff.Wait(gateway.UID, inputs, time.Now()); wait > 0 {
 		return pushResult{done: true, target: target, retryAfter: wait}, lastErr, nil
 	}
@@ -426,12 +431,13 @@ func (r *Reconciler) pushConfiguration(
 
 // pushInputs tells what a push of the gateway is made of: its gw-admin pods,
 // whether each is serving, the TLS material they are reached with, the
-// revision of its configuration and the expected gateways. A push that failed
-// is tried again right away once they change, e.g. once a pod starts or stops
-// serving, or the configuration changes; a change that leaves them as they
-// are, e.g. of the status of the gateway, waits for the backoff.
-func pushInputs(target *gwadminsync.Target, gateway *eventgatewayv1alpha1.OnPremEventGateway, expected []uuid.UUID) string {
-	return strings.Join([]string{targetInputs(target.Pods, target), strconv.FormatInt(gateway.Status.ConfigRevision, 10), idsKey(expected)}, " ")
+// revision of its configuration, its data plane certificates and the expected
+// gateways. A push that failed is tried again right away once they change, e.g.
+// once a pod starts or stops serving, or the configuration changes; a change
+// that leaves them as they are, e.g. of the status of the gateway, waits for
+// the backoff.
+func pushInputs(target *gwadminsync.Target, gateway *eventgatewayv1alpha1.OnPremEventGateway, expected []uuid.UUID, certificatesKey string) string {
+	return strings.Join([]string{targetInputs(target.Pods, target), strconv.FormatInt(gateway.Status.ConfigRevision, 10), certificatesKey, idsKey(expected)}, " ")
 }
 
 // targetInputs tells what the pods of the target are: which, where, whether

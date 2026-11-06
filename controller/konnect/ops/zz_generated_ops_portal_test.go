@@ -154,7 +154,8 @@ func TestDeletePortal_UsesGeneratedSDKOps(t *testing.T) {
 	sdk.EXPECT().
 		DeletePortal(
 			mock.Anything,
-			obj.GetKonnectStatus().GetKonnectID(), mock.Anything,
+			obj.GetKonnectStatus().GetKonnectID(),
+			mock.Anything,
 		).
 		Return(&sdkkonnectops.DeletePortalResponse{}, nil).
 		Once()
@@ -174,7 +175,8 @@ func TestDeletePortal_PropagatesSDKError(t *testing.T) {
 	sdk.EXPECT().
 		DeletePortal(
 			mock.Anything,
-			obj.GetKonnectStatus().GetKonnectID(), mock.Anything,
+			obj.GetKonnectStatus().GetKonnectID(),
+			mock.Anything,
 		).
 		Return(nil, sdkErr).
 		Once()

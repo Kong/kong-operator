@@ -37,40 +37,27 @@ func TestKongUpstreamBuilder_WithNamespace(t *testing.T) {
 }
 
 func TestKongUpstreamBuilder_WithLabels(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongUpstream().WithLabels(httpRoute, parentRef)
 
 	upstream, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, upstream.Labels)
-	assert.NotEmpty(t, upstream.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), upstream.Labels)
 }
 
 func TestKongUpstreamBuilder_WithAnnotations(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongUpstream().WithAnnotations(httpRoute, parentRef)
 
 	upstream, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, upstream.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), upstream.Annotations)
 }
 
 func TestKongUpstreamBuilder_WithSpecName(t *testing.T) {

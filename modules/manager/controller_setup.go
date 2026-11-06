@@ -101,6 +101,18 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 	return c.Controller.SetupWithManager(ctx, mgr)
 }
 
+// onPremEventGatewayKindAvailable tells whether the KegDataPlane controller
+// enables its OnPremEventGateway control plane kind: when it is enabled and
+// the cluster serves the resources of the kind.
+func onPremEventGatewayKindAvailable(mgr manager.Manager, cfg Config) (bool, error) {
+	if !cfg.KEGDataPlaneControllerEnabled {
+		return false, nil
+	}
+	return egdataplane.OnPremAvailable(func(gvr schema.GroupVersionResource) (bool, error) {
+		return k8sutils.CRDExists(mgr.GetRESTMapper(), gvr)
+	})
+}
+
 // SetupCacheIndexes sets up all the cache indexes required by the controllers.
 func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 	var indexOptions []index.Option
@@ -191,6 +203,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKongConsumer(cl),
 			index.OptionsForKongConsumerGroup(cl),
 			index.OptionsForKongService(cl),
+			index.OptionsForBackendService(),
 			index.OptionsForKongRoute(cl),
 			index.OptionsForKongUpstream(cl),
 			index.OptionsForKongTarget(),
@@ -212,6 +225,19 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		indexOptions = append(indexOptions, generatedIndexOptionsForKonnectEntities(cl)...)
 	}
 
+	// The OnPremEventGateway controller looks the entities of a gateway up by
+	// the same indexes as the Konnect controllers: they are registered once.
+	if cfg.OnPremEventGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
+		indexOptions = slices.Concat(indexOptions, egonprem.IndexOptions())
+	}
+	// The OnPremEventGateway and KegDataPlane controllers both look the
+	// gateways of a GWAdmin up. The KegDataPlane controller only does when
+	// its OnPremEventGateway control plane kind is enabled, i.e. when the
+	// cluster serves its resources.
+	if cfg.OnPremEventGatewayControllerEnabled || (cfg.KEGDataPlaneControllerEnabled && cfg.OnPremEventGatewayKindAvailable) {
+		indexOptions = slices.Concat(indexOptions, gwadminref.IndexOptions())
+	}
+
 	if cfg.KEGDataPlaneControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForKegDataPlane(),
@@ -228,16 +254,6 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		indexOptions = slices.Concat(indexOptions,
 			gwadmin.IndexOptions(),
 		)
-	}
-
-	// The OnPremEventGateway controller looks the gateways of a GWAdmin up.
-	if cfg.OnPremEventGatewayControllerEnabled {
-		indexOptions = slices.Concat(indexOptions, gwadminref.IndexOptions())
-	}
-	// The OnPremEventGateway controller finds the entities of a gateway by the
-	// indexes the Konnect controllers register too.
-	if cfg.OnPremEventGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
-		indexOptions = slices.Concat(indexOptions, egonprem.IndexOptions())
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
@@ -414,24 +430,19 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnecteventgateways",
 				},
+				// The resources of the on-prem control planes a KegDataPlane can
+				// reference (egdataplane.OnPremGroupVersionResources) are
+				// optional: without them, the controller disables that kind.
 			},
 		},
 		{
-			// The OnPremEventGateway controller watches the gateways, every
-			// Event Gateway entity that can belong to one, the GWAdmins serving
-			// them, and the KongReferenceGrants allowing a gateway to use a
-			// GWAdmin in another namespace.
+			// The OnPremEventGateway controller watches the gateways, the
+			// GWAdmins serving them, the grants allowing a gateway to use one
+			// in another namespace, and every Event Gateway entity that can
+			// belong to a gateway.
 			condition: c.OnPremEventGatewayControllerEnabled,
 			gvrs: slices.Concat(
-				[]schema.GroupVersionResource{
-					{
-						Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
-						Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
-						Resource: "onpremeventgateways",
-					},
-					operatorv1alpha1.GWAdminGVR(),
-					configurationv1alpha1.SchemeGroupVersion.WithResource("kongreferencegrants"),
-				},
+				gwadminref.GroupVersionResources(),
 				egonprem.EntityGroupVersionResources(),
 			),
 		},
@@ -488,6 +499,13 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    aiconfigurationv1alpha1.SchemeGroupVersion.Group,
 					Version:  aiconfigurationv1alpha1.SchemeGroupVersion.Version,
 					Resource: "aigatewaymodels",
+				},
+				{
+					// Listed by the instance's translator to check the cross-namespace
+					// references to the gateway, and watched by its grant reconciler.
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
 				},
 			},
 		},
@@ -969,7 +987,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
+				OperatorNamespace:        c.ControllerNamespace,
+				GWAdminCertTTL:           c.GWAdminCertTTL,
 				TypeConverter:            ssaProvider,
+				OnPremUnavailable:        !c.OnPremEventGatewayKindAvailable,
 			},
 		},
 		// On-prem EventGateway controller

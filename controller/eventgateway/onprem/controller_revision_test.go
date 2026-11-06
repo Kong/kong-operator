@@ -17,7 +17,6 @@ limitations under the License.
 package onprem
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -26,9 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 )
 
 func TestGatewayConfigHash(t *testing.T) {
@@ -60,15 +61,28 @@ func TestGatewayConfigHash(t *testing.T) {
 	assert.NotEqual(t, hash, entityHash)
 	assert.Empty(t, config.Entities.BackendClusters, "hashing doesn't change the configuration")
 
-	encoded, err := json.Marshal(config)
+	withCertificate := emptyConfiguration()
+	withCertificate.certificates = []dataPlaneCertificate{testCertificate(uuid.New(), client.ObjectKey{Name: "certificate"})}
+	certificateHash, err := deriveConfig(gateway, withCertificate).hash()
 	require.NoError(t, err)
-	assert.NotContains(t, string(encoded), "certificates",
-		"without certificates, the configuration is the one recorded before they were part of it: an upgrade records no new revision")
-	withCertificate := config
-	withCertificate.Certificates = map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem{uuid.NewString(): {Certificate: "pem"}}
-	certificateHash, err := withCertificate.hash()
+	assert.Equal(t, hash, certificateHash, "gw-admin refuses a new revision of the same entities: the certificates aren't part of the configuration")
+}
+
+func TestPushInputsCertificates(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	target := &gwadminsync.Target{}
+	cert := testCertificate(uuid.New(), client.ObjectKey{Name: "certificate"})
+
+	none, err := certificatesHash(nil)
 	require.NoError(t, err)
-	assert.NotEqual(t, hash, certificateHash)
+	one, err := certificatesHash([]dataPlaneCertificate{cert})
+	require.NoError(t, err)
+	assert.NotEqual(t, pushInputs(target, gateway, nil, none), pushInputs(target, gateway, nil, one), "a new certificate is pushed right away")
+
+	cert.body.Certificate = "renewed"
+	renewed, err := certificatesHash([]dataPlaneCertificate{cert})
+	require.NoError(t, err)
+	assert.NotEqual(t, one, renewed, "a renewed certificate is pushed right away")
 }
 
 func TestRecordRevision(t *testing.T) {

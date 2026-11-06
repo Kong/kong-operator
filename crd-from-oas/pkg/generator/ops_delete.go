@@ -17,6 +17,16 @@ type OpsDeleteFileInfo struct {
 	SDKGetter      string
 }
 
+// deleteArg is one positional argument of a non-wrapped SDK delete call.
+type deleteArg struct {
+	// Expr is the argument expression in the generated ops function: a parent
+	// variable such as "parentID", or "id" for the entity's own Konnect ID.
+	Expr string
+	// IsID is true for the entity's own Konnect ID argument. Generated tests
+	// call obj.GetKonnectStatus().GetKonnectID() instead of the local variable.
+	IsID bool
+}
+
 // opsDeleteFuncData holds template data for a single delete<Entity> function.
 type opsDeleteFuncData struct {
 	Entity             string
@@ -44,6 +54,13 @@ type opsDeleteFuncData struct {
 	// the variadic opts; we pass nil for each since they are all optional.
 	// Only used when DeleteFullyWrapped is false.
 	DeleteNilArgs []struct{}
+	// DeleteArgs holds the positional arguments of a non-wrapped SDK delete
+	// call, in the order of the SDK method signature. The SDK codegen follows
+	// the OAS declaration order of the path parameters, which can differ from
+	// the URL order, e.g. DeletePortalTeam(ctx, teamID, portalID) for
+	// /v3/portals/{portalId}/teams/{teamId}.
+	// Used only when DeleteFullyWrapped is false.
+	DeleteArgs []deleteArg
 	// DeleteOmitsEntityID is true for parent-scoped singleton resources whose
 	// DELETE path contains only parent path params and no entity-specific ID (e.g.
 	// DELETE /portals/{portalId}/email-config). The SDK method takes the parent ID
@@ -177,6 +194,14 @@ func (g *Generator) generateOpsDeleteFuncBody(
 
 	nilArgs := make([]struct{}, schema.DeleteQueryParamCount)
 
+	var deleteArgs []deleteArg
+	if !deleteFullyWrapped {
+		deleteArgs, err = buildDeleteArgs(parents, schema.DeletePathParamOrder, deleteOmitsEntityID)
+		if err != nil {
+			return nil, fmt.Errorf("entity %q: %w", entityName, err)
+		}
+	}
+
 	return &opsDeleteFuncData{
 		Entity:              entityName,
 		APIAlias:            g.config.APIGroupPackageAlias,
@@ -188,9 +213,67 @@ func (g *Generator) generateOpsDeleteFuncBody(
 		DeleteEntityIDField: deleteEntityIDField,
 		DeleteRequestFields: deleteOp.RequestFields,
 		DeleteNilArgs:       nilArgs,
+		DeleteArgs:          deleteArgs,
 		DeleteOmitsEntityID: deleteOmitsEntityID,
 		SupportsMirror:      g.entitySupportsMirror(entityName),
 	}, nil
+}
+
+// buildDeleteArgs orders the positional delete arguments to match the SDK
+// method signature, which follows the OAS declaration order of the path
+// parameters (declared) rather than their URL order.
+//
+// When declared is empty, as for schemas built without parser output, it falls
+// back to the URL order: parents first, then the entity ID. A declared order
+// that does not map one to one onto the parents plus the entity ID is an
+// error, because the SDK argument positions are unknown then and a swapped
+// call of two string arguments still compiles.
+func buildDeleteArgs(parents []parentInfo, declared []string, omitsEntityID bool) ([]deleteArg, error) {
+	if len(declared) == 0 {
+		if omitsEntityID {
+			return []deleteArg{{Expr: parents[0].VarName}}, nil
+		}
+		if len(parents) == 0 {
+			return []deleteArg{{Expr: "id", IsID: true}}, nil
+		}
+		args := make([]deleteArg, 0, len(parents)+1)
+		for _, p := range parents {
+			args = append(args, deleteArg{Expr: p.VarName})
+		}
+		return append(args, deleteArg{Expr: "id", IsID: true}), nil
+	}
+
+	byParam := make(map[string]string, len(parents))
+	for _, p := range parents {
+		byParam[p.ParamName] = p.VarName
+	}
+
+	args := make([]deleteArg, 0, len(declared))
+	matchedParents := 0
+	idUsed := false
+	for _, name := range declared {
+		if expr, ok := byParam[name]; ok {
+			args = append(args, deleteArg{Expr: expr})
+			matchedParents++
+			continue
+		}
+		if !omitsEntityID && !idUsed {
+			args = append(args, deleteArg{Expr: "id", IsID: true})
+			idUsed = true
+			continue
+		}
+		return nil, fmt.Errorf(
+			"delete path parameter %q in order %v does not map to a parent or the entity ID",
+			name, declared,
+		)
+	}
+	if matchedParents != len(parents) {
+		return nil, fmt.Errorf("delete path parameter order %v does not cover every parent", declared)
+	}
+	if !omitsEntityID && !idUsed {
+		return nil, fmt.Errorf("delete path parameter order %v does not contain the entity ID", declared)
+	}
+	return args, nil
 }
 
 // GenerateOpsDeleteDispatcher emits zz_generated_ops_delete.go with

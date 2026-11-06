@@ -71,6 +71,7 @@ spec:
           authStrategies:
             - name: ai-gw-mcp-auth-strategy
           acls:
+            type: allow
             allow:
               - kind: AIGatewayConsumerGroup
                 name: ai-gw-mcp-consumer-group

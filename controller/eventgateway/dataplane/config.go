@@ -80,12 +80,18 @@ var config = shareddataplane.Config[
 	},
 
 	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
+		if ref := egdp.Spec.ControlPlaneRef.OnPremNamespacedRef; ref != nil {
+			return shareddataplane.ControlPlaneRef{
+				Kind: onPremEventGatewayKind.Kind,
+				Name: ref.Name,
+			}
+		}
 		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
 		if ref == nil {
-			// An onpremNamespacedRef isn't supported by the controller yet.
-			// Returning an empty ref skips control plane resolution;
-			// resolveCertificateSecret then refuses it before provisioning a
-			// certificate, instead of panicking.
+			// The CRD schema requires a reference of the type, so this
+			// shouldn't happen. Returning an empty ref skips control plane
+			// resolution; buildContainer then refuses to build a Deployment
+			// without a resolved control plane, instead of panicking.
 			return shareddataplane.ControlPlaneRef{}
 		}
 		return shareddataplane.ControlPlaneRef{
@@ -93,6 +99,8 @@ var config = shareddataplane.Config[
 			Name: ref.Name,
 		}
 	},
+	// The OnPremEventGateway kind is added per reconciler (see
+	// Reconciler.config): its Dependencies need the operator namespace.
 	ControlPlanes: []shareddataplane.ControlPlaneKindConfig{konnectEventGatewayKind},
 
 	Conditions: shareddataplane.Conditions{
@@ -128,14 +136,16 @@ var config = shareddataplane.Config[
 		AdaptToExisting: keepEventGatewayDataPlaneCertificateRefField,
 		Ensure:          secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
 		// Requested is left nil: KEG always needs a certificate to connect to
-		// its (Konnect-backed) control plane, so an unresolved one always
-		// blocks the Deployment.
-		Resolve:            resolveCertificateSecret,
+		// its control plane, so an unresolved one always blocks the
+		// Deployment.
+		// Resolve is set per reconciler (see Reconciler.config).
 		Checksum:           shareddataplane.CertificateChecksum,
 		ChecksumAnnotation: consts.KEGDataPlaneCertificateChecksumAnnotation,
-		CleanupStale:       cleanupStaleCertificates,
+		// CleanupStale and RequeueAfter are set per reconciler (see
+		// Reconciler.config): they depend on its certificate settings.
 	},
-	ExtraWatches: extraWatches,
+	// ExtraWatches is set per reconciler (see Reconciler.config): the
+	// watches of the OnPremEventGateway kind depend on whether it is enabled.
 
 	Deployment: shareddataplane.DeploymentConfig[*eventgatewayv1alpha1.KegDataPlane]{
 		ContainerName:         consts.KEGContainerName,
@@ -146,6 +156,8 @@ var config = shareddataplane.Config[
 		DeploymentLabels:      deploymentLabels,
 		DeploymentAnnotations: deploymentAnnotations,
 		BuildContainer:        buildContainer,
+		Customize:             customizeDeployment,
+		ControlPlaneGone:      releaseDeploymentFromGWAdmin,
 
 		TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 	},
@@ -165,10 +177,22 @@ var config = shareddataplane.Config[
 }
 
 func podTemplateSpec(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.PodTemplateSpec {
-	if egdp.Spec.Deployment == nil {
+	if egdp.Spec.Deployment == nil || egdp.Spec.Deployment.PodTemplateSpec == nil {
 		return nil
 	}
-	return egdp.Spec.Deployment.PodTemplateSpec
+	overlay := egdp.Spec.Deployment.PodTemplateSpec
+	_, clientCA := overlay.Annotations[consts.GWAdminDataPlaneClientCAAnnotation]
+	_, serverBundle := overlay.Annotations[consts.GWAdminDataPlaneServerBundleAnnotation]
+	if !clientCA && !serverBundle {
+		return overlay
+	}
+	// The overlay wins on annotation conflicts: pinning those the rotations of
+	// a GWAdmin rely on would make them drop a certificate authority pods
+	// still use, or wait forever (see customizeDeployment).
+	overlay = overlay.DeepCopy()
+	delete(overlay.Annotations, consts.GWAdminDataPlaneClientCAAnnotation)
+	delete(overlay.Annotations, consts.GWAdminDataPlaneServerBundleAnnotation)
+	return overlay
 }
 
 // terminationGracePeriodSeconds returns the termination grace period of the
@@ -293,28 +317,10 @@ func serviceOptions(egdp *eventgatewayv1alpha1.KegDataPlane) *shareddataplane.Se
 
 // konnectEventGatewayFromResolved returns the KonnectEventGateway carried by
 // the resolved control plane, or nil when the KegDataPlane has no control
-// plane resolved. It panics on a resolved control plane of an unexpected
-// kind: KegDataPlane only supports KonnectEventGateway for now, so a mismatch
-// is a programming error.
+// plane resolved or references another kind of control plane.
 func konnectEventGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *konnectv1alpha1.KonnectEventGateway {
-	if cp.Object == nil {
-		return nil
-	}
-	keg, ok := cp.Object.(*konnectv1alpha1.KonnectEventGateway)
-	if !ok {
-		panic(fmt.Sprintf("KegDataPlane referenced an unsupported control plane kind %q", cp.Kind))
-	}
+	keg, _ := cp.Object.(*konnectv1alpha1.KonnectEventGateway)
 	return keg
-}
-
-// onPremNotSupported returns an error for a KegDataPlane that references an
-// OnPremEventGateway, which the controller doesn't support yet, and nil
-// otherwise.
-func onPremNotSupported(egdp *eventgatewayv1alpha1.KegDataPlane) error {
-	if egdp.Spec.ControlPlaneRef.Type != eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef {
-		return nil
-	}
-	return fmt.Errorf("KegDataPlane %s/%s references an OnPremEventGateway: an onpremNamespacedRef is not supported by the controller yet", egdp.Namespace, egdp.Name)
 }
 
 // buildContainer builds the keg container and the additional volumes it
@@ -326,34 +332,43 @@ func buildContainer(
 	_ string, // certSecretName: KEG always resolves a certificate Secret before the Deployment is built.
 	_ string, // adminCertSecretName: KEG never provisions an admin certificate.
 ) (corev1.Container, []corev1.Volume, error) {
-	keg := konnectEventGatewayFromResolved(cp)
-	if keg == nil {
-		// keg needs its KonnectEventGateway's region and cluster ID to start, so
-		// there is no Deployment to build without one. resolveCertificateSecret
-		// already refuses an onpremNamespacedRef; this is a backstop.
-		if err := onPremNotSupported(egdp); err != nil {
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      KonnectCertVolumeName,
+			MountPath: KonnectCertMountPath,
+			ReadOnly:  true,
+		},
+	}
+	var extraVolumes []corev1.Volume
+	var envVars []corev1.EnvVar
+	if deps := onPremDependenciesOf(cp); deps != nil {
+		envVars = append(onPremEnvVars(deps), commonKEGEnvVars(egdp)...)
+		volume, mount := onPremVolume(egdp, deps)
+		extraVolumes = append(extraVolumes, volume)
+		volumeMounts = append(volumeMounts, mount)
+	} else {
+		keg := konnectEventGatewayFromResolved(cp)
+		if keg == nil {
+			// keg needs the region and cluster ID of its control plane to
+			// start, so there is no Deployment to build without one. The CRD
+			// schema requires a control plane reference, so this shouldn't
+			// happen.
+			return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved control plane", egdp.Namespace, egdp.Name)
+		}
+		var err error
+		envVars, err = buildKEGEnvVars(egdp, keg)
+		if err != nil {
 			return corev1.Container{}, nil, err
 		}
-		return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved KonnectEventGateway", egdp.Namespace, egdp.Name)
-	}
-	envVars, err := buildKEGEnvVars(egdp, keg)
-	if err != nil {
-		return corev1.Container{}, nil, err
 	}
 
 	healthPort := intstr.FromInt32(DefaultHealthPort)
 
 	container := corev1.Container{
-		Name:  consts.KEGContainerName,
-		Image: image,
-		Env:   envVars,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      KonnectCertVolumeName,
-				MountPath: KonnectCertMountPath,
-				ReadOnly:  true,
-			},
-		},
+		Name:         consts.KEGContainerName,
+		Image:        image,
+		Env:          envVars,
+		VolumeMounts: volumeMounts,
 		ReadinessProbe: &corev1.Probe{
 			HTTPGet: &corev1.HTTPGetAction{
 				Path: "/health/probes/readiness",
@@ -368,7 +383,7 @@ func buildContainer(
 		},
 	}
 	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeKeg)
-	return container, volumes, nil
+	return container, append(volumes, extraVolumes...), nil
 }
 
 // buildKEGEnvVars builds the full list of keg environment variables from
@@ -383,16 +398,8 @@ func buildKEGEnvVars(
 	}
 	region := srv.Region().String()
 	domain := srv.Domain()
-	healthAddr := fmt.Sprintf("0.0.0.0:%d", DefaultHealthPort)
-
-	cfg := egdp.Spec.Config
-	if cfg != nil {
-		if cfg.Konnect != nil && cfg.Konnect.Domain != nil {
-			domain = *cfg.Konnect.Domain
-		}
-		if cfg.Runtime != nil && cfg.Runtime.HealthListenerAddressPort != nil {
-			healthAddr = *cfg.Runtime.HealthListenerAddressPort
-		}
+	if cfg := egdp.Spec.Config; cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil {
+		domain = *cfg.Konnect.Domain
 	}
 
 	envVars := []corev1.EnvVar{
@@ -401,12 +408,26 @@ func buildKEGEnvVars(
 		{Name: EnvKonnectClientCertPath, Value: KonnectCertMountPath + "tls.crt"},
 		{Name: EnvKonnectClientKeyPath, Value: KonnectCertMountPath + "tls.key"},
 		{Name: EnvKonnectDomain, Value: domain},
+	}
+	return append(envVars, commonKEGEnvVars(egdp)...), nil
+}
+
+// commonKEGEnvVars builds the keg environment variables that don't depend on
+// the kind of the control plane, from DataPlane spec.config.
+func commonKEGEnvVars(egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.EnvVar {
+	healthAddr := fmt.Sprintf("0.0.0.0:%d", DefaultHealthPort)
+	cfg := egdp.Spec.Config
+	if cfg != nil && cfg.Runtime != nil && cfg.Runtime.HealthListenerAddressPort != nil {
+		healthAddr = *cfg.Runtime.HealthListenerAddressPort
+	}
+
+	envVars := []corev1.EnvVar{
 		// Bind the health endpoint to all interfaces so Kubernetes probes can reach it.
 		{Name: EnvRuntimeHealthAddr, Value: healthAddr},
 	}
 
 	if cfg == nil {
-		return envVars, nil
+		return envVars
 	}
 
 	if cfg.Konnect != nil {
@@ -450,7 +471,7 @@ func buildKEGEnvVars(
 		}
 	}
 
-	return envVars, nil
+	return envVars
 }
 
 // buildEventGatewayDataPlaneCertificate builds the desired
@@ -464,11 +485,14 @@ func buildEventGatewayDataPlaneCertificate(
 	certSecretName string,
 	certChecksum string,
 ) *configurationv1alpha1.EventGatewayDataPlaneCertificate {
-	keg := konnectEventGatewayFromResolved(cp)
 	// certName is also used as the Konnect certificate name so that every
 	// rotation registers a distinct Konnect entity (see
 	// shareddataplane.CertEntityName).
 	certName := shareddataplane.CertEntityName(egdp.Name, certChecksum)
+	if deps := onPremDependenciesOf(cp); deps != nil {
+		return buildOnPremCertificate(egdp, deps.gateway, certSecretName, certName)
+	}
+	keg := konnectEventGatewayFromResolved(cp)
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
 		APIVersion: configurationv1alpha1.GroupVersion.String(),
 		Kind:       "EventGatewayDataPlaneCertificate",
@@ -533,16 +557,19 @@ func selectorLabelsForKegDataPlane(egdp *eventgatewayv1alpha1.KegDataPlane) map[
 // cleanupStaleCertificates removes the certificate resources left over from
 // an earlier rotation or a switch of provisioning mode: stale
 // EventGatewayDataPlaneCertificates (all but the one named after the current
-// checksum) and, when a manually-referenced Secret is in use, the
-// operator-provisioned Automatic Secret. The shared reconciler only calls
-// this once the rollout onto the current certificate completed, so no
-// running replica is left depending on what this removes.
-func cleanupStaleCertificates(
+// checksum), when a manually-referenced Secret is in use, the
+// operator-provisioned Automatic Secret, and, for an OnPremEventGateway, the
+// client certificate Secrets the current one, Automatic or Manual, replaced,
+// and the copy of the cp server CA bundle of the GWAdmin once it is no
+// longer needed. The shared
+// reconciler only calls this once the rollout onto the current certificate
+// completed, so no running replica is left depending on what this removes.
+func (r *Reconciler) cleanupStaleCertificates(
 	ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	_ shareddataplane.ResolvedControlPlane,
+	cp shareddataplane.ResolvedControlPlane,
 	certChecksum string,
 ) error {
 	if err := shareddataplane.CleanupStaleKonnectCertificates(ctx, cl, logger, egdp,
@@ -550,6 +577,16 @@ func cleanupStaleCertificates(
 		shareddataplane.CertEntityName(egdp.Name, certChecksum),
 	); err != nil {
 		return err
+	}
+	if err := cleanupServerBundleCopy(ctx, cl, logger, egdp, cp); err != nil {
+		return err
+	}
+	// The client certificate Secrets of a data plane of an OnPremEventGateway
+	// are kept while a certificate references them, also after a switch to
+	// Manual: gw-admin keeps trusting a certificate until its
+	// EventGatewayDataPlaneCertificate is gone.
+	if egdp.Spec.ControlPlaneRef.OnPremNamespacedRef != nil {
+		return r.cleanupStaleOnPremCertificates(ctx, cl, logger, egdp, certChecksum)
 	}
 	if isManualProvisioning(egdp) {
 		return shareddataplane.CleanupStaleAutomaticCertificateSecret(ctx, cl, logger, egdp, consts.SecretKEGDataPlaneCertificateLabel)

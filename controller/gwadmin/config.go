@@ -127,10 +127,10 @@ func buildContainer(
 		Env: []corev1.EnvVar{
 			{Name: consts.GWAdminAPITLSCertFileEnvVar, Value: consts.GWAdminAPITLSMountPath + "/" + corev1.TLSCertKey},
 			{Name: consts.GWAdminAPITLSKeyFileEnvVar, Value: consts.GWAdminAPITLSMountPath + "/" + corev1.TLSPrivateKeyKey},
-			{Name: consts.GWAdminAPITLSClientCAFileEnvVar, Value: consts.GWAdminAPITLSMountPath + "/" + caBundleKey},
+			{Name: consts.GWAdminAPITLSClientCAFileEnvVar, Value: consts.GWAdminAPITLSMountPath + "/" + consts.CACRT},
 			{Name: consts.GWAdminCPTLSCertFileEnvVar, Value: consts.GWAdminCPTLSMountPath + "/" + corev1.TLSCertKey},
 			{Name: consts.GWAdminCPTLSKeyFileEnvVar, Value: consts.GWAdminCPTLSMountPath + "/" + corev1.TLSPrivateKeyKey},
-			{Name: consts.GWAdminCPTLSClientCAFileEnvVar, Value: consts.GWAdminCPTLSMountPath + "/" + caBundleKey},
+			{Name: consts.GWAdminCPTLSClientCAFileEnvVar, Value: consts.GWAdminCPTLSMountPath + "/" + consts.CACRT},
 		},
 		Ports: []corev1.ContainerPort{
 			{Name: consts.GWAdminAPIPortName, ContainerPort: consts.GWAdminAPIPort, Protocol: corev1.ProtocolTCP},
@@ -175,7 +175,7 @@ func tlsVolume(name, certSecretName, bundleSecretName string) corev1.Volume {
 				}},
 				{Secret: &corev1.SecretProjection{
 					Name:  bundleSecretName,
-					Items: []corev1.KeyToPath{{Key: caBundleKey, Path: caBundleKey}},
+					Items: []corev1.KeyToPath{{Key: consts.CACRT, Path: consts.CACRT}},
 				}},
 			},
 		},

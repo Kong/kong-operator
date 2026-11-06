@@ -3,6 +3,8 @@
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [v2.4.0-rapid.3.1](#v240-rapid31)
+- [v2.4.0-rapid.3.0](#v240-rapid30)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.3](#v233)
@@ -71,7 +73,40 @@
 
 ## [Unreleased]
 
-### Fixed
+### Added
+
+- `KegDataPlane`: the operator deploys a data plane for an
+  `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
+  gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
+  certificate authority rotations wait for the data plane to move to the new
+  authority. Its name must be a valid DNS-1035 label of at most 57 characters.
+  [#6435](https://github.com/Kong/kong-operator/pull/6435)
+
+### Changed
+
+- `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
+  shorter validity could keep the client certificate of an on-prem `KegDataPlane`
+  from being issued.
+  [#6435](https://github.com/Kong/kong-operator/pull/6435)
+
+## [v2.4.0-rapid.3.1]
+
+> Release date: 2026-11-04
+
+### Fixes
+
+- `AIGatewayMCPServer`: an `AIGatewayMCPServer` whose listener access sets
+  server-level `access.acls` is no longer refused by Konnect with
+  `400 Bad Request`.
+  [#6419](https://github.com/Kong/kong-operator/pull/6419)
+  [#6418](https://github.com/Kong/kong-operator/pull/6418)
+  [#6414](https://github.com/Kong/kong-operator/pull/6414)
+
+## [v2.4.0-rapid.3.0]
+
+> Release date: 2026-11-03
+
+### Fixes
 
 - `KongPlugin` `spec.ordering` is now sent to Konnect. It was dropped for every
   `KongPluginBinding`, and for `KongPlugin`s referenced from `HTTPRoute` and
@@ -291,9 +326,136 @@
   route may run without plugin in the time window between old plugin deleted and
   new plugin created.
   [#6181](https://github.com/Kong/kong-operator/pull/6181)
+- Hybridgateway: preserve Gateway API precedence for overlapping path, method,
+  and header matches by retaining native PathPrefix matching and generating
+  specialized Kong Routes for conflicting match combinations. Specialized
+  variants use regex paths so their inherited priorities take effect, including
+  when lower-priority variants combine method and header matches.
+  User-provided RegularExpression paths and their variants now receive the same
+  explicit priority from the original match. Within an HTTPRoute, regex paths
+  use implementation-specific ordering ahead of Exact and PathPrefix matches,
+  then longer configured patterns, method matches, more headers, and earlier rules,
+  matching the precedence-variant generator instead of defaulting to priority 0.
+  Representable exact/regex header intersections are narrowed to the exact
+  constraint, retaining the higher-priority match's backend and priority.
+  Unsupported regex intersection checks fail translation explicitly instead
+  of silently omitting a required variant.
+  Expansion is limited to 64 variants per original match, including the original;
+  exceeding this limit fails translation with a `TranslationFailed` warning event
+  instead of silently dropping precedence constraints.
+  Hybrid Gateway DataPlanes default to `KONG_ROUTE_MATCH_CALCULATION=strict`
+  to avoid the legacy calculation overlapping native match fields with
+  `regex_priority`. Explicit user settings are preserved; selecting `original`
+  retains legacy precedence limitations.
+  The default Kong 3.16 image supports `strict`. Older pinned images that ignore
+  this unsupported setting retain their legacy calculation and cannot provide
+  corrected precedence; use an image supporting `strict` for these guarantees.
+  This enables the `HTTPRouteMethodMatching` Gateway API conformance test for the
+  hybrid gateway, without advertising it for standard traditional-compatible
+  Gateways. Generated priorities stay below `1 << 20` (`1048576`).
+  [#4715](https://github.com/Kong/kong-operator/pull/4715)
+- Konnect: fix hot retry loop when Konnect returns 5xx on entity update
+  (e.g. Event Gateway update returning 500). The Konnect trace ID is now
+  cleared from Konnect 5xx API errors in the `Programmed` condition
+  message, and 5xx update errors are returned to controller-runtime so its
+  exponential backoff applies.
+  [#6008](https://github.com/Kong/kong-operator/pull/6008)
+- Konnect: status condition patches no longer drop status conditions that a
+  concurrent write set between the operator reading the object and patching it.
+  A JSON merge patch replaces the whole `conditions` array, so a patch built
+  from a stale cached object could silently remove newer conditions such as
+  `Programmed` (for example set right after the entity was created in Konnect).
+  Condition patches now carry the optimistic-lock `resourceVersion` and
+  conflict instead; the reconciler then requeues and retries on a fresh cache.
+  [#5958](https://github.com/Kong/kong-operator/pull/5958) fixed one visible
+  symptom of this; this change fixes the root cause in the shared condition
+  patch helpers.
+  [#5990](https://github.com/Kong/kong-operator/pull/5990)
+- Konnect: a `KonnectExtension` now registers the certificate of its
+  certificate `Secret` in Konnect again when that certificate changes, for
+  example when the `Secret` is deleted and regenerated. Before, the
+  `KongDataPlaneClientCertificate` kept the previous certificate (its
+  `spec.cert` is immutable) while the `KonnectExtension` stayed ready, so new
+  `DataPlane` Pods got `401` from Konnect. The new certificate is registered
+  next to the previous one, which is deleted only after managed consumers
+  finish migrating and no running or terminating Pod still mounts it.
+  Automatically provisioned certificates are renewed using `--cert-ttl`
+  and `--cert-expiration-margin`. Manually provisioned certificates use
+  immutable owned Secret snapshots so in-place issuer renewal cannot reach
+  Pods before Konnect accepts the new certificate. The source Secret remains
+  externally managed, and status references the snapshot. Deleting a current
+  Manual snapshot creates a replacement and preserves the original mount
+  until consumers migrate, without removing the unchanged Konnect registration.
+  The extension remains unready until its current certificate is programmed.
+  [#5982](https://github.com/Kong/kong-operator/pull/5982)
+- `AIGatewayCustomPolicy`: prevent bypassing type immutability by removing
+  and re-adding `spec.apiSpec`. Once the type is set, removing `apiSpec` or
+  its enclosing `spec` is rejected; changing the type requires recreating
+  the resource.
+  [#5999](https://github.com/Kong/kong-operator/issues/5999)
+- Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
+  the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
+  `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,
+  `EventGatewayVirtualClusterPolicy`, `EventGatewayVirtualClusterProducePolicy`
+  and `EventGatewayVirtualClusterConsumePolicy`.
+  For `AIGatewayAuthStrategy`, `AIGatewayModelProvider` and the three
+  `EventGatewayVirtualCluster` policies, the operator could not find the
+  Konnect entity it owns, so it could not recover a lost entity ID or clean up
+  the entity. It now finds it by its `k8s-uid` label.
+  `AIGatewayModel`, `AIGatewayMCPServer`, `AIGatewayConsumer`,
+  `AIGatewayConsumerGroup`, `AIGatewayConsumerCredential`,
+  `AIGatewayDataPlaneCertificate` and `EventGatewayListenerPolicy` are also
+  found by their `k8s-uid` label now, instead of by name (or certificate and
+  title), which could match an entity with the same name that the operator did
+  not create.
+  For the Event Gateway entities (`KonnectEventGateway`, `EventGatewayBackendCluster`,
+  `EventGatewayListener`, `EventGatewayVirtualCluster`,
+  `EventGatewaySchemaRegistry`, `EventGatewayDataPlaneCertificate` and the
+  Event Gateway policies), a create rejected because the name is already taken
+  is now handled like a conflict: Konnect reports it as a 400 Bad Request
+  (`name: must be unique`) instead of a 409, so the operator previously never
+  looked up the entity it had already created.
+  `EventGatewayDataPlaneCertificate`s, which have no labels in Konnect, are
+  found by their certificate (resolved from its Secret), name and description,
+  so one with the same name but another certificate is never taken over.
+  Upgrading: Konnect entities created by earlier releases get the labels on
+  their next update. `AIGatewayDataPlaneCertificate`s, which Konnect cannot
+  update, keep being found by their certificate, title and description when
+  they carry no `k8s-uid` label.
+  [#5947](https://github.com/Kong/kong-operator/pull/5947)
+- Konnect: when looking up the existing Konnect entity of an AI Gateway, Event
+  Gateway or Portal object (to recover a lost entity ID, or to delete an
+  object without one), the operator now goes through every page of the
+  Konnect list instead of only the first one. An entity listed after the
+  first page (e.g. with more than 20 Event Gateways in an organization) was
+  not found, so the object kept failing to be created, or its entity was left
+  behind in Konnect when the object was deleted.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+- Konnect: when the deletion of an `AIGatewayCustomPolicy` is blocked by
+  `AIGatewayPolicy` objects still using it, the operator now names them even
+  when the AI Gateway has more than one page of policies. Before, it failed
+  to read the second page of policies, so the blocking objects were not
+  reported.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+- On-prem AI Gateway: `AIGatewayConsumer`s referenced by an `OnPremAIGateway`
+  are now rendered into the on-prem document, with their
+  `AIGatewayConsumerCredential`s embedded and their `secretRef` api keys
+  resolved from Secrets. Previously the reconciliation failed for every
+  referenced consumer and credential with a "does not have a Konnect ID yet"
+  error.
+  [#5954](https://github.com/Kong/kong-operator/pull/5954)
 
 ### Added
 
+- On-prem AI Gateway: a configuration entity of another namespace can reference an
+  `OnPremAIGateway`. Two grants are needed. A `WatchNamespaceGrant` in the entity's
+  namespace lets the gateway watch it. A `KongReferenceGrant` in the gateway's
+  namespace lets the entity kind of that namespace reference the `OnPremAIGateway`.
+  Without the second grant, the entity reports `Programmed=False` and is left out of
+  the pushed configuration. The `AIGatewayConsumerCredential` of a consumer in
+  another namespace follows its consumer. The grant of the consumer also covers the
+  credentials.
+  [#5685](https://github.com/Kong/kong-operator/issues/5685)
 - Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
   order of cluster-level policies within an Event Gateway virtual cluster.
   The API requires an explicit policy list and an immutable virtual-cluster CR
@@ -666,11 +828,19 @@
   document and reports the failure on its own status.
   [#6376](https://github.com/Kong/kong-operator/issues/6376)
 
+- Konnect-backed Gateway API backend Services can select an existing
+  `KongCertificate` for upstream mTLS with `konghq.com/client-cert-ref`.
+  Namespaced references support Vault-backed client certificates without copying
+  or adopting them. References require current readiness, the same remote
+  ControlPlane, and KongService-to-certificate cross-namespace authorization.
+  Invalid or conflicting direct selections fail closed; `konghq.com/client-cert`
+  retains its Secret semantics and legacy-only selection behavior.
+
 ### Changed
 
-- Bumped `sdk-konnect-go` to `v0.78.0`. Konnect core entities (`KongService`,
-  `KongRoute`, `KongConsumer`, `KongConsumerGroup`, `KongPluginBinding`,
-  `KongCertificate`, `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
+- Konnect core entities (`KongService`, `KongRoute`, `KongConsumer`,
+  `KongConsumerGroup`, `KongPluginBinding`, `KongCertificate`,
+  `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
   now created, read and deleted through the workspace-scoped
   `/v2/control-planes/{controlPlaneId}/core-entities/default/...` endpoints.
   [#6347](https://github.com/Kong/kong-operator/pull/6347)
@@ -725,6 +895,7 @@
   planes. An SNI's `certificate` reference resolves to the referenced
   certificate's entity name in the same namespace; the referenced certificate
   must target the same `OnPremAIGateway` as the SNI.
+  [#5959](https://github.com/Kong/kong-operator/pull/5959)
 - `KegDataPlane`: the `EventGatewayDataPlaneCertificate` is renamed from
   `<kegdataplane>` to `<kegdataplane>-<checksum>`, derived from the certificate
   content, and now carries the operator's managed-by labels. Tooling that looks
@@ -789,128 +960,6 @@
   in the `DataPlane` pod template keeps the admin API, `Service` and
   certificate as before.
   [#6082](https://github.com/Kong/kong-operator/pull/6082)
-
-### Fixes
-
-- Hybridgateway: preserve Gateway API precedence for overlapping path, method,
-  and header matches by retaining native PathPrefix matching and generating
-  specialized Kong Routes for conflicting match combinations. Specialized
-  variants use regex paths so their inherited priorities take effect, including
-  when lower-priority variants combine method and header matches.
-  User-provided RegularExpression paths and their variants now receive the same
-  explicit priority from the original match. Within an HTTPRoute, regex paths
-  use implementation-specific ordering ahead of Exact and PathPrefix matches,
-  then longer configured patterns, method matches, more headers, and earlier rules,
-  matching the precedence-variant generator instead of defaulting to priority 0.
-  Representable exact/regex header intersections are narrowed to the exact
-  constraint, retaining the higher-priority match's backend and priority.
-  Unsupported regex intersection checks fail translation explicitly instead
-  of silently omitting a required variant.
-  Expansion is limited to 64 variants per original match, including the original;
-  exceeding this limit fails translation with a `TranslationFailed` warning event
-  instead of silently dropping precedence constraints.
-  Hybrid Gateway DataPlanes default to `KONG_ROUTE_MATCH_CALCULATION=strict`
-  to avoid the legacy calculation overlapping native match fields with
-  `regex_priority`. Explicit user settings are preserved; selecting `original`
-  retains legacy precedence limitations.
-  The default Kong 3.16 image supports `strict`. Older pinned images that ignore
-  this unsupported setting retain their legacy calculation and cannot provide
-  corrected precedence; use an image supporting `strict` for these guarantees.
-  This enables the `HTTPRouteMethodMatching` Gateway API conformance test for the
-  hybrid gateway, without advertising it for standard traditional-compatible
-  Gateways. Generated priorities stay below `1 << 20` (`1048576`).
-  [#4715](https://github.com/Kong/kong-operator/pull/4715)
-- Konnect: fix hot retry loop when Konnect returns 5xx on entity update
-  (e.g. Event Gateway update returning 500). The Konnect trace ID is now
-  cleared from Konnect 5xx API errors in the `Programmed` condition
-  message, and 5xx update errors are returned to controller-runtime so its
-  exponential backoff applies.
-  [#6008](https://github.com/Kong/kong-operator/pull/6008)
-- Konnect: status condition patches no longer drop status conditions that a
-  concurrent write set between the operator reading the object and patching it.
-  A JSON merge patch replaces the whole `conditions` array, so a patch built
-  from a stale cached object could silently remove newer conditions such as
-  `Programmed` (for example set right after the entity was created in Konnect).
-  Condition patches now carry the optimistic-lock `resourceVersion` and
-  conflict instead; the reconciler then requeues and retries on a fresh cache.
-  [#5958](https://github.com/Kong/kong-operator/pull/5958) fixed one visible
-  symptom of this; this change fixes the root cause in the shared condition
-  patch helpers.
-  [#5990](https://github.com/Kong/kong-operator/pull/5990)
-- Konnect: a `KonnectExtension` now registers the certificate of its
-  certificate `Secret` in Konnect again when that certificate changes, for
-  example when the `Secret` is deleted and regenerated. Before, the
-  `KongDataPlaneClientCertificate` kept the previous certificate (its
-  `spec.cert` is immutable) while the `KonnectExtension` stayed ready, so new
-  `DataPlane` Pods got `401` from Konnect. The new certificate is registered
-  next to the previous one, which is deleted only after managed consumers
-  finish migrating and no running or terminating Pod still mounts it.
-  Automatically provisioned certificates are renewed using `--cert-ttl`
-  and `--cert-expiration-margin`. Manually provisioned certificates use
-  immutable owned Secret snapshots so in-place issuer renewal cannot reach
-  Pods before Konnect accepts the new certificate. The source Secret remains
-  externally managed, and status references the snapshot. Deleting a current
-  Manual snapshot creates a replacement and preserves the original mount
-  until consumers migrate, without removing the unchanged Konnect registration.
-  The extension remains unready until its current certificate is programmed.
-  [#5982](https://github.com/Kong/kong-operator/pull/5982)
-- `AIGatewayCustomPolicy`: prevent bypassing type immutability by removing
-  and re-adding `spec.apiSpec`. Once the type is set, removing `apiSpec` or
-  its enclosing `spec` is rejected; changing the type requires recreating
-  the resource.
-  [#5999](https://github.com/Kong/kong-operator/issues/5999)
-- Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
-  the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
-  `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,
-  `EventGatewayVirtualClusterPolicy`, `EventGatewayVirtualClusterProducePolicy`
-  and `EventGatewayVirtualClusterConsumePolicy`.
-  For `AIGatewayAuthStrategy`, `AIGatewayModelProvider` and the three
-  `EventGatewayVirtualCluster` policies, the operator could not find the
-  Konnect entity it owns, so it could not recover a lost entity ID or clean up
-  the entity. It now finds it by its `k8s-uid` label.
-  `AIGatewayModel`, `AIGatewayMCPServer`, `AIGatewayConsumer`,
-  `AIGatewayConsumerGroup`, `AIGatewayConsumerCredential`,
-  `AIGatewayDataPlaneCertificate` and `EventGatewayListenerPolicy` are also
-  found by their `k8s-uid` label now, instead of by name (or certificate and
-  title), which could match an entity with the same name that the operator did
-  not create.
-  For the Event Gateway entities (`KonnectEventGateway`, `EventGatewayBackendCluster`,
-  `EventGatewayListener`, `EventGatewayVirtualCluster`,
-  `EventGatewaySchemaRegistry`, `EventGatewayDataPlaneCertificate` and the
-  Event Gateway policies), a create rejected because the name is already taken
-  is now handled like a conflict: Konnect reports it as a 400 Bad Request
-  (`name: must be unique`) instead of a 409, so the operator previously never
-  looked up the entity it had already created.
-  `EventGatewayDataPlaneCertificate`s, which have no labels in Konnect, are
-  found by their certificate (resolved from its Secret), name and description,
-  so one with the same name but another certificate is never taken over.
-  Upgrading: Konnect entities created by earlier releases get the labels on
-  their next update. `AIGatewayDataPlaneCertificate`s, which Konnect cannot
-  update, keep being found by their certificate, title and description when
-  they carry no `k8s-uid` label.
-  [#5947](https://github.com/Kong/kong-operator/pull/5947)
-- Konnect: when looking up the existing Konnect entity of an AI Gateway, Event
-  Gateway or Portal object (to recover a lost entity ID, or to delete an
-  object without one), the operator now goes through every page of the
-  Konnect list instead of only the first one. An entity listed after the
-  first page (e.g. with more than 20 Event Gateways in an organization) was
-  not found, so the object kept failing to be created, or its entity was left
-  behind in Konnect when the object was deleted.
-  [#5961](https://github.com/Kong/kong-operator/pull/5961)
-- Konnect: when the deletion of an `AIGatewayCustomPolicy` is blocked by
-  `AIGatewayPolicy` objects still using it, the operator now names them even
-  when the AI Gateway has more than one page of policies. Before, it failed
-  to read the second page of policies, so the blocking objects were not
-  reported.
-  [#5961](https://github.com/Kong/kong-operator/pull/5961)
-
-- On-prem AI Gateway: `AIGatewayConsumer`s referenced by an `OnPremAIGateway`
-  are now rendered into the on-prem document, with their
-  `AIGatewayConsumerCredential`s embedded and their `secretRef` api keys
-  resolved from Secrets. Previously the reconciliation failed for every
-  referenced consumer and credential with a "does not have a Konnect ID yet"
-  error.
-  [#5954](https://github.com/Kong/kong-operator/pull/5954)
 
 ## [v2.4.0-rapid.2.0]
 
@@ -4458,7 +4507,9 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[Unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..HEAD
+[Unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.1..HEAD
+[v2.4.0-rapid.3.1]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.0..v2.4.0-rapid.3.1
+[v2.4.0-rapid.3.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..v2.4.0-rapid.3.0
 [v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
 [v2.3.3]: https://github.com/Kong/kong-operator/compare/v2.3.2..v2.3.3

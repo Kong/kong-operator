@@ -26,6 +26,9 @@ var skippedTestsForHybrid = []string{
 
 	// Extended profile.
 	tests.HTTPRouteQueryParamMatching.ShortName,
+
+	// https://github.com/Kong/kong-operator/issues/5286.
+	tests.GRPCRouteWeight.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given router flavor and gateway type.

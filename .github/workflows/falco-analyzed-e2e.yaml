@@ -72,10 +72,25 @@ jobs:
     - name: set test image
       if: ${{ inputs.test-image != '' }}
       env:
-         TEST_IMAGE: ${{ inputs.test-image }}
+        TEST_IMAGE: ${{ inputs.test-image }}
       run: |
-        docker pull "$TEST_IMAGE"
-        echo "TEST_IMAGE=$TEST_IMAGE" >> $GITHUB_ENV
+        # kind imports the archive with `ctr images import --all-platforms`, which
+        # fails on a multi-platform index whose manifests are absent. Pin the local
+        # platform's manifest by digest so `docker save` writes a single manifest.
+        platform="$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')"
+        digest="$(
+          docker buildx imagetools inspect --raw "$TEST_IMAGE" \
+            | jq -r --arg platform "$platform" \
+              'first((.manifests // [])[] | select((.platform.os + "/" + .platform.architecture) == $platform) | .digest) // empty'
+        )"
+        if [ -n "$digest" ]; then
+          docker pull "$TEST_IMAGE@$digest"
+          docker tag "$TEST_IMAGE@$digest" "$TEST_IMAGE"
+        else
+          # Not a multi-platform image.
+          docker pull "$TEST_IMAGE"
+        fi
+        echo "TEST_IMAGE=$TEST_IMAGE" >> "$GITHUB_ENV"
 
     - uses: ./.github/actions/setup-mise
       with:

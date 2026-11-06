@@ -23,37 +23,28 @@ func TestKongSNIBuilder_BasicFields(t *testing.T) {
 }
 
 func TestKongSNIBuilder_WithLabels(t *testing.T) {
-	gw := &gwtypes.Gateway{
-		Name: "gw1", Namespace: "ns1",
-	}
+	gw := newGatewayMetadataFixture()
 	listener := &gwtypes.Listener{Port: 443}
 	b := NewKongSNI().WithLabels(gw, listener)
 	sni, err := b.Build()
 	require.NoError(t, err)
-	require.NotNil(t, sni.Labels)
-	require.Contains(t, sni.Labels, "gateway-operator.konghq.com/listener-port")
-	require.Equal(t, "443", sni.Labels["gateway-operator.konghq.com/listener-port"])
+	require.Equal(t, wantGatewayListenerLabels("443"), sni.Labels)
 }
 
 func TestKongSNIBuilder_WithLabels_NilListener(t *testing.T) {
-	gw := &gwtypes.Gateway{
-		Name: "gw2", Namespace: "ns2",
-	}
+	gw := newGatewayMetadataFixture()
 	b := NewKongSNI().WithLabels(gw, nil)
 	sni, err := b.Build()
 	require.NoError(t, err)
-	require.NotNil(t, sni.Labels)
-	require.NotContains(t, sni.Labels, "gateway-operator.konghq.com/listener-port")
+	require.Equal(t, wantGatewayLabels(), sni.Labels)
 }
 
 func TestKongSNIBuilder_WithAnnotations(t *testing.T) {
-	gw := &gwtypes.Gateway{
-		Name: "gw3", Namespace: "ns3",
-	}
+	gw := newGatewayMetadataFixture()
 	b := NewKongSNI().WithAnnotations(gw)
 	sni, err := b.Build()
 	require.NoError(t, err)
-	require.NotNil(t, sni.Annotations)
+	require.Equal(t, wantGatewayAnnotations(), sni.Annotations)
 }
 
 func TestKongSNIBuilder_WithOwner(t *testing.T) {

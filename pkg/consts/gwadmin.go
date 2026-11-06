@@ -69,9 +69,9 @@ const (
 	// Deployment, holds the namespace of the GWAdmin it pulls the
 	// configuration from: its rollouts gate the rotations of that GWAdmin.
 	// The controller managing the data plane sets it, with
-	// GWAdminDataPlaneNameLabel, when it creates the Deployment, and never
-	// removes them while the data plane runs: a GWAdmin with no data plane
-	// rotates without waiting.
+	// GWAdminDataPlaneNameLabel, on the Deployment, and removes them once its
+	// gateway is gone, or being deleted, as its pods then never move, even if
+	// they still run: a GWAdmin with no such data plane rotates without waiting.
 	GWAdminDataPlaneNamespaceLabel = OperatorLabelPrefix + "gwadmin-namespace"
 	// GWAdminDataPlaneNameLabel is the label that, set on a data plane
 	// Deployment, holds the name of the GWAdmin it pulls the configuration from.
@@ -104,11 +104,11 @@ const (
 	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp-dev"
 	// DefaultGWAdminTag is the default image tag for the gw-admin container.
 	// gw-admin has no release yet: the tag pins the dev image by digest, the
-	// build of its pull request 1502 serving version 1.11.0 of its API and
+	// build of its pull request 1520 serving version 1.11.0 of its API and
 	// deleting the data plane certificates of a gateway with it, and must be
 	// bumped by hand, to a main-<commit> build once that is merged.
 	// TODO: move to a released image with a renovate annotation once gw-admin is released.
-	DefaultGWAdminTag = "pr-1502@sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b"
+	DefaultGWAdminTag = "pr-1520@sha256:dcf2f39c9d9e4f308603701073c0fe57b903b65ee484756a20807bb598007f49"
 	// DefaultGWAdminImage is the full default image reference for the gw-admin container.
 	DefaultGWAdminImage = DefaultGWAdminBaseImage + ":" + DefaultGWAdminTag
 
@@ -156,17 +156,21 @@ const (
 const (
 	// GWAdminCATTL is the default validity of the certificate authorities
 	// Kong Operator creates for a GWAdmin (--gwadmin-ca-ttl). They are
-	// renewed once two thirds of it have elapsed, so that rotations run
-	// regularly.
-	GWAdminCATTL = 365 * 24 * time.Hour
+	// renewed once two thirds of it have elapsed.
+	GWAdminCATTL = 10 * 365 * 24 * time.Hour
 	// GWAdminLeafTTL is the default validity of the certificates Kong
 	// Operator issues for a GWAdmin (--gwadmin-cert-ttl). They are renewed
 	// once two thirds of it have elapsed.
 	GWAdminLeafTTL = 90 * 24 * time.Hour
-	// GWAdminMinTTL is the shortest validity --gwadmin-ca-ttl and
-	// --gwadmin-cert-ttl accept: certificates are backdated by 5 minutes
-	// against clock skew, which a shorter validity would mostly consume.
-	GWAdminMinTTL = 10 * time.Minute
+	// GWAdminMinCATTL is the shortest validity --gwadmin-ca-ttl accepts: a
+	// data plane of an OnPremEventGateway gets a client certificate from the
+	// certificate authority only while it has at least 10 minutes left, and
+	// a renewed one can take the rollout of the gw-admin pods to be published.
+	GWAdminMinCATTL = time.Hour
+	// GWAdminMinCertTTL is the shortest validity --gwadmin-cert-ttl accepts:
+	// certificates are backdated by 5 minutes against clock skew, which a
+	// shorter validity would mostly consume.
+	GWAdminMinCertTTL = 10 * time.Minute
 	// GWAdminOperatorClientCommonName is the common name of the client
 	// certificate Kong Operator authenticates to gw-admin with.
 	GWAdminOperatorClientCommonName = "kong-operator"

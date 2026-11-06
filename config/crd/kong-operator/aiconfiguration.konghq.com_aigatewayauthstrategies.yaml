@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
   name: aigatewayauthstrategies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -3187,20 +3187,49 @@ spec:
                         type: string
                       tokenVault:
                         description: |-
-                          Serves the self-service enrollment UI through which end users authorize the
-                          upstream providers
-                          this auth strategy authenticates against.
-                          Omit `token_vault` entirely to serve no such UI.
+                          Enables enrollment protection for the Token Vault datastore linked to this
+                          auth strategy.
+                          Users of the linked Token Vault will need to authenticate using this OIDC
+                          auth strategy
+                          before completing enrollment with upstream providers.
+                          Enrollment links always store upstream
+                          credentials in the Token Vault belonging to the principal who requested the
+                          link.
+                          Enrollment
+                          protection ensures that other principals cannot use an enrollment link to
+                          unknowingly
+                          authorize the storage of their upstream credentials in another principal's
+                          Token Vault.
 
-                          Requires a `token-vault` Datastore reference in `datastores`; enabling the
-                          credential manager
+                          Note that the auth strategy used to protect upstream resources such as MCP
+                          servers need not
+                          be the same auth strategy used for enrollment protection.
+                          Omit `token_vault` entirely to
+                          enforce no such enrollment protection.
+
+                          Requires a `token-vault` Datastore reference in `datastores`; enabling
+                          enrollment protection
                           without one is rejected.
 
                           **Requires a minimum runtime version of `2.3`**.
                         properties:
                           enableCredentialManager:
-                            description: Whether the self-service enrollment UI is
-                              served for this auth strategy.
+                            description: |-
+                              Enables the self-service credential manager UI through which end users
+                              authorize
+                              upstream providers for Token Vault datastore linked to this auth strategy.
+                              This OIDC
+                              auth strategy is used to authenticate access to the self-service UI, but
+                              need not
+                              necessarily be the same auth strategy that is used to authenticate access to
+                              upstream
+                              Token Vault providers.
+
+                              Requires a `token-vault` Datastore reference in `datastores`; enabling the
+                              credential
+                              manager without one is rejected.
+                              The credential manager cannot be used without
+                              enrollment protection.
                             enum:
                             - Enabled
                             - Disabled

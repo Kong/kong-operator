@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -205,7 +206,7 @@ func TestReconcile_StopRequeue(t *testing.T) {
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gwObj), gw))
 	res, err := r.Reconcile(t.Context(), gw)
 	require.NoError(t, err, "a user error is reported in the status, not retried with backoff")
-	assert.Equal(t, maxRequeue, res.RequeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, res.RequeueAfter)
 
 	live := &operatorv1alpha1.GWAdmin{}
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gw), live))

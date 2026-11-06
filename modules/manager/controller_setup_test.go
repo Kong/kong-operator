@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -15,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
+	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -94,6 +96,46 @@ func TestSetupControllers_OnPremEventGatewayController(t *testing.T) {
 			})
 			require.NotEqual(t, -1, idx, "the OnPremEventGateway controller is not defined")
 			require.Equal(t, enabled, controllerDefs[idx].Enabled)
+		})
+	}
+}
+
+// TestSetupControllers_KegDataPlaneOnPremWiring checks what the KegDataPlane
+// controller gets from the configuration for the OnPremEventGateway kind: the
+// namespace the GWAdmin controller publishes the cp client CA in isn't the one
+// of the cluster CA, and the validity of the certificates of the GWAdmin caps
+// those of the data planes.
+func TestSetupControllers_KegDataPlaneOnPremWiring(t *testing.T) {
+	t.Parallel()
+
+	for _, available := range []bool{false, true} {
+		t.Run(fmt.Sprintf("kind available %t", available), func(t *testing.T) {
+			t.Parallel()
+
+			mgr, err := ctrl.NewManager(&rest.Config{}, ctrlmgr.Options{
+				MapperProvider: func(*rest.Config, *http.Client) (meta.RESTMapper, error) {
+					return allKindsRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)}, nil
+				},
+			})
+			require.NoError(t, err)
+			cfg := testutils.DefaultControllerConfigForTests()
+			cfg.ControllerNamespace = "operator-namespace"
+			cfg.ClusterCASecretNamespace = "cluster-ca-namespace"
+			cfg.GWAdminCertTTL = 720 * time.Hour
+			cfg.OnPremEventGatewayKindAvailable = available
+			controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil, nil)
+			require.NoError(t, err)
+
+			idx := slices.IndexFunc(controllerDefs, func(def manager.ControllerDef) bool {
+				_, ok := def.Controller.(*egdataplane.Reconciler)
+				return ok
+			})
+			require.NotEqual(t, -1, idx, "the KegDataPlane controller is not defined")
+			reconciler := controllerDefs[idx].Controller.(*egdataplane.Reconciler)
+			require.Equal(t, "operator-namespace", reconciler.OperatorNamespace)
+			require.Equal(t, "cluster-ca-namespace", reconciler.ClusterCASecretNamespace)
+			require.Equal(t, 720*time.Hour, reconciler.GWAdminCertTTL)
+			require.Equal(t, !available, reconciler.OnPremUnavailable)
 		})
 	}
 }

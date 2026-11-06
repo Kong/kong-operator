@@ -3,9 +3,18 @@ package metadata
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
+
+// IsHybridGatewayService identifies route-generated Services without treating external
+// KongCertificates as owned resources.
+func IsHybridGatewayService(service *configurationv1alpha1.KongService) bool {
+	kind := service.Labels[consts.GatewayOperatorManagedByLabel]
+	return HybridRouteAnnotationKeyForKind(kind) != "" &&
+		service.Annotations[consts.GatewayOperatorHybridGatewaysAnnotation] != ""
+}
 
 // BuildLabels creates the standard labels map for Kong resources managed by the given object and ParentReference.
 // It generates labels that identify which route and gateway the Kong resources belong to, enabling

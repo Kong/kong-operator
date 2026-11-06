@@ -39,9 +39,12 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kong-operator
+      # The backport action pushes with the checkout credentials, not with its
+      # `github_token` input. Persist the app token so the push is allowed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
       - uses: korthout/backport-action@8560fb503c275d433c56f05a2f64850093baa9f7 # v4.7.0
         with:
           github_token: ${{ steps.app-token.outputs.token }}

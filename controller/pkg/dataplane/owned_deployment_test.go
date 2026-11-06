@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -729,6 +730,63 @@ func Test_ensureDeployment_Replicas(t *testing.T) {
 	}
 }
 
+func TestRolloutOntoCertificateComplete(t *testing.T) {
+	const annotation = "test/cert-checksum"
+	deployment := func(checksum string, rolledOut bool) *appsv1.Deployment {
+		d := &appsv1.Deployment{
+			Name: "test-dp", Namespace: "default", Generation: 1,
+			Spec: appsv1.DeploymentSpec{
+				Replicas: new(int32(1)),
+				Template: corev1.PodTemplateSpec{Annotations: map[string]string{annotation: checksum}},
+			},
+		}
+		if rolledOut {
+			d.Status = appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1}
+		}
+		return d
+	}
+	for _, tc := range []struct {
+		name               string
+		deployment         *appsv1.Deployment
+		checksumAnnotation string
+		getErr             error
+		want               bool
+		wantErr            bool
+	}{
+		{name: "no Deployment", checksumAnnotation: annotation},
+		{name: "the Deployment can't be read", checksumAnnotation: annotation, getErr: assert.AnError, wantErr: true},
+		{name: "rolling out", deployment: deployment("current", false), checksumAnnotation: annotation},
+		{name: "rolled out onto another certificate", deployment: deployment("previous", true), checksumAnnotation: annotation},
+		{name: "rolled out onto the certificate", deployment: deployment("current", true), checksumAnnotation: annotation, want: true},
+		{name: "rolled out, without checksum tracking", deployment: deployment("previous", true), want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(managerscheme.Get())
+			if tc.deployment != nil {
+				builder = builder.WithObjects(tc.deployment).WithStatusSubresource(tc.deployment)
+			}
+			cl := interceptor.NewClient(builder.Build(), interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if tc.getErr != nil {
+						return tc.getErr
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			})
+			cfg := testConfig
+			cfg.Certificate.ChecksumAnnotation = tc.checksumAnnotation
+			r := &testReconciler{Client: cl, Config: cfg}
+			got, err := r.rolloutOntoCertificateComplete(t.Context(), newTestAIGWDP(), "current")
+			if tc.wantErr {
+				require.ErrorIs(t, err, tc.getErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
 	const (
 		ns     = "test-ns"
@@ -769,4 +827,108 @@ func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
 
 	require.NoError(t, cl.Get(t.Context(), key, &deploy))
 	assert.Equal(t, new(int32(1)), deploy.Spec.Replicas)
+}
+
+func TestAdminAPIConfig(t *testing.T) {
+	enabled := func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true }
+	adminAPI := AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             enabled,
+		ServiceNameSuffix:   "-admin",
+		ServicePort:         8444,
+		ServicePortName:     "admin",
+		ManagedByLabelValue: "aigwdp-admin",
+		CertificateLabelKey: "test/admin-cert",
+	}
+
+	svcCfg := adminAPI.serviceConfig()
+	assert.Equal(t, "Admin", svcCfg.Description)
+	assert.Equal(t, "-admin", svcCfg.NameSuffix)
+	assert.Equal(t, "admin", svcCfg.DefaultPortName)
+	assert.Equal(t, int32(8444), svcCfg.DefaultPort)
+	assert.Equal(t, "aigwdp-admin", svcCfg.ManagedByLabelValue)
+	require.NotNil(t, svcCfg.Enabled, "the Service is gated like the certificate")
+	assert.True(t, svcCfg.Enabled(newTestAIGWDP(), ResolvedControlPlane{}))
+	assert.Nil(t, svcCfg.SetStatusAddresses, "the admin Service doesn't feed the status")
+
+	assert.Equal(t, "test-dp-admin.default.svc", adminAPI.certificateSubject(newTestAIGWDP()))
+}
+
+func Test_rolloutOntoCertificateComplete_scaledToZero(t *testing.T) {
+	const annotation, checksum = "example.com/certificate-checksum", "current"
+	for _, tc := range []struct {
+		name   string
+		mutate func(*appsv1.Deployment)
+		want   bool
+	}{
+		{name: "no pod runs a previous certificate", want: true},
+		{name: "its pods are still there", mutate: func(d *appsv1.Deployment) { d.Status.Replicas = 1 }},
+		{name: "its pods are terminating", mutate: func(d *appsv1.Deployment) { d.Status.TerminatingReplicas = new(int32(1)) }},
+		{name: "the scale down isn't observed yet", mutate: func(d *appsv1.Deployment) { d.Generation = 2 }},
+		{name: "the template has a previous certificate", mutate: func(d *appsv1.Deployment) { d.Spec.Template.Annotations[annotation] = "previous" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			deployment := &appsv1.Deployment{
+				Namespace: testCASecretNamespace, Name: testDPName, Generation: 1,
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(0)),
+					Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{annotation: checksum}}},
+				},
+				Status: appsv1.DeploymentStatus{ObservedGeneration: 1},
+			}
+			if tc.mutate != nil {
+				tc.mutate(deployment)
+			}
+			dp := &aigatewayv1alpha1.AIGatewayDataPlane{Namespace: testCASecretNamespace, Name: testDPName}
+			cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(deployment).WithStatusSubresource(deployment).Build()
+			cfg := testConfig
+			cfg.Certificate.ChecksumAnnotation = annotation
+			complete, err := (&testReconciler{Client: cl, Config: cfg}).rolloutOntoCertificateComplete(t.Context(), dp, checksum)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, complete)
+		})
+	}
+}
+
+func Test_rolloutOntoCertificateComplete_terminatingPods(t *testing.T) {
+	const annotation, checksum = "example.com/certificate-checksum", "current"
+	for _, tc := range []struct {
+		name        string
+		terminating *int32
+		want        bool
+	}{
+		{name: "the rollout completed, and no pod is left terminating", terminating: new(int32(0)), want: true},
+		{name: "the rollout completed, where terminating pods aren't reported", want: true},
+		{name: "old pods still run the previous certificate while they terminate", terminating: new(int32(1))},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			deployment := &appsv1.Deployment{
+				Namespace: testCASecretNamespace, Name: testDPName, Generation: 1,
+				Spec: appsv1.DeploymentSpec{
+					Replicas: new(int32(1)),
+					Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{annotation: checksum}}},
+				},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1, TerminatingReplicas: tc.terminating,
+				},
+			}
+			dp := &aigatewayv1alpha1.AIGatewayDataPlane{Namespace: testCASecretNamespace, Name: testDPName}
+			cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(deployment).WithStatusSubresource(deployment).Build()
+			cfg := testConfig
+			cfg.Certificate.ChecksumAnnotation = annotation
+			complete, err := (&testReconciler{Client: cl, Config: cfg}).rolloutOntoCertificateComplete(t.Context(), dp, checksum)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, complete)
+		})
+	}
+}
+
+func TestDeploymentRolledOut(t *testing.T) {
+	deployment := func(replicas int32, status appsv1.DeploymentStatus) *appsv1.Deployment {
+		return &appsv1.Deployment{Generation: 1, Spec: appsv1.DeploymentSpec{Replicas: &replicas}, Status: status}
+	}
+	assert.True(t, DeploymentRolledOut(deployment(1, appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1})))
+	assert.True(t, DeploymentRolledOut(deployment(0, appsv1.DeploymentStatus{ObservedGeneration: 1})))
+	assert.False(t, DeploymentRolledOut(deployment(1, appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1})))
+	assert.False(t, DeploymentRolledOut(deployment(0, appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1})))
+	assert.False(t, DeploymentRolledOut(deployment(0, appsv1.DeploymentStatus{ObservedGeneration: 1, TerminatingReplicas: new(int32(1))})))
 }

@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -30,3 +31,40 @@ var (
 	// fails to parse (invalid bool, invalid integer, negative integer, etc.).
 	ErrMalformedAnnotation = fmt.Errorf("malformed annotation")
 )
+
+// ClientCertificateRefError denotes invalid desired client authentication, not an API failure.
+// Translation may omit the affected rule and remove its old bindings, but must never
+// replace it with a KongService without the requested client certificate.
+type ClientCertificateRefError struct {
+	Reason  string
+	Message string
+}
+
+func (e *ClientCertificateRefError) Error() string {
+	return e.Message
+}
+
+// OnlyClientCertificateRefErrors distinguishes invalid bindings from transient failures,
+// including errors wrapped by the converters' aggregated translation errors.
+func OnlyClientCertificateRefErrors(err error) bool {
+	if err == nil {
+		return false
+	}
+	if e, ok := errors.AsType[interface {
+		error
+		Unwrap() []error
+	}](err); ok {
+		errs := e.Unwrap()
+		if len(errs) == 0 {
+			return false
+		}
+		for _, child := range errs {
+			if !OnlyClientCertificateRefErrors(child) {
+				return false
+			}
+		}
+		return true
+	}
+	_, ok := errors.AsType[*ClientCertificateRefError](err)
+	return ok
+}

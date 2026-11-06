@@ -18,6 +18,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -35,11 +36,11 @@ func tRogue(t *testing.T) (*corev1.Secret, *x509.Certificate) {
 func tTamperBundle(t *testing.T, r *Reconciler, name string, rogue *x509.Certificate) {
 	t.Helper()
 	live := getSecret(t, r, name)
-	live.Data[caBundleKey] = append(live.Data[caBundleKey], encodeCertificates([]*x509.Certificate{rogue})...)
+	live.Data[consts.CACRT] = append(live.Data[consts.CACRT], encodeCertificates([]*x509.Certificate{rogue})...)
 	if live.Annotations == nil {
 		live.Annotations = map[string]string{}
 	}
-	live.Annotations["konghq.com/gw-admin-published-cas"] = `{"` + fingerprint(rogue) + `":"previous"}`
+	live.Annotations["konghq.com/gw-admin-published-cas"] = `{"` + pki.Fingerprint(rogue) + `":"previous"}`
 	require.NoError(t, r.Update(t.Context(), live))
 }
 
@@ -110,8 +111,8 @@ func TestEnsureTLS_RogueChainInALeafIsNeverTrusted(t *testing.T) {
 			r := newReconciler(t, &now, gw)
 			m := dSteady(t, r, gw)
 
-			certPEM, keyPEM, err := issueCertificate(rogueSecret, certRequest{
-				commonName: tc.spec.commonName, dnsNames: tc.spec.dnsNames, usages: tc.spec.usages, ttl: time.Hour, now: now,
+			certPEM, keyPEM, err := pki.IssueCertificate(rogueSecret, pki.CertRequest{
+				CommonName: tc.spec.commonName, DNSNames: tc.spec.dnsNames, Usages: tc.spec.usages, TTL: time.Hour, Now: now,
 			})
 			require.NoError(t, err)
 			live := getSecret(t, r, tc.name)
@@ -368,7 +369,7 @@ func TestEnsureTLS_ManualCAClockSkew(t *testing.T) {
 				return
 			}
 			require.ErrorIs(t, err, errStop)
-			assert.Equal(t, tc.notBefore.Add(-clockSkew).Sub(now), stopRequeue(err))
+			assert.Equal(t, tc.notBefore.Add(-pki.ClockSkew).Sub(now), stopRequeue(err))
 			assert.Equal(t, operatorv1alpha1.GWAdminReasonInvalidSecret, certificateCondition(gw).Reason)
 		})
 	}

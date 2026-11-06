@@ -349,12 +349,16 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 // cache is what decides which namespaces the gateway serves. A nil list means every
 // namespace. EndpointSlices, the AIGatewayDataPlanes and the OnPremAIGateway itself stay
 // scoped to the gateway's namespace: the onpremNamespacedRef is same-namespace and only
-// objects in it are read there. Secrets keep a label filter: the instance reads the Admin
-// API client certificate Secret and, through the generated secretRef resolvers (e.g.
-// AIGatewayAuthStrategy's oidc clientSecret and consumer credential apiKeys), user entity
-// Secrets. Both match i.secretSelector(): user Secrets must carry the operator's Secret
-// label selector to be ingestible at all, and the Admin API client certificate Secret
-// carries it too (see the OnPremAIGateway controller's ensureAdminClientCertificateSecret).
+// objects in it are read there. KongReferenceGrants follow the watch namespaces like the
+// entities: a grant lives in the namespace of what it grants access to, be that a Secret a
+// cross-namespace secretRef points at or the gateway an entity of another namespace
+// references (the gateway's own namespace is always watched). Secrets keep a label filter:
+// the instance reads the Admin API client certificate Secret and, through the generated
+// secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc clientSecret and consumer
+// credential apiKeys), user entity Secrets. Both match i.secretSelector(): user Secrets
+// must carry the operator's Secret label selector to be ingestible at all, and the Admin
+// API client certificate Secret carries it too (see the OnPremAIGateway controller's
+// ensureAdminClientCertificateSecret).
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
@@ -374,6 +378,14 @@ func (i *Instance) cacheOpts() cache.Options {
 	}
 
 	secrets := cache.ByObject{Namespaces: entityNamespaces, Label: i.secretSelector()}
+	// KongReferenceGrants deliberately keep the default scope: a grant lives in the
+	// namespace of what it grants access to, so the translation reads the grants of the
+	// gateway's namespace (an entity of another namespace referencing the gateway) and
+	// those of a Secret's namespace (a cross-namespace secretRef). A cache scoped
+	// narrower than the watch namespaces makes the translation fail on the first
+	// cross-namespace reference: the cached client cannot list another namespace at all
+	// ("unknown namespace for the cache"). TestCacheOpts and the
+	// CrossNamespaceSecretRefGrantOutsideGatewayNamespace envtest pin this.
 	opts.ByObject = map[client.Object]cache.ByObject{
 		&discoveryv1.EndpointSlice{}:            {Namespaces: gatewayNamespaces},
 		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: gatewayNamespaces},
@@ -725,28 +737,9 @@ func (i *Instance) Run(ctx context.Context) error {
 	// index, whose extractor only matches entities actually targeting an
 	// OnPremAIGateway, so a KonnectAIGateway sharing namespace/name never
 	// collides.
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayDataPlaneCertificate(),
-		index.OptionsForAIGatewayDatastore(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayVault(),
-	} {
-		for _, opt := range opts {
-			if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
-				return fmt.Errorf("registering %s field index: %w", opt.Field, err)
-			}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
+			return fmt.Errorf("registering %s field index: %w", opt.Field, err)
 		}
 	}
 

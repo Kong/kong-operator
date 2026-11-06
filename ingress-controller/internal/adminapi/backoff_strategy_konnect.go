@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jpillora/backoff"
+	"github.com/cenkalti/backoff/v5"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
@@ -39,7 +39,7 @@ type Clock interface {
 // configuration are allowed on Konnect side for some reason), we might have to
 // drop this part of the backoff strategy.
 type KonnectBackoffStrategy struct {
-	b                    *backoff.Backoff
+	b                    *backoff.ExponentialBackOff
 	nextAttempt          time.Time
 	clock                Clock
 	lastFailedConfigHash []byte
@@ -48,12 +48,11 @@ type KonnectBackoffStrategy struct {
 }
 
 func NewKonnectBackoffStrategy(clock Clock) *KonnectBackoffStrategy {
-	exponentialBackoff := &backoff.Backoff{
-		Min:    KonnectBackoffInitialInterval,
-		Max:    KonnectBackoffMaxInterval,
-		Factor: KonnectBackoffMultiplier,
+	exponentialBackoff := &backoff.ExponentialBackOff{
+		InitialInterval: KonnectBackoffInitialInterval,
+		MaxInterval:     KonnectBackoffMaxInterval,
+		Multiplier:      KonnectBackoffMultiplier,
 	}
-	exponentialBackoff.Reset()
 
 	return &KonnectBackoffStrategy{
 		b:     exponentialBackoff,
@@ -137,10 +136,10 @@ func (s *KonnectBackoffStrategy) handleGenericClientError(configHash []byte) {
 }
 
 func (s *KonnectBackoffStrategy) incrementExponentialBackoff() {
-	// Backoff.Duration() call returns backoff time we need to wait until next attempt.
+	// NextBackOff() returns backoff time we need to wait until next attempt.
 	// It also increments the internal attempts counter so the next time we call it, the
 	// duration will be multiplied accordingly.
-	timeLeft := s.b.Duration()
+	timeLeft := s.b.NextBackOff()
 
 	// We're storing the exact point in time after which we'll be allowed to perform the next update attempt.
 	s.nextAttempt = s.clock.Now().Add(timeLeft)

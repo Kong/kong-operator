@@ -11,13 +11,13 @@ import (
 func TestAIGatewayCustomPolicyAPISpec_ToCreateAIGatewayCustomPolicyRequest(t *testing.T) {
 	spec := &AIGatewayCustomPolicyAPISpec{}
 	result, err := spec.ToCreateAIGatewayCustomPolicyRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "AIGatewayCustomPolicy config is required")
 	require.Nil(t, result)
 }
 
 func TestAIGatewayCustomPolicyAPISpec_ToUpdateAIGatewayCustomPolicyRequest(t *testing.T) {
 	spec := &AIGatewayCustomPolicyAPISpec{}
 	result, err := spec.ToUpdateAIGatewayCustomPolicyRequest()
-	require.Error(t, err)
+	require.ErrorContains(t, err, "AIGatewayCustomPolicy config is required")
 	require.Nil(t, result)
 }

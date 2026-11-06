@@ -427,6 +427,12 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			assert.Zero(ct, cert.Spec.GatewayRef)
 		}, waitTime, tickTime)
 
+		// The spec change bumps the generation of the certificate: the Konnect
+		// controller, which doesn't run here, programs it again.
+		movedCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(konnectCert), movedCert))
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, movedCert)
+
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
 				return

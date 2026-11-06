@@ -22,11 +22,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -44,23 +49,45 @@ func TestControlPlaneRef(t *testing.T) {
 		assert.Equal(t, shareddataplane.ControlPlaneRef{}, config.ControlPlaneRef(egdp))
 	})
 
-	t.Run("onpremNamespacedRef: empty ref, it isn't supported yet", func(t *testing.T) {
-		assert.Equal(t, shareddataplane.ControlPlaneRef{}, config.ControlPlaneRef(newOnPremEGDP()))
+	t.Run("onpremNamespacedRef set", func(t *testing.T) {
+		assert.Equal(t, shareddataplane.ControlPlaneRef{
+			Kind: onPremEventGatewayKind.Kind,
+			Name: "my-onprem-gateway",
+		}, config.ControlPlaneRef(newOnPremEGDP()))
 	})
 }
 
 func TestBuildContainerWithoutControlPlane(t *testing.T) {
-	t.Run("konnectNamespacedRef", func(t *testing.T) {
-		_, _, err := buildContainer(newReconcileEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "has no resolved KonnectEventGateway")
-	})
+	_, _, err := buildContainer(newReconcileEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "has no resolved control plane")
+}
 
-	t.Run("onpremNamespacedRef", func(t *testing.T) {
-		_, _, err := buildContainer(newOnPremEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "an onpremNamespacedRef is not supported by the controller yet")
-	})
+func TestBuildContainerImage(t *testing.T) {
+	gateway, gw, bundle, ca := onPremFixture(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca).Build()
+	onPrem := shareddataplane.ResolvedControlPlane{Dependencies: resolveOnPremDependencies(t, cl, gateway)}
+	konnect := shareddataplane.ResolvedControlPlane{Object: &konnectv1alpha1.KonnectEventGateway{
+		Status: konnectv1alpha1.KonnectEventGatewayStatus{ServerURL: "https://us.api.konghq.tech"},
+	}}
+
+	for _, tc := range []struct {
+		name  string
+		egdp  *eventgatewayv1alpha1.KegDataPlane
+		cp    shareddataplane.ResolvedControlPlane
+		image string
+		want  string
+	}{
+		{name: "on-prem: the default image is the same", egdp: newOnPremEGDP(), cp: onPrem, image: consts.DefaultKEGImage, want: consts.DefaultKEGImage},
+		{name: "on-prem: another image, e.g. RELATED_IMAGE_KEG, wins", egdp: newOnPremEGDP(), cp: onPrem, image: "custom/keg:1.0", want: "custom/keg:1.0"},
+		{name: "Konnect: the default image stays", egdp: newReconcileEGDP(), cp: konnect, image: consts.DefaultKEGImage, want: consts.DefaultKEGImage},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			container, _, err := buildContainer(tc.egdp, tc.cp, tc.image, "cert", "")
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, container.Image)
+		})
+	}
 }
 
 // newOnPremEGDP returns a KegDataPlane that references an OnPremEventGateway.
@@ -243,6 +270,95 @@ func TestTerminationGracePeriodSeconds(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.want, terminationGracePeriodSeconds(tc.egdp))
+		})
+	}
+}
+
+func TestServiceOptions(t *testing.T) {
+	kafka := &eventgatewayv1alpha1.ServiceOptions{
+		Type:                  corev1.ServiceTypeLoadBalancer,
+		Annotations:           map[string]string{"a": "b"},
+		Labels:                map[eventgatewayv1alpha1.LabelName]eventgatewayv1alpha1.LabelValue{"team": "kafka"},
+		ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
+		TrafficDistribution:   new("PreferClose"),
+		InternalTrafficPolicy: new(corev1.ServiceInternalTrafficPolicyCluster),
+		Ports: []eventgatewayv1alpha1.ServicePort{{
+			Name:       new("kafka"),
+			Port:       9093,
+			TargetPort: new(intstr.FromInt32(9092)),
+			NodePort:   new(int32(30093)),
+		}},
+	}
+	for _, tc := range []struct {
+		name    string
+		network *eventgatewayv1alpha1.NetworkOptions
+		want    *shareddataplane.ServiceOptions
+	}{
+		{name: "no network"},
+		{name: "no services", network: &eventgatewayv1alpha1.NetworkOptions{}},
+		{name: "no Kafka Service", network: &eventgatewayv1alpha1.NetworkOptions{Services: &eventgatewayv1alpha1.Services{}}},
+		{
+			name:    "the Kafka Service",
+			network: &eventgatewayv1alpha1.NetworkOptions{Services: &eventgatewayv1alpha1.Services{Kafka: kafka}},
+			want: &shareddataplane.ServiceOptions{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				Annotations:           map[string]string{"a": "b"},
+				Labels:                map[string]string{"team": "kafka"},
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
+				TrafficDistribution:   new("PreferClose"),
+				InternalTrafficPolicy: new(corev1.ServiceInternalTrafficPolicyCluster),
+				Ports: []shareddataplane.ServicePort{{
+					Name:       new("kafka"),
+					Port:       9093,
+					TargetPort: new(intstr.FromInt32(9092)),
+					NodePort:   new(int32(30093)),
+				}},
+			},
+		},
+		{
+			name: "a Kafka Service without ports nor labels",
+			network: &eventgatewayv1alpha1.NetworkOptions{Services: &eventgatewayv1alpha1.Services{
+				Kafka: &eventgatewayv1alpha1.ServiceOptions{Type: corev1.ServiceTypeClusterIP},
+			}},
+			want: &shareddataplane.ServiceOptions{Type: corev1.ServiceTypeClusterIP, Labels: map[string]string{}, Ports: []shareddataplane.ServicePort{}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			egdp := newReconcileEGDP()
+			egdp.Spec.Network = tc.network
+			assert.Equal(t, tc.want, serviceOptions(egdp))
+		})
+	}
+}
+
+func TestSetStatusAddresses(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		addrs []operatorv1beta1.Address
+		want  []eventgatewayv1alpha1.Address
+	}{
+		{name: "no address", want: []eventgatewayv1alpha1.Address{}},
+		{
+			name: "addresses with and without type",
+			addrs: []operatorv1beta1.Address{
+				{Type: new(operatorv1beta1.IPAddressType), Value: "10.0.0.1", SourceType: operatorv1beta1.PrivateIPAddressSourceType},
+				{Value: "keg.example.com", SourceType: operatorv1beta1.PublicLoadBalancerAddressSourceType},
+			},
+			want: []eventgatewayv1alpha1.Address{
+				{
+					Type:       new(eventgatewayv1alpha1.AddressType(operatorv1beta1.IPAddressType)),
+					Value:      "10.0.0.1",
+					SourceType: eventgatewayv1alpha1.AddressSourceType(operatorv1beta1.PrivateIPAddressSourceType),
+				},
+				{Value: "keg.example.com", SourceType: eventgatewayv1alpha1.AddressSourceType(operatorv1beta1.PublicLoadBalancerAddressSourceType)},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			egdp := newReconcileEGDP()
+			egdp.Status.Addresses = []eventgatewayv1alpha1.Address{{Value: "stale"}}
+			setStatusAddresses(egdp, tc.addrs)
+			assert.Equal(t, tc.want, egdp.Status.Addresses)
 		})
 	}
 }

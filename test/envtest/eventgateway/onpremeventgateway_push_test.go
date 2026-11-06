@@ -364,6 +364,15 @@ func (f *fakeGWAdmin) state(id uuid.UUID) (fakeGateway, bool, []uuid.UUID) {
 	return copied, true, slices.Clone(f.expected)
 }
 
+func (f *fakeGWAdmin) setRejectCertificates(reject bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.rejectCertificate = nil
+	if reject {
+		f.rejectCertificate = func(uuid.UUID, gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem) bool { return true }
+	}
+}
+
 func (f *fakeGWAdmin) setReject(reject func(gwadminapi.GatewayEntitySet) string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
