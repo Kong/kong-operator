@@ -14,6 +14,8 @@ type generateValidatingPolicyParam struct {
 	validatingPoliciesSubPath     string
 	chartValidatingPolicyFileName string
 	helmValueName                 string
+	// policyOverrides gate single policies behind their own Helm value instead of helmValueName.
+	policyOverrides []policyOverride
 }
 
 // Generates CRDs for Helm Chart charts/kong-operator/templates/validating-policy-dataplane.yaml.
@@ -48,8 +50,11 @@ func main() {
 				kustomizePath, err)
 		}
 
-		validatingPolicyContent := string(validatingPolicyKustomize)
-		validatingPolicyContent = wrapInIfEnabled(param.helmValueName, validatingPolicyContent)
+		validatingPolicyContent, err := renderChartTemplate(string(validatingPolicyKustomize), param.helmValueName, param.policyOverrides)
+		if err != nil {
+			fmt.Printf("Failed to render chart template for %s: %v\n", kustomizePath, err)
+			os.Exit(1)
+		}
 		validatingPolicyContent = wrapInIfCapabilitiesExist(validatingPolicyContent)
 
 		var fileCRDs *os.File
