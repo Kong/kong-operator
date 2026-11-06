@@ -172,21 +172,18 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
-	// HTTPRoute is a required CRD, so it is always installed.
-	r.installedRouteKinds = routeKindSet{"HTTPRoute": {}}
-
-	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
-	tlsRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "tlsroutes",
-	}
-	tlsRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tlsRouteGVR)
+	// Detect the route kinds whose CRDs the cluster serves: they gate the route
+	// watches, the AttachedRoutes counting and the supportedKinds status. Watching
+	// a resource that does not exist would trigger reconciliation for all the
+	// Gateways on every event in the cluster.
+	var err error
+	r.installedRouteKinds, err = detectInstalledRouteKinds(r.RESTMapper())
 	if err != nil {
-		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
+		return err
 	}
-	if tlsRouteExist {
-		r.installedRouteKinds["TLSRoute"] = struct{}{}
+
+	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster.
+	if r.installedRouteKinds.has("TLSRoute") {
 		blder.Watches(
 			&gatewayv1.TLSRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
@@ -196,17 +193,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "TLSRoute CRD not found in cluster, skipping watch for TLSRoute resources")
 	}
 
-	grpcRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "grpcroutes",
-	}
-	grpcRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), grpcRouteGVR)
-	if err != nil {
-		return fmt.Errorf("failed to check if GRPCRoute CRD exists: %w", err)
-	}
-	if grpcRouteExist {
-		r.installedRouteKinds["GRPCRoute"] = struct{}{}
+	if r.installedRouteKinds.has("GRPCRoute") {
 		blder.Watches(
 			&gatewayv1.GRPCRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByGRPCRoute),
@@ -216,17 +203,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "GRPCRoute CRD not found in cluster, skipping watch for GRPCRoute resources")
 	}
 
-	udpRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupVersion.Group,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "udproutes",
-	}
-	udpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), udpRouteGVR)
-	if err != nil {
-		return fmt.Errorf("failed to check if UDPRoute CRD exists: %w", err)
-	}
-	if udpRouteExist {
-		r.installedRouteKinds["UDPRoute"] = struct{}{}
+	if r.installedRouteKinds.has("UDPRoute") {
 		blder.Watches(
 			&gwtypes.UDPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByUDPRoute),
@@ -236,17 +213,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		log.Info(mgr.GetLogger(), "UDPRoute CRD not found in cluster, skipping watch for UDPRoute resources")
 	}
 
-	tcpRouteGVR := schema.GroupVersionResource{
-		Group:    gatewayv1.GroupName,
-		Version:  gatewayv1.GroupVersion.Version,
-		Resource: "tcproutes",
-	}
-	tcpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tcpRouteGVR)
-	if err != nil {
-		return err
-	}
-	if tcpRouteExist {
-		r.installedRouteKinds["TCPRoute"] = struct{}{}
+	if r.installedRouteKinds.has("TCPRoute") {
 		blder.Watches(
 			&gatewayv1.TCPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
