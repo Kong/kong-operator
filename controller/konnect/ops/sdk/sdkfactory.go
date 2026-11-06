@@ -34,7 +34,7 @@ type SDKWrapper interface {
 	GetKeySetsSDK() sdkkonnectgo.KeySetsSDK
 	GetSNIsSDK() sdkkonnectgo.SNIsSDK
 	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
-	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
+	GetCloudGatewaysSDK() CloudGatewaysSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 	GetConfigStoreSecretsSDK() sdkkonnectgo.ConfigStoreSecretsSDK
 
@@ -173,8 +173,8 @@ func (w sdkWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
 }
 
 // GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
-func (w sdkWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
-	return w.sdk.CloudGateways
+func (w sdkWrapper) GetCloudGatewaysSDK() CloudGatewaysSDK {
+	return NewGlobalCloudGatewaysSDK(w.sdk.CloudGateways, w.server)
 }
 
 // GetMCPServersSDK returns the SDK to operate MCP servers.

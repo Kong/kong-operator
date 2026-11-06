@@ -102,7 +102,7 @@ func TestAdoptMatchTransitGatewaySuccess(t *testing.T) {
 
 	sdk.CloudGatewaysSDK.
 		EXPECT().
-		GetTransitGateway(mock.Anything, networkID, "tg-1").
+		GetTransitGateway(mock.Anything, networkID, "tg-1", mock.Anything).
 		Return(&sdkkonnectops.GetTransitGatewayResponse{TransitGatewayResponse: &awsResp}, nil).
 		Once()
 
@@ -167,7 +167,7 @@ func TestAdoptMatchTransitGatewayMismatch(t *testing.T) {
 
 	sdk.CloudGatewaysSDK.
 		EXPECT().
-		GetTransitGateway(mock.Anything, networkID, "tg-2").
+		GetTransitGateway(mock.Anything, networkID, "tg-2", mock.Anything).
 		Return(&sdkkonnectops.GetTransitGatewayResponse{TransitGatewayResponse: &awsResp}, nil).
 		Once()
 

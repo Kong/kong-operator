@@ -64,7 +64,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 
 	sdk.CloudGatewaysSDK.
 		EXPECT().
-		GetConfiguration(mock.Anything, "cfg-1").
+		GetConfiguration(mock.Anything, "cfg-1", mock.Anything).
 		Return(&sdkkonnectops.GetConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             "cfg-1",
@@ -144,7 +144,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 
 	sdk.CloudGatewaysSDK.
 		EXPECT().
-		GetConfiguration(mock.Anything, "cfg-2").
+		GetConfiguration(mock.Anything, "cfg-2", mock.Anything).
 		Return(&sdkkonnectops.GetConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             "cfg-2",
