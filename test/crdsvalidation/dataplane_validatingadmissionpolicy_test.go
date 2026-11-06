@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
@@ -629,5 +630,57 @@ func TestDataPlanePDBReplicasValidatingAdmissionPolicy(t *testing.T) {
 
 	t.Run("metadata-only update is not validated", func(t *testing.T) {
 		assertPDBReplicasRatchet(ctx, t, cfg, scheme, nonCompliant)
+	})
+}
+
+func TestDataPlanePDBReplicasValidatingAdmissionPolicyDeny(t *testing.T) {
+	t.Parallel()
+
+	var (
+		ctx     = t.Context()
+		scheme  = scheme.Get()
+		cfg, ns = envtest.Setup(t, ctx, scheme)
+	)
+
+	cl, err := client.New(cfg, client.Options{Scheme: scheme})
+	require.NoError(t, err)
+
+	nonCompliant := pdbReplicasDataPlane(ns.Name, pdbReplicasCase{replicas: new(int32(1)), withPDB: true})
+	// Created before the policy exists, so it's stored despite being non-compliant.
+	existing := nonCompliant.DeepCopy()
+	require.NoError(t, cl.Create(ctx, existing))
+
+	helm.ApplyTemplate(ctx, t, cfg, kcfg.ChartPath(), []string{ValidationPolicyDataplane},
+		"--set", "global.validatingPolicies.podDisruptionBudgetReplicas.validationActions={Deny}",
+	)
+	waitForPDBReplicasPolicy(ctx, t, cfg, scheme, nonCompliant)
+
+	t.Run("non-compliant create is denied", func(t *testing.T) {
+		err := cl.Create(ctx, nonCompliant.DeepCopy())
+		require.Error(t, err)
+		require.ErrorContains(t, err, "replica floor is 1")
+	})
+
+	t.Run("compliant create is allowed", func(t *testing.T) {
+		dp := pdbReplicasDataPlane(ns.Name, pdbReplicasCase{replicas: new(int32(2)), withPDB: true})
+		require.NoError(t, cl.Create(ctx, dp))
+	})
+
+	t.Run("metadata-only update of existing non-compliant object is allowed", func(t *testing.T) {
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(existing), existing))
+		existing.Labels = map[string]string{"ratchet": "true"}
+		require.NoError(t, cl.Update(ctx, existing))
+	})
+
+	t.Run("spec update of existing non-compliant object is denied", func(t *testing.T) {
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(existing), existing))
+		existing.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = "kong:3.10"
+		err := cl.Update(ctx, existing)
+		require.Error(t, err)
+		require.ErrorContains(t, err, pdbReplicasWarning)
+	})
+
+	t.Run("delete of existing non-compliant object is allowed", func(t *testing.T) {
+		require.NoError(t, cl.Delete(ctx, existing))
 	})
 }
