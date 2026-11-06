@@ -45,6 +45,33 @@ func testPolicyChain(name string) *configurationv1alpha1.EventGatewayVirtualClus
 	}
 }
 
+func TestPolicyChainOnPremReconciliationIsLocal(t *testing.T) {
+	t.Parallel()
+	chain := testPolicyChain("chain")
+	chain.Status.Conditions = []metav1.Condition{
+		{Type: "Programmed", Status: metav1.ConditionTrue, Reason: "Programmed",
+			Message: "In the configuration of the OnPremEventGateway default/onprem-gw, pushed to its gw-admin pods"},
+		{Type: "PolicyChainOwnerValid", Status: metav1.ConditionTrue, Reason: "Owner"},
+	}
+	backend := newTestOnPremEventGatewayBackendCluster(chain.Namespace, "backend", "onprem-gw")
+	parent := newTestEventGatewayVirtualCluster(chain.Namespace, "vc", backend.Name)
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(chain).
+		WithObjects(backend, parent, chain).Build()
+	r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl)
+	for range 3 {
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+		res, err := r.Reconcile(t.Context(), chain)
+		require.NoError(t, err, "on-prem chains must not use a Konnect SDK factory or authentication")
+		require.True(t, res.IsZero())
+	}
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+	require.Empty(t, chain.Finalizers)
+	require.Empty(t, chain.GetKonnectID())
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed"))
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "PolicyChainOwnerValid"))
+	require.Len(t, chain.Status.Conditions, 2, "Konnect must not race the on-prem status writer")
+}
+
 func TestPolicyChainReconcileResolvesReferencesOnce(t *testing.T) {
 	t.Parallel()
 	ctx := t.Context()

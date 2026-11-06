@@ -136,12 +136,15 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	// An update is mapped for both the old and the new object, so an entity
 	// whose parent reference changes, which the CRDs only allow while it is not
 	// Programmed, triggers both gateways. A delete is mapped for the deleted
-	// object. GenerationChangedPredicate ignores the status writes on the
-	// entities, e.g. the Programmed condition the gateway reconcile will set.
+	// object. Status-only writes are ignored, but termination and parent
+	// policy-chain ownership changes also trigger a rebuild.
 	mapToGateway := handler.EnqueueRequestsFromMapFunc(mapEntityToOnPremEventGateway(mgr.GetClient()))
 	for _, entity := range entityTypes() {
-		b = b.Watches(entity, mapToGateway, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+		b = b.Watches(entity, mapToGateway, builder.WithPredicates(entityChanged()))
 	}
+	b = b.Watches(&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
+		handler.EnqueueRequestsFromMapFunc(mapClusterPolicyToChainGateways(mgr.GetClient())),
+		builder.WithPredicates(entityChanged()))
 
 	// A change to the GWAdmin of a gateway, to its Secrets or to its gw-admin
 	// pods triggers it, and so does a change to a KongReferenceGrant allowing
@@ -217,10 +220,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
-	r.lastEntities.Store(gateway.UID, cfg.built)
 	config := deriveConfig(gateway, cfg)
-	if err := r.recordRevision(ctx, gateway, config); err != nil {
-		return requeueOnConflict(logger, ctrl.Result{}, err)
+	if len(cfg.invalidChains) == 0 {
+		r.lastEntities.Store(gateway.UID, cfg.built)
+		if err := r.recordRevision(ctx, gateway, config); err != nil {
+			return requeueOnConflict(logger, ctrl.Result{}, err)
+		}
 	}
 	config.Version = configVersion(gateway)
 
@@ -373,6 +378,9 @@ func (r *Reconciler) pushConfiguration(
 	}
 	if err != nil {
 		return result, nil, err
+	}
+	if len(cfg.invalidChains) > 0 {
+		return pushResult{done: true, target: target}, invalidPolicyChainsError{problems: cfg.invalidChains}, nil
 	}
 	expected, err := expectedGateways(ctx, r.Client, gateway)
 	if err != nil {
