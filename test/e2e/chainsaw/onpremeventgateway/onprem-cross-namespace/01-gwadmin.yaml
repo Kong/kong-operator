@@ -1,0 +1,37 @@
+# A GWAdmin in the namespace admin_namespace, whose owner allows the
+# OnPremEventGateways of the namespace of the test to reference it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($admin_namespace)
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+  namespace: ($admin_namespace)
+spec:
+  # Readiness probed every second, so the pod turns Ready without waiting for
+  # the default 10s period, and unready after 30s of failures, as by default.
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: gw-admin
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: onprem-event-gateways
+  namespace: ($admin_namespace)
+spec:
+  from:
+    - group: eventgateway.konghq.com
+      kind: OnPremEventGateway
+      namespace: ($namespace)
+  to:
+    - group: gateway-operator.konghq.com
+      kind: GWAdmin

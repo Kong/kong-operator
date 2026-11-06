@@ -1,0 +1,55 @@
+# The TLS server policy of the listener, reading its certificate from the
+# Secret tls_secret_name of the namespace tls_namespace, and the SNI forward
+# policy routing to the virtual clusters by TLS hostname:
+# bootstrap-{dns_label}{sni_suffix}, brokers at
+# broker-{node_id}-{dns_label}{sni_suffix}.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: tls-server
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: tls-server
+      enabled: Enabled
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: ($tls_secret_name)
+                namespace: ($tls_namespace)
+                key: tls.crt
+            key:
+              type: secretRef
+              secretRef:
+                name: ($tls_secret_name)
+                namespace: ($tls_namespace)
+                key: tls.key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: sni-forward
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: sni-forward
+      enabled: Enabled
+      config:
+        type: sni
+        sni:
+          advertisedPort: 19092
+          sniSuffix: ($sni_suffix)
+          brokerHostFormat:
+            type: shared_suffix

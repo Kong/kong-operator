@@ -1,0 +1,257 @@
+# Variants of a data plane of an OnPremEventGateway: a Manual client
+# certificate the user gets wrong, a switch to Automatic, and horizontal
+# scaling.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-dataplane-variants
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway:
+    1. With a Manual client certificate whose Secret doesn't exist, it reports
+       it (CertificateProvisioned False, SecretRefNotFound).
+    2. Once the Secret holds a certificate and a key that don't match, it
+       reports it invalid (InvalidSecret).
+    3. Switched to Automatic, it gets a client certificate from the cp client
+       CA, turns Ready, and keg proxies produce and consume.
+    4. A Pod template overlay can't pin the annotations the rotations of the
+       GWAdmin rely on, while its other annotations apply.
+    5. With horizontal scaling, the operator creates its HPA, and it stays
+       Ready; once scaling is removed, the HPA is deleted.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Manual-certificate-secret-missing
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - apply:
+            file: ../onprem-manual-certificate/01-keg-dataplane.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: "False"
+                    reason: SecretRefNotFound
+      cleanup:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            content: rm -rf "$WORK_DIR"
+
+    - name: 2-Manual-certificate-and-key-mismatch
+      try:
+        - script:
+            env: *env
+            content: |
+              set -e
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca one "$WORK_DIR/one"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca other "$WORK_DIR/other"
+              kubectl create secret generic -n "$NAMESPACE" keg-cert \
+                --from-file=tls.crt="$WORK_DIR/one/tls.crt" --from-file=tls.key="$WORK_DIR/other/tls.key" --dry-run=client -o json |
+                jq '.metadata.labels["konghq.com/secret"] = "true"' | kubectl apply -f -
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: "False"
+                    reason: InvalidSecret
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+
+    - name: 3-Switched-to-automatic
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                certificateSecret:
+                  provisioning: Automatic
+                  secretRef: null
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" automatic hello-automatic
+
+    - name: 4-Overlay-cant-pin-the-gwadmin-trust-annotations
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  podTemplateSpec:
+                    metadata:
+                      annotations:
+                        example.com/overlay: applied
+                        konghq.com/gw-admin-cp-client-ca: pinned-by-the-overlay
+                        konghq.com/gw-admin-cp-server-bundle-checksum: pinned-by-the-overlay
+        # The other annotation tells the overlay was applied.
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                template:
+                  metadata:
+                    annotations:
+                      example.com/overlay: applied
+              (spec.template.metadata.annotations."konghq.com/gw-admin-cp-client-ca" != 'pinned-by-the-overlay'): true
+              (spec.template.metadata.annotations."konghq.com/gw-admin-cp-server-bundle-checksum" != 'pinned-by-the-overlay'): true
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  podTemplateSpec: null
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                template:
+                  metadata:
+                    annotations:
+                      example.com/overlay: applied
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+
+    - name: 5-Horizontal-scaling
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  replicas: null
+                  scaling:
+                    horizontal:
+                      minReplicas: 1
+                      maxReplicas: 3
+        - assert:
+            resource:
+              apiVersion: autoscaling/v2
+              kind: HorizontalPodAutoscaler
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                scaleTargetRef:
+                  apiVersion: apps/v1
+                  kind: Deployment
+                  name: ($keg_dp_name)
+                minReplicas: 1
+                maxReplicas: 3
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  scaling: null
+                  replicas: 1
+        - error:
+            resource:
+              apiVersion: autoscaling/v2
+              kind: HorizontalPodAutoscaler
+              metadata:
+                name: ($keg_dp_name)
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

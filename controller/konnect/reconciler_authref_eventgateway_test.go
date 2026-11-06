@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -251,8 +250,7 @@ func TestGetAPIAuthRef(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(tc.objects...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -376,8 +374,7 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(tc.objects...).
 				Build()
 

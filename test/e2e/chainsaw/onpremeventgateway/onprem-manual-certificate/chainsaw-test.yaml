@@ -1,0 +1,236 @@
+# On-prem Event Gateway with a Manual data plane certificate.
+#
+# The data plane of an OnPremEventGateway uses the client certificate the
+# user provides, once a cp client CA gw-admin trusts issued it, and the
+# rotations of the user's cp client CA wait for the user to replace it.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-manual-certificate
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway with a Manual client certificate,
+    against a GWAdmin whose cp client CA, A, is the user's:
+    1. A certificate from a CA gw-admin doesn't trust is reported
+       (CertificateProvisioned False, InvalidSecret), and no Deployment is
+       created with it.
+    2. Once the Secret holds a certificate from A, the data plane is Ready and
+       keg proxies produce and consume.
+    3. The user renews the cp client CA in place with CA B. The GWAdmin
+       publishes B, and keeps trusting A while the data plane runs its
+       certificate from A, naming it in its CertificateProvisioned condition.
+       keg keeps proxying.
+    4. Once the user replaces the data plane certificate with one from B, the
+       data plane rolls onto it, the rotation completes, dropping A, and keg
+       proxies again.
+    Records are produced through keg from the start of 3 to the end of 4,
+    each with a new connection: not one fails, and every one is consumed.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Untrusted-certificate-is-rejected
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca ca-a "$WORK_DIR/a"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/a"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca rogue "$WORK_DIR/rogue"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/rogue" "$KEG_DP" "$WORK_DIR/rogue-dp"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/rogue-dp"
+        - apply:
+            file: 01-gwadmin.yaml
+        - apply:
+            file: 01-keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: "False"
+                    reason: InvalidSecret
+                    (contains(message, 'gw-admin would reject it')): true
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh clean-work-dir
+
+    - name: 2-Certificate-from-the-cp-client-ca-is-used
+      try:
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/a" "$KEG_DP" "$WORK_DIR/dp-a"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/dp-a"
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/a/tls.crt" 240
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/dp-a"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" manual-a hello-from-a
+
+    - name: 3-Cp-client-ca-rotation-waits-for-the-data-plane
+      try:
+        # Records are produced through keg all along the rotation, until the
+        # end of the test: not a single one may fail.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh traffic-start traffic "$KEG_DP" during-rotation
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca ca-b "$WORK_DIR/b"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/b"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/b/tls.crt" 300
+        - assert:
+            timeout: 2m
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - reason: CARotationInProgress
+                    (contains(message, 'stays trusted until every data plane')): true
+                    (contains(message, join('/', [$namespace, $keg_dp_name]))): true
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh assert-dp-client-ca "$KEG_DP" "$WORK_DIR/a/tls.crt"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" manual-rotating hello-while-rotating
+
+    - name: 4-Certificate-replaced-completes-the-rotation
+      try:
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/b" "$KEG_DP" "$WORK_DIR/dp-b"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/dp-b"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/b/tls.crt" 300
+        # Once rolled out, only the new certificate is registered, from its copy.
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/dp-b"
+        - assert:
+            timeout: 5m
+            file: ../../gwadmin/gwadmin-shared/assert-event.yaml
+            bindings:
+              - {name: event_type, value: Normal}
+              - {name: event_reason, value: CARotationCompleted}
+        # The previous cp client CA is dropped: no data plane runs a
+        # certificate from it anymore.
+        - assert:
+            timeout: 3m
+            file: ../../gwadmin/gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" manual-b hello-from-b
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh traffic-check traffic
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

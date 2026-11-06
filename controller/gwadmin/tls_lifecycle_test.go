@@ -26,13 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/pki"
-	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -557,7 +555,7 @@ func TestEnsureTLS_ManualCPRejected(t *testing.T) {
 
 	t.Run("transient read error", func(t *testing.T) {
 		gw := newGWAdmin(&operatorv1alpha1.GWAdminTLS{CP: manualCP()})
-		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw).
+		cl := newFakeClientBuilder().WithObjects(gw).
 			WithInterceptorFuncs(interceptor.Funcs{
 				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 					if key.Name == userCPSecretName {
@@ -657,7 +655,7 @@ func TestEnsureTLS_StaleCacheAfterCreate(t *testing.T) {
 	setup := func(t *testing.T, now *time.Time) (client.WithWatch, *operatorv1alpha1.GWAdmin) {
 		t.Helper()
 		gw := newGWAdmin(nil)
-		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw).Build()
+		base := newFakeClientBuilder().WithObjects(gw).Build()
 		_, err := reconcilerWith(base, now).ensureTLS(t.Context(), gw, nil)
 		require.NoError(t, err)
 		return base, gw
@@ -716,7 +714,7 @@ func TestEnsureTLS_StaleCacheAfterCreate(t *testing.T) {
 			gw := newGWAdmin(nil)
 			own := &corev1.Secret{Name: name, Namespace: testNamespace, Data: map[string][]byte{"k": []byte("v")}, Labels: labels}
 			k8sutils.SetOwnerForObject(own, gw)
-			base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, own).Build()
+			base := newFakeClientBuilder().WithObjects(gw, own).Build()
 			r := reconcilerWith(hidingClient(base, name), &now)
 			_, err := r.ensureTLS(t.Context(), gw, nil)
 			require.ErrorIs(t, err, errCacheStale)
@@ -774,7 +772,7 @@ func TestEnsureTLS_StaleCacheAfterCreate(t *testing.T) {
 			now := time.Now()
 			gw := newGWAdmin(nil)
 			foreign := tc.foreign(gw)
-			base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, foreign).Build()
+			base := newFakeClientBuilder().WithObjects(gw, foreign).Build()
 			r := reconcilerWith(hidingClient(base, tc.hidden), &now)
 			_, err := r.ensureTLS(t.Context(), gw, nil)
 			require.ErrorIs(t, err, errStop)
@@ -792,7 +790,7 @@ func TestEnsureTLS_StaleCacheAfterCreate(t *testing.T) {
 	t.Run("gone by the time it is patched: the cache is stale", func(t *testing.T) {
 		now := time.Now()
 		gw := newGWAdmin(nil)
-		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw).Build()
+		base := newFakeClientBuilder().WithObjects(gw).Build()
 		cl := interceptor.NewClient(base, interceptor.Funcs{
 			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 				if obj.GetName() == name {
@@ -847,7 +845,7 @@ func TestEnsureTLS_UpdateFailures(t *testing.T) {
 		t.Helper()
 		now := time.Now()
 		gw := newGWAdmin(nil)
-		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw).Build()
+		base := newFakeClientBuilder().WithObjects(gw).Build()
 		m, err := reconcilerWith(base, &now).ensureTLS(t.Context(), gw, nil)
 		require.NoError(t, err)
 		now = now.Add(consts.GWAdminLeafTTL * 3 / 4)
@@ -1020,7 +1018,7 @@ func TestEnsureTLS_DeleteNextCAPrecondition(t *testing.T) {
 	now := time.Now()
 	gw := newGWAdmin(nil)
 	userCA := userCASecretValidAt(t, "user", now, 2*consts.GWAdminCATTL)
-	base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, userCA).Build()
+	base := newFakeClientBuilder().WithObjects(gw, userCA).Build()
 	var preconditionUID *types.UID
 	cl := interceptor.NewClient(base, interceptor.Funcs{
 		Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
@@ -1445,7 +1443,7 @@ func TestCleanup_DeletesPrivateSecretsTheCacheDoesntSee(t *testing.T) {
 	gw.Finalizers = []string{consts.GWAdminCleanupFinalizer}
 	hidden := &corev1.Secret{Name: "gwadmin-gw-uid-api-ca", Namespace: testOperatorNamespace, Data: map[string][]byte{"tls.key": []byte("k")}}
 	other := &corev1.Secret{Name: "gwadmin-other-uid-api-ca", Namespace: testOperatorNamespace}
-	base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, hidden, other).Build()
+	base := newFakeClientBuilder().WithObjects(gw, hidden, other).Build()
 	r := reconcilerWith(hidingClient(base, hidden.Name), &now)
 
 	require.NoError(t, r.cleanup(t.Context(), gw))

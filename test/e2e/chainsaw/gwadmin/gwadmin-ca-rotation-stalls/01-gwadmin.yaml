@@ -2,4 +2,19 @@ apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: GWAdmin
 metadata:
   name: ($gwadmin_name)
-spec: {}
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        # A condition nothing sets: the pods never turn Ready, whoever
+        # provisions them, until step 3 removes the gate.
+        readinessGates:
+          - conditionType: e2e.konghq.com/held
+        containers:
+          - name: gw-admin
+            # Readiness probed every second, so the pod turns Ready without
+            # waiting for the default 10s period, and unready after 30s of
+            # failures, as by default.
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30

@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -72,7 +71,7 @@ func TestPolicyChainReconcileResolvesReferencesOnce(t *testing.T) {
 	for _, kind := range []string{"KonnectAPIAuthConfiguration", "KonnectEventGateway"} {
 		mapper.Add(konnectv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRESTMapper(mapper).
+	cl := newFakeClientBuilder(scheme.Get()).WithRESTMapper(mapper).
 		WithStatusSubresource(chain, &configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
 			&configurationv1alpha1.EventGatewayVirtualCluster{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).
 		WithObjects(append(policies, chain)...).
@@ -168,7 +167,7 @@ func TestPolicyChainOwnership(t *testing.T) {
 	ctx := t.Context()
 	first, second := testPolicyChain("first"), testPolicyChain("second")
 	parent := &configurationv1alpha1.EventGatewayVirtualCluster{Name: "vc", Namespace: "default"}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithStatusSubresource(first, second).WithObjects(parent, first, second).Build()
 
 	owned, res, err := claimPolicyChain(ctx, cl, first, consts.DefaultKonnectSyncPeriod)
@@ -216,7 +215,7 @@ func TestPolicyChainOwnershipSyncPeriod(t *testing.T) {
 			for _, kind := range []string{"KonnectAPIAuthConfiguration", "KonnectEventGateway"} {
 				mapper.Add(konnectv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
 			}
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRESTMapper(mapper).
+			cl := newFakeClientBuilder(scheme.Get()).WithRESTMapper(mapper).
 				WithStatusSubresource(chain, &configurationv1alpha1.EventGatewayVirtualCluster{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).
 				WithObjects(owner, chain).Build()
 			nsClient := client.NewNamespacedClient(cl, chain.Namespace)
@@ -286,7 +285,7 @@ func TestPolicyChainOwnershipStaleAnnotation(t *testing.T) {
 				Annotations: map[string]string{policyChainOwnerAnnotation: tt.owner},
 			}
 			lookedUpOwner := false
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithStatusSubresource(chain).WithObjects(parent, chain, other).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -319,7 +318,7 @@ func TestPolicyChainOwnershipLookupError(t *testing.T) {
 		Annotations: map[string]string{policyChainOwnerAnnotation: "other/other-uid"},
 	}
 	failure := errors.New("owner lookup unavailable")
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithStatusSubresource(chain).WithObjects(parent, chain).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -379,7 +378,7 @@ func TestPolicyChainRetainOnDeletion(t *testing.T) {
 			parent := &configurationv1alpha1.EventGatewayVirtualCluster{Name: "vc", Namespace: "default",
 				Annotations: map[string]string{policyChainOwnerAnnotation: tt.owner},
 			}
-			clBuilder := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(chain)
+			clBuilder := newFakeClientBuilder(scheme.Get()).WithObjects(chain)
 			if tt.parent {
 				clBuilder = clBuilder.WithObjects(parent)
 			}
@@ -427,7 +426,7 @@ func TestPolicyChainDeletionRetriesParentErrors(t *testing.T) {
 				Name: "vc", Namespace: "default",
 				Annotations: map[string]string{policyChainOwnerAnnotation: "chain/chain-uid"},
 			}
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(chain, parent).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(chain, parent).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 						if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualCluster); ok && tt.getErr != nil {
@@ -467,7 +466,7 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 	for _, kind := range []string{"KonnectAPIAuthConfiguration", "KonnectEventGateway"} {
 		mapper.Add(konnectv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRESTMapper(mapper).WithStatusSubresource(
+	cl := newFakeClientBuilder(scheme.Get()).WithRESTMapper(mapper).WithStatusSubresource(
 		chain, &configurationv1alpha1.EventGatewayVirtualCluster{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{},
 	).WithObjects(chain).Build()
 	parentClient := client.NewNamespacedClient(cl, "parent")

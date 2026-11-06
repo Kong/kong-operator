@@ -42,7 +42,11 @@ spec:
               - name: ca_organization
                 value: first
         - assert:
-            file: 01-assert-certificates-ready.yaml
+            file: 01-assert-ca-certificate-ready.yaml
+        - assert:
+            file: 01-assert-cp-certificate-ready.yaml
+        - assert:
+            file: 01-assert-cp-secret-issued.yaml
         - apply:
             file: 01-gwadmin.yaml
         # The scripts the peers and gwadmin-dp run, from gwadmin-shared.

@@ -217,7 +217,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	}
 
 	t.Run("missing referenced CR sets condition False with NotFound", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(agent.DeepCopy()).Build()
 		ent := agent.DeepCopy()
 		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
@@ -232,7 +232,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 
 	t.Run("referenced CR exists but is not programmed sets condition False with NotProgrammed", func(t *testing.T) {
 		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "missing-policy", Namespace: "ns"}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
 		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
@@ -251,7 +251,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			Namespace: "other-ns",
 			Name:      "policy",
 		}}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent.DeepCopy()).Build()
 
 		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
@@ -271,7 +271,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent := agent.DeepCopy()
 		ent.SetGatewayID("gw-agent")
 		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
 
 		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
@@ -297,7 +297,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		}
 		ent := agent.DeepCopy()
 		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
 
 		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
@@ -312,7 +312,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("ref to a CR not managed by Konnect sets condition False with Invalid", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 		resolverErr := configurationv1alpha1.ReferenceNotKonnectManagedError{
 			Kind: "EventGatewayTLSTrustBundle", Namespace: "ns", Name: "onprem-trust-bundle",
@@ -336,7 +336,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("joined same-category reference errors keep specific reason", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 		resolverErr := errors.Join(
 			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-1"},
@@ -362,7 +362,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("joined mixed-category reference errors set generic failure reason", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 		resolverErr := errors.Join(
 			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "missing-policy"},
@@ -397,7 +397,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	t.Run("programmed referenced CR sets condition True", func(t *testing.T) {
 		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "missing-policy", Namespace: "ns"}
 		policy.SetKonnectID("kid-123")
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
 		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
@@ -411,7 +411,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("unexpected resolver error is returned for normal reconcile retry", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 		resolverErr := errors.New("cache unavailable")
 
@@ -435,7 +435,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	}
 
 	t.Run("cross-namespace sibling reference without a KongReferenceGrant sets condition False with NotPermitted, without calling the resolver", func(t *testing.T) {
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		cl := newFakeClientBuilder(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 
 		updated, isProblem, _, err := handleKonnectReferences(
@@ -472,7 +472,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 				}},
 			},
 		}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(grant).Build()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(grant).Build()
 		ent := agent.DeepCopy()
 		resolverErr := aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
 
@@ -499,8 +499,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		// The optimistic-lock status patch conflicts when the cached object is
 		// stale; handleKonnectReferences must surface the requeue instead of
 		// letting the caller proceed to SDK calls with a stale object.
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithInterceptorFuncs(interceptor.Funcs{
 				SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
 					return &apierrors.StatusError{
@@ -536,8 +535,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			Message:            "Some conditions have status set to False",
 			ObservedGeneration: ent.GetGeneration(),
 		})
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithObjects(ent.DeepCopy()).
 			WithStatusSubresource(ent.DeepCopy()).
 			Build()

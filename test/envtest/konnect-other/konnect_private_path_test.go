@@ -3,12 +3,10 @@ package konnectother
 import (
 	"crypto/tls"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -138,31 +136,37 @@ func TestKonnectPrivatePath(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, cp, consts.WaitTime, consts.TickTime)
 	})
 
-	// TODO(#6110): the Dedicated Cloud Gateway calls leave the private path for
-	// the public global API; these assertions fail on purpose once that is fixed.
-	t.Run("sends a cloud gateway network to the public global API, not the private host", func(t *testing.T) {
+	t.Run("reconciles a cloud gateway network over the private global host", func(t *testing.T) {
 		networkWatch := envtest.SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
 		network := deploy.KonnectCloudGatewayNetwork(t, ctx, clientNamespaced, apiAuth)
 
-		t.Log("Waiting for the network to report the failure against the public global API")
+		t.Log("Waiting for the network to be programmed with the fake Konnect ID")
 		envtest.WatchFor(t, ctx, networkWatch, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
-			if client.ObjectKeyFromObject(n) != client.ObjectKeyFromObject(network) {
-				return false
-			}
-			cond := apimeta.FindStatusCondition(n.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType)
-			return cond != nil &&
-				cond.Status == metav1.ConditionFalse &&
-				strings.Contains(cond.Message, "global.api.konghq.com")
-		}, "KonnectCloudGatewayNetwork did not report a failure against the public global API")
+			return client.ObjectKeyFromObject(n) == client.ObjectKeyFromObject(network) &&
+				envtest.ConditionsContainProgrammed(n.GetConditions(), metav1.ConditionTrue) &&
+				n.GetKonnectID() == envtest.KonnectPrivateNetworkID
+		}, "KonnectCloudGatewayNetwork did not get programmed with the fake Konnect ID")
 
-		t.Log("Checking nothing reached the fake on the private host")
+		t.Log("Checking the requests the fake received")
+		assert.Contains(t, fake.Requests(), envtest.KonnectRequest{
+			Method:        http.MethodPost,
+			Host:          envtest.KonnectPrivateGlobalHost,
+			ServerName:    envtest.KonnectPrivateGlobalHost,
+			Path:          "/api/v2/cloud-gateways/networks",
+			Authorization: "Bearer " + konnectPrivateToken,
+		}, "the network create must go to the private global host's path, authenticated")
+
+		// This loop is what used to fail: the cloud gateway calls left the
+		// private path for the public global API.
+		privateHosts := []string{envtest.KonnectPrivateRegionalHost, envtest.KonnectPrivateGlobalHost}
 		for _, r := range fake.Requests() {
-			assert.NotContains(t, r.Path, "/api/v2/cloud-gateways/",
-				"a cloud gateway call reached the private host: #6110 is fixed, flip this test to assert the private path")
+			assert.Contains(t, privateHosts, r.Host, "every request must go to a private host")
+			assert.Equal(t, r.Host, r.ServerName, "the TLS handshake must present the host being called")
+			assert.Contains(t, r.Path, "/api/", "the configured path prefix must be preserved")
 		}
 
-		// Deleting the network hits the same wall, so its finalizer stays for as
-		// long as #6110 is open: delete it and let the namespace teardown take it.
+		t.Log("Deleting the network")
 		require.NoError(t, cl.Delete(ctx, network))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, network, consts.WaitTime, consts.TickTime)
 	})
 }

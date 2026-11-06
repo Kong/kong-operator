@@ -1,0 +1,162 @@
+# On-prem Event Gateway configuration changed while keg runs.
+#
+# Kong Operator pushes a change to the entities of a gateway to gw-admin,
+# and keg, which pulls its configuration from gw-admin, applies it without a
+# restart.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-live-config
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway, proxying produce and consume:
+    1. The header the consume policy injects is changed while records are
+       produced through keg, each with a new connection: the records are
+       consumed with the new header, no record fails, and the Deployment of
+       the data plane isn't rolled.
+    2. The listener policy is deleted: keg stops forwarding the listener, and
+       producing through it fails.
+    3. The entities are applied again, the listener policy with them: keg
+       proxies produce and consume again, with the first header.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: changed_header_value
+      value: changed_value
+
+  steps:
+    - name: 1-Consume-policy-changed-without-downtime
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+              - name: CHANGED_HEADER_VALUE
+                value: ($changed_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" before-change hello-before-change
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh traffic-start traffic "$KEG_DP" during-change
+        - script:
+            env: *env
+            content: kubectl get deployment -n "$NAMESPACE" "$KEG_DP" -o jsonpath='{.metadata.generation}'
+            outputs:
+              - name: dp_generation
+                value: ($stdout)
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: ($consume_policy_name)
+              spec:
+                apiSpec:
+                  modifyHeaders:
+                    config:
+                      actions:
+                        - op: set
+                          set:
+                            key: ($injected_header_key)
+                            value: ($changed_header_value)
+        # The round trip retries until the consumed record carries the new
+        # header: keg applied the configuration gw-admin got.
+        - script:
+            env: *env
+            timeout: 5m
+            content: HEADER_VALUE="$CHANGED_HEADER_VALUE" ../onprem-shared/onprem.sh roundtrip "$KEG_DP" after-change hello-after-change
+        # The consume policy applies when records are consumed: every record
+        # produced along is consumed with the new header.
+        - script:
+            env: *env
+            timeout: 3m
+            content: HEADER_VALUE="$CHANGED_HEADER_VALUE" ../onprem-shared/onprem.sh traffic-check traffic
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                generation: (to_number($dp_generation))
+
+    - name: 2-Listener-policy-deleted-stops-forwarding
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              name: ($listener_policy_name)
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh expect-blocked "$KEG_DP" blocked 240
+
+    - name: 3-Listener-policy-restored
+      try:
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            # entities.yaml sets the consume policy back to the first header.
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" after-restore hello-after-restore
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

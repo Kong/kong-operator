@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -180,8 +179,7 @@ func testGetAPIAuthConfigurationRefFromParent[
 		t.Run(tc.name, func(t *testing.T) {
 			child := childBuilder(tc.parentRef)
 
-			builder := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			builder := newFakeClientBuilder(scheme.Get()).
 				WithObjects(child)
 
 			if tc.withParent {
@@ -317,7 +315,7 @@ func testGetParentForRef[
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().WithScheme(scheme.Get())
+			builder := newFakeClientBuilder(scheme.Get())
 			if tc.withParent {
 				builder = builder.WithObjects(parentBuilder(tc.parentNamespace))
 			}

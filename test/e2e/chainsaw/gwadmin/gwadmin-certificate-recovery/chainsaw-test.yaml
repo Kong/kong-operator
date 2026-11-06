@@ -90,7 +90,7 @@ spec:
             content: ../gwadmin-shared/gwadmin.sh delete-secret "$GWADMIN-api-tls"
             outputs:
               - name: deleted_uid
-                value: ($stdout)
+                value: (json_parse($stdout).uid)
         - assert:
             timeout: 1m
             resource:

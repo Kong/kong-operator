@@ -3,7 +3,7 @@
 # Creates:
 #   - KonnectEventGateway (control plane)
 #   - KegDataPlane (single port 19092 — SNI routing uses one port for all VCs)
-#   - EventGatewayBackendCluster (in-namespace Kafka)
+#   - EventGatewayBackendCluster (shared Kafka)
 #   - EventGatewayVirtualCluster "analytics" (namespace prefix analytics_)
 #   - EventGatewayVirtualCluster "payments"  (namespace prefix payments_)
 #   - EventGatewayListener (port 19092)
@@ -54,9 +54,9 @@ spec:
       name: ($keg_cp_name)
   apiSpec:
     name: ($backend_cluster_name)
-    description: sni-routing backend (in-namespace Kafka)
+    description: sni-routing backend (shared Kafka)
     bootstrapServers:
-      - (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+      - kafka-bootstrap.kafka-shared.svc:9092
     authentication:
       type: anonymous
       anonymous: {}

@@ -476,6 +476,7 @@ spec:
         # Leave the Konnect controllers time to pick it up, if they were to.
         - sleep:
             duration: 10s
+        # The on-prem controller, when enabled, reports the missing gateway.
         - description: The Konnect controllers set no status and no finalizer on it.
           assert:
             resource:
@@ -485,7 +486,7 @@ spec:
                 name: listener-onprem
                 namespace: ($namespace)
                 (finalizers == null): true
-              (status.conditions == null): true
+              (length(status.conditions[?reason != 'GatewayNotFound'] || `[]`) == `0`): true
 
     - name: Reject-moving-an-entity-to-an-OnPremEventGateway
       try:

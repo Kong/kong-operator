@@ -1,0 +1,15 @@
+# The owner of the namespace tls_namespace allows the listener policies of
+# the namespace of the test to read its Secrets.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: listener-policies
+  namespace: ($tls_namespace)
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: EventGatewayListenerPolicy
+      namespace: ($namespace)
+  to:
+    - group: core
+      kind: Secret

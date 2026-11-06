@@ -1,0 +1,147 @@
+# On-prem Event Gateway: long-lived Kafka clients across a rotation of the
+# certificate authorities of the GWAdmin, with several keg replicas.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-long-lived-client
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway with 3 keg replicas, and a Kafka
+    producer and a Kafka consumer each keeping a single session through keg:
+    1. The rotate-certificate-authorities annotation rotates every certificate
+       authority of the GWAdmin: the data plane gets a client certificate from
+       the new cp client CA, and its 3 pods roll onto it, one at a time.
+    2. The producer, which produced a record every half second all along in
+       one session, got every record acknowledged: its client reconnects to
+       the new keg pods. The consumer of a consumer group read every record,
+       with the header the consume policy injects: a replaced keg pod leaves
+       the Service and keeps serving its connections for its drain duration
+       (5s by default), then closes them, and the consumer resumes from its
+       committed offsets, as Kafka consumers do, without losing a record.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Data-plane-with-3-replicas
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  replicas: 3
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                readyReplicas: 3
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 1m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/ca-0"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/ca-0/tls.crt" 240
+      cleanup:
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh clean-work-dir
+
+    - name: 2-Long-lived-clients-across-the-rotation
+      try:
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../onprem-shared/onprem.sh long-traffic-start clients "$KEG_DP" long-lived
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                annotations:
+                  gateway-operator.konghq.com/rotate-certificate-authorities: "1"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/ca-0/tls.crt" "$WORK_DIR/ca-1" 300
+        - script:
+            env: *env
+            timeout: 10m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/ca-1/tls.crt" 540
+        - assert:
+            timeout: 3m
+            file: ../../gwadmin/gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh long-traffic-check clients
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

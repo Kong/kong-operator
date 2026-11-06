@@ -181,8 +181,8 @@ func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificate
 	return m.DataPlaneCertificatesSDK
 }
 
-func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
-	return m.CloudGatewaysSDK
+func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkops.CloudGatewaysSDK {
+	return sdkops.NewGlobalCloudGatewaysSDK(m.CloudGatewaysSDK, m.server)
 }
 
 func (m MockSDKWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {

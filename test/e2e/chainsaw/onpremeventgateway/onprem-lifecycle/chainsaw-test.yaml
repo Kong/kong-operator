@@ -1,0 +1,274 @@
+# Lifecycle of a data plane of an OnPremEventGateway: created before what it
+# depends on, rolled out, and following its GWAdmin and its gateway when they
+# are deleted and created again.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-lifecycle
+spec:
+  description: |
+    1. A KegDataPlane created before its OnPremEventGateway reports it not
+       found (OnPremEventGatewayResolved False, NotFound).
+    2. Once the gateway exists, before its GWAdmin, the data plane reports the
+       GWAdmin not ready (GWAdminNotReady), and the gateway reports its
+       GWAdmin not found.
+    3. Once the GWAdmin exists, the data plane turns Ready, and keg proxies
+       produce and consume.
+    4. A rollout of the data plane, whose new pod turns Ready late, reports
+       Ready False (WaitingToBecomeReady) until it completes.
+    5. The GWAdmin is deleted, then created again, with new certificate
+       authorities: the data plane reports it not ready meanwhile, then gets a
+       client certificate from the new cp client CA, and keg proxies again.
+    6. The gateway is deleted, then created again under the same name, with a
+       new UID: the data plane runs keg with the new UID, its certificate and
+       the entities are pushed to the new gateway, and keg proxies again.
+    7. Once the gateway is deleted, the data plane reports it not found, and
+       isn't Ready (DependenciesNotReady).
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Data-plane-before-its-gateway
+      try:
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: NotFound
+                (conditions[?type == 'Ready']):
+                  - status: "False"
+
+    - name: 2-Gateway-before-its-gwadmin
+      try:
+        - apply:
+            file: gateway.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: GWAdminNotReady
+                    (contains(message, 'does not exist')): true
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'GWAdminResolved']):
+                  - status: "False"
+                    reason: NotFound
+
+    - name: 3-Gwadmin-created
+      try:
+        - apply:
+            file: gwadmin.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: GATEWAY
+                value: ($gateway_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" first-gwadmin hello-first-gwadmin
+      cleanup:
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh clean-work-dir
+
+    - name: 4-Rollout-reports-not-ready-until-it-completes
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: keg
+                          # The new pod turns Ready 30s late: a wide window in
+                          # which the old one serves and Ready is False.
+                          readinessProbe:
+                            initialDelaySeconds: 30
+                          env:
+                            - name: ROLLOUT_TRIGGER
+                              value: "v2"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "False"
+                    reason: WaitingToBecomeReady
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+
+    - name: 5-Gwadmin-deleted-and-created-again
+      try:
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/ca-first"
+        - delete:
+            ref:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              name: ($gwadmin_name)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: GWAdminNotReady
+        - apply:
+            file: gwadmin.yaml
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/ca-first/tls.crt" "$WORK_DIR/ca-second" 300
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/ca-second/tls.crt" 300
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" second-gwadmin hello-second-gwadmin
+
+    - name: 6-Gateway-deleted-and-created-again
+      try:
+        - delete:
+            ref:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              name: ($gateway_name)
+        - apply:
+            file: gateway.yaml
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../onprem-shared/onprem.sh wait-dp-gateway-id "$KEG_DP" "$GATEWAY" 300
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" second-gateway hello-second-gateway
+
+    - name: 7-Gateway-deleted
+      try:
+        - delete:
+            ref:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              name: ($gateway_name)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: NotFound
+                (conditions[?type == 'Ready']):
+                  - status: "False"
+                    reason: DependenciesNotReady
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

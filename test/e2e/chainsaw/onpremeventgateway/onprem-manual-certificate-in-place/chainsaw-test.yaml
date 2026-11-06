@@ -1,0 +1,335 @@
+# A Manual client certificate of a data plane of an OnPremEventGateway replaced
+# in place, in the same Secret, as the user or cert-manager does.
+#
+# gw-admin keeps trusting the certificate the pods run until they rolled out
+# onto the new one: each EventGatewayDataPlaneCertificate registers its own
+# certificate from a copy Kong Operator keeps, not from the Secret of the user.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-manual-certificate-in-place
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway with a Manual client certificate:
+    1. The pods mount a copy of the Secret of the user, its certificate is
+       registered from that copy, marked as a copy, and keg proxies produce and
+       consume.
+    2. The rollout of its Deployment is stuck (paused), and the certificate is
+       replaced in the Secret. Once it is registered, the Deployment moves to its
+       copy. gw-admin trusts both the new one and the one the pods still run, and
+       keeps doing so.
+    3. Once the rollout completes, the previous certificate and its copy are
+       deleted, gw-admin no longer trusts it, and keg proxies again.
+    4. The Secret then holds a certificate gw-admin wouldn't trust, then is
+       deleted. Each is reported. The Deployment stays on the copy of the current
+       certificate, so new pods, as after a restart or a drain, start with it,
+       turn Ready, and keg proxies. The Secret holding a valid certificate again,
+       it recovers.
+    5. Scaled to zero, the certificate is replaced in the Secret: no pod runs
+       the previous one, so it and its copy are deleted without any rollout.
+       Scaled back, keg proxies again.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Certificate-registered-from-a-copy
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: GATEWAY
+                value: ($gateway_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca ca "$WORK_DIR/ca"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/ca"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/ca" "$KEG_DP" "$WORK_DIR/first"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/first"
+        - apply:
+            file: ../onprem-manual-certificate/01-gwadmin.yaml
+        - apply:
+            file: ../onprem-manual-certificate/01-keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/first"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh assert-dp-cert "$KEG_DP" "$WORK_DIR/first"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/first" "$GATEWAY" 200 150
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" first hello-first
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh clean-work-dir
+
+    - name: 2-Replaced-in-place-with-the-rollout-stuck
+      try:
+        - patch:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                paused: true
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/ca" "$KEG_DP" "$WORK_DIR/second"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/second"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/first" "$WORK_DIR/second"
+        # The template moves to the copy once registered: new pods would use it.
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-dp-cert "$KEG_DP" "$WORK_DIR/second" 150
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/second" "$GATEWAY" 200 150
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/first" "$GATEWAY" 200 90
+        # Once the operator handled all of that: the certificate the pods run
+        # is still trusted.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh wait-operator-idle 210
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/first" "$GATEWAY" 200 90
+
+    - name: 3-Rollout-completes
+      try:
+        - patch:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                paused: false
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh wait-rolled-out "$KEG_DP" 210
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/second"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/first" "$GATEWAY" '!200' 150
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/second" "$GATEWAY" 200 90
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" second hello-second
+
+    - name: 4-Unusable-certificate-never-reaches-the-pods
+      try:
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca rogue "$WORK_DIR/rogue"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/rogue" "$KEG_DP" "$WORK_DIR/rogue-dp"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/rogue-dp"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: "False"
+                    reason: InvalidSecret
+                (conditions[?type == 'GWAdminCertificateRegistered']):
+                  - status: "Unknown"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh assert-dp-cert "$KEG_DP" "$WORK_DIR/second"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh replace-dp-pods "$KEG_DP" 270
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh assert-dp-cert "$KEG_DP" "$WORK_DIR/second"
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/second" "$GATEWAY" 200 90
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" untrusted hello-untrusted
+        # The Secret of the user is gone.
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh delete-secret keg-cert
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: "False"
+                    reason: SecretRefNotFound
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh replace-dp-pods "$KEG_DP" 270
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" secret-gone hello-secret-gone
+        # A valid certificate again: the same one, so nothing rolls.
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/second"
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/second"
+
+    - name: 5-Replaced-while-scaled-to-zero
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  replicas: 0
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                replicas: 0
+              (status.replicas || `0`): 0
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/ca" "$KEG_DP" "$WORK_DIR/third"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret keg-cert "$WORK_DIR/third"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-manual-copies "$KEG_DP" keg-cert 150 "$WORK_DIR/third"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/second" "$GATEWAY" '!200' 150
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/third" "$GATEWAY" 200 90
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              spec:
+                deployment:
+                  replicas: 1
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" third hello-third
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

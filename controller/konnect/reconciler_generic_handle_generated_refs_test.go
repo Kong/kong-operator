@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -36,7 +35,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				r := &KonnectEntityReconciler[
 					configurationv1alpha1.KongService, *configurationv1alpha1.KongService,
 				]{
-					Client: fake.NewClientBuilder().WithScheme(scheme.Get()).Build(),
+					Client: newFakeClientBuilder(scheme.Get()).Build(),
 				}
 
 				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
@@ -79,8 +78,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				cl := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(ent).
 					WithObjects(ent, parent).
 					Build()
@@ -138,8 +136,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				cl := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(ent).
 					WithObjects(ent, parent).
 					Build()
@@ -194,8 +191,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				cl := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(ent).
 					WithObjects(ent, parent).
 					Build()
@@ -250,8 +246,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				cl := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(ent).
 					WithObjects(ent, parent).
 					Build()
@@ -291,8 +286,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				cl := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(ent).
 					WithObjects(ent).
 					Build()
@@ -334,8 +328,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					},
 				}
 
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				cl := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(ent).
 					WithObjects(ent).
 					Build()

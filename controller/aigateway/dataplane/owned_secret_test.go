@@ -79,7 +79,7 @@ func manualCertSecret(valid bool) *corev1.Secret {
 	// Valid for a year: the expected requeue for a valid certificate is the
 	// 24h cap (see maxCertificateRequeue in controller/pkg/dataplane).
 	now := time.Now()
-	cert, key := certificate.MustGenerateCertPEMFormat(
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA),
 		certificate.WithCommonName("user cert"),
 		certificate.WithValidity(now.Add(-time.Hour), now.AddDate(1, 0, 0)),
 	)

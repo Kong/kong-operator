@@ -1,0 +1,193 @@
+# On-prem Event Gateway served by a GWAdmin of another namespace, and its
+# deletion.
+#
+# The data plane of an OnPremEventGateway whose GWAdmin is in another
+# namespace mounts a copy of the cp server CA bundle of the GWAdmin. Once the
+# gateway is deleted, the data plane is released from the GWAdmin: its
+# Deployment no longer holds the GWAdmin back.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-cross-namespace
+spec:
+  description: |
+    1. A GWAdmin in the namespace admin_namespace, whose KongReferenceGrant
+       allows the OnPremEventGateways of the namespace of the test to
+       reference it. The data plane of the gateway mounts a copy of the cp
+       server CA bundle in its own namespace, and keg proxies produce and
+       consume.
+    2. The gateway is deleted. Its entities report GatewayNotFound once it
+       is gone, and the Deployment of its data plane is no longer labelled
+       for the GWAdmin.
+    3. The certificate authorities of the GWAdmin are rotated: the rotation
+       completes, the data plane of the deleted gateway no longer holding it
+       back, although its namespace is still granted.
+  bindings:
+    - name: admin_namespace
+      value: (join('-', [$namespace, 'admin']))
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+
+  steps:
+    - name: 1-Data-plane-of-a-gwadmin-in-another-namespace
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        - apply:
+            file: 01-gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        # The copy of the cp server CA bundle, controlled by the data plane.
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [$keg_dp_name, 'gw-admin-cp-server-ca']))
+                labels:
+                  gateway-operator.konghq.com/secret-copy: cp-server-ca-bundle
+                annotations:
+                  gateway-operator.konghq.com/copied-from: (join('/', [$admin_namespace, 'gw-admin-cp-server-ca-bundle']))
+                ownerReferences:
+                  - kind: KegDataPlane
+                    name: ($keg_dp_name)
+                    controller: true
+              (length(data."ca.crt") > `0`): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                labels:
+                  gateway-operator.konghq.com/gwadmin-namespace: ($admin_namespace)
+                  gateway-operator.konghq.com/gwadmin-name: ($gwadmin_name)
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" cross-namespace hello-across-namespaces
+
+    - name: 2-Gateway-deleted
+      try:
+        - delete:
+            ref:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              name: ($gateway_name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: ($listener_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: GatewayNotFound
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              metadata:
+                name: ($backend_cluster_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: GatewayNotFound
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: NotFound
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-dp-unlabelled "$KEG_DP" 150
+
+    - name: 3-Gwadmin-rotation-no-longer-waits-for-the-data-plane
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                namespace: ($admin_namespace)
+                annotations:
+                  gateway-operator.konghq.com/rotate-certificate-authorities: "1"
+        - assert:
+            timeout: 8m
+            resource:
+              apiVersion: events.k8s.io/v1
+              kind: Event
+              metadata:
+                namespace: ($admin_namespace)
+              regarding:
+                kind: GWAdmin
+                name: ($gwadmin_name)
+              type: Normal
+              reason: CARotationCompleted
+        - assert:
+            timeout: 3m
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [$gwadmin_name, 'cp-client-ca-bundle']))
+                namespace: ($admin_namespace)
+              data:
+                (length(split(base64_decode("ca.crt"), '-----BEGIN CERTIFICATE-----')) - `1`): 1
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

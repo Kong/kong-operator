@@ -5,10 +5,9 @@ metadata:
 spec:
   description: |
     A rotation never gets ahead of the pods it depends on:
-    1. A GWAdmin starts with its Automatic certificate authorities. Kong
-       Operator, which would tell its pods they serve no gateway, is cut off
-       from them, and the peers don't run: nothing provisions its pods, so
-       they never turn Ready.
+    1. A GWAdmin starts with its Automatic certificate authorities. Its pods
+       carry a readiness gate nothing sets, and the peers don't run: they
+       never turn Ready.
     2. It is switched to a Manual cp client CA, and its Automatic certificate
        authorities are rotated with the rotate-certificate-authorities
        annotation. The new CAs are trusted right away, but a rolling update
@@ -20,7 +19,7 @@ spec:
        The cp server certificate doesn't depend on the pods, only on the data
        planes, and none runs yet: it moves to the new cp server CA right
        away, rollout or not.
-    3. Once Kong Operator is let through and peers provision the pods, and
+    3. Once the readiness gate is lifted, the peers provision the pods, and
        the data plane gwadmin-dp starts,
        the rollout completes and the rotations finish, without a TLS
        failure: the Manual CA is published, under the same name, the
@@ -35,16 +34,6 @@ spec:
   steps:
     - name: 1-Create-gwadmin-unprovisioned
       try:
-        # Before the GWAdmin, so that no pod of it is ever provisioned.
-        - script:
-            env: &env
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: GWADMIN
-                value: ($gwadmin_name)
-              - name: WORK_DIR
-                value: ($work_dir)
-            content: ../gwadmin-shared/gwadmin.sh block-operator
         - apply:
             file: 01-gwadmin.yaml
         - assert:
@@ -58,7 +47,13 @@ spec:
             timeout: 30s
             file: ../gwadmin-shared/assert-tls-status.yaml
         - script:
-            env: *env
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
             timeout: 1m
             content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/auto"
         - script:
@@ -135,12 +130,13 @@ spec:
             env: *env
             timeout: 4m
             content: ../gwadmin-shared/gwadmin.sh assert-server-bundle-count "$GWADMIN" 2
-        # The rollout can never complete without the peers, so a fixed
-        # observation window is all a negative check can do here.
+        # The rollout can never complete while the readiness gate holds the
+        # pods, so a fixed observation window is all a negative check can do
+        # here.
         - script:
             env: *env
             timeout: 4m
-            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 60 api operator-client
+            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 20 api operator-client
         - script:
             env: *env
             timeout: 4m
@@ -152,9 +148,18 @@ spec:
               - {name: bundle_size, value: 2}
     - name: 3-Provisioning-unblocks-rotation
       try:
-        - script:
-            env: *env
-            content: ../gwadmin-shared/gwadmin.sh unblock-operator
+        # Without the readiness gate, the pods roll out and can turn Ready.
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              spec:
+                deployment:
+                  podTemplateSpec:
+                    spec:
+                      readinessGates: null
         # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
         - script:
             env:

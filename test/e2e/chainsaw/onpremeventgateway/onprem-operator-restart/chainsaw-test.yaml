@@ -1,0 +1,157 @@
+# On-prem Event Gateway across a restart of Kong Operator.
+#
+# A restarted operator picks up what it left: it doesn't issue the data plane
+# a new certificate, register it again or roll its Deployment, and keg keeps
+# proxying meanwhile.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-operator-restart
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway, Ready. Records are produced
+    through keg, each with a new connection, while Kong Operator is restarted:
+    1. not one record fails, and every one is consumed with the header;
+    2. once the new operator reconciled everything, the data plane keeps its
+       client certificate, its EventGatewayDataPlaneCertificates and the
+       generation of its Deployment;
+    3. keg proxies a new round trip.
+  # Restarts the operator.
+  concurrent: false
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Data-plane-ready
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" before-restart hello-before-restart
+      cleanup:
+        - script:
+            env: *env
+            content: rm -rf "$WORK_DIR"
+
+    - name: 2-Operator-restarts-without-disturbing-the-data-plane
+      try:
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_DP" "$WORK_DIR/before"
+        - script:
+            env: *env
+            content: kubectl get eventgatewaydataplanecertificates -n "$NAMESPACE" -o json | jq -r '[.items[].metadata.name] | sort | join(",")'
+            outputs:
+              - name: certificates_before
+                value: ($stdout)
+        - script:
+            env: *env
+            content: kubectl get deployment -n "$NAMESPACE" "$KEG_DP" -o jsonpath='{.metadata.generation}'
+            outputs:
+              - name: generation_before
+                value: ($stdout)
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh traffic-start traffic "$KEG_DP" during-restart
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh restart-operator 300
+        # The new operator reconciles everything at its start: wait for it to
+        # finish, then check it changed nothing.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh wait-operator-idle 210
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            content: |
+              ../onprem-shared/onprem.sh save-dp-cert "$KEG_DP" "$WORK_DIR/after"
+              cmp -s "$WORK_DIR/before/tls.crt" "$WORK_DIR/after/tls.crt" || { echo "the data plane got a new client certificate" >&2; exit 1; }
+        - script:
+            env: *env
+            content: kubectl get eventgatewaydataplanecertificates -n "$NAMESPACE" -o json | jq -r '[.items[].metadata.name] | sort | join(",")'
+            check:
+              ($stdout == $certificates_before): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                generation: (to_number($generation_before))
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh traffic-check traffic
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" after-restart hello-after-restart
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

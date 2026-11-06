@@ -1,0 +1,194 @@
+# The entities of the OnPremEventGateway gateway_name of the policies test: a
+# virtual cluster enforcing ACLs on the gateway, an ACL policy denying writes
+# to blocked-topic, a static key, from a Secret, which an encrypt produce
+# policy encrypts the records with and a decrypt consume policy decrypts them
+# with, and a listener forwarding the ports of the Kafka Service of the data
+# plane keg_dp_name to the virtual cluster.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: vcluster
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend
+  apiSpec:
+    name: vcluster
+    dnsLabel: vcluster-1
+    # The topics and consumer groups of the test, on the shared Kafka cluster.
+    namespace:
+      mode: hide_prefix
+      prefix: (join('', [($namespace), '_']))
+    aclMode: enforce_on_gateway
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: acls
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: acls
+    acls:
+      name: acls
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
+          - action: deny
+            resourceType: topic
+            operations:
+              - name: write
+            resourceNames:
+              type: stat
+              stat:
+                - match: blocked-topic
+          - action: allow
+            resourceType: group
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: encryption-key
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayStaticKey
+metadata:
+  name: encryption-key
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: encryption-key
+    value:
+      type: secretRef
+      secretRef:
+        name: encryption-key
+        key: key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: encrypt
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: encrypt
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              namespacedRef:
+                name: encryption-key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: decrypt
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: decrypt
+    decrypt:
+      name: decrypt
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        keySources:
+          - type: static
+            static: {}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: listener
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092-19095"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: forward
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
+          destination:
+            name: vcluster

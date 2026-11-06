@@ -140,3 +140,26 @@ func TestServer_Domain(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_GlobalURL(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "us.api.konghq.com", want: "https://global.api.konghq.com"},
+		{input: "https://us.svc.konghq.com/api", want: "https://global.svc.konghq.com/api"},
+		{input: "https://us.svc.konghq.tech/api", want: "https://global.svc.konghq.tech/api"},
+		{input: "https://us.konghq.com:8000", want: "https://global.konghq.com:8000"},
+		{input: "https://us.api.konghq.tech", want: "https://global.api.konghq.tech"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			s, err := server.NewServer[konnectv1alpha2.KonnectGatewayControlPlane](tc.input)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, s.GlobalURL())
+			// The receiver must not be mutated.
+			assert.NotEqual(t, server.RegionGlobal, s.Region())
+		})
+	}
+}

@@ -59,8 +59,7 @@ func TestHandleRefResult(t *testing.T) {
 		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 		ent.Finalizers = []string{KonnectCleanupFinalizer}
 
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithObjects(ent).
 			Build()
 
@@ -97,8 +96,7 @@ func TestHandleRefResult(t *testing.T) {
 		ent := testEventGatewayDataPlaneCertificateForEventGatewayRefResult()
 		ent.Finalizers = []string{KonnectCleanupFinalizer}
 
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithObjects(ent).
 			WithInterceptorFuncs(interceptor.Funcs{
 				Update: func(

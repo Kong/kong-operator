@@ -358,8 +358,7 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := scheme.Get()
-			clientBuilder := fake.NewClientBuilder().
-				WithScheme(s).
+			clientBuilder := newFakeClientBuilder(s).
 				WithObjects(tt.apiAuth)
 
 			if len(tt.referencingResources) > 0 {
@@ -649,8 +648,7 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(tt.apiAuth).
 				WithStatusSubresource(tt.apiAuth).
 				Build()
@@ -712,8 +710,7 @@ func TestReconcileKonnectAPIAuthConfigurationRateLimited(t *testing.T) {
 	}
 
 	cl := withAPIAuthRefIndexes(
-		fake.NewClientBuilder().
-			WithScheme(s).
+		newFakeClientBuilder(s).
 			WithObjects(apiAuth),
 	).WithStatusSubresource(apiAuth).Build()
 
@@ -762,8 +759,7 @@ func TestReconcileKonnectAPIAuthConfigurationRateLimitedServerURLChanged(t *test
 	}
 
 	cl := withAPIAuthRefIndexes(
-		fake.NewClientBuilder().
-			WithScheme(s).
+		newFakeClientBuilder(s).
 			WithObjects(apiAuth),
 	).WithStatusSubresource(apiAuth).Build()
 
