@@ -106,6 +106,12 @@
 - On-prem AI Gateway: an entity with a cross-namespace reference now reports a
   `ResolvedRefs` condition for cross-namespace `aiGatewayRef` and `secretRef`.
   [#6457](https://github.com/Kong/kong-operator/pull/6457)
+- Add `ValidatingAdmissionPolicies` warning when a `DataPlane` or
+  `GatewayConfiguration` sets a `PodDisruptionBudget` while its replica floor
+  (`replicas`, or `scaling.horizontal.minReplicas`) is lower than 2.
+  Set the chart value
+  `global.validatingPolicies.podDisruptionBudgetReplicas.validationActions`
+  to `[Deny]` to reject such objects instead.
 
 ### Changed
 
