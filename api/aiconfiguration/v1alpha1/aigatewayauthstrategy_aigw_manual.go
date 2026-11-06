@@ -20,7 +20,7 @@ import (
 // clientSecret) and the datastore references of the key-auth and openid-connect
 // variants.
 func (obj *AIGatewayAuthStrategy) ToAIGWAuthStrategy(ctx context.Context, cl client.Client) (*aigw.AuthStrategy, error) {
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAuthStrategy %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 

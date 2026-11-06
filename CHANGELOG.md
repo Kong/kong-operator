@@ -103,6 +103,9 @@
   certificate authority rotations wait for the data plane to move to the new
   authority. Its name must be a valid DNS-1035 label of at most 57 characters.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
+- On-prem AI Gateway: an entity with a cross-namespace reference now reports a
+  `ResolvedRefs` condition for cross-namespace `aiGatewayRef` and `secretRef`.
+  [#6457](https://github.com/Kong/kong-operator/pull/6457)
 
 ### Changed
 

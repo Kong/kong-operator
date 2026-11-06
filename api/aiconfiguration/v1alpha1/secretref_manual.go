@@ -15,19 +15,23 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
 
-// crossNamespaceSecretRefChecker is the generated accessor set the on-prem translations
-// gate secretRefs through.
-type crossNamespaceSecretRefChecker interface {
+// SecretRefsOwner is the generated accessor set of the entities with secretRefs
+// that the on-prem translations and reconcilers check against KongReferenceGrants.
+//
+// It is an interface, never a field of an API type, so it needs no deepcopy.
+//
+// +kubebuilder:object:generate=false
+type SecretRefsOwner interface {
 	GetNamespace() string
 	GetTypeName() string
 	GetSensitiveDataSecretRefs() []SensitiveDataSecretRef
 }
 
-// checkCrossNamespaceSecretRefsGranted errors when a KongReferenceGrant in the Secret's
+// CheckCrossNamespaceSecretRefsGranted returns an error when a KongReferenceGrant in the Secret's
 // namespace does not allow one of the entity's cross-namespace secretRefs. This is the same
 // rule as the Konnect path (controller/konnect reconciler_secretref.go handleSecretRef).
 // The kind comes from GetTypeName, because objects read from the cache have no TypeMeta.
-func checkCrossNamespaceSecretRefsGranted(ctx context.Context, cl client.Client, entity crossNamespaceSecretRefChecker) error {
+func CheckCrossNamespaceSecretRefsGranted(ctx context.Context, cl client.Client, entity SecretRefsOwner) error {
 	for _, ref := range entity.GetSensitiveDataSecretRefs() {
 		if ref.Namespace == nil || *ref.Namespace == "" || *ref.Namespace == entity.GetNamespace() {
 			continue

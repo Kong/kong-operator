@@ -13,15 +13,16 @@ spec:
 
     Covers, in order:
     1. without a KongReferenceGrant, the provider and the policy report
-       Programmed=False with the reason, and the model that references them
-       is left out too. These failures only affect their entities: the
-       OnPremAIGateway stays Ready and a data plane deploys;
+       Programmed=False with the reason and ResolvedRefs=False, and the model
+       that references them is left out too. These failures only affect their
+       entities: the OnPremAIGateway stays Ready and a data plane deploys;
     2. creating the KongReferenceGrant renders them again without other
-       changes: they become Programmed and the header reaches the data plane;
+       changes: they become Programmed with ResolvedRefs=True, and the header
+       reaches the data plane;
     3. updating the cross-namespace Secret changes the header;
     4. deleting the KongReferenceGrant revokes the access: the provider and
-       the policy report Programmed=False again, and the OnPremAIGateway stays
-       Ready.
+       the policy report Programmed=False and ResolvedRefs=False again, and the
+       OnPremAIGateway stays Ready.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -88,6 +89,9 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'False'
                     (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
         - assert:
             resource:
               apiVersion: aiconfiguration.konghq.com/v1alpha1
@@ -99,6 +103,9 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'False'
                     (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
     - name: Assert-model-not-programmed-without-kong-reference-grant
       try:
         - assert:
@@ -153,6 +160,9 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
         - assert:
             resource:
               apiVersion: aiconfiguration.konghq.com/v1alpha1
@@ -163,6 +173,9 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
         - assert:
             resource:
               apiVersion: aiconfiguration.konghq.com/v1alpha1
@@ -173,6 +186,8 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
+                # The model has no secretRef: it has no ResolvedRefs condition.
+                (length(conditions[?type == 'ResolvedRefs'])): 0
     - name: Verify-cross-namespace-secret-policy-is-applied
       try:
         - script:
@@ -238,6 +253,9 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'False'
                     (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
         - assert:
             resource:
               apiVersion: aiconfiguration.konghq.com/v1alpha1
@@ -249,6 +267,9 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'False'
                     (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
         - assert:
             resource:
               apiVersion: aigateway.konghq.com/v1alpha1
