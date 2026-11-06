@@ -155,8 +155,8 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 
 func TestValidateGWAdminTTLs(t *testing.T) {
 	require.NoError(t, validateGWAdminTTLs(consts.GWAdminCATTL, consts.GWAdminLeafTTL))
-	require.NoError(t, validateGWAdminTTLs(10*time.Minute, 10*time.Minute))
-	require.EqualError(t, validateGWAdminTTLs(9*time.Minute, 9*time.Minute), "--gwadmin-ca-ttl (9m0s) must be at least 10m0s")
+	require.NoError(t, validateGWAdminTTLs(time.Hour, 10*time.Minute))
+	require.EqualError(t, validateGWAdminTTLs(59*time.Minute, 10*time.Minute), "--gwadmin-ca-ttl (59m0s) must be at least 1h0m0s")
 	require.EqualError(t, validateGWAdminTTLs(time.Hour, 5*time.Minute), "--gwadmin-cert-ttl (5m0s) must be at least 10m0s")
 	require.EqualError(t, validateGWAdminTTLs(time.Hour, 2*time.Hour), "--gwadmin-cert-ttl (2h0m0s) must not exceed --gwadmin-ca-ttl (1h0m0s)")
 }

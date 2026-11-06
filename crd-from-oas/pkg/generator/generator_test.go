@@ -4365,6 +4365,47 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, string(formatted), file.Content)
 }
 
+func TestGenerateAIGatewayIndexOptionsDispatcher(t *testing.T) {
+	infos := []*WatchFileInfo{
+		{
+			Entity: "AIGatewayVault",
+			Group:  "aiconfiguration.konghq.com",
+		},
+		{
+			Entity: "AIGatewayModel",
+			Group:  "aiconfiguration.konghq.com",
+		},
+		{
+			Entity: "Portal",
+			Group:  "konnect.konghq.com",
+		},
+	}
+
+	file, err := GenerateAIGatewayIndexOptionsDispatcher(infos)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Equal(t, "zz_generated_aigateway_index_options.go", file.Name)
+	assert.Equal(t, "internal/utils/index", file.RelativeDir)
+	assert.Contains(t, file.Content, "package index")
+	assert.Contains(t, file.Content, "func OptionsForAIGatewayEntities() []Option {")
+	assert.Contains(t, file.Content, "OptionsForAIGatewayModel()")
+	assert.Contains(t, file.Content, "OptionsForAIGatewayVault()")
+	assert.NotContains(t, file.Content, "OptionsForPortal()")
+
+	idxModel := strings.Index(file.Content, "OptionsForAIGatewayModel()")
+	idxVault := strings.Index(file.Content, "OptionsForAIGatewayVault()")
+	assert.Less(t, idxModel, idxVault)
+
+	formatted, err := format.Source([]byte(file.Content))
+	require.NoError(t, err)
+	assert.Equal(t, string(formatted), file.Content)
+
+	empty, err := GenerateAIGatewayIndexOptionsDispatcher(nil)
+	require.NoError(t, err)
+	assert.Nil(t, empty)
+}
+
 func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 	const (
 		group = "configuration.konghq.com"
@@ -6766,6 +6807,75 @@ func TestGenerateOpsDelete_NonRootEntity(t *testing.T) {
 
 	// Delete does not reference sdkkonnectops directly (no wrapped struct for delete).
 	assert.NotContains(t, file.Content, "sdkkonnectops.Delete")
+}
+
+func TestGenerateOpsDelete_PositionalArgsFollowOASDeclarationOrder(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalTeam": {IsRoot: new(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-team",
+		Tags:               []string{"Portal Teams"},
+		SuccessResponseRef: "PortalTeamResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		// DELETE /v3/portals/{portalId}/teams/{teamId} declares teamId before
+		// portalId, so the SDK signature is DeletePortalTeam(ctx, teamID, portalID).
+		DeleteOperationID:    "delete-portal-team",
+		DeleteTags:           []string{"Portal Teams"},
+		DeletePathParams:     []string{"portalId", "teamId"},
+		DeletePathParamOrder: []string{"teamId", "portalId"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalTeamRequest"},
+			"delete": {},
+		},
+	}
+
+	file, _, err := g.generateOpsDelete("PortalTeam", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, file)
+
+	assert.Contains(t, file.Content, "sdk.DeletePortalTeam(ctx, id, parentID)")
+}
+
+func TestGenerateOpsDelete_PositionalArgsRejectUnmappedDeclarationOrder(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalTeam": {IsRoot: new(false)},
+		},
+	})
+
+	schema := &parser.Schema{
+		OperationID:        "create-portal-team",
+		Tags:               []string{"Portal Teams"},
+		SuccessResponseRef: "PortalTeamResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+		DeleteOperationID:    "delete-portal-team",
+		DeleteTags:           []string{"Portal Teams"},
+		DeletePathParams:     []string{"portalId", "teamId"},
+		DeletePathParamOrder: []string{"teamId", "portalId", "unknownId"},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortalTeamRequest"},
+			"delete": {},
+		},
+	}
+
+	_, _, err := g.generateOpsDelete("PortalTeam", schema, opsConfig)
+	require.ErrorContains(t, err, `"unknownId"`)
 }
 
 // newConfigStoreDeleteFixture returns the generator, schema and ops config for a

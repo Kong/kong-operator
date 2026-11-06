@@ -321,7 +321,7 @@ jobs:
         run: echo "${DIGEST}" > "digest-image-linux-${ARCH}.sha256"
       - name: Upload the per-arch digest
         if: ${{ inputs.push }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: digest-image-linux-${{ matrix.arch }}.sha256
           path: digest-image-linux-${{ matrix.arch }}.sha256
@@ -519,20 +519,20 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Download the per-arch digest
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: digest-image-linux-${{ matrix.arch }}.sha256
 
       # `imagetools inspect` and the scanners below read ~/.docker/config.json; anonymous Docker Hub
       # pulls are rate limited.
       - name: Log in to the Container registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.username }}
@@ -563,7 +563,7 @@ jobs:
       # per report named "<asset_prefix>-<kind>" — the same artifact contract sca uses, and what
       # the attest job turns into referrers on the image.
       - name: Scan the image
-        uses: Kong/public-shared-actions/security-actions/scan-docker-image@a92df3beb1e69e27d86be56346488f15fecaf0de # scan-docker-image@6.1.1
+        uses: Kong/public-shared-actions/security-actions/scan-docker-image@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # scan-docker-image@6.1.1
         with:
           asset_prefix: image-linux-${{ matrix.arch }}
           image: ${{ env.IMAGE }}
@@ -582,12 +582,12 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+      - uses: Kong/public-shared-actions/security-actions/sca@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # sca@6.0.3
         # fail_build stays false: gating on findings is a separate decision, not this PR's.
         with:
           dir: '.'

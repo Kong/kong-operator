@@ -26,16 +26,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync/gwadminsynctest"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // The entities of an OnPremEventGateway pushed to its gw-admin pods: see
@@ -612,6 +617,49 @@ spec:
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.Equal(ct, []string{"backend-cluster"}, backendClusterNames(ct, pod, gateway))
 	}, waitTime, tickTime)
+}
+
+// testGWAdminCPBundle is the cp server CA bundle Secret of the GWAdmin of the
+// tests.
+const testGWAdminCPBundle = "gw-admin-cp-server-ca-bundle" //nolint:gosec // the name of a Secret
+
+// publishCP publishes the cp server CA bundle of the GWAdmin in its status,
+// as the data planes need it.
+func (g *testGWAdmin) publishCP(ctx context.Context) {
+	g.t.Helper()
+	require.NoError(g.t, g.cl.Create(ctx, &corev1.Secret{
+		Name: testGWAdminCPBundle, Namespace: g.namespace,
+		Data: map[string][]byte{"ca.crt": gwadminsynctest.NewCA(g.t, "cp-server-ca").PEM},
+	}))
+	g.updateStatus(ctx, func(status *operatorv1alpha1.GWAdminStatus) {
+		status.TLS.CPServerCABundleSecretName = testGWAdminCPBundle
+	})
+}
+
+// publishClientCA publishes a new cp client CA of the GWAdmin in the operator
+// namespace, as the GWAdmin controller does once the gw-admin pods trust it,
+// and returns its certificate in PEM.
+func (g *testGWAdmin) publishClientCA(ctx context.Context) []byte {
+	g.t.Helper()
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("gw-admin cp client CA"),
+		certificate.WithCATrue(),
+	)
+	secret := &corev1.Secret{
+		Name: gwadminref.CPClientCASecretName(g.gwAdmin), Namespace: g.namespace,
+		Labels: map[string]string{
+			consts.GWAdminUIDLabel:                        string(g.gwAdmin.UID),
+			consts.GatewayOperatorManagedByNameLabel:      g.gwAdmin.Name,
+			consts.GatewayOperatorManagedByNamespaceLabel: g.gwAdmin.Namespace,
+		},
+		Type: corev1.SecretTypeTLS,
+	}
+	_, err := controllerutil.CreateOrUpdate(ctx, g.cl, secret, func() error {
+		secret.Data = map[string][]byte{"tls.crt": cert, "tls.key": key}
+		return nil
+	})
+	require.NoError(g.t, err)
+	return cert
 }
 
 // selfSignedCertificatePEM returns a self-signed certificate in PEM.

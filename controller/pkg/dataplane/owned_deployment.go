@@ -97,9 +97,13 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 // rolloutOntoCertificateComplete reports whether the DataPlane Deployment
 // finished rolling out the given certificate checksum: every replica runs the
 // current Pod template and the template carries the current checksum
-// annotation. A missing Deployment reports not-complete; the caller retries
-// on the next reconcile. When no checksum annotation is configured the gate
-// reduces to the plain rollout-complete check.
+// annotation. Pods still terminating run a previous certificate, as far as
+// status.terminatingReplicas reports them: without the
+// DeploymentReplicaSetTerminatingReplicas feature, a rollout can look complete
+// while they drain. A Deployment scaled to zero has no pod left running a
+// previous certificate once its pods are gone. A missing Deployment reports
+// not-complete; the caller retries on the next reconcile. When no checksum
+// annotation is configured the gate reduces to the plain rollout-complete check.
 func (r *Reconciler[T, Cert]) rolloutOntoCertificateComplete(
 	ctx context.Context,
 	dp T,
@@ -112,13 +116,32 @@ func (r *Reconciler[T, Cert]) rolloutOntoCertificateComplete(
 		}
 		return false, err
 	}
-	if !k8sutils.DeploymentRolloutComplete(deployment) {
+	if !DeploymentRolledOut(deployment) {
 		return false, nil
 	}
 	if r.Config.Certificate.ChecksumAnnotation == "" {
 		return true, nil
 	}
 	return deployment.Spec.Template.Annotations[r.Config.Certificate.ChecksumAnnotation] == certChecksum, nil
+}
+
+// DeploymentRolledOut reports whether no pod of the Deployment runs anything but
+// its current Pod template: the rollout completed, or it is scaled to zero, and no
+// pod is left terminating, as far as status.terminatingReplicas reports them.
+func DeploymentRolledOut(deployment *appsv1.Deployment) bool {
+	if terminating := deployment.Status.TerminatingReplicas; terminating != nil && *terminating > 0 {
+		return false
+	}
+	return k8sutils.DeploymentRolloutComplete(deployment) || scaledToZero(deployment)
+}
+
+// scaledToZero reports whether the Deployment is scaled to zero, and its
+// controller observed it and removed its pods.
+func scaledToZero(deployment *appsv1.Deployment) bool {
+	status := deployment.Status
+	return deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == 0 &&
+		status.ObservedGeneration >= deployment.Generation &&
+		status.Replicas == 0
 }
 
 // ResolveImage determines the DataPlane container image using the following priority:

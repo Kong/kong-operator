@@ -407,6 +407,19 @@ func (r *Runner) Run(
 		return err
 	}
 
+	// Emit AI Gateway index options dispatcher.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		generator.AIGatewayIndexOptionsDir,
+		generator.AIGatewayIndexOptionsFile,
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateAIGatewayIndexOptionsDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
 	// Emit SDK factory file.
 	if err := emitDispatcherFile(
 		r.projectRoot,

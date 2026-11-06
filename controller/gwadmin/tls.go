@@ -468,13 +468,6 @@ func renewalTime(cert *x509.Certificate) time.Time {
 	return pki.RenewalTime(cert.NotBefore, cert.NotAfter)
 }
 
-// warningTime returns when a certificate the user provides is about to
-// expire: once less than a sixth of its validity is left, half of the
-// renewal window cert-manager leaves by default.
-func warningTime(cert *x509.Certificate) time.Time {
-	return cert.NotAfter.Add(-cert.NotAfter.Sub(cert.NotBefore) / 6)
-}
-
 // leafIssue tells whether a certificate must be issued, and whether issuing
 // it must wait for the pods to trust the signer.
 type leafIssue struct {
@@ -906,12 +899,12 @@ func (r *Reconciler) issueInto(
 	signer *x509.Certificate,
 	l leafTarget,
 ) error {
-	certPEM, keyPEM, err := issueCertificate(signerSecret, certRequest{
-		commonName: l.spec.commonName,
-		dnsNames:   l.spec.dnsNames,
-		usages:     l.spec.usages,
-		ttl:        r.certTTL(),
-		now:        r.clock(),
+	certPEM, keyPEM, err := pki.IssueCertificate(signerSecret, pki.CertRequest{
+		CommonName: l.spec.commonName,
+		DNSNames:   l.spec.dnsNames,
+		Usages:     l.spec.usages,
+		TTL:        r.certTTL(),
+		Now:        r.clock(),
 	})
 	if err != nil {
 		return fmt.Errorf("failed issuing certificate %s: %w", l.ref.name, err)
@@ -1101,8 +1094,8 @@ func (r *Reconciler) ensureClientSigner(ctx context.Context, gw *operatorv1alpha
 		if c.source, c.signer, err = r.manualSigner(ctx, gw, p.now); err != nil {
 			return nil, err
 		}
-		m.due = append(m.due, warningTime(c.signer), c.signer.NotAfter)
-		if !p.now.Before(warningTime(c.signer)) {
+		m.due = append(m.due, pki.WarningTime(c.signer), c.signer.NotAfter)
+		if !p.now.Before(pki.WarningTime(c.signer)) {
 			m.warnExpiring(fmt.Sprintf("CA Secret %q expires at %s",
 				gw.Spec.TLS.ClientCA.SecretRef.Name, c.signer.NotAfter.UTC().Format(time.RFC3339)))
 		}
@@ -1121,7 +1114,7 @@ func (r *Reconciler) ensureClientSigner(ctx context.Context, gw *operatorv1alpha
 	if !p.running && next == nil {
 		// No pod to wait for: the new certificate authority is published
 		// right away, without going through cpClientCANextSecretName.
-		certPEM, keyPEM, err := generateCA(clientCACommonName(gw), p.now, r.caTTL())
+		certPEM, keyPEM, err := pki.GenerateCA(clientCACommonName(gw), p.now, r.caTTL())
 		if err != nil {
 			return nil, err
 		}
@@ -1524,7 +1517,7 @@ func (r *Reconciler) ensureAutomaticCA(
 	default:
 		rec.previous = union(rec.previous, lost())
 	}
-	certPEM, keyPEM, err := generateCA(commonName, now, r.caTTL())
+	certPEM, keyPEM, err := pki.GenerateCA(commonName, now, r.caTTL())
 	if err != nil {
 		return nil, err
 	}
@@ -1597,14 +1590,6 @@ func truncateCommonName(cn string) string {
 	return cn
 }
 
-// secretVisibilityHint tells how to make a Secret visible to the operator.
-func (r *Reconciler) secretVisibilityHint() string {
-	if r.SecretLabelSelector == "" {
-		return ""
-	}
-	return fmt.Sprintf(" (it must exist and carry the %q label to be visible to the operator)", r.SecretLabelSelector)
-}
-
 // manualSigner returns the user's certificate authority Secret, once validated.
 func (r *Reconciler) manualSigner(
 	ctx context.Context,
@@ -1638,7 +1623,7 @@ func (r *Reconciler) userSecret(ctx context.Context, gw *operatorv1alpha1.GWAdmi
 	if err := r.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: name}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefNotFound,
-				fmt.Sprintf("%s Secret %q not found%s", what, name, r.secretVisibilityHint()))
+				fmt.Sprintf("%s Secret %q not found%s", what, name, gwadminref.SecretHint(r.SecretLabelSelector)))
 			return nil, errStop
 		}
 		// A transient API error or an RBAC denial: retried with backoff.
@@ -1720,14 +1705,14 @@ func validateCA(secret *corev1.Secret, now time.Time) (*x509.Certificate, error)
 		return nil, errors.New("the certificate can't sign certificates")
 	case !now.Before(ca.NotAfter):
 		return nil, fmt.Errorf("the certificate expired at %s", ca.NotAfter.UTC().Format(time.RFC3339))
-	case now.Before(ca.NotBefore.Add(-clockSkew)):
-		return nil, &notYetValidError{validFrom: ca.NotBefore.Add(-clockSkew)}
+	case now.Before(ca.NotBefore.Add(-pki.ClockSkew)):
+		return nil, &notYetValidError{validFrom: ca.NotBefore.Add(-pki.ClockSkew)}
 	}
 	return ca, nil
 }
 
 // manualCPCertificate returns the user's cp server certificate Secret, once
-// validated: a key pair valid at now, give or take clockSkew, the data
+// validated: a key pair valid at now, give or take pki.ClockSkew, the data
 // planes can verify.
 func (r *Reconciler) manualCPCertificate(
 	ctx context.Context,
@@ -1751,10 +1736,10 @@ func (r *Reconciler) manualCPCertificate(
 		return nil, invalid("does not contain a valid tls.crt/tls.key pair")
 	case !now.Before(leaf.NotAfter):
 		return nil, invalid("holds a certificate that expired at " + leaf.NotAfter.UTC().Format(time.RFC3339))
-	case now.Before(leaf.NotBefore.Add(-clockSkew)):
+	case now.Before(leaf.NotBefore.Add(-pki.ClockSkew)):
 		// No watch event fires when it becomes valid: look again then.
 		return nil, errors.Join(invalid("holds a certificate not valid before "+leaf.NotBefore.UTC().Format(time.RFC3339)),
-			&stopError{after: leaf.NotBefore.Add(-clockSkew).Sub(now)})
+			&stopError{after: leaf.NotBefore.Add(-pki.ClockSkew).Sub(now)})
 	case isManualCA(gw) && gw.Spec.TLS.ClientCA.SecretRef.Name == name:
 		return nil, invalid("is the CA Secret: its private key would be mounted into the gw-admin pods")
 	case leaf.IsCA:
@@ -1769,8 +1754,8 @@ func (r *Reconciler) manualCPCertificate(
 	if host := cpHost(gw, r.ClusterDomain); leaf.VerifyHostname(host) != nil {
 		m.warnings = append(m.warnings, fmt.Sprintf("the cp certificate doesn't cover %s, the host in status.cp.serverURL", host))
 	}
-	m.due = append(m.due, warningTime(leaf), leaf.NotAfter)
-	if !now.Before(warningTime(leaf)) {
+	m.due = append(m.due, pki.WarningTime(leaf), leaf.NotAfter)
+	if !now.Before(pki.WarningTime(leaf)) {
 		m.warnExpiring(fmt.Sprintf("cp certificate Secret %q expires at %s", name, leaf.NotAfter.UTC().Format(time.RFC3339)))
 	}
 	return src, nil

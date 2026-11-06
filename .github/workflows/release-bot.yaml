@@ -182,7 +182,7 @@ jobs:
 
       - name: Generate source SBOM
         # Blocking: the SBOMs are deliverables.
-        uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        uses: Kong/public-shared-actions/security-actions/sca@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # sca@6.0.3
         with:
           dir: '.'
           asset_prefix: source
@@ -195,7 +195,7 @@ jobs:
       # syft and `imagetools inspect` read ~/.docker/config.json; anonymous Docker Hub pulls are
       # rate limited, and this job is blocking. Pull-scoped on purpose: no push rights here.
       - name: Log in to Docker Hub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}

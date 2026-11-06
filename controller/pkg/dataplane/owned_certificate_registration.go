@@ -147,12 +147,12 @@ func (r *Reconciler[T, Cert]) checkCertificateProgrammed(
 	desired Cert,
 	conds CertificateRegistrationConditions,
 ) (bool, error) {
-	markNotProgrammed := func(programmedCond *metav1.Condition, generation int64) (bool, error) {
+	markNotProgrammed := func(message string) (bool, error) {
 		setStatusCondition(dp, metav1.Condition{
 			Type:               conds.Type,
 			Status:             metav1.ConditionFalse,
 			Reason:             conds.NotProgrammedReason,
-			Message:            r.notProgrammedMessage(conds, programmedCond, generation),
+			Message:            message,
 			ObservedGeneration: dp.GetGeneration(),
 		})
 		return false, nil
@@ -168,13 +168,21 @@ func (r *Reconciler[T, Cert]) checkCertificateProgrammed(
 		// apply yet; treat it as not-programmed. The Owns() watch on the
 		// certificate will retrigger once the controller of the certificate
 		// flips Programmed to True.
-		return markNotProgrammed(nil, 0)
+		return markNotProgrammed(r.notProgrammedMessage(conds, nil, 0))
+	}
+
+	// A certificate being deleted is going away, whatever its status still says:
+	// a certificate named after its content can be needed again meanwhile, e.g.
+	// once the previous one is back in a Manual Secret. The Owns() watch retriggers
+	// once it is gone, and it is created again.
+	if !current.GetDeletionTimestamp().IsZero() {
+		return markNotProgrammed(r.Config.Certificate.Kind + " is being deleted: it is created again once it is gone")
 	}
 
 	programmedCond := apimeta.FindStatusCondition(current.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType)
 	if programmedCond == nil || programmedCond.Status != metav1.ConditionTrue ||
 		programmedCond.ObservedGeneration != current.GetGeneration() {
-		return markNotProgrammed(programmedCond, current.GetGeneration())
+		return markNotProgrammed(r.notProgrammedMessage(conds, programmedCond, current.GetGeneration()))
 	}
 	return true, nil
 }

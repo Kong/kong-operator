@@ -95,6 +95,22 @@
   carrying a path until its private rendering lands.
   [#6265](https://github.com/Kong/kong-operator/pull/6265)
 
+### Added
+
+- `KegDataPlane`: the operator deploys a data plane for an
+  `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
+  gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
+  certificate authority rotations wait for the data plane to move to the new
+  authority. Its name must be a valid DNS-1035 label of at most 57 characters.
+  [#6435](https://github.com/Kong/kong-operator/pull/6435)
+
+### Changed
+
+- `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
+  shorter validity could keep the client certificate of an on-prem `KegDataPlane`
+  from being issued.
+  [#6435](https://github.com/Kong/kong-operator/pull/6435)
+
 ## [v2.4.0-rapid.3.1]
 
 > Release date: 2026-11-04

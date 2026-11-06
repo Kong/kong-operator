@@ -737,28 +737,9 @@ func (i *Instance) Run(ctx context.Context) error {
 	// index, whose extractor only matches entities actually targeting an
 	// OnPremAIGateway, so a KonnectAIGateway sharing namespace/name never
 	// collides.
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayDataPlaneCertificate(),
-		index.OptionsForAIGatewayDatastore(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayVault(),
-	} {
-		for _, opt := range opts {
-			if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
-				return fmt.Errorf("registering %s field index: %w", opt.Field, err)
-			}
+	for _, opt := range index.OptionsForAIGatewayEntities() {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
+			return fmt.Errorf("registering %s field index: %w", opt.Field, err)
 		}
 	}
 

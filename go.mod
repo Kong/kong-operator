@@ -7,8 +7,9 @@ require (
 	dario.cat/mergo v1.0.2
 	github.com/Kong/ai-deck-converter v0.32.7
 	github.com/Kong/sdk-konnect-go v0.82.2
-	github.com/avast/retry-go/v5 v5.0.0
+	github.com/avast/retry-go/v5 v5.0.1
 	github.com/blang/semver/v4 v4.0.0
+	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/cert-manager/cert-manager v1.21.3
 	github.com/cloudflare/cfssl v1.7.1
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
@@ -26,7 +27,6 @@ require (
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.43.0
 	github.com/kong/go-kong v0.80.0
 	github.com/kong/kubernetes-telemetry v0.1.14
@@ -130,7 +130,6 @@ require (
 	github.com/bombsimon/logrusr/v3 v3.1.0 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -208,7 +207,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/klauspost/compress v1.20.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect

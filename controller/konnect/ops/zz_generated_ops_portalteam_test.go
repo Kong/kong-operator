@@ -160,8 +160,8 @@ func TestDeletePortalTeam_UsesGeneratedSDKOps(t *testing.T) {
 	sdk.EXPECT().
 		DeletePortalTeam(
 			mock.Anything,
-			parentID,
 			obj.GetKonnectStatus().GetKonnectID(),
+			parentID,
 		).
 		Return(&sdkkonnectops.DeletePortalTeamResponse{}, nil).
 		Once()
@@ -183,8 +183,8 @@ func TestDeletePortalTeam_PropagatesSDKError(t *testing.T) {
 	sdk.EXPECT().
 		DeletePortalTeam(
 			mock.Anything,
-			parentID,
 			obj.GetKonnectStatus().GetKonnectID(),
+			parentID,
 		).
 		Return(nil, sdkErr).
 		Once()

@@ -111,6 +111,59 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// DataPlane - OnPremEventGateway Resolved Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremEventGatewayResolvedType indicates whether the referenced
+	// OnPremEventGateway, and what the data plane needs from its GWAdmin,
+	// have been resolved. When the GWAdmin doesn't provide what the data
+	// plane needs yet, e.g. its cp endpoint or its certificate authorities,
+	// the reason is KegDataPlaneGWAdminNotReadyReason.
+	OnPremEventGatewayResolvedType consts.ConditionType = "OnPremEventGatewayResolved"
+
+	// OnPremEventGatewayResolvedReason indicates the OnPremEventGateway has
+	// been resolved successfully.
+	OnPremEventGatewayResolvedReason consts.ConditionReason = "Resolved"
+	// OnPremEventGatewayNotFoundReason indicates the referenced
+	// OnPremEventGateway was not found.
+	OnPremEventGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// KegDataPlaneGWAdminNotReadyReason indicates the GWAdmin of the
+	// referenced OnPremEventGateway doesn't provide what the data plane needs
+	// yet.
+	KegDataPlaneGWAdminNotReadyReason consts.ConditionReason = "GWAdminNotReady"
+
+	// OnPremEventGatewayNotFoundMessage indicates the referenced
+	// OnPremEventGateway was not found.
+	OnPremEventGatewayNotFoundMessage = "Referenced OnPremEventGateway not found"
+	// OnPremEventGatewayResolvedMessage indicates the OnPremEventGateway has
+	// been resolved.
+	OnPremEventGatewayResolvedMessage = "Referenced OnPremEventGateway and its GWAdmin are resolved"
+)
+
+// -----------------------------------------------------------------------------
+// DataPlane - gw-admin Certificate Registration Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// GWAdminCertificateRegisteredType indicates whether the client
+	// certificate of the data plane is registered on the gw-admin of its
+	// OnPremEventGateway.
+	GWAdminCertificateRegisteredType consts.ConditionType = "GWAdminCertificateRegistered"
+
+	// GWAdminCertificateRegisteredReason indicates every gw-admin pod trusts
+	// the client certificate of the data plane.
+	GWAdminCertificateRegisteredReason consts.ConditionReason = "GWAdminCertificateRegistered"
+	// GWAdminCertificateRegistrationFailedReason indicates the
+	// EventGatewayDataPlaneCertificate of the data plane could not be ensured.
+	GWAdminCertificateRegistrationFailedReason consts.ConditionReason = "GWAdminCertificateRegistrationFailed"
+	// GWAdminCertificateNotProgrammedReason indicates the
+	// EventGatewayDataPlaneCertificate exists but has not been pushed to every
+	// gw-admin pod yet.
+	GWAdminCertificateNotProgrammedReason consts.ConditionReason = "GWAdminCertificateNotProgrammed"
+)
+
+// -----------------------------------------------------------------------------
 // DataPlane - Condition Messages
 // -----------------------------------------------------------------------------
 

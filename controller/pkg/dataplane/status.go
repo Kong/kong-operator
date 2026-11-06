@@ -88,8 +88,9 @@ func SetLicenseStatusCondition(
 }
 
 // ensureReadyStatus computes the Ready condition for a DataPlane.
-// It first checks whether any non-Ready condition is False; if so it sets
-// Ready=False immediately without fetching the Deployment. Otherwise it reads
+// It first checks whether any non-Ready condition isn't True, e.g. is Unknown
+// as what it reports can't be told; if so it sets Ready=False immediately
+// without fetching the Deployment. Otherwise it reads
 // the owned Deployment and sets Ready based on DeploymentRolloutComplete,
 // which requires the controller to have observed the current generation and
 // all desired replicas to be updated and available.
@@ -104,7 +105,7 @@ func (r *Reconciler[T, Cert]) ensureReadyStatus(
 		// gateway keeps running.
 		if c.Type != r.Config.Conditions.ReadyType &&
 			c.Type != r.Config.Conditions.LicenseValidType &&
-			c.Status == metav1.ConditionFalse {
+			c.Status != metav1.ConditionTrue {
 			setStatusCondition(dp, metav1.Condition{
 				Type:               r.Config.Conditions.ReadyType,
 				Status:             metav1.ConditionFalse,

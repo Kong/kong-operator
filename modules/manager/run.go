@@ -154,6 +154,12 @@ type Config struct {
 	KEGDataPlaneControllerEnabled       bool
 	OnPremEventGatewayControllerEnabled bool
 
+	// OnPremEventGatewayKindAvailable tells whether the cluster serves the
+	// resources of the OnPremEventGateway control plane kind of the
+	// KegDataPlane controller. It isn't a flag: it is decided once at
+	// startup, so that the indexes and the watches of the kind agree.
+	OnPremEventGatewayKindAvailable bool
+
 	// Controller for gw-admin, the on-prem control plane of the data planes
 	// that do not use Konnect.
 	GWAdminControllerEnabled bool
@@ -356,6 +362,10 @@ func Run(
 	}
 
 	ctx := context.Background()
+
+	if cfg.OnPremEventGatewayKindAvailable, err = onPremEventGatewayKindAvailable(mgr, cfg); err != nil {
+		return err
+	}
 
 	if err := SetupCacheIndexes(ctx, mgr, cfg); err != nil {
 		return err
