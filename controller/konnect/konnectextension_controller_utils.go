@@ -34,6 +34,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -397,6 +398,39 @@ func enforceKonnectExtensionStatus(
 	}
 
 	return toUpdate
+}
+
+// konnectEndpointsVerdict reports the condition holding a KonnectExtension whose Konnect endpoints
+// cannot be used, and whether that condition has to be written.
+func konnectEndpointsVerdict(
+	clusterType konnectv1alpha2.KonnectExtensionClusterType,
+	serverURL string,
+	endpoints konnectv1alpha2.KonnectEndpoints,
+) (metav1.Condition, bool) {
+	// A KIC instance reaches Konnect through kic.api, which has no private surface.
+	if clusterType == konnectv1alpha2.ClusterTypeK8sIngressController &&
+		konnectendpoint.CarriesPath(endpoints.ControlPlaneEndpoint) {
+		return metav1.Condition{
+			Type:   konnectv1alpha2.KonnectExtensionReadyConditionType,
+			Status: metav1.ConditionFalse,
+			Reason: string(konnect.InvalidEndpointReason),
+			Message: fmt.Sprintf(
+				"cannot derive a KIC address from private endpoint %q: kic.api has no private surface",
+				endpoints.ControlPlaneEndpoint,
+			),
+		}, true
+	}
+
+	if err := konnectendpoint.CheckPrivateEndpoints(serverURL, endpoints.ControlPlaneEndpoint, endpoints.TelemetryEndpoint); err != nil {
+		return metav1.Condition{
+			Type:    konnectv1alpha2.KonnectExtensionReadyConditionType,
+			Status:  metav1.ConditionFalse,
+			Reason:  konnectv1alpha2.KonnectExtensionReadyReasonEndpointMismatch,
+			Message: err.Error(),
+		}, true
+	}
+
+	return metav1.Condition{}, false
 }
 
 func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha2.KonnectExtensionClusterType {

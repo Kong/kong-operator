@@ -620,6 +620,17 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		return ctrl.Result{}, err
 	}
 
+	// Status.Konnect is nil when the control plane has no endpoints: enforceKonnectExtensionStatus
+	// clears it (see konnectextension_controller_utils.go) and the verdict has nothing to decide.
+	if ext.Status.Konnect != nil {
+		if cond, bad := konnectEndpointsVerdict(ext.Status.Konnect.ClusterType, apiAuth.Status.ServerURL, ext.Status.Konnect.Endpoints); bad {
+			if res, updated, err := patch.StatusWithConditions(ctx, r.Client, ext, cond); err != nil || updated || !res.IsZero() {
+				return res, err
+			}
+			return ctrl.Result{}, nil
+		}
+	}
+
 	readyCondition = metav1.Condition{
 		Type:    konnectv1alpha2.KonnectExtensionReadyConditionType,
 		Status:  metav1.ConditionTrue,

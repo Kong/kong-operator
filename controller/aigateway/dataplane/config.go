@@ -35,6 +35,7 @@ import (
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -46,14 +47,16 @@ var konnectAIGatewayKind = shareddataplane.ControlPlaneKindConfig{
 	NewObject:                 func() shareddataplane.ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 	IsKonnect:                 true,
+	EndpointCheck:             checkKonnectAIGatewayEndpoints,
 	Conditions: shareddataplane.ControlPlaneConditions{
-		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ResolvedReason:       string(aigatewayv1alpha1.ControlPlaneResolvedReason),
-		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		NotFoundReason:       string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
-		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
-		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+		ResolvedType:           string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		ResolvedReason:         string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage:        aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		NotFoundReason:         string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage:        aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+		NotProgrammedReason:    string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+		NotProgrammedMessage:   aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+		EndpointMismatchReason: string(aigatewayv1alpha1.KonnectAIGatewayEndpointMismatchReason),
 	},
 }
 
@@ -419,6 +422,33 @@ func onPremControlPlane(cp shareddataplane.ResolvedControlPlane) bool {
 // reference configured.
 func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp shareddataplane.ResolvedControlPlane) bool {
 	return cp.IsResolved() && cp.Kind == onPremAIGatewayKind.Kind
+}
+
+// checkKonnectAIGatewayEndpoints reports whether the endpoints of a resolved
+// KonnectAIGateway can be used: a nil Status.Endpoints is left to
+// buildAIGatewayEnvVars, which refuses it with its own message.
+func checkKonnectAIGatewayEndpoints(cp shareddataplane.ControlPlaneObject) error {
+	aigw, ok := cp.(*konnectv1alpha1.KonnectAIGateway)
+	if !ok {
+		return fmt.Errorf("unexpected control plane object %T", cp)
+	}
+	if aigw.Status.Endpoints == nil {
+		return nil
+	}
+
+	for _, endpoint := range []string{aigw.Status.Endpoints.Configuration, aigw.Status.Endpoints.Telemetry} {
+		// shortcut: the AI Gateway has no private rendering yet (#6105), drop
+		// this loop when it lands.
+		if konnectendpoint.CarriesPath(endpoint) {
+			return fmt.Errorf("cannot use private endpoint %q: the AI Gateway has no private rendering yet", endpoint)
+		}
+	}
+
+	return konnectendpoint.CheckPrivateEndpoints(
+		aigw.Status.ServerURL,
+		aigw.Status.Endpoints.Configuration,
+		aigw.Status.Endpoints.Telemetry,
+	)
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables for the

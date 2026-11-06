@@ -17,4 +17,7 @@ const (
 	// KonnectExtensionReady condition type indicating that the Konnect extension
 	// is provisioning.
 	KonnectExtensionReadyReasonProvisioning = "Provisioning"
+	// KonnectExtensionReadyReasonEndpointMismatch is the reason used with the KonnectExtensionReady
+	// condition type when a private server URL is paired with an endpoint that is not private.
+	KonnectExtensionReadyReasonEndpointMismatch = "EndpointMismatch"
 )
