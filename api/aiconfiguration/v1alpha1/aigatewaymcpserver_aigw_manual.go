@@ -20,7 +20,7 @@ import (
 // entities' names, and the config's secretRefs (the session and token-vault Redis passwords
 // and the passthrough proxy's basic-auth password) to their Secret values.
 func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 

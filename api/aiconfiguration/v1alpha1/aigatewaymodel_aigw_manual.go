@@ -52,7 +52,7 @@ import (
 // references to the referenced entities' AI Gateway names, and the vector DB and proxy
 // basic-auth passwords' secretRefs to their Secret values.
 func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*aigw.Model, error) {
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayModel %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 

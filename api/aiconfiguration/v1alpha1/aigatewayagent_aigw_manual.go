@@ -20,7 +20,7 @@ import (
 // references to the referenced entities' names, and the proxy's basic-auth password
 // secretRef to its Secret value.
 func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*aigw.Agent, error) {
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
