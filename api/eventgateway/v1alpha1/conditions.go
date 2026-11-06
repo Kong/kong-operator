@@ -262,6 +262,13 @@ const (
 	// could not be reached or rejected the configuration of the
 	// OnPremEventGateway.
 	OnPremEventGatewayConfigurationPushFailedReason consts.ConditionReason = "ConfigurationPushFailed"
+	// OnPremEventGatewayInvalidEntitiesReason indicates the configuration of
+	// the OnPremEventGateway is not pushed: some of its entities can't be
+	// sent, e.g. a policy references an entity that doesn't exist. Left out,
+	// they would change what the gateway does, so gw-admin keeps the
+	// configuration it has. The message names them, and each reports why on
+	// its own Programmed condition.
+	OnPremEventGatewayInvalidEntitiesReason consts.ConditionReason = "InvalidEntities"
 	// OnPremEventGatewayGWAdminNotResolvedMessage is the message of the
 	// Programmed condition while the GWAdminResolved condition is not True.
 	OnPremEventGatewayGWAdminNotResolvedMessage = "The GWAdmin of the gateway is not resolved"
@@ -308,9 +315,12 @@ const (
 	// configuration of its OnPremEventGateway, which is not programmed: its
 	// Programmed condition tells why.
 	OnPremEntityGatewayNotProgrammedReason consts.ConditionReason = "GatewayNotProgrammed"
-	// OnPremEntityInvalidReason indicates the entity is left out of the
+	// OnPremEntityInvalidReason indicates the entity can't be sent in the
 	// configuration of its OnPremEventGateway, e.g. it reads a Secret that
-	// doesn't exist, or sets a field gw-admin doesn't support.
+	// doesn't exist, or sets a field gw-admin doesn't support: the
+	// configuration isn't pushed until it is fixed or deleted. One that
+	// doesn't belong to the gateway, e.g. in another namespace, is only left
+	// out.
 	OnPremEntityInvalidReason consts.ConditionReason = "Invalid"
 	// OnPremEntityDetachedReason indicates the entity was in the
 	// configuration of its OnPremEventGateway, and no longer belongs to it,

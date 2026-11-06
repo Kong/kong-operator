@@ -135,7 +135,7 @@ func (hangingGWAdminClient) ListEventGatewayDataPlaneCertificates(ctx context.Co
 func TestPushConfiguration(t *testing.T) {
 	t.Run("pushed to every pod", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, nil)
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		require.NoError(t, pushErr)
 		assert.True(t, result.done)
@@ -156,7 +156,7 @@ func TestPushConfiguration(t *testing.T) {
 	}
 	push := func(t *testing.T, f *pushFixture, cfg configuration) (pushResult, error) {
 		t.Helper()
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, cfg), cfg)
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, cfg), cfg, nil)
 		require.NoError(t, err)
 		return result, pushErr
 	}
@@ -204,7 +204,7 @@ func TestPushConfiguration(t *testing.T) {
 		restarted := newPushFixture(t, interceptor.Funcs{}, nil)
 		restarted.r.Client, restarted.r.GWAdminSync.Client, restarted.r.GWAdminSync.NewClient = f.cl, f.cl, f.pods.newClient
 		f.pod().reset()
-		result, pushErr, err := restarted.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, cfg), cfg)
+		result, pushErr, err := restarted.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, cfg), cfg, nil)
 		require.NoError(t, err)
 		require.NoError(t, pushErr)
 		assert.Equal(t, []string{callGetEntities, callListCertificates, callExpected + " " + f.gatewayID.String()}, f.pod().recorded(),
@@ -306,7 +306,7 @@ func TestPushConfiguration(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 		defer cancel()
 		cfg := withCertificates(uuid.New())
-		result, pushErr, err := f.r.pushConfiguration(ctx, f.gateway, f.gatewayID, deriveConfig(f.gateway, cfg), cfg)
+		result, pushErr, err := f.r.pushConfiguration(ctx, f.gateway, f.gatewayID, deriveConfig(f.gateway, cfg), cfg, nil)
 		require.NoError(t, err)
 		require.NoError(t, pushErr)
 		require.NoError(t, ctx.Err(), "not held as long as a pod pushed to")
@@ -331,7 +331,7 @@ func TestPushConfiguration(t *testing.T) {
 	t.Run("a pod fails", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, nil)
 		f.pod().respond = failing(callEntities, http.StatusBadRequest)
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		require.ErrorContains(t, pushErr, "gw-admin pod gw-admin-0: failed to push the entities of the gateway")
 		assert.True(t, result.done)
@@ -342,7 +342,7 @@ func TestPushConfiguration(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 			return []client.Object{f.gateway}
 		})
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		assert.True(t, result.done)
 		assert.Nil(t, result.target)
@@ -353,7 +353,7 @@ func TestPushConfiguration(t *testing.T) {
 
 	t.Run("the gateway may not use the GWAdmin: it is removed", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
-		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		notReady, ok := errors.AsType[gwAdminNotReadyError](pushErr)
 		require.True(t, ok)
@@ -366,13 +366,13 @@ func TestPushConfiguration(t *testing.T) {
 	t.Run("the gateway may not use the GWAdmin, and a pod fails to remove it", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
 		f.pod().respond = failing(callDeleteGateway, http.StatusInternalServerError)
-		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		require.ErrorContains(t, pushErr, "failed to make gw-admin stop serving the gateway: gw-admin pod gw-admin-0")
 		assert.False(t, onlyNotReady(pushErr), "retried")
 
 		f.pod().reset()
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		assert.Positive(t, result.retryAfter, "after its backoff")
 		assert.Empty(t, f.pod().recorded(), "not removed again before its backoff")
@@ -384,7 +384,7 @@ func TestPushConfiguration(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
 		removed := []string{callExpected + " ", callDeleteGateway}
 		for range 2 {
-			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 			require.NoError(t, err)
 			assert.True(t, onlyNotReady(pushErr))
 		}
@@ -392,12 +392,12 @@ func TestPushConfiguration(t *testing.T) {
 
 		grant := gwadminreftest.Grant("admins", "gateways", ns, "")
 		require.NoError(t, f.cl.Create(t.Context(), grant))
-		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		require.NoError(t, pushErr)
 
 		require.NoError(t, f.cl.Delete(t.Context(), grant))
-		_, _, err = f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		_, _, err = f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.NoError(t, err)
 		pushed := []string{callGetEntities, callRegister, callEntities, callExpected + " " + f.gatewayID.String()}
 		assert.Equal(t, slices.Concat(removed, pushed, removed), f.pod().recorded(), "told again once no longer allowed")
@@ -409,7 +409,7 @@ func TestPushConfiguration(t *testing.T) {
 			return slices.DeleteFunc(objects, func(o client.Object) bool { return o == f.gwAdmin.ClientSecret })
 		})
 		for range 2 {
-			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 			require.NoError(t, err)
 			require.ErrorContains(t, pushErr, "gw-admin can't be told to stop serving the gateway yet: The operator client certificate Secret")
 			assert.True(t, onlyNotReady(pushErr), "a change to the GWAdmin triggers it again")
@@ -430,7 +430,7 @@ func TestPushConfiguration(t *testing.T) {
 			g.gateway.Spec.GWAdminRef.Namespace = new("admins")
 			return []client.Object{g.gateway}
 		})
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 		require.ErrorContains(t, err, "unavailable", "an error reading the cluster is only retried")
 		assert.True(t, result.done)
 		assert.True(t, onlyNotReady(pushErr), "the status reports the gateway may not use the GWAdmin")
@@ -465,7 +465,7 @@ func TestPushConfiguration(t *testing.T) {
 	for _, tc := range transient {
 		t.Run("not pushed, only retried: "+tc.name, func(t *testing.T) {
 			f := newPushFixture(t, tc.funcs, nil)
-			result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+			result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 			require.ErrorContains(t, err, tc.want)
 			require.NoError(t, pushErr, "not an error of the push: the status doesn't report it")
 			assert.False(t, result.done)
@@ -1533,7 +1533,7 @@ func TestReconcileWarnsWhenEveryPodIsPending(t *testing.T) {
 func TestRemovalRetriedOnceItsPodsChange(t *testing.T) {
 	f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
 	f.pod().respond = failing(callDeleteGateway, http.StatusInternalServerError)
-	result, _, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+	result, _, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 	require.NoError(t, err)
 	require.True(t, result.failed)
 	require.Positive(t, result.retryAfter)
@@ -1544,7 +1544,7 @@ func TestRemovalRetriedOnceItsPodsChange(t *testing.T) {
 	slice := read(t, f.cl, f.gwAdmin.EndpointSlice)
 	slice.Endpoints = []discoveryv1.Endpoint{endpoint("gw-admin-2", "10.0.0.1", false)}
 	require.NoError(t, f.cl.Update(t.Context(), slice))
-	result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
+	result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration(), nil)
 	require.NoError(t, err)
 	assert.Zero(t, result.retryAfter, "not waiting for its backoff")
 	assert.Equal(t, []string{callExpected + " ", callDeleteGateway}, f.pod().recorded())

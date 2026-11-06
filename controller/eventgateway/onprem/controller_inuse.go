@@ -47,6 +47,9 @@ var (
 	backendClusterType = reflect.TypeFor[*configurationv1alpha1.EventGatewayBackendCluster]()
 	producePolicyType  = reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy]()
 	consumePolicyType  = reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy]()
+	// The policies that aren't held, but whose references hold entities.
+	virtualClusterPolicyType = reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterPolicy]()
+	listenerPolicyType       = reflect.TypeFor[*configurationv1alpha1.EventGatewayListenerPolicy]()
 
 	// heldKinds are the kinds of entity FinalizerInUse can hold. A produce or
 	// consume policy is held while child policies name it as their parent:

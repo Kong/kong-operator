@@ -103,6 +103,16 @@ spec:
 			assert.Equal(t, "virtual cluster", inUse.What)
 		})
 
+		t.Run("returns Konnect's error when the listener policy isn't in Konnect", func(t *testing.T) {
+			pending := forward.DeepCopyObject().(*configurationv1alpha1.EventGatewayListenerPolicy)
+			pending.SetKonnectID("")
+			refused := badRequest()
+			err := deleteEventGatewayVirtualClusterGuarded(t.Context(), expectDelete(t, refused), newClient(t, pending), vc.DeepCopy())
+			_, blocked := errors.AsType[DeletionBlockedError](err)
+			assert.False(t, blocked)
+			assert.ErrorIs(t, err, refused)
+		})
+
 		t.Run("returns any other error as it is", func(t *testing.T) {
 			other := errors.New("unavailable")
 			err := deleteEventGatewayVirtualClusterGuarded(t.Context(), expectDelete(t, other), newClient(t, forward), vc.DeepCopy())

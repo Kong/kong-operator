@@ -12,22 +12,27 @@ import (
 )
 
 func TestReferrerChanged(t *testing.T) {
-	policy := func(generation int64, programmed metav1.ConditionStatus, reason string) *configurationv1alpha1.EventGatewayListenerPolicy {
+	policyObserving := func(generation, observedGeneration int64, programmed metav1.ConditionStatus, reason string) *configurationv1alpha1.EventGatewayListenerPolicy {
 		p := &configurationv1alpha1.EventGatewayListenerPolicy{Name: "p", Namespace: "default"}
 		p.SetGeneration(generation)
 		if programmed != "" {
-			p.SetConditions([]metav1.Condition{{Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: programmed, Reason: reason}})
+			p.SetConditions([]metav1.Condition{{
+				Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: programmed, Reason: reason,
+				ObservedGeneration: observedGeneration,
+			}})
 		}
 		return p
 	}
-	// otherStatusWrite changes all but the generation and the status and
-	// reason of Programmed: its message, observed generation and transition
-	// time, another condition and the Konnect ID.
+	policy := func(generation int64, programmed metav1.ConditionStatus, reason string) *configurationv1alpha1.EventGatewayListenerPolicy {
+		return policyObserving(generation, generation, programmed, reason)
+	}
+	// otherStatusWrite changes all but the generation and the status, reason
+	// and observed generation of Programmed: its message and transition time,
+	// another condition and the Konnect ID.
 	otherStatusWrite := func() *configurationv1alpha1.EventGatewayListenerPolicy {
 		p := policy(1, metav1.ConditionTrue, "Programmed")
 		conditions := p.GetConditions()
 		conditions[0].Message = "another message"
-		conditions[0].ObservedGeneration = 1
 		conditions[0].LastTransitionTime = metav1.Now()
 		p.SetConditions(append(conditions, metav1.Condition{Type: "Other", Status: metav1.ConditionTrue, Reason: "Other"}))
 		p.SetKonnectID("konnect-id")
@@ -42,6 +47,9 @@ func TestReferrerChanged(t *testing.T) {
 		"it is programmed":                     {policy(1, metav1.ConditionFalse, "Pending"), policy(1, metav1.ConditionTrue, "Programmed"), true},
 		"the reason of Programmed changes":     {policy(1, metav1.ConditionFalse, "Pending"), policy(1, metav1.ConditionFalse, "KonnectAPIOpFailed"), true},
 		"another status write leaves it alone": {policy(1, metav1.ConditionTrue, "Programmed"), otherStatusWrite(), false},
+		// E.g. it dropped a reference: its Konnect update is done once
+		// Programmed observes the generation of the spec change.
+		"Programmed observes its new generation": {policyObserving(2, 1, metav1.ConditionTrue, "Programmed"), policy(2, metav1.ConditionTrue, "Programmed"), true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.want, p.Update(event.UpdateEvent{ObjectOld: tc.old, ObjectNew: tc.new}))

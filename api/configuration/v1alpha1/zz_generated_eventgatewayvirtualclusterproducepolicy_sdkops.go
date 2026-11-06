@@ -476,6 +476,12 @@ func resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx context.C
 			errs = append(errs, fmt.Errorf("EventGatewayVirtualClusterProducePolicy %s/%s must have apiSpec.type schemaValidation", ns, ref.Name))
 			continue
 		}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue

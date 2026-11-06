@@ -107,6 +107,9 @@ type Reconciler struct {
 	// It is kept in memory: after a restart of the operator, an entity whose
 	// Secret is gone is left out.
 	lastEntities sync.Map
+	// lastConfigs holds, by gateway UID, the last configuration of the
+	// gateway that could be sent (see lastGoodConfig). Kept in memory too.
+	lastConfigs sync.Map
 	// reported holds, by gateway UID, the objects whose status was last
 	// reported for the gateway (see reportDetached). Kept in memory too.
 	reported sync.Map
@@ -224,6 +227,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
+	// A configuration with entities that can't be sent isn't pushed, nor
+	// recorded: gw-admin keeps the one it has, and so do the revision and the
+	// entities an entity whose Secret is gone is kept as.
+	blocked := cfg.blocked()
+	var last *lastGoodConfig
+	var notPushable error
+	if blocked != nil {
+		// What the last configuration that could be sent uses stays held:
+		// gw-admin still serves it, and a policy fixed back needs it.
+		last, notPushable = r.lastGoodConfigOf(gateway)
+		if notPushable != nil {
+			// E.g. after a restart of the operator: a gw-admin pod may hold it.
+			recovered, err := r.recoverLastConfig(ctx, gateway, gatewayID, cfg)
+			if err == nil {
+				last, notPushable = recovered, nil
+			} else {
+				notPushable = fmt.Errorf("%w, and it can't be read back: %w", notPushable, err)
+			}
+		}
+		if notPushable == nil {
+			cfg.entitiesInUse = mergeEntitiesInUse(cfg.entitiesInUse, last.inUse)
+		}
+	}
 	// An entity that can't be held or released doesn't hold back the
 	// configuration, nor what the status tells of it: one that changed since it
 	// was read triggers the gateway again, and an error is returned after the
@@ -238,15 +264,48 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	}
 	cfg.refreshResourceVersions(held)
 	config := deriveConfig(gateway, cfg)
-	if len(cfg.invalidChains) == 0 {
-		r.lastEntities.Store(gateway.UID, cfg.built)
-		if err := r.recordRevision(ctx, gateway, config); err != nil {
+	pushing := cfg
+	switch blocked {
+	case nil:
+		// A configuration with invalid policy chains isn't recorded either:
+		// pushConfiguration doesn't push it.
+		if len(cfg.invalidChains) == 0 {
+			r.lastEntities.Store(gateway.UID, cfg.built)
+			if err := r.recordRevision(ctx, gateway, config); err != nil {
+				return requeueOnConflict(logger, ctrl.Result{}, err)
+			}
+			// Remembered before any pod is pushed, like the revision.
+			if err := r.rememberConfig(gateway, config, cfg.entitiesInUse); err != nil {
+				return requeueOnConflict(logger, ctrl.Result{}, err)
+			}
+		}
+		config.Version = configVersion(gateway)
+	default:
+		// The pods are pushed the last configuration that could be sent,
+		// when it is the one the gateway records: those that hold it see
+		// nothing change, and one that lost it, e.g. restarted, gets it again.
+		// Otherwise, when no pod holds it either (see recoverLastConfig),
+		// they are only pushed the gateway and its data plane certificates,
+		// so that one deleted stops being trusted, and keep the entities they
+		// hold. Invalid policy chains stop that push too (see
+		// pushConfiguration).
+		if notPushable != nil {
+			log.Debug(logger, "no last configuration of the OnPremEventGateway is pushed", "reason", notPushable.Error())
+			break
+		}
+		if config, pushing, err = last.pushedAs(cfg); err != nil {
 			return requeueOnConflict(logger, ctrl.Result{}, err)
 		}
+		invalid, _ := errors.AsType[invalidEntitiesError](blocked)
+		invalid.serving = last.revision
+		blocked = invalid
 	}
-	config.Version = configVersion(gateway)
 
-	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config, cfg)
+	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config, pushing, blocked)
+	if blocked != nil {
+		// The push is stopped, whatever the pods were pushed.
+		pushErr = errors.Join(blocked, pushErr)
+	}
 	if !result.done {
 		// The push has no outcome yet, e.g. the gateways of the GWAdmin
 		// couldn't be listed: it is retried, and the status is left as it is.
@@ -406,9 +465,12 @@ type pushResult struct {
 // the error of the push, which the status of the gateway reports. Only the
 // outcome of the calls to gw-admin and the readiness of the GWAdmin are
 // errors of the push: any other error, e.g. listing the gateways of the
-// GWAdmin, is returned apart, and only retried.
+// GWAdmin, is returned apart, and only retried. A configuration blocked, with
+// entities that can't be sent, isn't pushed: blocked is the error of the push,
+// once the GWAdmin is resolved, so that the status still tells of it.
 func (r *Reconciler) pushConfiguration(
 	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, config gatewayConfig, cfg configuration,
+	blocked error,
 ) (result pushResult, pushErr error, err error) {
 	target, err := r.resolveGWAdmin(ctx, gateway, true)
 	if notReady, ok := errors.AsType[gwAdminNotReadyError](err); ok {
@@ -427,6 +489,10 @@ func (r *Reconciler) pushConfiguration(
 	// The gateway may use its GWAdmin again: if it may not anymore later,
 	// gw-admin is told to stop serving it.
 	r.removedFromGWAdmin.Delete(gateway.UID)
+	// A stopped push with no configuration to push leaves the entities the
+	// pods hold as they are.
+	invalid, isBlocked := errors.AsType[invalidEntitiesError](blocked)
+	withEntities := !isBlocked || invalid.serving != 0
 
 	certificatesKey, err := certificatesHash(cfg.certificates)
 	if err != nil {
@@ -455,7 +521,7 @@ func (r *Reconciler) pushConfiguration(
 				}
 				return nil
 			}
-			err := r.push(ctx, target, pod, gwAdmin, config, cfg, gatewayID, expected, certificates)
+			err := r.push(ctx, target, pod, gwAdmin, config, cfg, gatewayID, expected, certificates, withEntities)
 			if err != nil {
 				certificates.fail(pod)
 			}
@@ -667,6 +733,7 @@ func (r *Reconciler) forgetDeleted() predicate.Funcs {
 func (r *Reconciler) forget(uid types.UID) {
 	r.removedFromGWAdmin.Delete(uid)
 	r.lastEntities.Delete(uid)
+	r.lastConfigs.Delete(uid)
 	r.reported.Delete(uid)
 	r.backoff.Forget(uid)
 	r.pendingRetries().Forget(uid)

@@ -29,6 +29,14 @@ func (e invalidPolicyChainsError) Error() string {
 func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Client, virtualClusters parents) error {
 	var list configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
 	before := len(c.excluded)
+	// A chain left out doesn't hold back the configuration by itself, e.g. one
+	// competing for a virtual cluster another chain owns: invalidChains, of
+	// the chains owning their virtual cluster, does.
+	defer func() {
+		for i := before; i < len(c.excluded); i++ {
+			c.excluded[i].blocks = false
+		}
+	}()
 	chains, parentIndex, _, err := childrenOf(ctx, c, cl, &list, &list.Items,
 		index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterRef, virtualClusters)
 	if err != nil {
