@@ -62,6 +62,10 @@ jobs:
     outputs:
       writes: ${{ steps.writes.outputs.writes }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        with:
+          egress-policy: audit
       - name: Read whether the author can write to this repository
         id: writes
         env:
