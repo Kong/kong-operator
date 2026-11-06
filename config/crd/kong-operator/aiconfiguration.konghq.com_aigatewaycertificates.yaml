@@ -185,6 +185,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   certAlt:
                     description: |-
                       PEM-encoded public certificate chain of the alternative certificate.
@@ -241,6 +243,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   key:
                     description: PEM-encoded private key matching `cert`.
                     properties:
@@ -294,6 +298,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   keyAlt:
                     description: PEM-encoded private key matching `cert_alt`. Requires
                       `cert_alt` to be set.
@@ -348,6 +354,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   labels:
                     additionalProperties:
                       description: PublicLabelsValue is the value type for PublicLabels.

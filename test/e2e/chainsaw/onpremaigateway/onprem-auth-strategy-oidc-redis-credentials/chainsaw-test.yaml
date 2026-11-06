@@ -1,0 +1,103 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-auth-strategy-oidc-redis-credentials
+spec:
+  description: |
+    Redis and Sentinel passwords of an openid-connect AIGatewayAuthStrategy come
+    from a Secret (issue #6003). Two auth strategies cover the two Redis blocks:
+    `redis` and `clusterCacheRedis`, each with `password` and
+    `sentinelPassword`.
+
+    The operator pushes the gateway's whole configuration in one POST /config,
+    so a shape the data plane rejects leaves every entity on the gateway with
+    Programmed=False. Programmed=True here proves that the operator resolved
+    each secretRef and that the pushed document carries plain strings: an
+    unresolved SensitiveDataSource would reach the data plane as an object and
+    be rejected.
+
+    No traffic is driven: the Redis and Sentinel endpoints are not reachable,
+    and using the cache needs a live Redis, which is out of scope for a config
+    push test.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: redis_credentials_name
+      value: (join('-', [($test_name), 'redis-credentials']))
+    - name: redis_password_value
+      value: chainsaw-redis-password
+    - name: sentinel_password_value
+      value: chainsaw-sentinel-password
+    - name: redis_auth_strategy_name
+      value: (join('-', [($test_name), 'redis-auth-strategy']))
+    - name: cluster_redis_auth_strategy_name
+      value: (join('-', [($test_name), 'cluster-redis-auth-strategy']))
+    - name: oidc_issuer
+      value: https://oidc.example.com/.well-known/openid-configuration
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-redis-credentials-and-auth-strategies
+      try:
+        - apply:
+            file: 01-redis-credentials.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    # Entities report Programmed=False before the data plane exists, so the
+    # assertions must come after the data plane is ready.
+    - name: Assert-auth-strategies-pushed-to-dataplane
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAuthStrategy
+              metadata:
+                name: ($redis_auth_strategy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAuthStrategy
+              metadata:
+                name: ($cluster_redis_auth_strategy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: OnPremAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ConfigurationTranslated']):
+                  - status: 'True'
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-auth-strategy-oidc-redis-credentials
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

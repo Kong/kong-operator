@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -702,6 +703,7 @@ func (s *AIGatewayModelAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayModelAPISpec: %w", err)
 	}
+	rawPayload = flattenSensitiveDataExcept(rawPayload, AIGatewayModelSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayModelSDKOpsFreeformKeyFields)
@@ -816,6 +818,395 @@ func (s *AIGatewayModelAPISpec) toUpdateAIGatewayModelRequestFromPayload(payload
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayModel config variant %q", variant)
 	}
+}
+
+func (obj *AIGatewayModel) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*AIGatewayModelAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("AIGatewayModel is nil")
+	}
+
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
+	// Resolve spec.apiSpec.api.config.balancer.semantic.vectordb.pgvector.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.API != nil {
+			if apiSpec.AIGatewayModelConfig.API.Config.Balancer != nil {
+				if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic != nil {
+					if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb != nil {
+						if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector != nil {
+							{
+								src := apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector.Password
+								if src.Type == SensitiveDataSourceTypeSecretRef {
+									if src.SecretRef == nil {
+										return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.api.config.balancer.semantic.vectordb.pgvector.password")
+									}
+									namespace := obj.GetNamespace()
+									if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+										namespace = *src.SecretRef.Namespace
+									}
+									var secret corev1.Secret
+									if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+										return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+									}
+									secretBytes, ok := secret.Data[src.SecretRef.Key]
+									if !ok {
+										return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+									}
+									resolved := string(secretBytes)
+									apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector.Password.Value = &resolved
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.api.config.balancer.semantic.vectordb.redis.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.API != nil {
+			if apiSpec.AIGatewayModelConfig.API.Config.Balancer != nil {
+				if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic != nil {
+					if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb != nil {
+						if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							{
+								src := apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Password
+								if src.Type == SensitiveDataSourceTypeSecretRef {
+									if src.SecretRef == nil {
+										return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.api.config.balancer.semantic.vectordb.redis.password")
+									}
+									namespace := obj.GetNamespace()
+									if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+										namespace = *src.SecretRef.Namespace
+									}
+									var secret corev1.Secret
+									if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+										return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+									}
+									secretBytes, ok := secret.Data[src.SecretRef.Key]
+									if !ok {
+										return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+									}
+									resolved := string(secretBytes)
+									apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Password.Value = &resolved
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.api.config.balancer.semantic.vectordb.redis.sentinel.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.API != nil {
+			if apiSpec.AIGatewayModelConfig.API.Config.Balancer != nil {
+				if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic != nil {
+					if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb != nil {
+						if apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							{
+								src := apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password
+								if src.Type == SensitiveDataSourceTypeSecretRef {
+									if src.SecretRef == nil {
+										return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.api.config.balancer.semantic.vectordb.redis.sentinel.password")
+									}
+									namespace := obj.GetNamespace()
+									if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+										namespace = *src.SecretRef.Namespace
+									}
+									var secret corev1.Secret
+									if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+										return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+									}
+									secretBytes, ok := secret.Data[src.SecretRef.Key]
+									if !ok {
+										return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+									}
+									resolved := string(secretBytes)
+									apiSpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.Value = &resolved
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.model.config.balancer.semantic.vectordb.pgvector.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.Model != nil {
+			if apiSpec.AIGatewayModelConfig.Model.Config.Balancer != nil {
+				if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic != nil {
+					if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb != nil {
+						if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector != nil {
+							{
+								src := apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector.Password
+								if src.Type == SensitiveDataSourceTypeSecretRef {
+									if src.SecretRef == nil {
+										return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.model.config.balancer.semantic.vectordb.pgvector.password")
+									}
+									namespace := obj.GetNamespace()
+									if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+										namespace = *src.SecretRef.Namespace
+									}
+									var secret corev1.Secret
+									if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+										return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+									}
+									secretBytes, ok := secret.Data[src.SecretRef.Key]
+									if !ok {
+										return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+									}
+									resolved := string(secretBytes)
+									apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector.Password.Value = &resolved
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.model.config.balancer.semantic.vectordb.redis.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.Model != nil {
+			if apiSpec.AIGatewayModelConfig.Model.Config.Balancer != nil {
+				if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic != nil {
+					if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb != nil {
+						if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							{
+								src := apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Password
+								if src.Type == SensitiveDataSourceTypeSecretRef {
+									if src.SecretRef == nil {
+										return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.model.config.balancer.semantic.vectordb.redis.password")
+									}
+									namespace := obj.GetNamespace()
+									if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+										namespace = *src.SecretRef.Namespace
+									}
+									var secret corev1.Secret
+									if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+										return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+									}
+									secretBytes, ok := secret.Data[src.SecretRef.Key]
+									if !ok {
+										return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+									}
+									resolved := string(secretBytes)
+									apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Password.Value = &resolved
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.model.config.balancer.semantic.vectordb.redis.sentinel.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.Model != nil {
+			if apiSpec.AIGatewayModelConfig.Model.Config.Balancer != nil {
+				if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic != nil {
+					if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb != nil {
+						if apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							{
+								src := apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password
+								if src.Type == SensitiveDataSourceTypeSecretRef {
+									if src.SecretRef == nil {
+										return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.model.config.balancer.semantic.vectordb.redis.sentinel.password")
+									}
+									namespace := obj.GetNamespace()
+									if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+										namespace = *src.SecretRef.Namespace
+									}
+									var secret corev1.Secret
+									if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+										return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+									}
+									secretBytes, ok := secret.Data[src.SecretRef.Key]
+									if !ok {
+										return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+									}
+									resolved := string(secretBytes)
+									apiSpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.Value = &resolved
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.api.config.proxy.auth.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.API != nil {
+			{
+				src := apiSpec.AIGatewayModelConfig.API.Config.Proxy.Auth.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.api.config.proxy.auth.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelConfig.API.Config.Proxy.Auth.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.model.config.proxy.auth.password
+	if apiSpec.AIGatewayModelConfig != nil {
+		if apiSpec.AIGatewayModelConfig.Model != nil {
+			{
+				src := apiSpec.AIGatewayModelConfig.Model.Config.Proxy.Auth.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.model.config.proxy.auth.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelConfig.Model.Config.Proxy.Auth.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	return &apiSpec, nil
+}
+
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
+func (obj *AIGatewayModel) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.API != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer != nil {
+				if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic != nil {
+					if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb != nil {
+						if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector != nil {
+							if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector.Password.SecretRef != nil {
+								refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.PgVector.Password.SecretRef)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.API != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer != nil {
+				if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic != nil {
+					if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb != nil {
+						if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Password.SecretRef != nil {
+								refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Password.SecretRef)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.API != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer != nil {
+				if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic != nil {
+					if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb != nil {
+						if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.SecretRef != nil {
+								refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.SecretRef)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.Model != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer != nil {
+				if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic != nil {
+					if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb != nil {
+						if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector != nil {
+							if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector.Password.SecretRef != nil {
+								refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.PgVector.Password.SecretRef)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.Model != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer != nil {
+				if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic != nil {
+					if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb != nil {
+						if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Password.SecretRef != nil {
+								refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Password.SecretRef)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.Model != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer != nil {
+				if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic != nil {
+					if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb != nil {
+						if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis != nil {
+							if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.SecretRef != nil {
+								refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic.Vectordb.Redis.Sentinel.Password.SecretRef)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.API != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Proxy.Auth.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Proxy.Auth.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.API.Config.Proxy.Auth.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelConfig.Model != nil {
+			if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Proxy.Auth.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Proxy.Auth.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Proxy.Auth.Password.SecretRef)
+			}
+		}
+	}
+	return refs
 }
 
 // RefsAtAIGatewayModelAPIPolicies returns the references at spec.apiSpec.api.policies,
@@ -1790,9 +2181,12 @@ func (obj *AIGatewayModel) CrossNamespaceSiblingReferences() []CrossNamespaceRef
 }
 
 // ToCreateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
-// sdkkonnectcomp.CreateAIGatewayModelRequest, resolving referenced CRs via the provided client.
+// sdkkonnectcomp.CreateAIGatewayModelRequest, resolving referenced Secrets and CRs via the provided client.
 func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayModelRequest, error) {
-	spec := &obj.Spec.APISpec
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
@@ -2041,9 +2435,12 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 }
 
 // ToUpdateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayModelRequest, resolving referenced CRs via the provided client.
+// sdkkonnectcomp.UpdateAIGatewayModelRequest, resolving referenced Secrets and CRs via the provided client.
 func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayModelRequest, error) {
-	spec := &obj.Spec.APISpec
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err

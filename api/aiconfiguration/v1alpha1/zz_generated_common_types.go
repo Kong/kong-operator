@@ -82,6 +82,7 @@ const (
 // either inline or sourced from a Kubernetes Secret.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+// +kubebuilder:validation:XValidation:rule="!(has(self.value) && has(self.secretRef))",message="only one of value and secretRef can be set"
 type SensitiveDataSource struct {
 	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
 	//
@@ -109,6 +110,25 @@ func (s SensitiveDataSource) GetValue() string {
 		return ""
 	}
 	return *s.Value
+}
+
+// UnmarshalJSON accepts a bare JSON string and reads it as an inline value.
+// Releases before a field used SensitiveDataSource stored a plain string.
+// Without this, the operator's caches fail to decode those objects and cannot
+// list them. A new write still needs the object shape: the CRD schema rejects
+// a bare string, so an owner must migrate the value before any update.
+func (s *SensitiveDataSource) UnmarshalJSON(data []byte) error {
+	if len(data) > 0 && data[0] == '"' {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		s.Type = SensitiveDataSourceTypeInline
+		s.Value = &value
+		return nil
+	}
+	type plain SensitiveDataSource
+	return json.Unmarshal(data, (*plain)(s))
 }
 
 // ConfigMapDataSourceType is the type of source for ConfigMap-backed data.

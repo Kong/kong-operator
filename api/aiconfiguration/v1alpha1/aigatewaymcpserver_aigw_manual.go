@@ -17,13 +17,19 @@ import (
 // ToAIGWMCPServer converts the AIGatewayMCPServer into ai-deck-converter's aigw.MCPServer,
 // resolving the spec's CR references (policies, the listener's sources, the access block's
 // ACL consumer groups and auth strategies, and every tool's access ACLs) to the referenced
-// entities' names.
-//
-// It carries no secretRefs: the passthrough/upstream credentials are either {vault://...}
-// Token Vault references (passed through verbatim, resolved by the gateway at runtime) or
-// plain values, so unlike e.g. AIGatewayConsumer it needs no secret resolution.
+// entities' names, and the config's secretRefs (the session and token-vault Redis passwords
+// and the passthrough proxy's basic-auth password) to their Secret values.
 func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
-	spec := &obj.Spec.APISpec
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+
+	// Resolve secretRefs against a copy: sdkOpsAPISpec deep-copies the spec, so the
+	// caller's object is not mutated.
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))
+	}
 	if spec.AIGatewayMCPServerConfig == nil {
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
 	}
@@ -72,7 +78,7 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: unsupported spec.apiSpec.type %q", obj.Namespace, obj.Name, spec.Type)
 	}
 
-	data, err := obj.marshalAIGWMCPServerPayload()
+	data, err := spec.marshalAIGWMCPServerPayload()
 	if err != nil {
 		return nil, fmt.Errorf("marshaling AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
@@ -265,8 +271,7 @@ func mcpServerRefs(refs []AIGatewayMCPServerRef) []namespacedRef {
 //     carries it under (the listener variant has no config.url and needs no move),
 //   - drops config.cache and config.allowed_versions: they have no aigw slot, the on-prem
 //     document format cannot express them.
-func (obj *AIGatewayMCPServer) marshalAIGWMCPServerPayload() ([]byte, error) {
-	spec := &obj.Spec.APISpec
+func (spec *AIGatewayMCPServerAPISpec) marshalAIGWMCPServerPayload() ([]byte, error) {
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err

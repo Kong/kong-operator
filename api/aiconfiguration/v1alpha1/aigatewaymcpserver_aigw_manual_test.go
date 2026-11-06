@@ -560,7 +560,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 			},
 		},
 	}
-	data, err := obj.marshalAIGWMCPServerPayload()
+	data, err := obj.Spec.APISpec.marshalAIGWMCPServerPayload()
 	require.NoError(t, err)
 
 	dec := yaml.NewDecoder(bytes.NewReader(data))
@@ -588,6 +588,68 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 	require.Len(t, mcp.Tools, 1)
 	require.NotNil(t, mcp.Tools[0].Annotations["read_only_hint"])
 	require.True(t, mcp.Tools[0].Annotations["read_only_hint"].(bool))
+}
+
+// TestAIGatewayMCPServer_ToAIGWMCPServer_ResolvesRedisCredentials pins that the
+// passthrough proxy's basic-auth password and the session Redis password come
+// from their Secrets when they use the SensitiveDataSource secretRef shape.
+func TestAIGatewayMCPServer_ToAIGWMCPServer_ResolvesRedisCredentials(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	obj := &AIGatewayMCPServer{
+		Name: "github-mcp", Namespace: "default",
+		Spec: AIGatewayMCPServerSpec{
+			APISpec: AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+					Type: AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+						Name: "github-mcp",
+						Config: AIGatewayMCPServerWithUpstreamConfig{
+							URL: "https://api.githubcopilot.com/mcp",
+							Proxy: AIGatewayProxyConfig{
+								Auth: AIGatewayProxyConfigAuth{
+									Username: "proxy-user",
+									Password: redisPasswordRef("mcp-credentials", "proxyPassword"),
+								},
+							},
+							Server: AIGatewayMCPServerWithUpstreamConfigServer{
+								Session: AIGatewayMCPServerWithUpstreamConfigServerSession{
+									Redis: AIGatewayRedisCloudConfiguration{
+										Host:     "redis.example.com",
+										Password: redisPasswordRef("mcp-credentials", "redisPassword"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(&corev1.Secret{
+		Name: "mcp-credentials", Namespace: "default",
+		Data: map[string][]byte{
+			"proxyPassword": []byte("proxy-pass"),
+			"redisPassword": []byte("redis-pass"),
+		},
+	}).Build()
+
+	got, err := obj.ToAIGWMCPServer(t.Context(), cl)
+	require.NoError(t, err)
+	require.NotNil(t, got.Config.Proxy)
+	require.NotNil(t, got.Config.Proxy.Auth)
+	require.Equal(t, "proxy-pass", got.Config.Proxy.Auth.Password)
+
+	session, ok := got.Config.Server["session"].(map[string]any)
+	require.True(t, ok)
+	redis, ok := session["redis"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "redis-pass", redis["password"])
 }
 
 // The server-level ACL union is flattened in the CRD, so the SDK payload

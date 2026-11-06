@@ -87,7 +87,9 @@ spec:
                 dimensions: 1536
                 distanceMetric: cosine
                 host: pgvector.example.com
-                password: pgvector-password
+                password:
+                  type: inline
+                  value: pgvector-password
                 port: 5432
                 threshold: 0.7
                 ssl:

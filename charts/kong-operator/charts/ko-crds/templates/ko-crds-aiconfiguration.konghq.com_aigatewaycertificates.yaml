@@ -128,6 +128,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   certAlt:
                     properties:
                       secretRef:
@@ -163,6 +165,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   key:
                     properties:
                       secretRef:
@@ -198,6 +202,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   keyAlt:
                     properties:
                       secretRef:
@@ -233,6 +239,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   labels:
                     additionalProperties:
                       maxLength: 63

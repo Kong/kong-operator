@@ -19,6 +19,8 @@ const (
 	IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef = "aiGatewayAgentOnAIGatewayConsumerGroupRef"
 	// IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef is the index field for AIGatewayAgent -> AIGatewayAuthStrategy.
 	IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef = "aiGatewayAgentOnAIGatewayAuthStrategyRef"
+	// IndexFieldAIGatewayAgentOnSecretRef is the index field for AIGatewayAgent -> the Secrets it reads.
+	IndexFieldAIGatewayAgentOnSecretRef = "aiGatewayAgentOnSecretRef"
 )
 
 // OptionsForAIGatewayAgent returns required Index options for AIGatewayAgent reconciler.
@@ -48,6 +50,11 @@ func OptionsForAIGatewayAgent() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef,
 			ExtractValueFn: aiGatewayAgentOnAIGatewayAuthStrategyRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
+			Field:          IndexFieldAIGatewayAgentOnSecretRef,
+			ExtractValueFn: aiGatewayAgentOnSecretRef,
 		},
 	}
 }
@@ -156,6 +163,23 @@ func aiGatewayAgentOnAIGatewayAuthStrategyRef(object client.Object) []string {
 		ns := ref.Namespace
 		if ns == "" {
 			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayAgentOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}

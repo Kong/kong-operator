@@ -333,6 +333,44 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 	}
 }
 
+// TestAIGatewayAgent_ToAIGWAgent_ResolvesProxyPassword pins that the proxy's
+// basic-auth password comes from its Secret when it uses the SensitiveDataSource
+// secretRef shape.
+func TestAIGatewayAgent_ToAIGWAgent_ResolvesProxyPassword(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	obj := &AIGatewayAgent{
+		Name: "sample-agent", Namespace: "default",
+		Spec: AIGatewayAgentSpec{
+			APISpec: AIGatewayAgentAPISpec{
+				Config: AIGatewayAgentConfig{
+					Proxy: AIGatewayProxyConfig{
+						Auth: AIGatewayProxyConfigAuth{
+							Username: "proxy-user",
+							Password: redisPasswordRef("agent-credentials", "proxyPassword"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(&corev1.Secret{
+		Name: "agent-credentials", Namespace: "default",
+		Data: map[string][]byte{"proxyPassword": []byte("proxy-pass")},
+	}).Build()
+
+	got, err := obj.ToAIGWAgent(t.Context(), cl)
+	require.NoError(t, err)
+	require.NotNil(t, got.Config.Proxy)
+	require.NotNil(t, got.Config.Proxy.Auth)
+	require.Equal(t, "proxy-pass", got.Config.Proxy.Auth.Password)
+}
+
 // TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip guards against a dropped or renamed
 // field: it decodes marshalAIGWAgentPayload's output with yaml.v3's KnownFields(true),
 // which errors on any key aigw.Agent doesn't recognize. See

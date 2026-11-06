@@ -53,3 +53,41 @@ func TestSDKOpsAPISpec_SecretInSliceDoesNotMutateObject(t *testing.T) {
 	assert.Equal(t, "Bearer sk-secret", resolved.Openai.Config.Auth.Headers[0].Value.GetValue())
 	assert.Nil(t, obj.Spec.APISpec.Openai.Config.Auth.Headers[0].Value.Value, "resolved Secret value leaked into the object")
 }
+
+// TestSDKOpsAPISpec_ResolvesTokenVaultRedisPassword covers the Redis password of
+// the token-vault cache, a shared AIGatewayRedisCloudConfiguration used by both
+// AIGatewayModelProvider and AIGatewayMCPServer.
+func TestSDKOpsAPISpec_ResolvesTokenVaultRedisPassword(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&corev1.Secret{
+		Name: "redis-cache", Namespace: "default",
+		Data: map[string][]byte{"password": []byte("redis-pass")},
+	}).Build()
+
+	obj := &AIGatewayModelProvider{
+		Name: "provider", Namespace: "default",
+		Spec: AIGatewayModelProviderSpec{
+			APISpec: AIGatewayModelProviderAPISpec{
+				AIGatewayModelProviderConfig: &AIGatewayModelProviderConfig{
+					Type: AIGatewayModelProviderConfigTypeOpenai,
+					Openai: &AIGatewayModelProviderOpenai{
+						Name: "openai-provider",
+						TokenVault: AIGatewayTokenVault{
+							Cache: AIGatewayTokenVaultCache{
+								Redis: AIGatewayRedisCloudConfiguration{
+									Password: redisPasswordRef("redis-cache", "password"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	resolved, err := obj.sdkOpsAPISpec(t.Context(), cl)
+	require.NoError(t, err)
+	require.Equal(t, "redis-pass", resolved.Openai.TokenVault.Cache.Redis.Password.GetValue())
+	assert.Nil(t, obj.Spec.APISpec.Openai.TokenVault.Cache.Redis.Password.Value, "resolved Secret value leaked into the object")
+}

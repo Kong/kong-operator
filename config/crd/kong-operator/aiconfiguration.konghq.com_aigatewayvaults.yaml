@@ -466,6 +466,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           base64Decode:
                             description: |-
                               Decode all secrets in this vault as base64. Useful for binary data.
@@ -899,6 +901,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               secretIDFile:
                                 description: |-
                                   Path to a file containing the AppRole secret ID.
@@ -1104,6 +1109,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               assumeRoleArn:
                                 description: |-
                                   The ARN of the role to assume for AWS IAM authentication.
@@ -1252,6 +1260,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               sslVerify:
                                 description: Whether to verify the TLS certificate
                                   of the vault when connecting.
@@ -1450,6 +1461,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               host:
                                 description: The hostname of your HashiCorp vault.
                                 maxLength: 253
@@ -1511,6 +1525,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               kv:
                                 description: The secrets engine version.
                                 enum:
@@ -1811,6 +1828,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               sslVerify:
                                 description: Whether to verify the TLS certificate
                                   of the vault when connecting.
@@ -1912,6 +1932,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               host:
                                 description: The hostname of your HashiCorp vault.
                                 maxLength: 253
@@ -2231,6 +2254,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               ttl:
                                 description: |-
                                   Time-to-live (in seconds) for a cached secret.

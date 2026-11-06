@@ -132,14 +132,16 @@ var secretRefNotifierFuncs = []func(
 	cn *changenotifier.ChangeNotifier,
 	log logr.Logger,
 ) error{
+	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayAgentList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayAuthStrategyList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayCACertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayCertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDatastoreList],
+	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayMCPServerList],
+	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayModelList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayModelProviderList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayPolicyList],
-	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDatastoreList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayVaultList],
 	notifyConsumersForCredentialSecrets,
 }

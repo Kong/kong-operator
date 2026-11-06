@@ -3161,6 +3161,1140 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 			}
 		}
 	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Anthropic != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Azure != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Baseten != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Bedrock != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Cerebras != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Cohere != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Dashscope != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Databricks != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Deepseek != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Gemini != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Huggingface != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Kimi != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Llama2 != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Mistral != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Ollama != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Openai != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Sagemaker != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Vercel != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Vllm != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Xai != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Anthropic != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Azure != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Baseten != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Bedrock != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Cerebras != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Cohere != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Dashscope != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Databricks != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Deepseek != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Gemini != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Huggingface != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Kimi != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Llama2 != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Mistral != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Ollama != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Openai != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Sagemaker != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Vercel != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Vllm != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Xai != nil {
+			{
+				src := apiSpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Sentinel.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.tokenVault.cache.redis.sentinel.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Sentinel.Password.Value = &resolved
+				}
+			}
+		}
+	}
 	return &apiSpec, nil
 }
 
@@ -3610,6 +4744,300 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 						refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.SecretRef)
 					}
 				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2 != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2 != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai != nil {
+			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Sentinel.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Sentinel.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai.TokenVault.Cache.Redis.Sentinel.Password.SecretRef)
 			}
 		}
 	}

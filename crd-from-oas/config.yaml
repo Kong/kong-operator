@@ -40,6 +40,16 @@ apiGroupVersions:
         dataSources:
           - path: spec.apiSpec.openid-connect.config.clientSecret
             type: Secret
+          # Redis and Sentinel credentials of the OIDC session cache. See
+          # https://github.com/Kong/kong-operator/issues/6003.
+          - path: spec.apiSpec.openid-connect.config.clusterCacheRedis.password
+            type: Secret
+          - path: spec.apiSpec.openid-connect.config.clusterCacheRedis.sentinelPassword
+            type: Secret
+          - path: spec.apiSpec.openid-connect.config.redis.password
+            type: Secret
+          - path: spec.apiSpec.openid-connect.config.redis.sentinelPassword
+            type: Secret
         # datastores are AIGatewayDatastore references (by metadata.name in the
         # same namespace, resolved to their Konnect names). Konnect refuses to
         # delete a datastore while an auth strategy uses it, so the
@@ -74,6 +84,26 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
+        dataSources:
+          # Vector DB credentials and the proxy's basic-auth password. The
+          # balancer config repeats under both union variants (api and model),
+          # so each branch needs its own entry.
+          - path: spec.apiSpec.api.config.balancer.semantic.vectordb.pgvector.password
+            type: Secret
+          - path: spec.apiSpec.api.config.balancer.semantic.vectordb.redis.password
+            type: Secret
+          - path: spec.apiSpec.api.config.balancer.semantic.vectordb.redis.sentinel.password
+            type: Secret
+          - path: spec.apiSpec.model.config.balancer.semantic.vectordb.pgvector.password
+            type: Secret
+          - path: spec.apiSpec.model.config.balancer.semantic.vectordb.redis.password
+            type: Secret
+          - path: spec.apiSpec.model.config.balancer.semantic.vectordb.redis.sentinel.password
+            type: Secret
+          - path: spec.apiSpec.api.config.proxy.auth.password
+            type: Secret
+          - path: spec.apiSpec.model.config.proxy.auth.password
+            type: Secret
         # AIGatewayModelRouteConfig's "model" field is an inline oneOf whose
         # variants have no OAS discriminator/$ref, so they'd otherwise generate
         # as generic Variant1/Variant2/Variant3. Name them from their OAS
@@ -184,6 +214,11 @@ apiGroupVersions:
           - path: spec.apiSpec.azure.config.auth.azure.clientSecret
             type: Secret
           - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
+            type: Secret
+          # Redis credentials of the token-vault cache.
+          - path: spec.apiSpec.*.tokenVault.cache.redis.password
+            type: Secret
+          - path: spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
             type: Secret
         # datastores are AIGatewayDatastore references (by metadata.name in the
         # same namespace, resolved to their Konnect names). A provider holds one
@@ -316,6 +351,11 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
+        dataSources:
+          # The proxy's basic-auth password. Same shared type as AIGatewayModel
+          # and AIGatewayMCPServer.
+          - path: spec.apiSpec.config.proxy.auth.password
+            type: Secret
         references:
           - path: spec.apiSpec.policies
             kinds: [AIGatewayPolicy]
@@ -407,6 +447,20 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/mcp-servers
         name: AIGatewayMCPServer
+        dataSources:
+          # Redis credentials of the session store and of the token-vault cache,
+          # plus the passthrough proxy's basic-auth password. Wildcards fan out
+          # over the root union and skip the variants that do not have the field.
+          - path: spec.apiSpec.*.config.server.session.redis.password
+            type: Secret
+          - path: spec.apiSpec.*.config.server.session.redis.sentinel.password
+            type: Secret
+          - path: spec.apiSpec.*.tokenVault.cache.redis.password
+            type: Secret
+          - path: spec.apiSpec.*.tokenVault.cache.redis.sentinel.password
+            type: Secret
+          - path: spec.apiSpec.*.config.proxy.auth.password
+            type: Secret
         references:
           - path: spec.apiSpec.conversion-listener.policies
             kinds: [AIGatewayPolicy]

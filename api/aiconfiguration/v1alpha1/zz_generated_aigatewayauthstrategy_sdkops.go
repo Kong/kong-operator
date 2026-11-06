@@ -948,6 +948,114 @@ func (obj *AIGatewayAuthStrategy) sdkOpsAPISpec(ctx context.Context, cl client.C
 			}
 		}
 	}
+	// Resolve spec.apiSpec.openid-connect.config.clusterCacheRedis.password
+	if apiSpec.AIGatewayAuthStrategyConfig != nil {
+		if apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			{
+				src := apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.openid-connect.config.clusterCacheRedis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.openid-connect.config.clusterCacheRedis.sentinelPassword
+	if apiSpec.AIGatewayAuthStrategyConfig != nil {
+		if apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			{
+				src := apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.SentinelPassword
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.openid-connect.config.clusterCacheRedis.sentinelPassword")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.SentinelPassword.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.openid-connect.config.redis.password
+	if apiSpec.AIGatewayAuthStrategyConfig != nil {
+		if apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			{
+				src := apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.Password
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.openid-connect.config.redis.password")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.Password.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.openid-connect.config.redis.sentinelPassword
+	if apiSpec.AIGatewayAuthStrategyConfig != nil {
+		if apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			{
+				src := apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.SentinelPassword
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.openid-connect.config.redis.sentinelPassword")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.SentinelPassword.Value = &resolved
+				}
+			}
+		}
+	}
 	return &apiSpec, nil
 }
 
@@ -963,6 +1071,34 @@ func (obj *AIGatewayAuthStrategy) GetSensitiveDataSecretRefs() []SensitiveDataSe
 				if item.Type == SensitiveDataSourceTypeSecretRef && item.SecretRef != nil {
 					refs = append(refs, *item.SecretRef)
 				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.SentinelPassword.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.SentinelPassword.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClusterCacheRedis.SentinelPassword.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.Password.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.Password.SecretRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+			if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.SentinelPassword.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.SentinelPassword.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.Redis.SentinelPassword.SecretRef)
 			}
 		}
 	}

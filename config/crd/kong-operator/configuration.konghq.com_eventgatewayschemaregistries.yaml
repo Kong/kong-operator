@@ -139,6 +139,9 @@ spec:
                                         required when type=secretRef
                                       rule: 'self.type == ''inline'' ? has(self.value)
                                         : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   username:
                                     description: |-
                                       A literal value or a reference to an existing secret as a template string

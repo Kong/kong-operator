@@ -36,11 +36,12 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		obj     *AIGatewayAuthStrategy
-		objects []runtime.Object
-		want    *aigw.AuthStrategy
-		wantErr string
+		name           string
+		obj            *AIGatewayAuthStrategy
+		objects        []runtime.Object
+		want           *aigw.AuthStrategy
+		wantSecretRefs []SensitiveDataSecretRef
+		wantErr        string
 	}{
 		{
 			name: "key-auth lifted to the flat aigw shape, managed_by dropped",
@@ -103,6 +104,77 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 					"cache_tokens_salt": "my-cache-salt",
 					"client_id":         []any{"my-client-id"},
 					"client_secret":     []any{"s3cr3t"},
+				},
+			},
+		},
+		{
+			// Issue #6003: the OIDC session cache's Redis and Sentinel passwords
+			// accept secretRefs like clientSecret does.
+			name: "openid-connect Redis and Sentinel passwords resolved from a Secret",
+			obj: &AIGatewayAuthStrategy{
+				Name: "ai-gw-auth-strategy-oidc-redis", Namespace: "default",
+				Spec: AIGatewayAuthStrategySpec{
+					APISpec: AIGatewayAuthStrategyAPISpec{
+						AIGatewayAuthStrategyConfig: &AIGatewayAuthStrategyConfig{
+							Type: AIGatewayAuthStrategyConfigTypeOpenIDConnect,
+							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
+								Name:        "my-oidc-provider-redis",
+								DisplayName: "My OpenID Connect Identity Provider",
+								Config: AIGWOpenIDConnectGeneratedConfig{
+									ClusterCacheRedis: AIGWOpenIDConnectGeneratedConfigClusterCacheRedis{
+										Password:         redisPasswordRef("oidc-redis", "clusterPassword"),
+										SentinelPassword: redisPasswordRef("oidc-redis", "clusterSentinelPassword"),
+									},
+									Redis: AIGWOpenIDConnectGeneratedConfigRedis{
+										Password:         redisPasswordRef("oidc-redis", "redisPassword"),
+										SentinelPassword: redisPasswordRef("oidc-redis", "redisSentinelPassword"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{&corev1.Secret{
+				Name: "oidc-redis", Namespace: "default",
+				Data: map[string][]byte{
+					"clusterPassword":         []byte("redis-pass"),
+					"clusterSentinelPassword": []byte("sentinel-pass"),
+					"redisPassword":           []byte("redis-pass"),
+					"redisSentinelPassword":   []byte("sentinel-pass"),
+				},
+			}},
+			want: &aigw.AuthStrategy{
+				Type:        "openid-connect",
+				Name:        "my-oidc-provider-redis",
+				DisplayName: "My OpenID Connect Identity Provider",
+				Config: map[string]any{
+					"cluster_cache_redis": map[string]any{
+						"password":          "redis-pass",
+						"sentinel_password": "sentinel-pass",
+					},
+					"redis": map[string]any{
+						"password":          "redis-pass",
+						"sentinel_password": "sentinel-pass",
+					},
+				},
+			},
+			wantSecretRefs: []SensitiveDataSecretRef{
+				{
+					Name: "oidc-redis",
+					Key:  "clusterPassword",
+				},
+				{
+					Name: "oidc-redis",
+					Key:  "clusterSentinelPassword",
+				},
+				{
+					Name: "oidc-redis",
+					Key:  "redisPassword",
+				},
+				{
+					Name: "oidc-redis",
+					Key:  "redisSentinelPassword",
 				},
 			},
 		},
@@ -197,7 +269,19 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
+			if tt.wantSecretRefs != nil {
+				require.Equal(t, tt.wantSecretRefs, tt.obj.GetSensitiveDataSecretRefs())
+			}
 		})
+	}
+}
+
+// redisPasswordRef builds a secretRef-backed password leaf. Shared by the on-prem
+// translator tests that cover the Redis credential fields.
+func redisPasswordRef(name, key string) SensitiveDataSource {
+	return SensitiveDataSource{
+		Type:      SensitiveDataSourceTypeSecretRef,
+		SecretRef: &SensitiveDataSecretRef{Name: name, Key: key},
 	}
 }
 
