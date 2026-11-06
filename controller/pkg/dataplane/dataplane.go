@@ -589,6 +589,9 @@ func (r *Reconciler[T, Cert]) validateControlPlaneKind(cpKind ControlPlaneKindCo
 	if cpKind.Dependencies != nil && cpKind.Conditions.NotReadyReason == "" {
 		return fmt.Errorf("Conditions: NotReadyReason must be set when Dependencies is set")
 	}
+	if cpKind.EndpointCheck != nil && cpKind.Conditions.EndpointMismatchReason == "" {
+		return fmt.Errorf("Conditions: EndpointMismatchReason must be set when EndpointCheck is set")
+	}
 	reg := cpKind.CertificateRegistration
 	if reg == nil {
 		return nil
@@ -662,15 +665,17 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 			}
 		}
 		if err != nil {
-			// A missing, not yet Programmed, or not yet Ready control plane is
-			// an expected, user-fixable state: resolveControlPlane has set the
-			// resolution condition and the control plane watch re-triggers the
-			// reconcile once the control plane appears or becomes healthy, so
-			// there is no need to retry with error backoff. Nor is there for a
-			// disabled kind: only a restart of the operator enables it.
+			// A missing, not yet Programmed, not yet Ready, or endpoint-mismatched
+			// control plane is an expected, user-fixable state: resolveControlPlane
+			// has set the resolution condition and the control plane watch
+			// re-triggers the reconcile once the control plane appears or becomes
+			// healthy, so there is no need to retry with error backoff. Nor is
+			// there for a disabled kind: only a restart of the operator enables
+			// it.
 			if apierrors.IsNotFound(err) ||
 				errors.Is(err, errControlPlaneNotProgrammed) ||
 				errors.Is(err, errControlPlaneNotReady) ||
+				errors.Is(err, errEndpointsMismatch) ||
 				errors.Is(err, errControlPlaneKindDisabled) {
 				return ctrl.Result{}, nil
 			}

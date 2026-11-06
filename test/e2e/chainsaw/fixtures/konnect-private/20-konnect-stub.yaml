@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: konnect-stub
+  namespace: konnect-private-stub
+  labels:
+    app: konnect-stub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: konnect-stub
+  template:
+    metadata:
+      labels:
+        app: konnect-stub
+    spec:
+      containers:
+        - name: kong
+          image: kong:3.9
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: /kong/declarative/kong.yml
+            - name: KONG_PROXY_LISTEN
+              value: 0.0.0.0:8443 ssl
+            - name: KONG_SSL_CERT
+              value: /certs/tls.crt
+            - name: KONG_SSL_CERT_KEY
+              value: /certs/tls.key
+            - name: KONG_ADMIN_LISTEN
+              value: "off"
+            - name: KONG_STATUS_LISTEN
+              value: 0.0.0.0:8100
+          ports:
+            - name: https
+              containerPort: 8443
+            - name: status
+              containerPort: 8100
+          # The declarative config and the certificate are read at startup: a
+          # restart is what applies a change to either.
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: status
+            initialDelaySeconds: 2
+            periodSeconds: 2
+            failureThreshold: 30
+          volumeMounts:
+            - name: declarative
+              mountPath: /kong/declarative
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+      volumes:
+        - name: declarative
+          configMap:
+            name: konnect-stub-config
+        - name: certs
+          secret:
+            secretName: konnect-stub-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: konnect-stub
+  namespace: konnect-private-stub
+spec:
+  selector:
+    app: konnect-stub
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
