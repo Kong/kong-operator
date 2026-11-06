@@ -7,7 +7,7 @@
 # running both suites (in either order) shares one mock stack.
 #
 # Optional env (forwarded to the aigateway prereq script):
-#   OLLAMA_TIMEOUT      Rollout timeout for the Ollama deployment. Default: 600s.
+#   OLLAMA_TIMEOUT      Rollout timeout for the Ollama deployment. Default: 900s.
 #   KONG_MOCK_TIMEOUT   Rollout timeout for the kong-mock deployment. Default: 180s.
 set -o errexit
 set -o nounset

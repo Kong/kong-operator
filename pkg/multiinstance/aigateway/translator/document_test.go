@@ -1973,27 +1973,41 @@ func TestIsEntityScopedFailure(t *testing.T) {
 	}
 }
 
-func TestTranslatedNamesRecord(t *testing.T) {
+func TestEntityOutcomesRecord(t *testing.T) {
 	failure := errors.New("failure")
-	names := make(translatedNames)
+	outcomes := make(entityOutcomes)
+	record := func(name string, err error) {
+		p := &aiconfigurationv1alpha1.AIGatewayPolicy{}
+		p.Spec.APISpec.Name = aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name)
+		outcomes.record(EntityStatus{Obj: p, Err: err})
+	}
 
-	names.record("failed-then-ok", failure)
-	names.record("failed-then-ok", nil)
-	names.record("ok-then-failed", nil)
-	names.record("ok-then-failed", failure)
-	names.record("failed", failure)
-	names.record("failed", errors.New("later failure"))
+	record("failed-then-ok", failure)
+	record("failed-then-ok", nil)
+	record("ok-then-failed", nil)
+	record("ok-then-failed", failure)
+	record("failed", failure)
+	record("failed", errors.New("later failure"))
 
 	// A success wins: the document holds an entity of that name.
-	require.NoError(t, checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed-then-ok", "ok-then-failed"}))
+	require.NoError(t, checkTranslatedRefs(outcomes, "AIGatewayPolicy", []string{"failed-then-ok", "ok-then-failed"}))
 
-	err := checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed"})
+	err := checkTranslatedRefs(outcomes, "AIGatewayPolicy", []string{"failed"})
 	require.ErrorIs(t, err, failure, "the first failure is kept as the cause")
 	require.EqualError(t, err, `referenced AIGatewayPolicy "failed" was excluded from the document: its own translation failed, or it references an excluded server`)
 
-	err = checkTranslatedRefs(names, "AIGatewayPolicy", []string{"unknown"})
+	err = checkTranslatedRefs(outcomes, "AIGatewayPolicy", []string{"unknown"})
 	require.Error(t, err)
 	require.NoError(t, errors.Unwrap(err))
+
+	// The outcomes are per kind: a policy name does not satisfy another kind.
+	require.Error(t, checkTranslatedRefs(outcomes, "AIGatewayAuthStrategy", []string{"failed-then-ok"}))
+
+	// A datastore is keyed by its CR key, not its entity name.
+	d := aiGatewayDatastoreFixture("datastore")
+	outcomes.record(EntityStatus{Obj: d})
+	require.NoError(t, checkTranslatedDatastores(outcomes, []client.ObjectKey{client.ObjectKeyFromObject(d)}))
+	require.Error(t, checkTranslatedRefs(outcomes, "AIGatewayDatastore", []string{d.GetKonnectName()}))
 }
 
 // aiGatewayDatastoreFixture returns a redis-ce datastore whose entity name is "shared-redis",
@@ -2127,10 +2141,41 @@ func TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails(t *testing.T) 
 
 	require.ErrorContains(t, findStatusByName(t, statuses, "datastore").Err, "does-not-exist")
 	for _, name := range []string{"policy", "model", "provider", "mcp-server-a", "auth-strategy"} {
-		require.ErrorContains(
-			t, findStatusByName(t, statuses, name).Err,
-			"referenced AIGatewayDatastore default/datastore was excluded from the document",
-		)
+		err := findStatusByName(t, statuses, name).Err
+		require.ErrorContains(t, err, `referenced AIGatewayDatastore "default/datastore" was excluded from the document`)
+		// A missing Secret is not entity-scoped, so the referrers fail the gateway too.
+		require.False(t, IsEntityScopedFailure(err), name)
+	}
+}
+
+// TestBuildDocument_DatastoreReferrersOfGrantDeniedDatastoreAreEntityScoped pins the cause
+// chain through the datastore references: a datastore excluded because no KongReferenceGrant
+// allows its cross-namespace secretRef only excludes the entities that reference it.
+func TestBuildDocument_DatastoreReferrersOfGrantDeniedDatastoreAreEntityScoped(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	denied := aiGatewayDatastoreFixture("datastore")
+	denied.Spec.APISpec.RedisCE.Config.Password = aiconfigurationv1alpha1.SensitiveDataSource{
+		Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+			Name: "redis", Key: "password", Namespace: new("secrets"),
+		},
+	}
+	objs := append([]client.Object{gw, denied}, datastoreRefsReferrers("datastore")...)
+
+	_, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, objs...).Build(), client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	for _, name := range []string{"datastore", "policy", "model", "provider", "mcp-server-a", "auth-strategy"} {
+		err := findStatusByName(t, statuses, name).Err
+		require.Error(t, err, name)
+		require.True(t, IsEntityScopedFailure(err), "%s: %v", name, err)
 	}
 }
 
@@ -2157,4 +2202,44 @@ func TestBuildDocument_DatastoreDuplicateEntityNameRejected(t *testing.T) {
 	require.NoError(t, findStatusByName(t, statuses, "datastore-a").Err)
 	require.ErrorContains(t, findStatusByName(t, statuses, "datastore-b").Err,
 		`duplicate datastore name "shared-redis"`)
+}
+
+// TestBuildDocument_DependentOfGatewayRefDeniedEntityIsEntityScoped pins the cause chain
+// of a denied cross-namespace aiGatewayRef: the denied entity never converts, so
+// translateKind records its failure, and an entity referencing it is excluded as
+// entity-scoped instead of failing the gateway.
+func TestBuildDocument_DependentOfGatewayRefDeniedEntityIsEntityScoped(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	gwRef := &commonv1alpha1.NamespacedRef{Namespace: new("default"), Name: "gw"}
+	provider := aiGatewayModelProviderFixture("provider-denied")
+	provider.Namespace = "other"
+	provider.Spec.AIGatewayRef.NamespacedRef = gwRef
+	model := aiGatewayModelFixture("model-granted")
+	model.Namespace = "other"
+	model.Spec.AIGatewayRef.NamespacedRef = gwRef
+	model.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+		Name:     "t",
+		Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-denied"},
+		Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+			Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+			Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+		},
+	}}
+	// Only the model's kind may reference the gateway from the other namespace.
+	cl := newTranslatorTestClient(t, gw, provider, model, crossNamespaceGrant("AIGatewayModel", nil))
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+	require.Empty(t, doc.ModelProviders)
+	require.Empty(t, doc.Models)
+
+	providerErr := findStatusByName(t, statuses, "provider-denied").Err
+	require.ErrorContains(t, providerErr, "is not granted by any KongReferenceGrant")
+	require.True(t, IsEntityScopedFailure(providerErr))
+
+	modelErr := findStatusByName(t, statuses, "model-granted").Err
+	require.ErrorContains(t, modelErr, `referenced AIGatewayModelProvider "provider-denied" was excluded`)
+	require.True(t, IsEntityScopedFailure(modelErr), "the model is excluded only because of the denied provider")
 }

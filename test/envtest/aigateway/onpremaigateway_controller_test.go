@@ -918,6 +918,16 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceRefRequiresKongReferenceGrant(t
 	}
 	require.NoError(t, cl.Create(ctx, strategy))
 
+	// assertResolvedRefs asserts the status and reason of the entity's ResolvedRefs
+	// condition, read in the same poll as the Programmed message.
+	assertResolvedRefs := func(ct *assert.CollectT, status metav1.ConditionStatus, reason string) {
+		c := apimeta.FindStatusCondition(strategy.Status.Conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+		if assert.NotNil(ct, c) {
+			assert.Equal(ct, status, c.Status)
+			assert.Equal(ct, reason, c.Reason)
+		}
+	}
+
 	// eventuallyProgrammedMessage returns the entity's Programmed condition message.
 	eventuallyProgrammedMessage := func(cond *assert.CollectT) (string, bool) {
 		if !assert.NoError(cond, cl.Get(ctx, client.ObjectKeyFromObject(strategy), strategy)) {
@@ -935,6 +945,7 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceRefRequiresKongReferenceGrant(t
 		msg, ok := eventuallyProgrammedMessage(ct)
 		if ok {
 			assert.Contains(ct, msg, "KongReferenceGrant")
+			assertResolvedRefs(ct, metav1.ConditionFalse, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted)
 		}
 	}, waitTime, tickTime)
 
@@ -962,6 +973,7 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceRefRequiresKongReferenceGrant(t
 		msg, ok := eventuallyProgrammedMessage(ct)
 		if ok {
 			assert.Contains(ct, msg, "no Admin API endpoints discovered")
+			assertResolvedRefs(ct, metav1.ConditionTrue, configurationv1alpha1.KongReferenceGrantReasonResolvedRefs)
 		}
 	}, waitTime, tickTime)
 
@@ -973,6 +985,7 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceRefRequiresKongReferenceGrant(t
 		msg, ok := eventuallyProgrammedMessage(ct)
 		if ok {
 			assert.Contains(ct, msg, "KongReferenceGrant")
+			assertResolvedRefs(ct, metav1.ConditionFalse, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted)
 		}
 	}, waitTime, tickTime)
 }
@@ -1101,6 +1114,16 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceSecretRefGrantOutsideGatewayNam
 	}
 	require.NoError(t, cl.Create(ctx, datastore))
 
+	// assertResolvedRefs asserts the status and reason of the entity's ResolvedRefs
+	// condition, read in the same poll as the Programmed message.
+	assertResolvedRefs := func(ct *assert.CollectT, status metav1.ConditionStatus, reason string) {
+		c := apimeta.FindStatusCondition(datastore.Status.Conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+		if assert.NotNil(ct, c) {
+			assert.Equal(ct, status, c.Status)
+			assert.Equal(ct, reason, c.Reason)
+		}
+	}
+
 	// eventuallyProgrammedMessage returns the datastore's Programmed condition message.
 	eventuallyProgrammedMessage := func(cond *assert.CollectT) (string, bool) {
 		if !assert.NoError(cond, cl.Get(ctx, client.ObjectKeyFromObject(datastore), datastore)) {
@@ -1118,6 +1141,7 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceSecretRefGrantOutsideGatewayNam
 		msg, ok := eventuallyProgrammedMessage(ct)
 		if ok {
 			assert.Contains(ct, msg, "KongReferenceGrant")
+			assertResolvedRefs(ct, metav1.ConditionFalse, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted)
 		}
 	}, waitTime, tickTime)
 
@@ -1146,6 +1170,7 @@ func TestOnPremAIGatewayReconciler_CrossNamespaceSecretRefGrantOutsideGatewayNam
 		msg, ok := eventuallyProgrammedMessage(ct)
 		if ok {
 			assert.Contains(ct, msg, "no Admin API endpoints discovered")
+			assertResolvedRefs(ct, metav1.ConditionTrue, configurationv1alpha1.KongReferenceGrantReasonResolvedRefs)
 		}
 	}, waitTime, tickTime)
 }

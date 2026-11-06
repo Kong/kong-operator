@@ -111,6 +111,9 @@
   `https://us.svc.konghq.com/api`) instead of the public global host, so they
   can be managed over AWS PrivateLink by adding a `GLOBAL` VPC endpoint.
   [#6313](https://github.com/Kong/kong-operator/pull/6313)
+- On-prem AI Gateway: an entity with a cross-namespace reference now reports a
+  `ResolvedRefs` condition for cross-namespace `aiGatewayRef` and `secretRef`.
+  [#6457](https://github.com/Kong/kong-operator/pull/6457)
 
 ### Changed
 

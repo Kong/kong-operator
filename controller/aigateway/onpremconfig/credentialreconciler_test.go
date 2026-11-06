@@ -18,6 +18,7 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -27,6 +28,7 @@ func newCredentialReconcilerClient(t *testing.T, objs ...client.Object) client.C
 	scheme := runtime.NewScheme()
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 	// The consumer watch lists credentials by this index, as the instance's cache does.
 	credIndex := index.OptionsForAIGatewayConsumerCredential()[0]
 	return fake.NewClientBuilder().
@@ -150,12 +152,20 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			if tc.konnectID {
 				cred.Status.ID = "konnect-id"
 			}
-			cred.Status.Conditions = []metav1.Condition{{
-				Type:    string(configurationv1.ConditionProgrammed),
-				Status:  metav1.ConditionTrue,
-				Reason:  string(configurationv1.ReasonProgrammed),
-				Message: seeded,
-			}}
+			cred.Status.Conditions = []metav1.Condition{
+				{
+					Type:    string(configurationv1.ConditionProgrammed),
+					Status:  metav1.ConditionTrue,
+					Reason:  string(configurationv1.ReasonProgrammed),
+					Message: seeded,
+				},
+				{
+					Type:    configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+					Status:  metav1.ConditionTrue,
+					Reason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+					Message: seeded,
+				},
+			}
 			objs := append([]client.Object{cred}, tc.objs...)
 			cl := newCredentialReconcilerClient(t, objs...)
 			rec := &AIGatewayConsumerCredentialReconciler{
@@ -167,13 +177,20 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
 			require.NoError(t, err)
 
-			cond := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
-			if tc.wantCleared {
-				require.Nil(t, cond, "the condition of a credential whose consumer is gone must be cleared")
-				return
+			stored := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{}
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(cred), stored))
+			for _, conditionType := range []string{
+				string(configurationv1.ConditionProgrammed),
+				configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+			} {
+				cond := apimeta.FindStatusCondition(stored.Status.Conditions, conditionType)
+				if tc.wantCleared {
+					require.Nil(t, cond, "the %s condition of a credential whose consumer is gone must be cleared", conditionType)
+					continue
+				}
+				require.NotNil(t, cond, "no %s condition must be written on a credential the on-prem machinery does not own", conditionType)
+				require.Equal(t, seeded, cond.Message, "the %s condition the reconciler found must be left as it was", conditionType)
 			}
-			require.NotNil(t, cond, "no condition must be written on a credential the on-prem machinery does not own")
-			require.Equal(t, seeded, cond.Message, "the condition the reconciler found must be left as it was")
 		})
 	}
 }

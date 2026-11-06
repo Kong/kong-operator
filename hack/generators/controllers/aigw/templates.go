@@ -24,9 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-{{- if or .ConfigStatusNotificationsEnabled .WatchedResources }}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 {{- if .ConfigStatusNotificationsEnabled }}
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -42,6 +40,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 
 	{{.PackageImportAlias}} "{{.Package}}"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -97,6 +96,12 @@ func (r *{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc({{ .MapFunc }}),
 	)
 {{- end}}
+	// Watch KongReferenceGrants, so that the ResolvedRefs condition follows a grant
+	// that is created, changed or deleted.
+	blder.Watches(
+		&configurationv1alpha1.KongReferenceGrant{},
+		handler.EnqueueRequestsFromMapFunc(mapKongReferenceGrantToEntities[{{.PackageImportAlias}}.{{.Kind}}List](r.Client)),
+	)
 	return blder.
 		For(
 			&{{.PackageImportAlias}}.{{.Kind}}{},
@@ -224,6 +229,12 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		)
 		obj.Status.Conditions = conditions
 		{{- end }}
+		// A failed KongReferenceGrant check (for example a list in a namespace the
+		// instance does not watch) must not hold back the Programmed condition, which
+		// reports the translation's failure: write the status first, then return the
+		// error so that the check is retried.
+		resolvedRefsChanged, resolvedRefsErr := ensureResolvedRefsCondition(ctx, r.Client, obj, obj.Generation, &obj.Status.Conditions)
+		updateNeeded = updateNeeded || resolvedRefsChanged
 		if updateNeeded {
 			if err := r.Status().Update(ctx, obj); err != nil {
 				if apierrors.IsConflict(err) {
@@ -233,10 +244,16 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 				}
 				return ctrl.Result{}, err
 			}
+			if resolvedRefsErr != nil {
+				return ctrl.Result{}, resolvedRefsErr
+			}
 
 			return ctrl.Result{
 				RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 			}, nil
+		}
+		if resolvedRefsErr != nil {
+			return ctrl.Result{}, resolvedRefsErr
 		}
 
 		logger.Info("Status update not needed")

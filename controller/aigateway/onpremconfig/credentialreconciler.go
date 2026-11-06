@@ -37,6 +37,7 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -55,7 +56,8 @@ import (
 // kinds, for this one entity.
 //
 // The reconciler therefore only reports the Programmed condition - writing it, and clearing
-// it when the credential's consumer is gone - and never feeds the ChangeNotifier: a
+// it when the credential's consumer is gone - and the ResolvedRefs condition of its
+// cross-namespace secretRefs, and never feeds the ChangeNotifier: a
 // credential event is already mapped to its parent consumer (see mapCredentialToConsumer),
 // and the consumer's own reconciler is what notifies the gateway.
 type AIGatewayConsumerCredentialReconciler struct {
@@ -95,6 +97,14 @@ func (r *AIGatewayConsumerCredentialReconciler) SetupWithManager(mgr ctrl.Manage
 			&aiconfigurationv1alpha1.AIGatewayConsumer{},
 			handler.EnqueueRequestsFromMapFunc(r.mapConsumerToCredentials),
 		).
+		// The ResolvedRefs condition follows a KongReferenceGrant that is created,
+		// changed or deleted. Reconcile skips the credentials it does not own.
+		Watches(
+			&configurationv1alpha1.KongReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(
+				mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](r.Client),
+			),
+		).
 		For(
 			&aiconfigurationv1alpha1.AIGatewayConsumerCredential{},
 			builder.WithPredicates(GenerationChangedPredicate{}),
@@ -133,11 +143,20 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 	// likewise not ours to report.
 	if !credentialOnPremManaged(ctx, r.Client, obj) {
 		// A credential whose consumer is gone is rendered by nothing, so the Programmed
-		// condition written while it still was claims a rendering that no longer exists:
-		// clear it. Only that case is corrected here - the status of a credential with a
-		// Konnect-managed consumer is the Konnect reconciler's to write and to clear.
+		// and ResolvedRefs conditions written while it still was claim a rendering that
+		// no longer exists: clear them. Only that case is corrected here - the status of
+		// a credential with a Konnect-managed consumer is the Konnect reconciler's to
+		// write and to clear.
 		if credentialOrphaned(ctx, r.Client, obj) {
-			return patch.StatusWithoutCondition(ctx, r.Client, obj, string(configurationv1.ConditionProgrammed))
+			for _, conditionType := range []string{
+				string(configurationv1.ConditionProgrammed),
+				configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+			} {
+				if res, err := patch.StatusWithoutCondition(ctx, r.Client, obj, conditionType); err != nil || !res.IsZero() {
+					return res, err
+				}
+			}
+			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, nil
 	}
@@ -152,6 +171,12 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 			ctrlutils.WithFailedMessage(r.StatusClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
+		// A failed KongReferenceGrant check (for example a list in a namespace the
+		// instance does not watch) must not hold back the Programmed condition, which
+		// reports the translation's failure: write the status first, then return the
+		// error so that the check is retried.
+		resolvedRefsChanged, resolvedRefsErr := ensureResolvedRefsCondition(ctx, r.Client, obj, obj.Generation, &obj.Status.Conditions)
+		updateNeeded = updateNeeded || resolvedRefsChanged
 		if updateNeeded {
 			if err := r.Status().Update(ctx, obj); err != nil {
 				if apierrors.IsConflict(err) {
@@ -161,10 +186,16 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 				}
 				return ctrl.Result{}, err
 			}
+			if resolvedRefsErr != nil {
+				return ctrl.Result{}, resolvedRefsErr
+			}
 
 			return ctrl.Result{
 				RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 			}, nil
+		}
+		if resolvedRefsErr != nil {
+			return ctrl.Result{}, resolvedRefsErr
 		}
 
 		logger.Info("Status update not needed")

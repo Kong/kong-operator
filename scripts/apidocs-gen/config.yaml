@@ -6,6 +6,8 @@ processor:
     # A translation result, not a resource type: it is returned by the on-prem
     # translation methods and never stored in an API object.
     - "CredentialTranslation$"
+    # A helper interface of the on-prem KongReferenceGrant checks, not a resource type.
+    - "SecretRefsOwner$"
   # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
   ignoreFields:
     - "TypeMeta$"

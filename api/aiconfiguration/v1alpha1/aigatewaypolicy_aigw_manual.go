@@ -21,7 +21,7 @@ import (
 // spec.apiSpec.customPolicyRef into the referenced custom policy's Konnect
 // name (which is sent as the policy's type, per the CRD field's contract).
 func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) (*aigw.Policy, error) {
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayPolicy %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
