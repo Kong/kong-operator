@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,6 +19,28 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+func TestDetectInstalledRouteKinds(t *testing.T) {
+	gv := schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version}
+	mapper := apimeta.NewDefaultRESTMapper([]schema.GroupVersion{gv})
+	// Only TLSRoute and TCPRoute are served by the cluster.
+	for _, kind := range []string{"TLSRoute", "TCPRoute"} {
+		mapper.AddSpecific(
+			gv.WithKind(kind),
+			gv.WithResource(strings.ToLower(kind)+"s"),
+			gv.WithResource(strings.ToLower(kind)),
+			apimeta.RESTScopeNamespace,
+		)
+	}
+
+	installed, err := detectInstalledRouteKinds(mapper)
+	require.NoError(t, err)
+	require.Equal(t, routeKindSet{
+		"HTTPRoute": {},
+		"TLSRoute":  {},
+		"TCPRoute":  {},
+	}, installed)
+}
 
 func routeKindsTestGateway() gwtypes.Gateway {
 	from := gatewayv1.NamespacesFromSame

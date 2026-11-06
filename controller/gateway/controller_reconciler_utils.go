@@ -953,6 +953,28 @@ func (s routeKindSet) has(kind gatewayv1.Kind) bool {
 	return ok
 }
 
+// detectInstalledRouteKinds returns the route kinds whose CRDs the mapper can
+// resolve. HTTPRoute is always included: it is a required CRD, so the Gateway
+// controller cannot start without it.
+func detectInstalledRouteKinds(mapper apimeta.RESTMapper) (routeKindSet, error) {
+	installed := routeKindSet{"HTTPRoute": {}}
+	for kind, gvr := range map[gatewayv1.Kind]schema.GroupVersionResource{
+		"TLSRoute":  {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "tlsroutes"},
+		"GRPCRoute": {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "grpcroutes"},
+		"UDPRoute":  {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "udproutes"},
+		"TCPRoute":  {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "tcproutes"},
+	} {
+		exists, err := k8sutils.CRDExists(mapper, gvr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if %s CRD exists: %w", kind, err)
+		}
+		if exists {
+			installed[kind] = struct{}{}
+		}
+	}
+	return installed, nil
+}
+
 // supportedRoutesByProtocol returns a map of maps to relate each protocolType with the
 // set of supported Routes.
 //
@@ -1032,10 +1054,10 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 		} else {
 			// Carried-over listener statuses may hold SupportedKinds from when
 			// the listener was accepted; clear them to match a fresh status.
-			// Keep the slice non-nil: Gateway API CRDs before v1.5 (OpenShift 4.19
-			// to 4.22) serialize a nil slice as null, which the API server rejects.
-			// On v1.5+ the field is omitzero, so an empty slice is omitted in
-			// storage and conformance's exact-empty expectation still holds.
+			// Keep the slice non-nil: Gateway API CRDs before v1.5 (OpenShift
+			// 4.19 to 4.22) require supportedKinds. A nil slice is omitted from
+			// JSON, so the field goes missing and the API server rejects the
+			// whole status. An empty list satisfies the old CRDs.
 			lStatus.SupportedKinds = []gatewayv1.RouteGroupKind{}
 		}
 
