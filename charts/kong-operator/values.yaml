@@ -135,8 +135,8 @@ global:
       # (replicas or scaling.horizontal.minReplicas must be >= 2 when a PodDisruptionBudget is set).
       enabled: true
       # Actions of the policy bindings. Set to [Deny] to reject incompatible objects.
-      # With Deny, pre-existing non-compliant GatewayConfigurations make Gateway
-      # reconciliation fail when the operator creates or updates their DataPlane.
+      # With Deny, pre-existing non-compliant DataPlanes and GatewayConfigurations keep running,
+      # but spec changes to them (including the operator's) are rejected until they are fixed.
       validationActions:
         - Warn
         - Audit
