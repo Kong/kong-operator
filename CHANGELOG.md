@@ -163,6 +163,7 @@
   Set the chart value
   `global.validatingPolicies.podDisruptionBudgetReplicas.validationActions`
   to `[Deny]` to reject such objects instead.
+  [#6490](https://github.com/Kong/kong-operator/pull/6490)
 
 ### Changed
 
