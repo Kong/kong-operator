@@ -1248,6 +1248,25 @@ func TestFillConsumersAndCredentials_DuplicateIdentifiers(t *testing.T) {
 				{Namespace: "default", Name: "newer"}: `username "foo" is already used by KongConsumer default/older`,
 			},
 		},
+		{
+			name: "rejected duplicate is not translated when the owner of the username has conflicting credentials",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "a", earliest, "foo", "", "a-key"),
+				newConsumer("default", "b", earlier, "foo", ""),
+				newConsumer("default", "c", now, "bar", "", "c-key"),
+			},
+			secrets: []*corev1.Secret{
+				newKeyAuthSecret("a-key", "same-key"),
+				newKeyAuthSecret("c-key", "same-key"),
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "a"}:     "Consumer has conflicting credentials",
+				{Namespace: "default", Name: "b"}:     `username "foo" is already used by KongConsumer default/a`,
+				{Namespace: "default", Name: "c"}:     "Consumer has conflicting credentials",
+				{Namespace: "default", Name: "a-key"}: "Secret has conflicting credential",
+				{Namespace: "default", Name: "c-key"}: "Secret has conflicting credential",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

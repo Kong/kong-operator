@@ -107,6 +107,11 @@ func (ks *KongState) FillConsumersAndCredentials(
 	credentialsConflictDetector := NewCredentialConflictsDetector()
 
 	// build consumer index
+	// The KongConsumers owning a username or custom_id are chosen before, and independently of, the credential
+	// conflict detection below. An owner can still be dropped later because of conflicting credentials, and the
+	// KongConsumers rejected as its duplicates are not translated in its place. This is intentional: it keeps the
+	// owner of a username or custom_id stable, so changes to credentials of unrelated objects never move it to another
+	// KongConsumer.
 	for _, consumer := range rejectConsumersWithDuplicateIdentifiers(s.ListKongConsumers(), failuresCollector) {
 		var c Consumer
 		// This is now enforce that the CRD level but we're keeping this just for those
