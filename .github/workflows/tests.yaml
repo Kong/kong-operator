@@ -473,7 +473,7 @@ jobs:
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: buildpulse/buildpulse-action@76dbedc6585e8731b40a19da1ebc3f6609dbbb83 # v3
+        uses: BuildPulseLLC/test-reporter-action@02b5aaf7cf2e448dfffe2b92969d3d6ffbef42fb # v3.2.0
         with:
           account: 962416
           repository: 477814940
