@@ -353,16 +353,16 @@ func TestKonnectExtensionAutomaticCertificateRenewal(t *testing.T) {
 			r.CertExpirationMargin = time.Hour
 			r.ClusterCASecretName, r.ClusterCASecretNamespace = "ca", ext.Namespace
 			require.NoError(t, r.Create(t.Context(), certificate.MustGenerateCASecret(ext.Namespace, "ca", "ca")))
-			cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName(ext.Name+"."+ext.Namespace))
+			cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName(ext.Name+"."+ext.Namespace))
 			if tt.expired {
-				cert, key = certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA),
+				cert, key = certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithKeyType(certificate.ECDSA),
 					certificate.WithCommonName(ext.Name+"."+ext.Namespace), certificate.WithAlreadyExpired())
 			}
 			if tt.invalid {
 				cert = []byte("not a PEM certificate")
 			}
 			if tt.subject {
-				cert, key = certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("other.default"))
+				cert, key = certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("other.default"))
 			}
 			previous := &corev1.Secret{
 				Name: "previous", Namespace: ext.Namespace,
@@ -741,7 +741,7 @@ func TestKonnectExtensionWaitsForRegistrationBeforePublishingSnapshot(t *testing
 }
 
 func TestKonnectExtensionRejectsCertificateWithoutRenewalInterval(t *testing.T) {
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("extension.default"))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("extension.default"))
 	r, ext := dpCertTestReconciler(t, "unused")
 	ext.Spec.ClientAuth.CertificateSecret.Provisioning = new(konnectv1alpha2.AutomaticSecretProvisioning)
 	ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef = nil
@@ -768,7 +768,7 @@ func TestKonnectExtensionRejectsCertificateWithoutRenewalInterval(t *testing.T) 
 }
 
 func TestKonnectExtensionSchedulesRenewalBeforeSyncPeriod(t *testing.T) {
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("extension.default"))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA), certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("extension.default"))
 	r, ext := dpCertTestReconciler(t, "unused", dpCertTestObject("extension", string(cert)))
 	ext.Spec.ClientAuth.CertificateSecret.Provisioning = new(konnectv1alpha2.AutomaticSecretProvisioning)
 	ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef = nil

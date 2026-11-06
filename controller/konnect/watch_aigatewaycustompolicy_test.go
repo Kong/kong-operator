@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -38,7 +37,7 @@ func TestEnqueueAIGatewayCustomPolicyForAIGatewayPolicy(t *testing.T) {
 	referenced := newCustomPolicy("referenced", "referenced-konnect", gatewayID)
 	byType := newCustomPolicy("by-type", "by-type-konnect", gatewayID)
 	otherGateway := newCustomPolicy("other-gateway", "by-type-konnect", "gateway-2")
-	builder := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(referenced, byType, otherGateway)
+	builder := newFakeClientBuilder(scheme.Get()).WithObjects(referenced, byType, otherGateway)
 	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -124,7 +123,7 @@ func TestEnqueueAIGatewayPolicyForAIGatewayCustomPolicy(t *testing.T) {
 		p.Spec.APISpec.Type = "response-transformer"
 	})
 
-	builder := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(viaRef, viaType, otherGateway, builtIn)
+	builder := newFakeClientBuilder(scheme.Get()).WithObjects(viaRef, viaType, otherGateway, builtIn)
 	for _, opt := range index.OptionsForAIGatewayPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}

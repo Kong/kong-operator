@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -237,8 +236,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				// Each sub-test needs a fresh child object to avoid cross-test mutation.
 				child := tc.obj.DeepCopyObject().(objectWithParentRef)
 
-				builder := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				builder := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(child)
 
 				if sc.setupParent != nil {
@@ -378,8 +376,7 @@ func TestHandleParentRef_EventGatewayVirtualCluster(t *testing.T) {
 		t.Run(sc.name, func(t *testing.T) {
 			freshChild := child.DeepCopy()
 
-			builder := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			builder := newFakeClientBuilder(scheme.Get()).
 				WithStatusSubresource(freshChild)
 
 			if sc.setupParent != nil {
@@ -574,8 +571,7 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 			t.Run(sc.name+"/"+tc.name, func(t *testing.T) {
 				child := tc.obj.DeepCopyObject().(objectWithParentRef)
 
-				builder := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				builder := newFakeClientBuilder(scheme.Get()).
 					WithStatusSubresource(child)
 
 				if sc.setupParent != nil {
@@ -661,8 +657,7 @@ func TestHandleParentRef_NotKonnectManagedParent(t *testing.T) {
 				LastTransitionTime: metav1.Now(),
 			}}
 		})
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithStatusSubresource(cred).
 			WithObjects(onPremConsumer(), cred).
 			Build()
@@ -707,8 +702,7 @@ func TestHandleParentRef_NotKonnectManagedParent(t *testing.T) {
 			},
 		}
 		cred := newCredential()
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithStatusSubresource(cred).
 			WithObjects(consumer, cred).
 			Build()

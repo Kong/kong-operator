@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -245,8 +244,7 @@ func testHandleControlPlaenRef[
 			require.NoError(t, configurationv1alpha1.AddToScheme(s))
 			require.NoError(t, konnectv1alpha1.AddToScheme(s))
 
-			fakeClient := fake.NewClientBuilder().
-				WithScheme(s).
+			fakeClient := newFakeClientBuilder(s).
 				WithObjects(tc.ent).
 				WithObjects(tc.objects...).
 				// WithStatusSubresource is required for updating status of handled entity.

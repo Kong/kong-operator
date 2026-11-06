@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -34,8 +33,7 @@ func newKongServiceForPendingTest(id string) *configurationv1alpha1.KongService 
 func newReconcilerForPendingTest(
 	objs ...client.Object,
 ) *KonnectEntityReconciler[configurationv1alpha1.KongService, *configurationv1alpha1.KongService] {
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithObjects(objs...).
 		WithStatusSubresource(&configurationv1alpha1.KongService{}).
 		Build()

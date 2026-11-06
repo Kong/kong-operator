@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -139,8 +138,7 @@ func TestSkipsKonnectReconciliation(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(objects...).
 				Build()
 			assert.Equal(t, tc.want, skipsKonnectReconciliation(t.Context(), cl, tc.obj))
@@ -148,8 +146,7 @@ func TestSkipsKonnectReconciliation(t *testing.T) {
 	}
 
 	t.Run("an ancestor that cannot be read is left to the regular parent handling", func(t *testing.T) {
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithObjects(objects...).
 			WithInterceptorFuncs(interceptor.Funcs{
 				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -177,8 +174,7 @@ func TestHandleParentRef_OnPremEventGatewayAncestor(t *testing.T) {
 	policy := newTestEventGatewayProducePolicy(ns, "policy", virtualCluster.Name)
 	policy.Finalizers = []string{KonnectCleanupFinalizer}
 
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithStatusSubresource(policy).
 		WithObjects(backend, virtualCluster, policy).
 		Build()
@@ -243,8 +239,7 @@ func TestSkipsKonnectReconciliation_OtherKinds(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			gets := 0
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithObjects(onPremConsumer, konnectConsumer, konnectAIGateway, portal).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -268,8 +263,7 @@ func TestHandleParentRef_OnPremEventGatewayParentInAnotherNamespace(t *testing.T
 	virtualCluster := newTestEventGatewayVirtualCluster("default", "virtual-cluster", backend.Name)
 	virtualCluster.Spec.EventGatewayBackendClusterRef.NamespacedRef.Namespace = new("other")
 
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithStatusSubresource(virtualCluster).
 		WithObjects(backend, virtualCluster).
 		Build()
@@ -339,8 +333,7 @@ func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
 			}
 			policy.SetKonnectID(tc.konnectID)
 
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			cl := newFakeClientBuilder(scheme.Get()).
 				WithStatusSubresource(policy).
 				WithObjects(backend, virtualCluster, policy).
 				Build()
@@ -372,8 +365,7 @@ func TestReconcile_SkipsEntityNotManagedByKonnect(t *testing.T) {
 			ParentRef: onPremEventGatewayParentRef("onprem-gw"),
 		},
 	}
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithStatusSubresource(trustBundle).
 		WithObjects(trustBundle).
 		Build()

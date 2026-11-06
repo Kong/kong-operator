@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -39,7 +38,7 @@ func TestDeletingUnmanagedSNIRetainsCertificateChecks(t *testing.T) {
 		Finalizers: []string{KonnectCleanupFinalizer},
 		Spec:       configurationv1alpha1.KongSNISpec{CertificateRef: commonv1alpha1.NamespacedRef{Name: "missing"}},
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(sni).
+	cl := newFakeClientBuilder(scheme.Get()).WithObjects(sni).
 		WithStatusSubresource(&configurationv1alpha1.KongSNI{}).Build()
 	_, err := handleKongCertificateRef(t.Context(), cl, sni)
 	_, missing := errors.AsType[ReferencedKongCertificateDoesNotExistError](err)
@@ -102,7 +101,7 @@ func TestDeleteGatewaySNIWithInvalidCertificateReference(t *testing.T) {
 				}
 				objects = append(objects, cert)
 			}
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).
 				WithStatusSubresource(&configurationv1alpha1.KongSNI{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).Build()
 			if state == "deleting Gateway" {
 				require.NoError(t, cl.Delete(t.Context(), gateway))
@@ -190,7 +189,7 @@ func TestDeleteGatewaySNIWithMissingAncestor(t *testing.T) {
 				objects = append(objects, cp)
 			}
 			lookupErr := apierrors.NewServiceUnavailable("temporary Kubernetes API failure")
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).
 				WithStatusSubresource(sni).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -294,7 +293,7 @@ func TestValidateGatewaySNICertificate(t *testing.T) {
 				}
 				objects = append(objects, gateway)
 			}
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).
 				WithStatusSubresource(&configurationv1alpha1.KongSNI{}).Build()
 			err := validateGatewaySNICertificate(t.Context(), cl, sni, cert)
 			if tt.owned && (tt.otherCP || tt.stale || tt.missingOwner || tt.replacedOwner) {
@@ -776,7 +775,7 @@ func testHandleCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 			require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
 			require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+			fakeClient := newFakeClientBuilder(scheme).
 				WithObjects(tc.ent).WithObjects(tc.objects...).
 				// WithStatusSubresource is required for updating status of handled entity.
 				WithStatusSubresource(tc.ent).Build()
@@ -951,8 +950,7 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 
 	t.Run("cross-NS cert ref without KongReferenceGrant", func(t *testing.T) {
 		ent := svcEntity()
-		cl := fake.NewClientBuilder().
-			WithScheme(s).
+		cl := newFakeClientBuilder(s).
 			WithObjects(ent, certInOtherNS).
 			WithStatusSubresource(ent).
 			WithInterceptorFuncs(populateGVKOnGet(s)).
@@ -977,8 +975,7 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 
 	t.Run("cross-NS cert ref with valid KongReferenceGrant", func(t *testing.T) {
 		ent := svcEntity()
-		cl := fake.NewClientBuilder().
-			WithScheme(s).
+		cl := newFakeClientBuilder(s).
 			WithObjects(ent, certInOtherNS, grant, cpOKInOtherNS).
 			WithStatusSubresource(ent).
 			WithInterceptorFuncs(populateGVKOnGet(s)).
@@ -1278,8 +1275,7 @@ func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
 
 	t.Run("cross-NS cert ref without KongReferenceGrant", func(t *testing.T) {
 		ent := upstreamEntity()
-		cl := fake.NewClientBuilder().
-			WithScheme(s).
+		cl := newFakeClientBuilder(s).
 			WithObjects(ent, certInOtherNS).
 			WithStatusSubresource(ent).
 			WithInterceptorFuncs(populateGVKOnGet(s)).
@@ -1301,8 +1297,7 @@ func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
 
 	t.Run("cross-NS cert ref with valid KongReferenceGrant", func(t *testing.T) {
 		ent := upstreamEntity()
-		cl := fake.NewClientBuilder().
-			WithScheme(s).
+		cl := newFakeClientBuilder(s).
 			WithObjects(ent, certInOtherNS, grant, cpOKInOtherNS).
 			WithStatusSubresource(ent).
 			WithInterceptorFuncs(populateGVKOnGet(s)).

@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -91,7 +90,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 	t.Run("empty CACertificateRefs returns immediately with no error", func(t *testing.T) {
 		svc := makeSvc() // no refs
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc).
 			WithStatusSubresource(svc).
 			Build()
@@ -104,7 +103,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 	t.Run("single ref, CA cert found and programmed", func(t *testing.T) {
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: certName})
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc, caCertOK).
 			WithStatusSubresource(svc).
 			Build()
@@ -131,7 +130,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 	t.Run("CA cert not found returns ReferencedKongCACertificateDoesNotExistError", func(t *testing.T) {
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: "nonexistent-ca"})
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc).
 			WithStatusSubresource(svc).
 			Build()
@@ -158,7 +157,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: certName})
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc, caCertBeingDeleted).
 			WithStatusSubresource(svc).
 			Build()
@@ -185,7 +184,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: certName})
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc, caCertNotProgrammed).
 			WithStatusSubresource(svc).
 			Build()
@@ -221,7 +220,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: certName})
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc, caCertEmptyID).
 			WithStatusSubresource(svc).
 			Build()
@@ -257,7 +256,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: certName})
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc, caCertWrongCP).
 			WithStatusSubresource(svc).
 			Build()
@@ -279,7 +278,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 			commonv1alpha1.NamespacedRef{Name: "ca-missing"},
 		)
 		sc := testScheme(t)
-		cl := fake.NewClientBuilder().WithScheme(sc).
+		cl := newFakeClientBuilder(sc).
 			WithObjects(svc, ca1).
 			WithStatusSubresource(svc).
 			Build()
@@ -306,8 +305,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 			Namespace: new(certNS),
 		})
 		s := scheme.Get()
-		cl := fake.NewClientBuilder().
-			WithScheme(s).
+		cl := newFakeClientBuilder(s).
 			WithObjects(svc, caCertInOtherNS).
 			WithStatusSubresource(svc).
 			WithInterceptorFuncs(populateGVKOnGet(s)).
@@ -350,8 +348,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}
 
 		s := scheme.Get()
-		cl := fake.NewClientBuilder().
-			WithScheme(s).
+		cl := newFakeClientBuilder(s).
 			WithObjects(svc, caCertInOtherNS, grant).
 			WithStatusSubresource(svc).
 			WithInterceptorFuncs(populateGVKOnGet(s)).

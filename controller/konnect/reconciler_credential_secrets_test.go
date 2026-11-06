@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	clientfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -364,8 +363,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				client := clientfake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				client := newFakeClientBuilder(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
 				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
@@ -447,8 +445,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				client := clientfake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				client := newFakeClientBuilder(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
 				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
@@ -530,8 +527,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 
 		for _, tt := range testCases {
 			t.Run(tt.name, func(t *testing.T) {
-				client := clientfake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				client := newFakeClientBuilder(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
 				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
@@ -626,8 +622,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 		}
 		for _, tt := range testCases {
 			t.Run(tt.name, func(t *testing.T) {
-				client := clientfake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				client := newFakeClientBuilder(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
 				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)
@@ -716,8 +711,7 @@ func TestEnsureExistingCredential(t *testing.T) {
 		}
 		for _, tt := range testCases {
 			t.Run(tt.name, func(t *testing.T) {
-				client := clientfake.NewClientBuilder().
-					WithScheme(scheme.Get()).
+				client := newFakeClientBuilder(scheme.Get()).
 					WithObjects(tt.cred).
 					Build()
 				_, err := ensureExistingCredential(t.Context(), client, tt.cred, tt.secret, tt.consumer)

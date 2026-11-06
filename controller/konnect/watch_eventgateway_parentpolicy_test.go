@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -25,7 +24,7 @@ func TestEventGatewayParentPolicyWatch(t *testing.T) {
 				},
 			},
 		}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(parent, child).
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(parent, child).
 			WithIndex(child, index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef, eventGatewayProduceParentIndex).Build()
 		enqueue := enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualClusterProducePolicy(cl)
 		require.Equal(t, []reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(child)}}, enqueue(t.Context(), parent))
@@ -43,7 +42,7 @@ func TestEventGatewayParentPolicyWatch(t *testing.T) {
 				},
 			},
 		}
-		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(parent, child).
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(parent, child).
 			WithIndex(child, index.IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef, eventGatewayConsumeParentIndex).Build()
 		enqueue := enqueueEventGatewayVirtualClusterConsumePolicyForEventGatewayVirtualClusterConsumePolicy(cl)
 		require.Equal(t, []reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(child)}}, enqueue(t.Context(), parent))

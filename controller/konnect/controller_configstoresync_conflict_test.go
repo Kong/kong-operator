@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/configstoresync"
@@ -83,8 +82,7 @@ func TestKonnectConfigStoreSyncConflictElection(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := fakectrlruntimeclient.NewClientBuilder().
-				WithScheme(scheme.Get()).
+			builder := newFakeClientBuilder(scheme.Get()).
 				WithObjects(tc.self, tc.other)
 			for _, opt := range index.OptionsForKonnectConfigStoreSync() {
 				builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)

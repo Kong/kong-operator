@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -106,8 +105,7 @@ func TestReconcileDeleteDoesNotDoubleDeleteOnConflict(t *testing.T) {
 	}
 	key := client.ObjectKeyFromObject(configStore)
 
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithObjects(apiAuth, cp, configStore).
 		WithStatusSubresource(&konnectv1alpha1.KonnectConfigStore{}).
 		WithInterceptorFuncs(interceptor.Funcs{
@@ -239,8 +237,7 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 	}
 	key := client.ObjectKeyFromObject(configStore)
 
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
+	cl := newFakeClientBuilder(scheme.Get()).
 		WithObjects(apiAuth, cp, configStore).
 		WithStatusSubresource(&konnectv1alpha1.KonnectConfigStore{}).
 		Build()

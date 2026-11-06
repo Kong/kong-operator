@@ -10,7 +10,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -63,7 +62,7 @@ func TestHybridGatewayServiceCertificateRef(t *testing.T) {
 				objects = append(objects, cert)
 			}
 			apiErr := apierrors.NewServiceUnavailable("test failure")
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).
 				WithStatusSubresource(&configurationv1alpha1.KongService{}).
 				WithInterceptorFuncs(interceptor.Funcs{Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 					if _, ok := obj.(*configurationv1alpha1.KongCertificate); ok && state == "API failure" {
@@ -140,7 +139,7 @@ func TestDeleteHybridGatewayServiceWithInvalidCertificate(t *testing.T) {
 			if state != "missing" {
 				objects = append(objects, cert)
 			}
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).
 				WithStatusSubresource(&configurationv1alpha1.KongService{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).Build()
 			require.NoError(t, cl.Delete(t.Context(), service))
 			factory := sdkmocks.NewMockSDKFactory(t)
@@ -181,7 +180,7 @@ func TestReconcileHybridGatewayServiceInvalidCertificateDoesNotProgram(t *testin
 				cert.Status.Konnect.ControlPlaneID = "another-cp"
 			}
 			apiErr := apierrors.NewServiceUnavailable("test failure")
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(service, cert, cp).
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(service, cert, cp).
 				WithStatusSubresource(&configurationv1alpha1.KongService{}).
 				WithInterceptorFuncs(interceptor.Funcs{Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 					if _, ok := obj.(*configurationv1alpha1.KongCertificate); ok && state == "API failure" {

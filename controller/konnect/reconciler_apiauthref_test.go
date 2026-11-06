@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -157,8 +156,7 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(tc.objects...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -315,8 +313,7 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(append(tc.objects, tc.route)...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -443,8 +440,7 @@ func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(append(tc.objects, tc.target)...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -531,8 +527,7 @@ func TestGetAPIAuthRefNN_PortalPage(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(append(tc.objects, tc.page)...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -649,8 +644,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(append(tc.objects, tc.virtualCluster)...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -767,8 +761,7 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(append(tc.objects, tc.policy)...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()
@@ -906,8 +899,7 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			s := scheme.Get()
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
+			cl := newFakeClientBuilder(s).
 				WithObjects(append(tc.objects, tc.policy)...).
 				WithInterceptorFuncs(populateGVKOnGet(s)).
 				Build()

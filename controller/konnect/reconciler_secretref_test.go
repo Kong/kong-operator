@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
@@ -379,8 +378,7 @@ func TestHandleSecretRef(t *testing.T) {
 			}
 			objs = append(objs, tc.certificate)
 
-			cl := fake.NewClientBuilder().
-				WithScheme(scheme).
+			cl := newFakeClientBuilder(scheme).
 				WithObjects(objs...).
 				WithStatusSubresource(tc.certificate).
 				Build()
@@ -438,8 +436,7 @@ func TestHandleSecretRef_RecoversToValidAfterFix(t *testing.T) {
 		},
 	}
 
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme).
+	cl := newFakeClientBuilder(scheme).
 		WithObjects(cert).
 		WithStatusSubresource(cert).
 		Build()
@@ -516,8 +513,7 @@ func TestHandleSecretRef_SensitiveDataSourceCrossNamespace(t *testing.T) {
 
 	t.Run("without grant is not permitted", func(t *testing.T) {
 		cluster := newCluster()
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme).
+		cl := newFakeClientBuilder(scheme).
 			WithObjects(cluster, secret).
 			WithStatusSubresource(cluster).
 			Build()
@@ -556,8 +552,7 @@ func TestHandleSecretRef_SensitiveDataSourceCrossNamespace(t *testing.T) {
 				},
 			},
 		}
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme).
+		cl := newFakeClientBuilder(scheme).
 			WithObjects(cluster, secret, grant).
 			WithStatusSubresource(cluster).
 			Build()
@@ -618,7 +613,7 @@ func TestHandleSecretRef_StaticKeyReadOnlyAtCreation(t *testing.T) {
 		}
 	}
 	newClient := func(obj client.Object, objs ...client.Object) client.Client {
-		return fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(append(objs, obj)...).WithStatusSubresource(obj).Build()
+		return newFakeClientBuilder(scheme.Get()).WithObjects(append(objs, obj)...).WithStatusSubresource(obj).Build()
 	}
 	secretRefValid := func(t *testing.T, cl client.Client, key *configurationv1alpha1.EventGatewayStaticKey) metav1.Condition {
 		t.Helper()
@@ -653,8 +648,7 @@ func TestHandleSecretRef_StaticKeyReadOnlyAtCreation(t *testing.T) {
 	t.Run("stops once created on errors other than a missing Secret", func(t *testing.T) {
 		key := newStaticKey(nil)
 		key.SetKonnectID("static-key-id")
-		cl := fake.NewClientBuilder().
-			WithScheme(scheme.Get()).
+		cl := newFakeClientBuilder(scheme.Get()).
 			WithObjects(key).
 			WithStatusSubresource(key).
 			WithInterceptorFuncs(interceptor.Funcs{

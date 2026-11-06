@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
@@ -108,8 +107,7 @@ func TestKonnectSecretReferenceController_isSecretReferencedByKonnectResources(t
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().
-				WithScheme(s).
+			builder := newFakeClientBuilder(s).
 				WithObjects(tc.existingObjs...)
 
 			// Set up indexing using the same options as the real controller
@@ -427,8 +425,7 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			builder := fake.NewClientBuilder().
-				WithScheme(s).
+			builder := newFakeClientBuilder(s).
 				WithObjects(tc.existingObjs...)
 
 			// Set up indexing.
