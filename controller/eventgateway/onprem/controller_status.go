@@ -222,6 +222,9 @@ func failureReason(pushErr error) kcfgconsts.ConditionReason {
 	if _, ok := errors.AsType[invalidUIDError](pushErr); ok {
 		return eventgatewayv1alpha1.OnPremEventGatewayInvalidUIDReason
 	}
+	if _, ok := errors.AsType[invalidEntitiesError](pushErr); ok {
+		return eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason
+	}
 	return eventgatewayv1alpha1.OnPremEventGatewayConfigurationPushFailedReason
 }
 
@@ -308,8 +311,12 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		errs = append(errs, r.setEntityStatus(ctx, e, cond))
 	}
 	for _, e := range cfg.excluded {
+		what := "Left out of the configuration of the OnPremEventGateway %s: %s"
+		if e.blocks {
+			what = "Can't be sent: the configuration of the OnPremEventGateway %s isn't pushed until it is fixed or deleted: %s"
+		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
-			fmt.Sprintf("Left out of the configuration of the OnPremEventGateway %s: %s", gatewayKey, e.message))
+			fmt.Sprintf(what, gatewayKey, e.message))
 		errs = append(errs, r.setEntityStatus(ctx, e.entityStatus, cond))
 	}
 	errs = append(errs, r.reportDetached(ctx, gateway, cfg))

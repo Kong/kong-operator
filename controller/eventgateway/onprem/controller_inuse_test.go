@@ -1192,6 +1192,45 @@ func TestConsumeJSONWithSchemaRegistryIsNotLeftOut(t *testing.T) {
 	assert.Equal(t, map[string]any{"id": string(orders.UID)}, at(t, got[0], "config", "schema_registry"))
 }
 
+// A held parent policy being deleted keeps its name: a newer policy naming it
+// is the one that can't be sent, not the parent, which would then be released
+// and its children left without it.
+func TestHeldParentPolicyKeepsItsName(t *testing.T) {
+	f := newSchemaRegistryFixture(t)
+	orders := f.registry("orders", "gateway", 2)
+	parent := f.producePolicy("validate-json", `
+    type: schemaValidation
+    schemaValidation:
+      name: validate-json
+      config: {type: json, json: {valueValidationAction: reject}}
+`, 5)
+	parent.SetFinalizers([]string{FinalizerInUse})
+	parent.SetDeletionTimestamp(new(metav1.NewTime(f.at(fixtureDeletion))))
+	child := f.producePolicy("transcode-avro", `
+    type: transcode
+    parentPolicyRef: {name: validate-json}
+    transcode:
+      name: transcode-avro
+      config:
+        outputFormat: avro
+        avro: {failureMode: reject, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}}}}
+`, 6)
+	newer := f.producePolicy("newer", `
+    type: schemaValidation
+    schemaValidation:
+      name: validate-json
+      config: {type: json, json: {valueValidationAction: reject}}
+`, fixtureDeletion+5)
+
+	cfg, err := buildConfiguration(t.Context(), f.objects(orders, parent, child, newer), f.gateway, "", nil)
+	require.NoError(t, err)
+	excluded := excludedMessages(cfg)
+	require.Len(t, excluded, 1, "%v", excluded)
+	assert.Contains(t, excluded["EventGatewayVirtualClusterProducePolicy newer"],
+		`its policy name "validate-json" is already the one of EventGatewayVirtualClusterProducePolicy `+ns+"/validate-json")
+	assert.Equal(t, []string{"EventGatewayVirtualClusterProducePolicy transcode-avro"}, policiesUsing(cfg, parent), "the parent stays held")
+}
+
 // A parent policy is held while child policies name it: without it, they
 // wouldn't be applied.
 func TestParentPolicyHeldByItsChildren(t *testing.T) {

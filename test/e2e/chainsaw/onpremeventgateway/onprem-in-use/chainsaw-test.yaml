@@ -10,12 +10,15 @@ spec:
     TLS trust bundle and a virtual cluster, by object, and a policy a child
     policy names as its parent:
     1. gw-admin accepts them, each held by the in-use finalizer.
-    2. Policies referencing them by id or by name are left out, reporting
-       namespacedRef is the only reference allowed, until they are deleted.
+    2. Policies referencing them by id or by name can't be sent, reporting
+       namespacedRef is the only reference allowed: they stop the push, the
+       gateway reporting InvalidEntities, and gw-admin keeps what it has, until
+       they are deleted.
     3. Deleted, each stays in gw-admin, Programmed with the reason
        DeletionBlocked naming the policy using it, which stays Programmed. So
        does the parent policy, naming its child.
-    4. A policy created since is left out, and doesn't hold them.
+    4. A policy created since can't be sent, stops the push, and doesn't hold
+       them.
     5. Once the policies using them are deleted, they go, from gw-admin too.
   bindings:
     - name: gwadmin_name
@@ -212,9 +215,20 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: "False"
                     (contains(message, 'only namespacedRef is allowed')): true
-        # The policies left out don't hold back the others.
+        # The policies that can't be sent stop the push: gw-admin keeps the
+        # configuration it has.
         - assert:
-            file: ../onprem-shared/assert-gateway-programmed.yaml
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidEntities
+                    "(contains(message, 'EventGatewayVirtualClusterProducePolicy'))": true
+                    "(contains(message, 'EventGatewayListenerPolicy'))": true
         - script:
             env:
               - name: NAMESPACE
@@ -397,9 +411,20 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: "False"
                     (contains(message, 'which is being deleted')): true
-        # The policies left out don't hold back the others.
+        # The policies that can't be sent stop the push: gw-admin keeps the
+        # configuration it has.
         - assert:
-            file: ../onprem-shared/assert-gateway-programmed.yaml
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidEntities
+                    "(contains(message, 'EventGatewayVirtualClusterProducePolicy'))": true
+                    "(contains(message, 'EventGatewayListenerPolicy'))": true
         - delete:
             file: 03-late-policies.yaml
         - assert:

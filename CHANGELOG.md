@@ -156,6 +156,14 @@
   held by the finalizer `gateway-operator.konghq.com/onprem-eventgateway-in-use`
   while in use.
   [#6492](https://github.com/Kong/kong-operator/pull/6492)
+- `OnPremEventGateway`: an entity that can't be sent stops the push of its
+  gateway instead of being left out, e.g. a policy whose reference, parent
+  policy or Secret doesn't exist, an empty Secret value, a duplicate policy
+  name or virtual cluster DNS label, or a parent policy of another virtual
+  cluster. The gateway reports `InvalidEntities`, naming them, and gw-admin
+  keeps the last configuration that could be sent until they are fixed or
+  deleted. Entities of other namespaces and data plane certificates are still
+  only left out.
 
 ### Changed
 
