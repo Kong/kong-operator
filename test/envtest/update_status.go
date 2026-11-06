@@ -134,13 +134,25 @@ func UpdateKonnectEventGatewayStatusWithProgrammed(
 	obj *konnectv1alpha1.KonnectEventGateway,
 	id string,
 ) {
+	UpdateKonnectEventGatewayStatusWithServerURL(t, ctx, cl, obj, id, sdkmocks.SDKServerURL)
+}
+
+// UpdateKonnectEventGatewayStatusWithServerURL programs the KonnectEventGateway
+// with the given server URL, for the tests that need one other than the mock's.
+func UpdateKonnectEventGatewayStatusWithServerURL(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	obj *konnectv1alpha1.KonnectEventGateway,
+	id, serverURL string,
+) {
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
 			return
 		}
 		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
 			ID:        id,
-			ServerURL: sdkmocks.SDKServerURL,
+			ServerURL: serverURL,
 			OrgID:     "org-id",
 		}
 		obj.Status.Conditions = []metav1.Condition{
