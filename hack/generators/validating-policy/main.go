@@ -28,6 +28,12 @@ func main() {
 			validatingPoliciesSubPath:     "dataplane",
 			chartValidatingPolicyFileName: "validation-policy-dataplane.yaml",
 			helmValueName:                 "dataplanePorts",
+			policyOverrides: []policyOverride{
+				{
+					policyName:    "pdb-replicas.dataplane.gateway-operator.konghq.com",
+					helmValueName: "podDisruptionBudgetReplicas",
+				},
+			},
 		},
 		{
 			validatingPoliciesSubPath:     "service",

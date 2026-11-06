@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -602,5 +603,28 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
+	})
+}
+
+func TestDataPlanePDBReplicasValidatingAdmissionPolicy(t *testing.T) {
+	t.Parallel()
+
+	var (
+		ctx     = t.Context()
+		scheme  = scheme.Get()
+		cfg, ns = envtest.Setup(t, ctx, scheme)
+	)
+
+	helm.ApplyTemplate(ctx, t, cfg, kcfg.ChartPath(), []string{ValidationPolicyDataplane})
+
+	nonCompliant := pdbReplicasDataPlane(ns.Name, pdbReplicasCase{replicas: new(int32(1)), withPDB: true})
+	waitForPDBReplicasPolicy(ctx, t, cfg, scheme, nonCompliant)
+
+	runPDBReplicasCases(ctx, t, cfg, scheme, func(c pdbReplicasCase) client.Object {
+		return pdbReplicasDataPlane(ns.Name, c)
+	})
+
+	t.Run("metadata-only update is not validated", func(t *testing.T) {
+		assertPDBReplicasRatchet(ctx, t, cfg, scheme, nonCompliant)
 	})
 }
