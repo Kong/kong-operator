@@ -37,6 +37,7 @@ import (
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -49,14 +50,16 @@ var konnectEventGatewayKind = shareddataplane.ControlPlaneKindConfig{
 	NewObject:                 func() shareddataplane.ControlPlaneObject { return &konnectv1alpha1.KonnectEventGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldKegDataPlaneOnKonnectEventGateway,
 	IsKonnect:                 true,
+	EndpointCheck:             checkKonnectEventGatewayEndpoints,
 	Conditions: shareddataplane.ControlPlaneConditions{
-		ResolvedType:         string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
-		ResolvedReason:       string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
-		ResolvedMessage:      eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
-		NotFoundReason:       string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
-		NotFoundMessage:      eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
-		NotProgrammedReason:  string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
-		NotProgrammedMessage: eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
+		ResolvedType:           string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
+		ResolvedReason:         string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
+		ResolvedMessage:        eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
+		NotFoundReason:         string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
+		NotFoundMessage:        eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
+		NotProgrammedReason:    string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
+		NotProgrammedMessage:   eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
+		EndpointMismatchReason: string(eventgatewayv1alpha1.KonnectEventGatewayEndpointMismatchReason),
 	},
 }
 
@@ -410,6 +413,31 @@ func buildKEGEnvVars(
 		{Name: EnvKonnectDomain, Value: domain},
 	}
 	return append(envVars, commonKEGEnvVars(egdp)...), nil
+}
+
+// checkKonnectEventGatewayEndpoints reports whether the data plane can reach
+// the KonnectEventGateway: the Event Gateway composes a public Konnect host
+// from the region and the domain and cannot use a path, so a serverURL carrying
+// a path would send it there. A domain set on the KegDataPlane does not make
+// that connection private: it only says the user took over the domain.
+func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
+	keg, ok := cp.(*konnectv1alpha1.KonnectEventGateway)
+	if !ok {
+		return fmt.Errorf("unexpected control plane object %T", cp)
+	}
+	egdp, ok := dp.(*eventgatewayv1alpha1.KegDataPlane)
+	if !ok {
+		return fmt.Errorf("unexpected DataPlane object %T", dp)
+	}
+	cfg := egdp.Spec.Config
+	if !konnectendpoint.CarriesPath(keg.Status.ServerURL) ||
+		(cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil && *cfg.Konnect.Domain != "") {
+		return nil
+	}
+	return fmt.Errorf(
+		"cannot use the private server URL %q: the Event Gateway composes a public Konnect host from the region and the domain and cannot use a path; set spec.config.konnect.domain to let it connect over the public internet",
+		keg.Status.ServerURL,
+	)
 }
 
 // commonKEGEnvVars builds the keg environment variables that don't depend on
