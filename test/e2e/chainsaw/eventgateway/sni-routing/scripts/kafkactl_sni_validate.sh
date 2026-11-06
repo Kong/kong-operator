@@ -34,7 +34,7 @@ GATEWAY_BOOTSTRAP="bootstrap-${DNS_LABEL}.${IP_DASHES}.sslip.io:19092"
 POD_NAME="kafkactl-sni-$(date +%s)"
 
 cat scripts/kafkactl_sni_validate_inner.sh | kubectl run "${POD_NAME}" \
-  --image=deviceinsight/kafkactl:latest \
+  --image=deviceinsight/kafkactl:v5.21.0 \
   --rm -i --restart=Never \
   --env="GATEWAY_BOOTSTRAP=${GATEWAY_BOOTSTRAP}" \
   --env="CA_CERT_B64=${CA_CERT_B64}" \

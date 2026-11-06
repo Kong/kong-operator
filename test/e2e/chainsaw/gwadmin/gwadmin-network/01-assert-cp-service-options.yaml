@@ -19,13 +19,3 @@ spec:
   (ports[?name == 'extra']):
     - port: 9443
       targetPort: cp
----
-apiVersion: gateway-operator.konghq.com/v1alpha1
-kind: GWAdmin
-metadata:
-  name: ($gwadmin_name)
-status:
-  cp:
-    # The host may carry the cluster domain.
-    (starts_with(serverURL, join('', ['https://', ($gwadmin_name), '-cp.', ($namespace), '.svc']))): true
-    (ends_with(serverURL, ':443')): true

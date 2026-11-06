@@ -1,0 +1,109 @@
+# The data plane keg_dp_name of the KonnectEventGateway keg_cp_name, with the
+# Manual client certificate of the Secret cert_secret_name, the listener
+# policy forwarding the ports of its Kafka Service to the virtual cluster, a
+# consume policy injecting injected_header_key, and an ACL policy allowing
+# every topic and consumer group.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($keg_cp_name)
+  certificateSecret:
+    provisioning: Manual
+    secretRef:
+      name: ($cert_secret_name)
+  network:
+    services:
+      kafka:
+        ports:
+          - name: kafka
+            port: 19092
+            targetPort: 19092
+          - name: kafka-broker-0
+            port: 19093
+            targetPort: 19093
+          - name: kafka-broker-1
+            port: 19094
+            targetPort: 19094
+          - name: kafka-broker-2
+            port: 19095
+            targetPort: 19095
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: forward
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
+          destination:
+            name: ($virtual_cluster_name)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: modify-headers
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster_name)
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: add-test-header
+      config:
+        actions:
+          - op: set
+            set:
+              key: ($injected_header_key)
+              value: ($injected_header_value)
+---
+# The virtual cluster of the step template enforces ACLs on the gateway: it
+# allows every topic and consumer group here.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: allow-all
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster_name)
+  apiSpec:
+    type: acls
+    acls:
+      name: allow-all
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"
+          - action: allow
+            resourceType: group
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: "*"

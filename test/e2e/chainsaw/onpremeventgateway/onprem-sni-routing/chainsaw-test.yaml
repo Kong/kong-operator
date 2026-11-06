@@ -1,0 +1,184 @@
+# On-prem Event Gateway SNI routing.
+#
+# The scenario of ../../eventgateway/sni-routing, with an OnPremEventGateway: keg terminates
+# TLS on a single listener port, with a certificate read from a Secret of
+# another namespace, and routes to the virtual clusters by TLS hostname.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-sni-routing
+spec:
+  description: |
+    Two virtual clusters, analytics and payments, behind a single keg listener
+    port, of an OnPremEventGateway:
+    1. The TLS server policy reads its certificate from a Secret of another
+       namespace: without a KongReferenceGrant it isn't pushed to gw-admin
+       (Programmed False, RefNotPermitted).
+    2. Once a KongReferenceGrant allows it, both policies are pushed.
+    3. Through the hostname of each virtual cluster, keg shows the topics of
+       its prefix and the shared topic, never those of the other one, and
+       proxies produce and consume.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: listener_name
+      value: listener
+    - name: tls_namespace
+      value: (join('-', [$namespace, 'tls']))
+    - name: tls_secret_name
+      value: listener-tls
+
+  steps:
+    - name: 1-Event-gateway
+      try:
+        - apply:
+            file: 01-event-gateway.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../onprem-shared/onprem.sh bounded 270 bash ../../common/scripts/seed_topics.sh
+
+    - name: 2-Tls-secret-of-another-namespace-needs-a-grant
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SERVICE_NAME
+                value: (join('', [($keg_dp_name), '-kafka']))
+            content: bash ../../common/scripts/service_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: LB_IP
+                value: ($lb_address)
+              - name: NAMESPACE
+                value: ($tls_namespace)
+              - name: SECRET_NAME
+                value: ($tls_secret_name)
+            content: bash ../../eventgateway/sni-routing/scripts/gen_certs.sh
+            outputs:
+              - name: sni_suffix
+                value: (json_parse($stdout).sni_suffix)
+        - apply:
+            file: 02-policies.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: tls-server
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: RefNotPermitted
+        - apply:
+            file: 03-grant.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: tls-server
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: sni-forward
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+
+    - name: 3-Each-virtual-cluster-by-its-hostname
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SERVICE_NAME
+                value: (join('', [($keg_dp_name), '-kafka']))
+            content: bash ../../common/scripts/service_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($tls_namespace)
+              - name: CA_CM_NAME
+                value: (join('-', [$tls_secret_name, 'ca']))
+            content: bash ../../common/scripts/get_ca_cert.sh
+            outputs:
+              - name: ca_cert_b64
+                value: (json_parse($stdout).ca_cert_b64)
+        - script:
+            env:
+              - name: LB_IP
+                value: ($lb_address)
+              - name: DNS_LABEL
+                value: analytics
+              - name: CA_CERT_B64
+                value: ($ca_cert_b64)
+              - name: EXPECTED_TOPICS
+                value: clicks orders pageviews user_actions
+              - name: UNEXPECTED_TOPICS
+                value: transactions refunds
+              - name: PRODUCE_TOPIC
+                value: pageviews
+              - name: NAMESPACE
+                value: ($namespace)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh bounded 270 sh -c 'cd ../../eventgateway/sni-routing && bash scripts/kafkactl_sni_validate.sh'
+        - script:
+            env:
+              - name: LB_IP
+                value: ($lb_address)
+              - name: DNS_LABEL
+                value: payments
+              - name: CA_CERT_B64
+                value: ($ca_cert_b64)
+              - name: EXPECTED_TOPICS
+                value: orders refunds transactions user_actions
+              - name: UNEXPECTED_TOPICS
+                value: pageviews clicks
+              - name: PRODUCE_TOPIC
+                value: transactions
+              - name: NAMESPACE
+                value: ($namespace)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh bounded 270 sh -c 'cd ../../eventgateway/sni-routing && bash scripts/kafkactl_sni_validate.sh'
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

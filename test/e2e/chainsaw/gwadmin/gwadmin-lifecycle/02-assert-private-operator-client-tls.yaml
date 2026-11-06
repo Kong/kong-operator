@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', ['gwadmin', $uid, 'operator-client-tls']))
+  namespace: kong-system
+  labels:
+    gateway.konghq.com/secret-provisioning: automatic
+    gateway-operator.konghq.com/gwadmin-uid: ($uid)
+    gateway-operator.konghq.com/managed-by-name: ($gwadmin_name)
+    gateway-operator.konghq.com/managed-by-namespace: ($namespace)
+  (length(ownerReferences || `[]`)): 0
+type: kubernetes.io/tls

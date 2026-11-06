@@ -1,0 +1,152 @@
+# The OnPremEventGateway gateway_name of the SNI routing test, served by the
+# GWAdmin gwadmin_name: a data plane exposing a single listener port through a
+# LoadBalancer Service, a backend cluster to the shared Kafka cluster,
+# the virtual clusters analytics and payments, each showing the topics of its
+# prefix and the shared user_actions topic, and the listener. The TLS Secret
+# of the listener lives in the namespace tls_namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($tls_namespace)
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+spec:
+  # Readiness probed every second, so the pod turns Ready without waiting for
+  # the default 10s period, and unready after 30s of failures, as by default.
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: gw-admin
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+spec:
+  gwAdminRef:
+    name: ($gwadmin_name)
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+spec:
+  # Readiness probed every second, so the pod turns Ready without waiting for
+  # the default 10s period, and unready after 30s of failures, as by default.
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: keg
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ($gateway_name)
+  network:
+    services:
+      kafka:
+        type: LoadBalancer
+        ports:
+          - name: kafka
+            port: 19092
+            targetPort: 19092
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: ($backend_cluster_name)
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: analytics
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: analytics
+    dnsLabel: analytics
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+    namespace:
+      mode: hide_prefix
+      prefix: analytics_
+      additional:
+        topics:
+          - type: exactList
+            exactList:
+              conflict: warn
+              exactList:
+                - backend: user_actions
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: payments
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: payments
+    dnsLabel: payments
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+    namespace:
+      mode: hide_prefix
+      prefix: payments_
+      additional:
+        topics:
+          - type: exactList
+            exactList:
+              conflict: warn
+              exactList:
+                - backend: user_actions
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: ($listener_name)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: ($listener_name)
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092"

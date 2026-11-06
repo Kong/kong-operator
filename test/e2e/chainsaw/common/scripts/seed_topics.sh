@@ -4,19 +4,19 @@
 # Connects directly to Kafka (no TLS, in-cluster DNS) via the bootstrap Service.
 #
 # Required env:
-#   NAMESPACE    Kubernetes namespace for the test pod and Kafka Service.
+#   NAMESPACE    Kubernetes namespace for the test pod.
 set -o errexit
 set -o nounset
 set -o pipefail
 
 : "${NAMESPACE:?must be set}"
 
-KAFKA_BOOTSTRAP="kafka-bootstrap.${NAMESPACE}.svc:9092"
+KAFKA_BOOTSTRAP="kafka-bootstrap.kafka-shared.svc:9092"
 POD_NAME="kafkactl-seed-$(date +%s)"
 SCRIPT_DIR="$(dirname "$0")"
 
 cat "${SCRIPT_DIR}/seed_topics_inner.sh" | kubectl run "${POD_NAME}" \
-  --image=deviceinsight/kafkactl:latest \
+  --image=deviceinsight/kafkactl:v5.21.0 \
   --rm -i --restart=Never \
   --env="KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP}" \
   -n "${NAMESPACE}" \

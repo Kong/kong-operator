@@ -1,0 +1,9 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend-cluster
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: GatewayNotFound
+      message: (join('', ['The OnPremEventGateway ', $namespace, '/', $gateway_name, ' does not exist']))

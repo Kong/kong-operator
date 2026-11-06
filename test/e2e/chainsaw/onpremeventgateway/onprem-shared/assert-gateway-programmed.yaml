@@ -1,0 +1,12 @@
+# The OnPremEventGateway gateway_name is Programmed.
+#
+# Every assert of a file runs even after one fails, and only then does the step
+# fail: the resources of the on-prem asserts are in a file each, so that the
+# first failure ends the step.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"

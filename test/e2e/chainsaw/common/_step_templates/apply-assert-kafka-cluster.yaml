@@ -6,6 +6,10 @@
 #   - Service/kafka-bootstrap (ClusterIP, for in-cluster client bootstrap)
 #   - StatefulSet/kafka       (3 replicas, Parallel pod management, apache/kafka:4.2.0)
 #
+# Deployed once, in the namespace kafka-shared, by
+# fixtures/onpremeventgateway/prereq.sh for the Event Gateway suites. Brokers
+# create no topic on first use: clients create the topics they use.
+#
 # No required bindings — all resource names are fixed.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
@@ -109,6 +113,7 @@ spec:
                         default.replication.factor=3
                         min.insync.replicas=2
                         num.partitions=3
+                        auto.create.topics.enable=false
                         EOF
                         if [ ! -f /var/lib/kafka/data/meta.properties ]; then
                           /opt/kafka/bin/kafka-storage.sh format \

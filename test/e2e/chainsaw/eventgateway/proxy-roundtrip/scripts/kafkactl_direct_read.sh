@@ -21,7 +21,7 @@ _on_exit() { [ $? -ne 0 ] && cat "${_STDERR}" >&2; rm -f "${_STDERR}"; }
 trap _on_exit EXIT
 
 cat scripts/kafkactl_direct_read_inner.sh | kubectl run "${POD_NAME}" \
-  --image=deviceinsight/kafkactl:latest \
+  --image=deviceinsight/kafkactl:v5.21.0 \
   --rm -i --restart=Never \
   --env="KAFKA_DIRECT=${KAFKA_DIRECT}" \
   --env="TOPIC=${TOPIC}" \

@@ -33,7 +33,11 @@ spec:
         - apply:
             file: 01-entities.yaml
         - assert:
-            file: 01-assert-entities-gateway-not-found.yaml
+            file: 01-assert-backend-cluster-gateway-not-found.yaml
+        - assert:
+            file: 01-assert-virtual-cluster-gateway-not-found.yaml
+        - assert:
+            file: 01-assert-listener-gateway-not-found.yaml
     - name: 2-Create-the-gateway
       try:
         - apply:
@@ -41,7 +45,11 @@ spec:
         - assert:
             file: 02-assert-gateway-programmed.yaml
         - assert:
-            file: 02-assert-entities-programmed.yaml
+            file: 02-assert-backend-cluster-programmed.yaml
+        - assert:
+            file: 02-assert-virtual-cluster-programmed.yaml
+        - assert:
+            file: 02-assert-listener-programmed.yaml
     - name: 3-Delete-the-gateway
       try:
         - delete:
@@ -52,7 +60,11 @@ spec:
         - error:
             file: 03-error-gateway.yaml
         - assert:
-            file: 01-assert-entities-gateway-not-found.yaml
+            file: 01-assert-backend-cluster-gateway-not-found.yaml
+        - assert:
+            file: 01-assert-virtual-cluster-gateway-not-found.yaml
+        - assert:
+            file: 01-assert-listener-gateway-not-found.yaml
     - name: 4-Delete-the-backend-cluster
       try:
         - delete:

@@ -1,0 +1,97 @@
+# On-prem Event Gateway round-trip test.
+#
+# Provisions a GWAdmin, an OnPremEventGateway served by it and a KegDataPlane
+# pulling the configuration from it, plus the Event Gateway entities of the
+# gateway, with no Konnect. Then runs kafkactl from inside the cluster to
+# assert that keg proxies produce and consume to the shared Kafka cluster, and
+# that the consume policy pushed to gw-admin injects the expected header.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-roundtrip
+spec:
+  description: |
+    Validates the on-prem Event Gateway end to end: Kong Operator pushes the
+    configuration to gw-admin, and keg pulls it and proxies Kafka traffic.
+
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+
+    - name: inside_topic
+      value: onprem-roundtrip
+    - name: inside_record_value
+      value: hello-from-onprem
+
+  steps:
+    - name: Create-onprem-event-gateway
+      description: |
+        Create the GWAdmin, the OnPremEventGateway, its KegDataPlane and its
+        entities, and wait for the configuration to be pushed to gw-admin and
+        the data plane to be Ready.
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+
+    - name: Test-inside-cluster
+      description: Produce + consume through the data plane from inside the cluster.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: TOPIC
+                value: ($inside_topic)
+              - name: RECORD
+                value: ($inside_record_value)
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" "$TOPIC" "$RECORD"
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: eventgateway-onprem-roundtrip
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

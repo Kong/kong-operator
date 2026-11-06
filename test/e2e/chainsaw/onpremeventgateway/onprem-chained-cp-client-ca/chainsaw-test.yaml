@@ -1,0 +1,117 @@
+# A GWAdmin whose Manual cp client CA holds a chain in its tls.crt, and the data
+# plane of an OnPremEventGateway it serves, with an Automatic client certificate.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-chained-cp-client-ca
+spec:
+  description: |
+    A GWAdmin whose cp client CA is an intermediate, with the root after it in
+    tls.crt, as cert-manager writes it:
+    1. The client certificate of the data plane is issued from the intermediate,
+       the first certificate of the chain, the one gw-admin trusts.
+    2. gw-admin trusts that certificate, the data plane is Ready, and keg proxies
+       produce and consume.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Certificate-issued-from-the-first-of-the-chain
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: GATEWAY
+                value: ($gateway_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca root-ca "$WORK_DIR/root"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh gen-intermediate-ca "$WORK_DIR/root" intermediate-ca "$WORK_DIR/chain"
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/chain"
+        - apply:
+            file: ../onprem-manual-certificate/01-gwadmin.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/chain/tls.crt" 240
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_DP" "$WORK_DIR/issued"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh assert-cert-issuer "$WORK_DIR/issued" intermediate-ca
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh clean-work-dir
+
+    - name: 2-Trusted-by-gw-admin
+      try:
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/issued" "$GATEWAY" 200 150
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" chained hello-chained
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -28,6 +28,7 @@ on:
             {"suite": "aigateway"},
             {"suite": "onpremaigateway"},
             {"suite": "eventgateway"},
+            {"suite": "onpremeventgateway"},
             {"suite": "gwadmin"},
             {"suite": "gwadmin", "ip_family": "ipv6"},
             {"suite": "conversion-webhook"}
@@ -113,7 +114,7 @@ jobs:
       # The operator deploys gw-admin itself (RELATED_IMAGE_GW_ADMIN), so the
       # pinned image must reach the operator, not only the tests (which read
       # GW_ADMIN_IMAGE through the Makefile to assert it).
-      if: ${{ matrix.suite == 'gwadmin' }}
+      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
       run: |
         IMAGE="$(yq -r '.chainsaw.gw-admin.image // ""' < test/test_dependencies.yaml)"
         TAG="$(yq -r '.chainsaw.gw-admin.tag // ""' < test/test_dependencies.yaml)"
@@ -127,15 +128,16 @@ jobs:
       env:
         SUITE: ${{ matrix.suite }}
       run: |
-        # Only the gwadmin suite runs the GWAdmin controller, and the
-        # OnPremEventGateway one pushing to its gw-admin pods: a fault in
-        # them must not fail the other suites.
+        # Only the suites that need gw-admin run the GWAdmin controller: a
+        # fault in it must not fail the other suites. Both push the
+        # configuration of OnPremEventGateways to it.
         GWADMIN_FLAGS=()
-        if [ "$SUITE" = gwadmin ]; then
-          GWADMIN_FLAGS=(--set env.enable_controller_gwadmin=true
-            --set env.enable_controller_onpremeventgateway=true
-            --set-string customEnv.RELATED_IMAGE_GW_ADMIN="$GW_ADMIN_IMAGE")
-        fi
+        case "$SUITE" in
+          gwadmin|onpremeventgateway)
+            GWADMIN_FLAGS=(--set env.enable_controller_gwadmin=true
+              --set env.enable_controller_onpremeventgateway=true
+              --set-string customEnv.RELATED_IMAGE_GW_ADMIN="$GW_ADMIN_IMAGE") ;;
+        esac
         helm install kong-operator charts/kong-operator \
           --namespace kong-system \
           --create-namespace \

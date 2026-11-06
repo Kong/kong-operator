@@ -76,6 +76,10 @@ safe_kubectl() {
   fi
 }
 
+# Events with their timestamps rather than their age, to line them up with the
+# logs. Newer events only set eventTime.
+EVENT_COLUMNS="LAST:.lastTimestamp,FIRST:.firstTimestamp,EVENT_TIME:.eventTime,COUNT:.count,TYPE:.type,REASON:.reason,KIND:.involvedObject.kind,NAME:.involvedObject.name,MESSAGE:.message"
+
 # 1. Capture events in test namespaces
 echo "Capturing events in test namespace(s)..."
 EVENTS_FILE="${SNAPSHOT_DIR}/events.txt"
@@ -95,7 +99,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${EVENTS_FILE}"
 
-  safe_kubectl "${EVENTS_FILE}" get events -n "${ns}" --sort-by='.lastTimestamp'
+  safe_kubectl "${EVENTS_FILE}" get events -n "${ns}" --sort-by=.lastTimestamp -o custom-columns="${EVENT_COLUMNS}"
 done
 
 # 2. Capture events in operator namespace
@@ -107,7 +111,7 @@ OPERATOR_EVENTS_FILE="${SNAPSHOT_DIR}/operator-events.txt"
   echo ""
 } > "${OPERATOR_EVENTS_FILE}"
 
-safe_kubectl "${OPERATOR_EVENTS_FILE}" get events -n "${OPERATOR_NAMESPACE}" --sort-by='.lastTimestamp'
+safe_kubectl "${OPERATOR_EVENTS_FILE}" get events -n "${OPERATOR_NAMESPACE}" --sort-by=.lastTimestamp -o custom-columns="${EVENT_COLUMNS}"
 
 # 3. Capture operator logs
 echo "Capturing operator logs from namespace ${OPERATOR_NAMESPACE}..."
@@ -243,7 +247,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \
-    "pods,services,deployments.apps,replicasets.apps,statefulsets.apps,configmaps,serviceaccounts,roles.rbac.authorization.k8s.io,rolebindings.rbac.authorization.k8s.io,leases.coordination.k8s.io"
+    "pods,services,deployments.apps,replicasets.apps,statefulsets.apps,configmaps,serviceaccounts,roles.rbac.authorization.k8s.io,rolebindings.rbac.authorization.k8s.io,leases.coordination.k8s.io,networkpolicies.networking.k8s.io,endpointslices.discovery.k8s.io"
 
   # Secrets with payloads redacted (finalizers on Secrets are a common cause of
   # namespaces stuck in Terminating, so their metadata matters for debugging).

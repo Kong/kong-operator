@@ -1,0 +1,123 @@
+# On-prem Event Gateway across restarts of its gw-admin pods.
+#
+# gw-admin keeps nothing across a restart: Kong Operator pushes the
+# configuration again to a new gw-admin pod, which only turns Ready once
+# provisioned. keg keeps proxying meanwhile.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-gwadmin-restart
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway whose GWAdmin runs 2 gw-admin
+    replicas. Records are produced through keg all along, each with a new
+    connection, while:
+    1. one gw-admin pod is deleted: its replacement turns Ready, provisioned
+       by Kong Operator;
+    2. every gw-admin pod is deleted at once: their replacements turn Ready
+       too.
+    Not one record fails, and every one is consumed with the header the
+    consume policy, pushed again to the new pods, injects. keg proxies a new
+    round trip afterwards.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+
+  steps:
+    - name: 1-Data-plane-ready
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - assert:
+            timeout: 4m
+            file: ../../gwadmin/gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 2}
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" before-restarts hello-before-restarts
+
+    - name: 2-Gwadmin-pods-restart-without-downtime
+      try:
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh traffic-start traffic "$KEG_DP" during-restarts
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh gwadmin-replace-pods "$NAMESPACE" "$GWADMIN" one 240
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh gwadmin-replace-pods "$NAMESPACE" "$GWADMIN" all 240
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" after-restarts hello-after-restarts
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh traffic-check traffic
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,158 @@
+# On-prem Event Gateway whose KongReferenceGrant to its GWAdmin of another
+# namespace is revoked, then restored.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-grant-revoked
+spec:
+  description: |
+    An OnPremEventGateway served by a GWAdmin of the namespace
+    admin_namespace, which a KongReferenceGrant allows:
+    1. Its data plane is Ready, and keg proxies produce and consume.
+    2. The KongReferenceGrant is deleted: the gateway reports it may not use
+       its GWAdmin (GWAdminResolved False, RefNotPermitted), the data plane
+       reports its GWAdmin not ready, and gw-admin stops serving the gateway:
+       the client certificate of the data plane no longer gets its
+       configuration.
+    3. The KongReferenceGrant is created again: gw-admin serves the gateway
+       again, the data plane is Ready, and keg proxies again.
+  bindings:
+    - name: admin_namespace
+      value: (join('-', [$namespace, 'admin']))
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Data-plane-of-a-granted-gwadmin
+      try:
+        - apply:
+            file: ../onprem-cross-namespace/01-gwadmin.yaml
+        - apply:
+            file: ../onprem-cross-namespace/01-gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" granted hello-granted
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_DP" "$WORK_DIR/dp"
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" 200 90
+      cleanup:
+        - script:
+            env: *env
+            content: rm -rf "$WORK_DIR"
+
+    - name: 2-Grant-revoked
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              namespace: ($admin_namespace)
+              name: onprem-event-gateways
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'GWAdminResolved']):
+                  - status: "False"
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: GWAdminNotReady
+                    (contains(message, 'may not use its GWAdmin')): true
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" '!200' 210
+
+    - name: 3-Grant-restored
+      try:
+        - apply:
+            file: ../onprem-cross-namespace/01-gwadmin.yaml
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" 200 210
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" restored hello-restored
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,166 @@
+# On-prem Event Gateway across a rotation of the certificate authorities of
+# its GWAdmin.
+#
+# The data plane of an OnPremEventGateway follows the rotations of the
+# GWAdmin: it gets a client certificate from the new cp client CA and the new
+# cp server CA bundle, and the rotation completes once it rolled out onto
+# them.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-ca-rotation
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway with an Automatic client
+    certificate, against a GWAdmin with Automatic certificate authorities:
+    1. The data plane runs a client certificate from the published cp client
+       CA, and keg proxies produce and consume.
+    2. The rotate-certificate-authorities annotation rotates every certificate
+       authority of the GWAdmin. The data plane gets a client certificate from
+       the new cp client CA, rolls out, and the rotation completes, recording
+       CARotationCompleted, and dropping the previous cp client CA. keg
+       proxies produce and consume again, the new pods pulling the
+       configuration from gw-admin with the new certificates. Records are
+       produced through keg all along the rotation, each with a new
+       connection: not one fails, and every one is consumed.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Data-plane-on-the-published-cp-client-ca
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 1m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/ca-0"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/ca-0/tls.crt" 240
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" before-rotation hello-before-rotation
+      cleanup:
+        # Holds CA certificates: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh clean-work-dir
+
+    - name: 2-Rotation-moves-the-data-plane-without-downtime
+      try:
+        # Records are produced through keg all along the rotation: not a
+        # single one may fail.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh traffic-start traffic "$KEG_DP" during-rotation
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                annotations:
+                  gateway-operator.konghq.com/rotate-certificate-authorities: "1"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/ca-0/tls.crt" "$WORK_DIR/ca-1" 300
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../onprem-shared/onprem.sh wait-dp-client-ca "$KEG_DP" "$WORK_DIR/ca-1/tls.crt" 420
+        - assert:
+            timeout: 8m
+            file: ../../gwadmin/gwadmin-shared/assert-event.yaml
+            bindings:
+              - {name: event_type, value: Normal}
+              - {name: event_reason, value: CARotationCompleted}
+        # The previous cp client CA is dropped: no data plane runs a
+        # certificate from it anymore.
+        - assert:
+            timeout: 3m
+            file: ../../gwadmin/gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh wait-rolled-out "$KEG_DP" 240
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" after-rotation hello-after-rotation
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh traffic-check traffic
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

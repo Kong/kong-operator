@@ -1,0 +1,131 @@
+# The entities of the OnPremEventGateway gateway_name of the mTLS listener
+# test: a virtual cluster, a TLS trust bundle of the client CA in the Secret
+# client-ca, and a listener terminating TLS with the certificate of the Secret
+# server-tls, which requires a client certificate the trust bundle trusts,
+# forwarding the ports of the Kafka Service of the data plane keg_dp_name to
+# the virtual cluster.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: vcluster
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend
+  apiSpec:
+    name: vcluster
+    dnsLabel: vcluster-1
+    # The topics and consumer groups of the test, on the shared Kafka cluster.
+    namespace:
+      mode: hide_prefix
+      prefix: (join('', [($namespace), '_']))
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayTLSTrustBundle
+metadata:
+  name: client-ca
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: client-ca
+    config:
+      trustedCa:
+        type: secretRef
+        secretRef:
+          name: client-ca
+          key: tls.crt
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: listener
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092-19095"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: mtls
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: mtls
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.crt
+            key:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.key
+        clientAuthentication:
+          mode: required
+          tlsTrustBundles:
+            - namespacedRef:
+                name: client-ca
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: forward
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
+          destination:
+            name: vcluster

@@ -1,0 +1,187 @@
+# Isolation of the OnPremEventGateways of a GWAdmin.
+#
+# The gw-admin pods of a GWAdmin serve several gateways: each data plane gets
+# the configuration of its own gateway only, with the client certificate
+# registered on it, and a data plane deleted can't get it anymore.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-gateway-isolation
+spec:
+  description: |
+    Two OnPremEventGateways, A and B, of one GWAdmin, each with its data plane
+    and entities, B's consume policy injecting another header:
+    1. Each keg proxies produce and consume with the header of its own
+       gateway.
+    2. gw-admin hands the configuration of A to the client certificate of the
+       data plane of A, and answers 401 to it for the configuration of B; and
+       the other way round.
+    3. Once the data plane of B is deleted, its certificate is removed from
+       gw-admin: a copy of it gets 401 for the configuration of B. The data
+       plane of A keeps proxying.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_a
+      value: gateway-a
+    - name: gateway_b
+      value: gateway-b
+    - name: keg_a
+      value: keg-a
+    - name: keg_b
+      value: keg-b
+    - name: injected_header_key
+      value: My-New-Header
+    - name: header_a
+      value: from-gateway-a
+    - name: header_b
+      value: from-gateway-b
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Each-data-plane-proxies-its-gateway
+      try:
+        - apply:
+            file: 01-gateways.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+            bindings: &bindings_a
+              - {name: gateway_name, value: ($gateway_a)}
+              - {name: keg_dp_name, value: ($keg_a)}
+              - {name: backend_cluster_name, value: backend-a}
+              - {name: virtual_cluster_name, value: vcluster-a}
+              - {name: listener_name, value: listener-a}
+              - {name: listener_policy_name, value: forward-a}
+              - {name: consume_policy_name, value: modify-headers-a}
+              - {name: injected_header_value, value: ($header_a)}
+        - apply:
+            file: ../onprem-shared/entities.yaml
+            bindings: *bindings_a
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+            bindings: &bindings_b
+              - {name: gateway_name, value: ($gateway_b)}
+              - {name: keg_dp_name, value: ($keg_b)}
+              - {name: backend_cluster_name, value: backend-b}
+              - {name: virtual_cluster_name, value: vcluster-b}
+              - {name: listener_name, value: listener-b}
+              - {name: listener_policy_name, value: forward-b}
+              - {name: consume_policy_name, value: modify-headers-b}
+              - {name: injected_header_value, value: ($header_b)}
+        - apply:
+            file: ../onprem-shared/entities.yaml
+            bindings: *bindings_b
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+            bindings: *bindings_a
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+            bindings: *bindings_a
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+            bindings: *bindings_a
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+            bindings: *bindings_a
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+            bindings: *bindings_b
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+            bindings: *bindings_b
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+            bindings: *bindings_b
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+            bindings: *bindings_b
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_A
+                value: ($keg_a)
+              - name: KEG_B
+                value: ($keg_b)
+              - name: GATEWAY_A
+                value: ($gateway_a)
+              - name: GATEWAY_B
+                value: ($gateway_b)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_A
+                value: ($header_a)
+              - name: HEADER_B
+                value: ($header_b)
+              - name: WORK_DIR
+                value: ($work_dir)
+            timeout: 5m
+            content: HEADER_VALUE="$HEADER_A" ../onprem-shared/onprem.sh roundtrip "$KEG_A" through-a hello-through-a
+        - script:
+            env: *env
+            timeout: 5m
+            content: HEADER_VALUE="$HEADER_B" ../onprem-shared/onprem.sh roundtrip "$KEG_B" through-b hello-through-b
+      cleanup:
+        # Holds client keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: rm -rf "$WORK_DIR"
+
+    - name: 2-A-data-plane-only-gets-its-gateway
+      try:
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_A" "$WORK_DIR/a"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_B" "$WORK_DIR/b"
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/a" "$GATEWAY_A" 200 90
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/a" "$GATEWAY_B" 401 90
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/b" "$GATEWAY_B" 200 90
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/b" "$GATEWAY_A" 401 90
+
+    - name: 3-A-deleted-data-plane-is-revoked
+      try:
+        - delete:
+            ref:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              name: ($keg_b)
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/b" "$GATEWAY_B" 401 210
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/a" "$GATEWAY_A" 200 90
+        - script:
+            env: *env
+            timeout: 5m
+            content: HEADER_VALUE="$HEADER_A" ../onprem-shared/onprem.sh roundtrip "$KEG_A" after-revocation hello-after-revocation
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

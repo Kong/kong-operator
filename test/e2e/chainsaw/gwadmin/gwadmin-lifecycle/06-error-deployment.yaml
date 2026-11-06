@@ -1,0 +1,5 @@
+# Everything the GWAdmin owns is garbage collected along with it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($gwadmin_name)

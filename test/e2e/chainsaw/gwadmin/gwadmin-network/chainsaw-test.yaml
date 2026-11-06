@@ -37,7 +37,10 @@ spec:
               - {name: replicas, value: 1}
         - assert:
             timeout: 1m
-            file: 01-assert-cp-service.yaml
+            file: 01-assert-cp-service-options.yaml
+        - assert:
+            timeout: 1m
+            file: 01-assert-gwadmin-network.yaml
     - name: 2-Data-planes-reach-the-cp-listener-through-the-service
       try:
         - script:

@@ -1,0 +1,86 @@
+# A configuration gw-admin rejects, then reverted.
+#
+# The revision of the configuration goes up twice while the entities gw-admin
+# holds stay the same, so it gets the same entities at a higher data_version.
+# gw-admin builds before pull request 1520 refuse that, and leave the gateway
+# reporting a failure until a pod restarts.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-revert-rejected-config
+spec:
+  description: |
+    An OnPremEventGateway with a backend cluster:
+    1. The gateway is Programmed.
+    2. The backend cluster gets a bootstrap server without a port, which the CRD
+       accepts and gw-admin rejects: the gateway reports the push failed.
+    3. The change is reverted: the gateway is Programmed again. It can only turn
+       Programmed from the failure above once gw-admin accepted the revert.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: backend_cluster_name
+      value: backend
+
+  steps:
+    - name: 1-Programmed
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-backend-cluster.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+
+    - name: 2-Rejected-by-gw-admin
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              metadata:
+                name: ($backend_cluster_name)
+              spec:
+                apiSpec:
+                  bootstrapServers:
+                    - kafka-without-a-port
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: ConfigurationPushFailed
+
+    - name: 3-Reverted
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              metadata:
+                name: ($backend_cluster_name)
+              spec:
+                apiSpec:
+                  bootstrapServers:
+                    - kafka.example.svc:9092
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

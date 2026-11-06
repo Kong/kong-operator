@@ -1,0 +1,32 @@
+# A GWAdmin serving two OnPremEventGateways, gateway_a and gateway_b.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+spec:
+  # Readiness probed every second, so the pod turns Ready without waiting for
+  # the default 10s period, and unready after 30s of failures, as by default.
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: gw-admin
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_a)
+spec:
+  gwAdminRef:
+    name: ($gwadmin_name)
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_b)
+spec:
+  gwAdminRef:
+    name: ($gwadmin_name)

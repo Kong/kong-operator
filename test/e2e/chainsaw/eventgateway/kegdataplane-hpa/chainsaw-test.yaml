@@ -47,10 +47,6 @@ spec:
     - name: 2-Create-konnect-api-auth
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
-    - name: 3-Create-kafka-cluster
-      description: Deploy 3-broker Apache Kafka cluster so the backend cluster bootstrapServers reference is valid.
-      use:
-        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
     - name: 4-Create-konnect-eventgateway
       use:
         template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
