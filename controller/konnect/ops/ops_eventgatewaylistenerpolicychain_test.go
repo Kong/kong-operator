@@ -44,9 +44,12 @@ func TestListenerPolicyChainGuardedOperations(t *testing.T) {
 			{name: "nil snapshot is not empty", resolved: true, wantErr: "supplied explicitly"},
 			{name: "unready reference", desired: []string{"first"}, invalidRef: true, wantErr: "not programmed"},
 			{name: "incomplete set", desired: []string{"first"}, remote: []string{"first", "second"}, wantErr: "complete remote listener policy chain"},
+			{name: "same count different set", desired: []string{"first", "second"}, remote: []string{"first", "foreign"}, wantErr: "complete remote listener policy chain"},
+			{name: "missing remote policy", desired: []string{"first", "second"}, remote: []string{"first"}, wantErr: "complete remote listener policy chain"},
 			{name: "empty cannot clear", desired: []string{}, remote: []string{"first"}, wantErr: "complete remote listener policy chain"},
 			{name: "recreated policy ID", desired: []string{"first"}, remote: []string{"previous-id"}, wantErr: "complete remote listener policy chain"},
 			{name: "duplicate IDs", desired: []string{"first", "first"}, remote: []string{"first"}, wantErr: "unique, non-empty"},
+			{name: "empty desired ID snapshot", desired: []string{""}, remote: []string{}, resolved: true, wantErr: "unique, non-empty"},
 			{name: "duplicate remote IDs", desired: []string{"first"}, remote: []string{"first", "first"}, wantErr: "unique, non-empty"},
 			{name: "empty remote ID", desired: []string{}, remote: []string{""}, wantErr: "unique, non-empty"},
 			{name: "null remote list", desired: []string{}, wantErr: "explicit policy list"},
@@ -70,6 +73,9 @@ func TestListenerPolicyChainGuardedOperations(t *testing.T) {
 			{name: "PUT nil body", desired: []string{}, remote: []string{}, wantPUT: true, nilPutBody: true, wantErr: ErrNilResponse.Error()},
 			{name: "PUT null is not empty", desired: []string{}, remote: []string{}, wantPUT: true, wantErr: "does not match"},
 			{name: "PUT ignored order", desired: []string{"second", "first"}, remote: []string{"first", "second"}, response: []string{"first", "second"}, wantPUT: true, wantErr: "does not match"},
+			{name: "PUT omitted policy", desired: []string{"second", "first"}, remote: []string{"first", "second"}, response: []string{"second"}, wantPUT: true, wantErr: "does not match"},
+			{name: "PUT added policy", desired: []string{"first"}, remote: []string{"first"}, response: []string{"first", "foreign"}, wantPUT: true, wantErr: "does not match"},
+			{name: "PUT duplicate policy", desired: []string{"first"}, remote: []string{"first"}, response: []string{"first", "first"}, wantPUT: true, wantErr: "does not match"},
 		} {
 			t.Run(string(op)+"/"+tt.name, func(t *testing.T) {
 				parent := commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
