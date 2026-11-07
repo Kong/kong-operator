@@ -241,9 +241,9 @@ are outside this layer's scope.
 
 `configuration.konghq.com/v1alpha1` `EventGatewayListenerPolicyChain` declares the
 execution order of all `EventGatewayListenerPolicy` resources attached to one
-`EventGatewayListener`. This is a Konnect-only API foundation: listener-chain
-controller support is not implemented yet, and the resource is not registered
-with the on-prem Event Gateway controller.
+`EventGatewayListener`. The Konnect controller manages this parent-scoped
+singleton configuration. The resource is not registered with the on-prem Event
+Gateway controller.
 
 `spec.eventGatewayListenerRef` must use `namespacedRef` to reference a listener
 in the same namespace. The parent reference is immutable from creation, even
@@ -278,3 +278,41 @@ rejected with `400` without changing the remote order. These are observations
 from the tested development backend, not a guarantee for every production
 version. The pinned SDK already provides listener-chain GET and PUT operations;
 no SDK upgrade is required for this API.
+
+### Konnect listener-chain reconciliation
+
+Each reference must resolve to a distinct policy on the same listener and gateway,
+with a nonempty Konnect ID and `Programmed=True` at its current generation.
+Missing, deleting, unready, wrong-kind, wrong-parent, cross-namespace, and duplicate
+references block programming with an actionable `KonnectReferencesResolved=False`
+condition. The controller reads each policy once per reconciliation and reuses
+that snapshot's ordered IDs for the apply operation; it resolves references anew
+on the next reconciliation. It never silently skips an invalid policy.
+
+Before applying, the controller GETs the listener chain and requires the declared
+IDs to be an exact complete-set permutation of the remote IDs. Empty IDs,
+duplicates, omitted or null remote lists, nil responses, and GET errors (including
+`404`) are failures, not an empty chain. It PUTs the requested order only after
+this check and verifies that the response contains exactly that order. A
+policy-set mismatch keeps `Programmed=False` until the declaration and remote set
+align. GET and PUT are not atomic; avoid concurrent out-of-band policy-set changes.
+
+The first chain to claim the listener owns it, using the UID-bound annotation
+`gateway-operator.konghq.com/listener-policy-chain-owner` on that listener.
+This is independent of cluster-chain ownership. Optimistic-lock patches serialize
+competing declarations, and ownership reads bypass the Kubernetes cache so an
+active owner cannot be mistaken for a stale one. Another chain reports
+`PolicyChainOwnerValid=False` with reason `ConflictingChain` and does not write
+Konnect. Malformed, missing-owner,
+recreated-owner, and wrong-parent claims can be reclaimed. Delete the owner before
+replacing it; a terminating owner retains its claim until cleanup releases it.
+
+Periodic reconciliation corrects ordering drift. Policy spec/status changes,
+deletion, and recreation enqueue referencing chains, as do listener changes.
+Ownership conflicts retry at the configured Konnect sync period; listener changes
+also allow prompt handover after release.
+
+Deleting the chain CR releases ownership and stops management while preserving
+remote policy order and all policy entities. Cleanup uses Kubernetes only and
+does not require working authentication or resolvable policy references. It does
+not PUT an empty list or call a remote DELETE endpoint.

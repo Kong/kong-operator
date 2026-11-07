@@ -1372,6 +1372,7 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayListenerPolicy]
             resolvesTo: id
+            resolverMethod: ResolveValidatedPolicyIDs
         cel:
           _validations:
             - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef",message="spec.eventGatewayListenerRef is immutable",fieldPath=".spec.eventGatewayListenerRef"'
@@ -1396,6 +1397,26 @@ apiGroupVersions:
                   list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
+            fieldName: EventGatewayListenerPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyChainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyChainRequest
+        reconciler:
+          skipOnPremEventGateway: true
+          parentEntityGVK:
+            kind: EventGatewayListener
+          parentRef:
+            fieldName: eventGatewayListenerRef
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentSDKFields:
+            - GatewayID
+            - ListenerID
       - path: /v1/event-gateways/{gatewayId}/backend-clusters
         name: EventGatewayBackendCluster
         cel:

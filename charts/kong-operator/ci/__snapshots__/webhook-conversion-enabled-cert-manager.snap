@@ -86619,6 +86619,7 @@ rules:
   resources:
   - eventgatewaybackendclusters
   - eventgatewaylistenerpolicies
+  - eventgatewaylistenerpolicychains
   - eventgatewaylisteners
   - eventgatewayschemaregistries
   - eventgatewaystatickeys
@@ -86650,6 +86651,8 @@ rules:
   - eventgatewaydataplanecertificates/status
   - eventgatewaylistenerpolicies/finalizers
   - eventgatewaylistenerpolicies/status
+  - eventgatewaylistenerpolicychains/finalizers
+  - eventgatewaylistenerpolicychains/status
   - eventgatewaylisteners/finalizers
   - eventgatewaylisteners/status
   - eventgatewayschemaregistries/finalizers
