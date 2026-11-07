@@ -166,6 +166,14 @@ func (p *Parser) ParsePaths(targetPaths []string) (*ParsedSpec, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Shared request bodies still represent distinct entities at each path.
+		if _, exists := result.RequestBodies[name]; exists {
+			name = deriveSchemaNameFromPath(targetPath, schema.OperationID)
+			if previous, exists := result.RequestBodies[name]; exists {
+				return nil, fmt.Errorf("request body name %q collides for paths %q and %q", name, previous.SourcePath, targetPath)
+			}
+			schema.Name = name
+		}
 		result.RequestBodies[name] = schema
 		p.collectReferencedSchemas(schema, referencedSchemas)
 	}

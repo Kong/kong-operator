@@ -17,6 +17,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&EventGatewayListenerList{},
 		&EventGatewayListenerPolicy{},
 		&EventGatewayListenerPolicyList{},
+		&EventGatewayListenerPolicyChain{},
+		&EventGatewayListenerPolicyChainList{},
 		&EventGatewaySchemaRegistry{},
 		&EventGatewaySchemaRegistryList{},
 		&EventGatewayStaticKey{},

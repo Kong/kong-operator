@@ -78,6 +78,30 @@ type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentErro
 // can never resolve to a usable ID.
 type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
 
+// EventGatewayListenerPolicyRef references an EventGatewayListenerPolicy in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayListenerPolicyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayListenerPolicy
+	// +kubebuilder:default=EventGatewayListenerPolicy
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // EventGatewaySchemaRegistryRef references an EventGatewaySchemaRegistry in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type EventGatewaySchemaRegistryRef struct {
