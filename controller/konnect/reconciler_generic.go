@@ -56,6 +56,9 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 
 	MetricRecorder metrics.Recorder
 
+	// apiReader makes policy-chain ownership decisions independent of cache lag.
+	apiReader client.Reader
+
 	// pendingKonnectIDs holds the Konnect ID of entities created in Konnect whose
 	// ID has not yet been persisted to their status. It lets the cleanup logic
 	// recover and delete a Konnect entity even if the status update that would
@@ -111,6 +114,7 @@ func NewKonnectEntityReconciler[
 		sdkFactory:        sdkFactory,
 		LoggingMode:       loggingMode,
 		Client:            client,
+		apiReader:         client,
 		SyncPeriod:        consts.DefaultKonnectSyncPeriod,
 		MetricRecorder:    nil,
 		pendingKonnectIDs: newPendingKonnectIDStore(),
@@ -123,6 +127,7 @@ func NewKonnectEntityReconciler[
 
 // SetupWithManager sets up the controller with the given manager.
 func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
 	var (
 		e              T
 		ent            = TEnt(&e)
@@ -151,10 +156,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
 
-	// Retaining a cluster policy chain must not depend on live authentication,
+	chainClient := r.Client
+	if r.apiReader != nil {
+		chainClient = policyChainLiveGetClient{Client: r.Client, apiReader: r.apiReader}
+	}
+
+	// Retaining a policy chain must not depend on live authentication,
 	// parent readiness, or policy references.
-	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok && !chain.DeletionTimestamp.IsZero() {
-		return finalizePolicyChain(ctx, r.Client, chain)
+	if chain, ok := any(ent).(policyChain); ok && !chain.GetDeletionTimestamp().IsZero() {
+		return finalizePolicyChain(ctx, chainClient, chain)
 	}
 
 	// Entities referencing a gateway the Konnect reconciler does not manage,
@@ -732,7 +742,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
 	// that do not exist or populate some Status fields based on Konnect API.
-	ctx, stop, res, err = handleTypeSpecific(ctx, sdk, r.SyncPeriod, r.Client, ent)
+	ctx, stop, res, err = handleTypeSpecific(ctx, sdk, r.SyncPeriod, r.Client, chainClient, ent)
 	if err != nil {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.

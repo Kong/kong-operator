@@ -128,6 +128,8 @@ func Create[
 		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
 		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, CreateOp)
+	case *configurationv1alpha1.EventGatewayListenerPolicyChain:
+		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, CreateOp)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
@@ -140,7 +142,7 @@ func Create[
 
 	var errGet error
 	switch {
-	case ErrorIsCreateConflict(err), isCreateNameConflict(e, err):
+	case (ErrorIsCreateConflict(err) || isCreateNameConflict(e, err)) && EntityPersistsKonnectID(e):
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
@@ -208,6 +210,13 @@ func Create[
 		)
 	}
 
+	// Singleton chain failures must remain errors, including GET failures and
+	// conflicts: there is no create/list-for-UID recovery for a policy chain.
+	switch any(e).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		return e, policyChainOperationError(err)
+	}
 	logger := loggerForEntity(ctx, e, CreateOp)
 	err = IgnoreUnrecoverableAPIErr(err, logger)
 	err = IgnoreAlreadyHandledErr(err, logger)
@@ -448,7 +457,8 @@ func Delete[
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), e)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), e)
-	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain:
 		// Deleting the declaration relinquishes management, not remote configuration.
 		break
 	case *konnectv1alpha1.MCPServer:
@@ -620,6 +630,8 @@ func Update[
 		err = updateEventGatewayStaticKey(ctx, cl, sdk.GetEventGatewayStaticKeysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
 		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, UpdateOp)
+	case *configurationv1alpha1.EventGatewayListenerPolicyChain:
+		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, UpdateOp)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -679,6 +691,11 @@ func Update[
 		)
 	}
 
+	switch any(e).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		return ctrl.Result{}, policyChainOperationError(err)
+	}
 	logger := loggerForEntity(ctx, e, UpdateOp)
 	err = IgnoreUnrecoverableAPIErr(err, logger)
 	err = IgnoreAlreadyHandledErr(err, logger)

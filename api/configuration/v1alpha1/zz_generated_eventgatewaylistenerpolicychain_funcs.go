@@ -81,7 +81,7 @@ func (obj *EventGatewayListenerPolicyChain) SetEventGatewayListenerID(id string)
 	obj.Status.EventGatewayListenerID.ID = id
 }
 
-// GetEventGatewayListenerRef returns the reference to the root EventGatewayListener.
+// GetEventGatewayListenerRef returns the reference to the parent EventGatewayListener.
 func (obj *EventGatewayListenerPolicyChain) GetEventGatewayListenerRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.EventGatewayListenerRef
 }
@@ -133,4 +133,23 @@ func (obj *EventGatewayListenerPolicyChain) GetStatusConditionReasonParentRefInv
 // programmed in Konnect.
 func (obj *EventGatewayListenerPolicyChain) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return EventGatewayListenerRefReasonNotProgrammed
+}
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *EventGatewayListenerPolicyChain) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, 1)
+	if obj.Status.GatewayID != nil {
+		m["KonnectEventGateway"] = obj.Status.GatewayID.ID
+	} else {
+		m["KonnectEventGateway"] = ""
+	}
+	return m
+}
+
+// SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
+func (obj *EventGatewayListenerPolicyChain) SetAncestorID(kind, id string) {
+	switch kind {
+	case "KonnectEventGateway":
+		obj.SetGatewayID(id)
+	}
 }

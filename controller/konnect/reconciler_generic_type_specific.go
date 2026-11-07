@@ -37,6 +37,7 @@ func handleTypeSpecific[
 	sdk sdkops.SDKWrapper,
 	syncPeriod time.Duration,
 	cl client.Client,
+	chainClient client.Client,
 	ent TEnt,
 ) (context.Context, bool, ctrl.Result, error) {
 	var (
@@ -48,8 +49,8 @@ func handleTypeSpecific[
 
 	resolver, hasReferences := any(ent).(konnectReferenceResolver)
 	var chainResolver *policyChainReferenceResolver
-	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
-		chainResolver = &policyChainReferenceResolver{EventGatewayVirtualClusterPolicyChain: chain}
+	if chain, ok := any(ent).(policyChain); ok {
+		chainResolver = &policyChainReferenceResolver{chain: chain}
 		resolver, hasReferences = chainResolver, true
 	}
 	if hasReferences {
@@ -62,16 +63,16 @@ func handleTypeSpecific[
 			return ctx, false, refRes, nil
 		}
 		if chainResolver != nil && !refProblem {
-			ctx = ops.WithResolvedPolicyChainIDs(ctx, chainResolver.EventGatewayVirtualClusterPolicyChain, chainResolver.policyIDs)
+			ctx = ops.WithResolvedPolicyChainIDs(ctx, ent, chainResolver.policyIDs)
 		}
 		updated = updated || refUpdated
 		isProblem = isProblem || refProblem
 	}
 
 	switch e := any(ent).(type) {
-	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+	case policyChain:
 		if !isProblem {
-			owned, res, err := claimPolicyChain(ctx, cl, e, syncPeriod)
+			owned, res, err := claimPolicyChain(ctx, chainClient, e, syncPeriod)
 			if err != nil || !res.IsZero() || !owned {
 				return ctx, true, res, err
 			}

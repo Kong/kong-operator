@@ -63,6 +63,7 @@ func ensureKongReferenceGrantForParentRef[
 	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
 		ref.NamespacedRef == nil ||
 		ref.NamespacedRef.Namespace == nil ||
+		*ref.NamespacedRef.Namespace == "" ||
 		*ref.NamespacedRef.Namespace == ent.GetNamespace() {
 		// The parent ref doesn't require a grant. Only remove the shared
 		// ResolvedRefs condition if no other cross-namespace reference of this
