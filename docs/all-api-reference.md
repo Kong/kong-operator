@@ -10056,6 +10056,7 @@ _Appears in:_
 - [AIGatewayConsumerCredentialSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialspec)
 - [EventGatewayBackendClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterspec)
 - [EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)
+- [EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)
 - [EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
 - [EventGatewayListenerSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerspec)
 - [EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)
@@ -10415,6 +10416,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
 - [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
 - [EventGatewayStaticKey](#configuration-konghq-com-v1alpha1-eventgatewaystatickey)
 - [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
@@ -10504,6 +10506,21 @@ EventGatewayListenerPolicy is the Schema for the eventgatewaylistenerpolicys API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)_ |  |
 | `status` _[EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)_ |  |
+
+### EventGatewayListenerPolicyChain
+
+
+EventGatewayListenerPolicyChain is the Schema for the eventgatewaylistenerpolicychains API.
+
+<!-- event_gateway_listener_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListenerPolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)_ |  |
+| `status` _[EventGatewayListenerPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainstatus)_ |  |
 
 ### EventGatewaySchemaRegistry
 
@@ -12404,6 +12421,55 @@ _Appears in:_
 
 - [EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
 
+#### EventGatewayListenerPolicyChainAPISpec
+
+
+EventGatewayListenerPolicyChainAPISpec defines the API spec fields for EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)
+
+#### EventGatewayListenerPolicyChainSpec
+
+
+EventGatewayListenerPolicyChainSpec defines the desired state of EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayListenerRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
+| `apiSpec` _[EventGatewayListenerPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
+
+#### EventGatewayListenerPolicyChainStatus
+
+
+EventGatewayListenerPolicyChainStatus defines the observed state of EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventGatewayListenerID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
+
 #### EventGatewayListenerPolicyConfig
 
 
@@ -12441,6 +12507,24 @@ Allowed values:
 | --- | --- |
 | `forwardToVirtualCluster` |  |
 | `tlsServer` |  |
+
+#### EventGatewayListenerPolicyRef
+
+
+EventGatewayListenerPolicyRef references an EventGatewayListenerPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainapispec)
 
 
 
@@ -16669,6 +16753,7 @@ _Appears in:_
 
 - [EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
 - [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
+- [EventGatewayListenerPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainstatus)
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)

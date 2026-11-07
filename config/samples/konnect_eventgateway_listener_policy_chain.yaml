@@ -1,0 +1,46 @@
+# Apply konnect_eventgateway_listener_policy.yaml first to create the Konnect
+# gateway, listener, TLS Secret, and TLS listener policy referenced below.
+# The chain CR defines the API only; listener-chain controller support is not
+# implemented yet. On-prem Event Gateways are not supported.
+#
+# The declared order is TLS handling followed by SNI forwarding. The forwarding
+# policy also needs a virtual cluster with a matching dnsLabel for traffic routing.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: listener-chain-forward
+  namespace: default
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-listener-1
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: listener-chain-forward
+      enabled: Enabled
+      config:
+        type: sni
+        sni:
+          sniSuffix: .example.com
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicyChain
+metadata:
+  name: listener-chain-example
+  namespace: default
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-listener-1
+  apiSpec:
+    # List every listener policy exactly once, in execution order.
+    # Update this list when policies are created or deleted.
+    # An empty list is valid only when no policies exist; it does not clear them.
+    policies:
+      - name: cp-event-1-listener-1
+      - name: listener-chain-forward
+        kind: EventGatewayListenerPolicy
+        namespace: default

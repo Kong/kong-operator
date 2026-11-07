@@ -302,8 +302,10 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 	for gvk := range s.AllKnownTypes() {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
-		// TODO(#6158): Include policy chains when controller support is implemented.
-		if _, apiOnly := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); apiOnly {
+		// Policy chains are Konnect-only and must not be registered on-prem.
+		switch obj.(type) {
+		case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+			*configurationv1alpha1.EventGatewayListenerPolicyChain:
 			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
 			continue
 		}
