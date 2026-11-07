@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // PolicyChainInvalidError identifies an invalid policy-chain declaration.
@@ -73,26 +74,9 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ResolveValidatedPolicyIDs(ctx 
 			}
 			continue
 		}
-		if commonv1alpha1.ObjectRefsDiffer(parent, policy.Spec.EventGatewayVirtualClusterRef, obj.Namespace, policy.Namespace) ||
-			(obj.GetVirtualClusterID() != "" && policy.GetVirtualClusterID() != obj.GetVirtualClusterID()) {
-			errs = append(errs, commonv1alpha1.ReferenceDifferentParentError{Kind: kind, Namespace: ns, Name: ref.Name, ParentKind: "EventGatewayVirtualCluster"})
-			continue
-		}
-		if obj.GetGatewayID() != "" && policy.GetGatewayID() != obj.GetGatewayID() {
-			errs = append(errs, commonv1alpha1.ReferenceDifferentGatewayError{
-				Kind: kind, Namespace: ns, Name: ref.Name,
-				ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: policy.GetGatewayID(),
-			})
-			continue
-		}
-		if !policy.DeletionTimestamp.IsZero() {
-			errs = append(errs, commonv1alpha1.ReferenceBeingDeletedError{Kind: kind, Namespace: ns, Name: ref.Name})
-			continue
-		}
-		programmed := apimeta.FindStatusCondition(policy.Status.Conditions, "Programmed")
-		if policy.GetKonnectID() == "" || programmed == nil || programmed.Status != metav1.ConditionTrue ||
-			programmed.ObservedGeneration != policy.Generation {
-			errs = append(errs, commonv1alpha1.ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
+		if err := validatePolicyChainPolicy(&policy, kind, parent, obj.Namespace,
+			"EventGatewayVirtualCluster", obj.GetVirtualClusterID(), policy.GetVirtualClusterID(), obj.GetGatewayID()); err != nil {
+			errs = append(errs, err)
 			continue
 		}
 		ids = append(ids, policy.GetKonnectID())
@@ -101,4 +85,37 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ResolveValidatedPolicyIDs(ctx 
 		return nil, err
 	}
 	return ids, nil
+}
+
+func validatePolicyChainPolicy(
+	policy interface {
+		k8sutils.ConditionsAwareObject
+		GetParentRef() commonv1alpha1.ObjectRef
+		GetGatewayID() string
+		GetKonnectID() string
+	},
+	kind string,
+	parent commonv1alpha1.ObjectRef,
+	namespace, parentKind, parentID, policyParentID, gatewayID string,
+) error {
+	ns, name := policy.GetNamespace(), policy.GetName()
+	if commonv1alpha1.ObjectRefsDiffer(parent, policy.GetParentRef(), namespace, ns) ||
+		(parentID != "" && policyParentID != parentID) {
+		return commonv1alpha1.ReferenceDifferentParentError{Kind: kind, Namespace: ns, Name: name, ParentKind: parentKind}
+	}
+	if gatewayID != "" && policy.GetGatewayID() != gatewayID {
+		return commonv1alpha1.ReferenceDifferentGatewayError{
+			Kind: kind, Namespace: ns, Name: name,
+			ReferrerGatewayID: gatewayID, ReferencedGatewayID: policy.GetGatewayID(),
+		}
+	}
+	if !policy.GetDeletionTimestamp().IsZero() {
+		return commonv1alpha1.ReferenceBeingDeletedError{Kind: kind, Namespace: ns, Name: name}
+	}
+	programmed := apimeta.FindStatusCondition(policy.GetConditions(), "Programmed")
+	if policy.GetKonnectID() == "" || programmed == nil || programmed.Status != metav1.ConditionTrue ||
+		programmed.ObservedGeneration != policy.GetGeneration() {
+		return commonv1alpha1.ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: name}
+	}
+	return nil
 }

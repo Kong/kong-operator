@@ -32,6 +32,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListener](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListenerPolicy](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayListenerPolicyChain](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewaySchemaRegistry](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayStaticKey](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayTLSTrustBundle](controllerFactory),

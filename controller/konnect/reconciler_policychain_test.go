@@ -316,7 +316,7 @@ func TestPolicyChainOwnershipStaleAnnotation(t *testing.T) {
 				WithStatusSubresource(chain).WithObjects(parent, chain, other).
 				WithInterceptorFuncs(interceptor.Funcs{
 					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
+						if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok && key.Name != chain.Name {
 							lookedUpOwner = true
 							require.True(t, tt.lookupOwner, "malformed ownership must not trigger an owner lookup")
 						}

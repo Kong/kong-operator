@@ -142,6 +142,7 @@
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.
   [#6501](https://github.com/Kong/kong-operator/pull/6501)
+  [#6502](https://github.com/Kong/kong-operator/pull/6502)
 - `EventGatewayVirtualClusterPolicyChain` now applies declared cluster-level
   policy ordering to `OnPremEventGateway` configuration, using Kubernetes policy
   references without Konnect IDs. Invalid owning declarations pause the
