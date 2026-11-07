@@ -63,7 +63,7 @@ fail() {
 
 CURL_ARGS=(-s -o "${RESPONSE_FILE}" -w '%{http_code}' -X "${METHOD}"
   --connect-timeout "${CONNECT_TIMEOUT}" --max-time "${MAX_TIME}"
-  -H "Authorization: Bearer ${KONNECT_TOKEN}")
+  -H @-)
 if [[ -n "${BODY}" ]]; then
   REQUEST_BODY="$(jq -cn "${BODY}")" || fail "BODY is not a valid jq program"
   CURL_ARGS+=(-H "Content-Type: application/json" -d "${REQUEST_BODY}")
@@ -80,7 +80,9 @@ status_accepted() {
 
 LAST_ERROR=""
 for ATTEMPT in $(seq 1 "${RETRY_COUNT}"); do
-  STATUS="$(curl "${CURL_ARGS[@]}" "https://${KONNECT_URL}${API_PATH}" || true)"
+  # Keep the credential in a pipe, not curl's argv or a temporary header file.
+  STATUS="$(printf 'Authorization: Bearer %s\n' "${KONNECT_TOKEN}" |
+    curl "${CURL_ARGS[@]}" "https://${KONNECT_URL}${API_PATH}" || true)"
   if ! status_accepted "${STATUS}"; then
     LAST_ERROR="HTTP status ${STATUS}, expected ${EXPECTED_STATUS:-2xx}"
   elif [[ -n "${EXPECTED_JQ}" ]] && ! jq -e "${EXPECTED_JQ}" "${RESPONSE_FILE}" >/dev/null 2>&1; then
