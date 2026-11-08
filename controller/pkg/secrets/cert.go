@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -174,10 +175,11 @@ func IsTLSSecretValid(secret *corev1.Secret) bool {
 	return true
 }
 
-// EnsureCertificate creates a namespace/name Secret for subject signed by the CA in the
-// mtlsCASecretNamespace/mtlsCASecretName Secret. If that Secret is already present, it is
-// reused unless its subject or CA bundle no longer matches, in which case it is re-created.
-// It returns the operation it performed and an error indicating any failures it encountered.
+// EnsureCertificate creates a Secret for subject, signed by the CA in mtlsCASecretNN. It reuses
+// the owner's single matching Secret, re-issuing the leaf into that Secret when the stored CA
+// bundle no longer matches. It re-creates the Secret when the stored certificate is unusable or
+// is for another subject. It returns the operation it performed and an error indicating any
+// failures it encountered.
 func EnsureCertificate[
 	T interface {
 		k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension
@@ -201,6 +203,12 @@ func EnsureCertificate[
 	if err != nil {
 		return op.Noop, nil, fmt.Errorf("failed listing Secrets for %T %s/%s: %w", owner, owner.GetNamespace(), owner.GetName(), err)
 	}
+
+	// A Secret that a previous reconcile deleted can still be listed while other finalizers
+	// hold it. Counting it as a live Secret makes the reduce step delete the new Secret instead.
+	secrets = slices.DeleteFunc(secrets, func(s corev1.Secret) bool {
+		return !s.DeletionTimestamp.IsZero()
+	})
 
 	count := len(secrets)
 	if count > 1 {
@@ -247,17 +255,21 @@ func EnsureCertificate[
 
 	// The reuse path only refreshes metadata, so a Secret that holds a stale CA bundle would
 	// keep it until the leaf expires. That bundle is stale after a CA gains a root, and after
-	// an operator upgrade to a version that appends the root. Re-create the Secret instead.
+	// an operator upgrade to a version that appends the root. Re-issue the leaf into the
+	// existing Secret: deleting it first would leave the owner with no certificate Secret
+	// when the CA cannot issue.
 	ca, err := getCASecret(ctx, cl, mtlsCASecretNN)
 	if err != nil {
 		return op.Noop, existingSecret, err
 	}
 	if desired := caBundle(ca); len(desired) > 0 && !bytes.Equal(existingSecret.Data["ca.crt"], desired) {
-		if err := deleteSecret(ctx, cl, existingSecret); err != nil {
-			return op.Noop, nil, err
+		if err := fillTLSData(existingSecret, owner, subject, ca, usages, certTTL); err != nil {
+			return op.Noop, existingSecret, err
 		}
-
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl, certTTL)
+		if err := cl.Update(ctx, existingSecret); err != nil {
+			return op.Noop, existingSecret, fmt.Errorf("failed updating secret %s: %w", existingSecret.Name, err)
+		}
+		return op.Updated, existingSecret, nil
 	}
 
 	var updated bool
@@ -303,8 +315,8 @@ func GenerateCertificate[T interface {
 }
 
 // deleteSecret deletes a generated certificate Secret. A DataPlane-owned Secret carries the
-// wait-for-owner finalizer that only the DataPlane deletion removes, so it must be dropped
-// first or the Secret stays terminating and the reduce step keeps it over its replacement.
+// wait-for-owner finalizer, which no controller removes while the owner lives, so drop that
+// finalizer first or the Secret stays terminating instead of going away.
 func deleteSecret(ctx context.Context, cl client.Client, secret *corev1.Secret) error {
 	if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, cl, secret); err != nil {
 		return err
@@ -364,14 +376,35 @@ func generateTLSDataSecret(
 	if err != nil {
 		return op.Noop, nil, err
 	}
+	if err := fillTLSData(generatedSecret, owner, subject, ca, usages, certTTL); err != nil {
+		return op.Noop, nil, err
+	}
+
+	if err = k8sClient.Create(ctx, generatedSecret); err != nil {
+		return op.Noop, nil, err
+	}
+
+	return op.Created, generatedSecret, nil
+}
+
+// fillTLSData fills secret with a new private key, a leaf for subject signed by ca, and the
+// CA bundle. It does not write to the API.
+func fillTLSData(
+	secret *corev1.Secret,
+	owner client.Object,
+	subject string,
+	ca *corev1.Secret,
+	usages []certificatesv1.KeyUsage,
+	certTTL time.Duration,
+) error {
 	keyConfig, err := DetectCertType(ca.Data["tls.crt"])
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
 	priv, pemBlock, signatureAlgorithm, err := CreatePrivateKey(keyConfig)
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
 	template := x509.CertificateRequest{
@@ -386,7 +419,7 @@ func generateTLSDataSecret(
 
 	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
 	// This is effectively a placeholder so long as we handle signing internally. When actually creating CSR resources,
@@ -410,30 +443,25 @@ func generateTLSDataSecret(
 
 	signed, err := signCertificate(csr, ca)
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
-	generatedSecret.Data = map[string][]byte{
+	secret.Data = map[string][]byte{
 		"ca.crt":  caBundle(ca),
 		"tls.crt": signed,
 		"tls.key": pem.EncodeToMemory(pemBlock),
 	}
 	// Preserve certificate expiration date as an annotation.
-	if generatedSecret.Annotations == nil {
-		generatedSecret.Annotations = make(map[string]string)
+	if secret.Annotations == nil {
+		secret.Annotations = make(map[string]string)
 	}
 	if certBlock, _ := pem.Decode(signed); certBlock != nil {
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err == nil {
-			generatedSecret.Annotations[consts.CertExpiresAtAnnotation] = cert.NotAfter.UTC().Format(time.RFC3339)
+			secret.Annotations[consts.CertExpiresAtAnnotation] = cert.NotAfter.UTC().Format(time.RFC3339)
 		}
 	}
-
-	if err = k8sClient.Create(ctx, generatedSecret); err != nil {
-		return op.Noop, nil, err
-	}
-
-	return op.Created, generatedSecret, nil
+	return nil
 }
 
 // getCASecret returns the CA Secret at the provided namespaced name.

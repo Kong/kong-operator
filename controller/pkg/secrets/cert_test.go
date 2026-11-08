@@ -479,7 +479,7 @@ func TestEnsureCertificateIncludesCAChain(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestEnsureCertificateRecreatesSecretWithStaleCABundle(t *testing.T) {
+func TestEnsureCertificateReissuesLeafWithStaleCABundle(t *testing.T) {
 	ctx := t.Context()
 
 	root := certificate.MustGenerateCert(
@@ -549,22 +549,187 @@ func TestEnsureCertificateRecreatesSecretWithStaleCABundle(t *testing.T) {
 	require.Equal(t, op.Created, res)
 	require.Equal(t, intermediateCert, leaf.Data["ca.crt"])
 
-	// The CA gains a root, so the stored bundle is stale. The Secret must be re-created
-	// instead of reused, or the data plane keeps a leaf that only names the intermediate.
+	// The CA gains a root, so the stored bundle is stale. The leaf is re-issued into the same
+	// Secret, or the data plane keeps a bundle that only names the intermediate.
 	require.NoError(t, fakeClient.Get(ctx, caNN, caSecret))
 	caSecret.Data["ca.crt"] = rootCert
 	require.NoError(t, fakeClient.Update(ctx, caSecret))
 
-	res, recreated := ensure()
+	res, reissued := ensure()
+	require.Equal(t, op.Updated, res)
+	require.Equal(t, leaf.Name, reissued.Name)
+	require.Equal(t, caBundle(caSecret), reissued.Data["ca.crt"])
+	require.NotEqual(t, leaf.Data["tls.crt"], reissued.Data["tls.crt"])
+
+	res, reused := ensure()
+	require.Equal(t, op.Noop, res)
+	require.Equal(t, reissued.Name, reused.Name)
+}
+
+func TestEnsureCertificateKeepsSecretWhenReissueFails(t *testing.T) {
+	ctx := t.Context()
+
+	root := certificate.MustGenerateCert(
+		certificate.WithCommonName("root-ca"),
+		certificate.WithCATrue(),
+		certificate.WithKeyType(certificate.ECDSA),
+	)
+	intermediate := certificate.MustGenerateCert(
+		certificate.WithCommonName("intermediate-ca"),
+		certificate.WithCATrue(),
+		certificate.WithKeyType(certificate.ECDSA),
+		certificate.WithParent(root),
+	)
+	intermediateCert, intermediateKey := certificate.CertToPEMFormat(intermediate)
+	rootCert, _ := certificate.CertToPEMFormat(root)
+
+	const (
+		namespace = "ns"
+		caName    = "ca"
+	)
+	dataPlane := &operatorv1beta1.DataPlane{
+		Name:      "dp",
+		Namespace: namespace,
+		UID:       types.UID("1234"),
+	}
+	caSecret := &corev1.Secret{
+		Name:      caName,
+		Namespace: namespace,
+		Data: map[string][]byte{
+			"tls.crt": intermediateCert,
+			"tls.key": intermediateKey,
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, certificatesv1.AddToScheme(scheme))
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(dataPlane, caSecret).
+		Build()
+
+	caNN := types.NamespacedName{
+		Namespace: namespace,
+		Name:      caName,
+	}
+	ensure := func() (op.Result, *corev1.Secret, error) {
+		return EnsureCertificate(
+			ctx,
+			dataPlane,
+			"test-subject",
+			caNN,
+			[]certificatesv1.KeyUsage{
+				certificatesv1.UsageServerAuth,
+			},
+			fakeClient,
+			nil,
+			consts.DefaultCertTTL,
+		)
+	}
+
+	res, leaf, err := ensure()
+	require.NoError(t, err)
+	require.Equal(t, op.Created, res)
+	originalCert := leaf.Data["tls.crt"]
+
+	// The CA Secret keeps a root but loses its certificate, so the stored bundle is stale and
+	// the CA cannot issue. The existing Secret must survive intact.
+	require.NoError(t, fakeClient.Get(ctx, caNN, caSecret))
+	caSecret.Data = map[string][]byte{"ca.crt": rootCert}
+	require.NoError(t, fakeClient.Update(ctx, caSecret))
+
+	_, _, err = ensure()
+	require.Error(t, err)
+
+	var kept corev1.Secret
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Namespace: leaf.Namespace, Name: leaf.Name}, &kept))
+	require.Equal(t, originalCert, kept.Data["tls.crt"])
+	require.Equal(t, intermediateCert, kept.Data["ca.crt"])
+}
+
+func TestEnsureCertificateKeepsNewSecretWhileOldOneTerminates(t *testing.T) {
+	ctx := t.Context()
+
+	root := certificate.MustGenerateCert(
+		certificate.WithCommonName("root-ca"),
+		certificate.WithCATrue(),
+		certificate.WithKeyType(certificate.ECDSA),
+	)
+	intermediate := certificate.MustGenerateCert(
+		certificate.WithCommonName("intermediate-ca"),
+		certificate.WithCATrue(),
+		certificate.WithKeyType(certificate.ECDSA),
+		certificate.WithParent(root),
+	)
+	intermediateCert, intermediateKey := certificate.CertToPEMFormat(intermediate)
+
+	const (
+		namespace = "ns"
+		caName    = "ca"
+	)
+	dataPlane := &operatorv1beta1.DataPlane{
+		Name:      "dp",
+		Namespace: namespace,
+		UID:       types.UID("1234"),
+	}
+	caSecret := &corev1.Secret{
+		Name:      caName,
+		Namespace: namespace,
+		Data: map[string][]byte{
+			"tls.crt": intermediateCert,
+			"tls.key": intermediateKey,
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, certificatesv1.AddToScheme(scheme))
+	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(dataPlane, caSecret).
+		Build()
+
+	caNN := types.NamespacedName{
+		Namespace: namespace,
+		Name:      caName,
+	}
+	ensure := func(subject string) (op.Result, *corev1.Secret) {
+		res, secret, err := EnsureCertificate(
+			ctx,
+			dataPlane,
+			subject,
+			caNN,
+			[]certificatesv1.KeyUsage{
+				certificatesv1.UsageServerAuth,
+			},
+			fakeClient,
+			nil,
+			consts.DefaultCertTTL,
+		)
+		require.NoError(t, err)
+		return res, secret
+	}
+
+	res, leaf := ensure("first-subject")
+	require.Equal(t, op.Created, res)
+
+	// A KonnectExtension holds the leaf, so the Secret stays terminating after the delete.
+	held := &corev1.Secret{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Namespace: leaf.Namespace, Name: leaf.Name}, held))
+	held.Finalizers = append(held.Finalizers, consts.KonnectExtensionSecretInUseFinalizer)
+	require.NoError(t, fakeClient.Update(ctx, held))
+
+	// The stored certificate is for another subject, so EnsureCertificate re-creates it.
+	res, recreated := ensure("second-subject")
 	require.Equal(t, op.Created, res)
 	require.NotEqual(t, leaf.Name, recreated.Name)
-	require.Equal(t, caBundle(caSecret), recreated.Data["ca.crt"])
 
-	// The stale Secret is deleted at once, so the next reconcile reuses the new Secret
+	// The old Secret is still terminating. The next reconcile must reuse the new Secret
 	// instead of reducing it away.
-	err := fakeClient.Get(ctx, types.NamespacedName{Namespace: leaf.Namespace, Name: leaf.Name}, &corev1.Secret{})
-	require.True(t, apierrors.IsNotFound(err))
-	res, reused := ensure()
+	res, reused := ensure("second-subject")
 	require.Equal(t, op.Noop, res)
 	require.Equal(t, recreated.Name, reused.Name)
 }

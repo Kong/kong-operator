@@ -108,9 +108,8 @@
   value holds the certificate that signs the leaf and the root from the
   `ca.crt` key of the CA Secret. If the chain already holds the root, the
   operator does not add it again. An existing certificate Secret with a
-  different bundle is re-issued. On upgrade, the operator re-issues every
-  affected certificate Secret once, so the DataPlane and on-prem AI Gateway
-  pods restart.
+  different bundle is re-issued in place, so the Secret keeps its name. On
+  upgrade, the operator re-issues every affected certificate Secret once.
   [#6500](https://github.com/Kong/kong-operator/issues/6500)
 - A missing CA Secret now reports an error that names the Secret and the
   secret label selector, instead of a bare `not found` message.
