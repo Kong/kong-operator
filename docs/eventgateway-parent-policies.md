@@ -261,6 +261,10 @@ cross-namespace references are not supported. Every policy must belong to the
 referenced listener. List order, not resource names or YAML document order,
 declares execution order. See the
 [listener-chain example](../config/samples/konnect_eventgateway_listener_policy_chain.yaml).
+It includes API authentication, the gateway, listener, backend, virtual cluster,
+forwarding policy, and chain in one file. Replace the token and Kafka/data-plane
+addresses before applying it. Its plaintext, anonymous port-mapping setup is
+for demonstration only.
 
 The declaration models complete-set reordering: list every existing listener
 policy exactly once. An explicit `policies: []` is valid only when the listener

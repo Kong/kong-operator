@@ -109,9 +109,8 @@
 
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
   installation artifacts, to declare the execution order of all policies on one
-  Konnect Event Gateway listener using Kubernetes references. This is the API-only
-  foundation; Konnect controller support is not implemented yet, and on-prem
-  Event Gateways are not supported.
+  Konnect Event Gateway listener using Kubernetes references.
+  [#6501](https://github.com/Kong/kong-operator/pull/6501)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
