@@ -35,6 +35,7 @@ func (r failingKonnectReferenceResolver) ResolveKonnectReferences(context.Contex
 
 type referenceCheckingEntity struct {
 	k8sutils.ConditionsAwareObject
+
 	checks []commonv1alpha1.CrossNamespaceReferenceCheck
 }
 
