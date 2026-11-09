@@ -563,7 +563,7 @@ jobs:
       # per report named "<asset_prefix>-<kind>" — the same artifact contract sca uses, and what
       # the attest job turns into referrers on the image.
       - name: Scan the image
-        uses: Kong/public-shared-actions/security-actions/scan-docker-image@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # scan-docker-image@6.1.1
+        uses: Kong/public-shared-actions/security-actions/scan-docker-image@a92df3beb1e69e27d86be56346488f15fecaf0de # scan-docker-image@6.1.1
         with:
           asset_prefix: image-linux-${{ matrix.arch }}
           image: ${{ env.IMAGE }}
@@ -587,7 +587,7 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: Kong/public-shared-actions/security-actions/sca@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # sca@6.0.3
+      - uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
         # fail_build stays false: gating on findings is a separate decision, not this PR's.
         with:
           dir: '.'

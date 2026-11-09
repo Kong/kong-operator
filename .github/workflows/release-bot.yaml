@@ -182,7 +182,7 @@ jobs:
 
       - name: Generate source SBOM
         # Blocking: the SBOMs are deliverables.
-        uses: Kong/public-shared-actions/security-actions/sca@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # sca@6.0.3
+        uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
         with:
           dir: '.'
           asset_prefix: source
