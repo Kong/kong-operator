@@ -1196,7 +1196,7 @@ func TestValidateReferences_UnionMember(t *testing.T) {
 		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
 			"AIGatewayAgent": {trustBundleUnionMemberRef()},
 		})
-		require.ErrorContains(t, g.validateReferences(parsed), "to be a root-level anyOf without own properties")
+		require.ErrorContains(t, g.validateReferences(parsed), "to be a root-level anyOf, or a root-level oneOf of $refs without discriminator, without own properties")
 	})
 
 	t.Run("rejects a member colliding with a multi-property variant field", func(t *testing.T) {

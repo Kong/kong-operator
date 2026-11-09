@@ -17,13 +17,94 @@ limitations under the License.
 package onprem
 
 import (
+	"os"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 )
+
+// TestReferencesByObjectCoversConfiguredReferences checks referencesByObject
+// against the references the CRD generator declares in crd-from-oas/config.yaml:
+// each reference of a policy to a schema registry, a static key or a TLS trust
+// bundle must be refused when not by object, and accepted by object. A
+// reference added there, or a field renamed, that referencesByObjectIn doesn't
+// recognize fails here, rather than letting a reference by id or by name
+// through on prem.
+func TestReferencesByObjectCoversConfiguredReferences(t *testing.T) {
+	data, err := os.ReadFile("../../../crd-from-oas/config.yaml")
+	require.NoError(t, err)
+	var config any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	policies := []string{"EventGatewayListenerPolicy", "EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualClusterConsumePolicy"}
+	// A parent policy reference is by object only: it has no other form to
+	// refuse.
+	heldKindNames := []string{"EventGatewaySchemaRegistry", "EventGatewayStaticKey", "EventGatewayTLSTrustBundle"}
+	type reference struct{ entity, path string }
+	var references []reference
+	var walk func(any)
+	walk = func(v any) {
+		switch v := v.(type) {
+		case map[string]any:
+			if name, _ := v["name"].(string); slices.Contains(policies, name) {
+				refs, _ := v["references"].([]any)
+				for _, r := range refs {
+					ref, _ := r.(map[string]any)
+					kinds, _ := ref["kinds"].([]any)
+					path, _ := ref["path"].(string)
+					if len(kinds) == 1 && slices.Contains(heldKindNames, kinds[0].(string)) {
+						references = append(references, reference{entity: name, path: path})
+					}
+				}
+			}
+			for _, child := range v {
+				walk(child)
+			}
+		case []any:
+			for _, child := range v {
+				walk(child)
+			}
+		}
+	}
+	walk(config)
+	require.NotEmpty(t, references, "no reference found in the configuration of the generator")
+
+	// specAt returns an API spec holding the reference at the path.
+	specAt := func(path string, ref any) map[string]any {
+		fields := strings.Split(strings.TrimPrefix(path, "spec.apiSpec."), ".")
+		spec := map[string]any{}
+		current := spec
+		for _, field := range fields[:len(fields)-1] {
+			next := map[string]any{}
+			current[field] = next
+			current = next
+		}
+		current[fields[len(fields)-1]] = ref
+		return spec
+	}
+	for _, r := range references {
+		t.Run(r.entity+" "+r.path, func(t *testing.T) {
+			byID := any(map[string]any{"type": "id", "id": map[string]any{"id": uuid.NewString()}})
+			byObject := any(map[string]any{"type": namespacedRefMember, namespacedRefMember: map[string]any{"name": "entity"}})
+			if strings.HasSuffix(r.path, ".tlsTrustBundles") {
+				byID = []any{map[string]any{"id": uuid.NewString()}}
+				byObject = []any{map[string]any{namespacedRefMember: map[string]any{"name": "entity"}}}
+			}
+			err := referencesByObject(specAt(r.path, byID))
+			require.Error(t, err)
+			// The path of the reference, or of an item of a list of them.
+			assert.Regexp(t, `^`+regexp.QuoteMeta(r.path)+`(\.\d+)? references `, err.Error())
+			require.NoError(t, referencesByObject(specAt(r.path, byObject)))
+		})
+	}
+}
 
 func TestResolveReferences(t *testing.T) {
 	registry, key, elsewhere := uuid.New(), uuid.New(), uuid.New()

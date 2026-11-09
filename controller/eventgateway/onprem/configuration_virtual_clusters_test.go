@@ -121,13 +121,13 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: with-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: registry}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: registry}}, valueValidationAction: mark}}
 `, 9)
 	withMissingRegistry := consumePolicy("with-missing-registry", `
     type: schemaValidation
     schemaValidation:
       name: with-missing-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: missing}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: missing}}, valueValidationAction: mark}}
 `, 9)
 	registry := fromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, at(1), `
 metadata: {name: registry}
@@ -166,13 +166,13 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: with-other-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: other-registry}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: other-registry}}, valueValidationAction: mark}}
 `, 10)
 	withDuplicateRegistry := consumePolicy("with-duplicate-registry", `
     type: schemaValidation
     schemaValidation:
       name: with-duplicate-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: duplicate-registry}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: duplicate-registry}}, valueValidationAction: mark}}
 `, 10)
 	staticKey := fromYAML[configurationv1alpha1.EventGatewayStaticKey](t, at(1), `
 metadata: {name: key}
