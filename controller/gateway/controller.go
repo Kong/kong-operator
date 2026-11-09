@@ -46,6 +46,7 @@ import (
 	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
 	"github.com/kong/kong-operator/v2/controller/pkg/watch"
@@ -341,8 +342,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
 		// Requeue will be triggered by the update of the gateway status.
-		if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway); err != nil {
-			return ctrl.Result{}, err
+		if err := r.applyStatusPatch(ctx, logger, gateway, oldGateway); err != nil {
+			return requeueOnConflict(err)
 		}
 		if acceptedCondition.Status == metav1.ConditionTrue {
 			log.Info(logger, "gateway accepted")
@@ -397,7 +398,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 				gwConditionAware.setProgrammed(metav1.ConditionFalse)
 				if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
-					return ctrl.Result{}, err
+					return requeueOnConflict(err)
 				}
 				log.Debug(logger, "KonnectGatewayControlplane not ready yet")
 				return ctrl.Result{}, nil
@@ -430,7 +431,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 				gwConditionAware.setProgrammed(metav1.ConditionFalse)
 				if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
-					return ctrl.Result{}, err
+					return requeueOnConflict(err)
 				}
 				log.Debug(logger, "KonnectExtension not ready yet")
 			}
@@ -500,7 +501,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			gwConditionAware.setListenersProgrammedPending()
 			// requeue will be triggered by the update of the dataplane status
 			if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
-				return ctrl.Result{}, err
+				return requeueOnConflict(err)
 			}
 			log.Debug(logger, "dataplane not ready yet")
 			return ctrl.Result{}, nil
@@ -615,9 +616,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			return ctrl.Result{}, err
 		}
 	}
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
-	if err != nil {
-		return ctrl.Result{}, err
+	if err := r.applyStatusPatch(ctx, logger, gateway, oldGateway); err != nil {
+		return requeueOnConflict(err)
 	}
 	if !isHybridGateway {
 		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
@@ -636,7 +636,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 				gwConditionAware.setProgrammed(metav1.ConditionFalse)
 				if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
-					return ctrl.Result{}, err
+					return requeueOnConflict(err)
 				}
 				log.Debug(logger, "controlplane not ready yet")
 			}
@@ -660,8 +660,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "dataplane is not ready yet")
 		gateway.Status.Addresses = nil
-		if _, patchErr := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway); patchErr != nil {
-			return ctrl.Result{}, patchErr
+		if err := r.applyStatusPatch(ctx, logger, gateway, oldGateway); err != nil {
+			return requeueOnConflict(err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -682,9 +682,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			return ctrl.Result{}, err
 		}
 	}
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
-	if err != nil {
-		return ctrl.Result{}, err
+	if err := r.applyStatusPatch(ctx, logger, gateway, oldGateway); err != nil {
+		return requeueOnConflict(err)
 	}
 
 	if k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware) {
@@ -1230,15 +1229,60 @@ func (r *Reconciler) handleInvalidKonnectLabels(
 	log.Info(logger, "invalid Konnect labels annotation, waiting for it to be fixed", "message", condition.Message)
 	gwConditionAware := gatewayConditionsAndListenersAware(gateway)
 	gwConditionAware.setProgrammed(metav1.ConditionFalse)
-	if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
-		return ctrl.Result{}, err
+	// Use the diff-less write so a reconcile that changes nothing writes nothing.
+	// This path runs on every reconcile while the annotation stays invalid.
+	if err := r.applyStatusPatch(ctx, logger, gateway, oldGateway); err != nil {
+		return requeueOnConflict(err)
 	}
 	return ctrl.Result{}, nil
 }
 
 // patchStatus patches the resource status with the Merge strategy.
+// The optimistic lock makes a patch computed from a stale cached copy fail with
+// a conflict instead of overwriting status written by others: a JSON merge
+// patch replaces list fields such as status.conditions wholesale, so a stale
+// patch would delete conditions added by other actors.
 func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtypes.Gateway) error {
-	return r.Client.Status().Patch(ctx, gateway, client.MergeFrom(oldGateway))
+	if err := r.Client.Status().Patch(ctx, gateway,
+		client.MergeFromWithOptions(oldGateway, client.MergeFromWithOptimisticLock{})); err != nil {
+		return err
+	}
+	// A reconcile can write status more than once. Keep the patch base on the
+	// version this write produced so the next write does not conflict with it.
+	oldGateway.ResourceVersion = gateway.ResourceVersion
+	return nil
+}
+
+// applyStatusPatch patches the Gateway status if the diff between oldGateway and
+// gateway is not empty. It uses the same optimistic lock as patchStatus.
+func (r *Reconciler) applyStatusPatch(
+	ctx context.Context, logger logr.Logger, gateway, oldGateway *gwtypes.Gateway,
+) error {
+	res, err := patch.ApplyStatusPatchIfNotEmpty(
+		ctx,
+		r.Client,
+		logger,
+		gateway,
+		oldGateway,
+		client.MergeFromWithOptimisticLock{},
+	)
+	if err != nil {
+		return err
+	}
+	if res == op.Updated {
+		oldGateway.ResourceVersion = gateway.ResourceVersion
+	}
+	return nil
+}
+
+// requeueOnConflict turns a status patch conflict into a requeue instead of an
+// error: the next reconcile reads the current object, including the fields
+// written by others that caused the conflict.
+func requeueOnConflict(err error) (ctrl.Result, error) {
+	if apierrors.IsConflict(err) {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	return ctrl.Result{}, err
 }
 
 func dataPlaneSpecDeepEqual(specCurrent, specExpected *operatorv1beta1.DataPlaneOptions, isHybrid bool) bool {
