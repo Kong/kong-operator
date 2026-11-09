@@ -24,21 +24,56 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 const ns = "default"
+
+func TestClusterPolicyChainNotifications(t *testing.T) {
+	backend := backendCluster(ns, "backend", onPremGatewayRef("gateway"))
+	parent := virtualCluster("vc", backend.Name)
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicyChainSpec{
+			EventGatewayVirtualClusterRef: namespacedRef(parent.Name),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterPolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterPolicyRef{{Name: "policy"}},
+			},
+		},
+	}
+	cl := newFakeClient(t, backend, parent, chain)
+	policy := &configurationv1alpha1.EventGatewayVirtualClusterPolicy{
+		Name: "policy", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicySpec{EventGatewayVirtualClusterRef: namespacedRef("other-vc")},
+	}
+	require.Equal(t, requestsFor(&eventgatewayv1alpha1.OnPremEventGateway{Namespace: ns, Name: "gateway"}),
+		mapClusterPolicyToChainGateways(cl)(t.Context(), policy),
+		"references must trigger the chain gateway even when the policy has the wrong parent")
+
+	pred := entityChanged()
+	newPolicy := policy.DeepCopy()
+	newPolicy.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newPolicy.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}), "deletion cannot wait for finalizer removal")
+	newParent := parent.DeepCopy()
+	newParent.Annotations = map[string]string{policychain.OwnerAnnotation: "chain/uid"}
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}), "claims are metadata-only updates")
+}
 
 func onPremGatewayRef(name string) *commonv1alpha1.GatewayRef {
 	return &commonv1alpha1.GatewayRef{
@@ -184,6 +219,14 @@ func TestMapEntityToOnPremEventGateway(t *testing.T) {
 			want: &onPremGateway,
 		},
 		{
+			name: "virtual cluster policy chain",
+			obj: &configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{
+				Name: "chain", Namespace: ns,
+				Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicyChainSpec{EventGatewayVirtualClusterRef: namespacedRef(onPremVirtualCluster.Name)},
+			},
+			want: &onPremGateway,
+		},
+		{
 			name: "virtual cluster consume policy",
 			obj: &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
 				Name: "consume-policy", Namespace: ns,
@@ -302,10 +345,8 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 	for gvk := range s.AllKnownTypes() {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
-		// Policy chains are Konnect-only and must not be registered on-prem.
-		switch obj.(type) {
-		case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
-			*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		// Listener policy chains are not supported on-prem yet.
+		if _, ok := obj.(*configurationv1alpha1.EventGatewayListenerPolicyChain); ok {
 			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
 			continue
 		}

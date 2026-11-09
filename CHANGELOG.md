@@ -111,6 +111,17 @@
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.
   [#6501](https://github.com/Kong/kong-operator/pull/6501)
+- `EventGatewayVirtualClusterPolicyChain` now applies declared cluster-level
+  policy ordering to `OnPremEventGateway` configuration, using Kubernetes policy
+  references without Konnect IDs. Invalid owning declarations pause the
+  gateway's complete configuration updates; unclaimed chains on excluded
+  virtual clusters do not block updates. Deleting a virtual cluster removes
+  its scope without its surviving chain blocking updates, and deleting a chain
+  restores the default policy order without deleting policies. Configuration
+  comparison accounts for gw-admin's default cluster-policy condition,
+  description and enabled flag to avoid repeatedly pushing an unchanged
+  configuration.
+  [#6395](https://github.com/Kong/kong-operator/pull/6395)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
