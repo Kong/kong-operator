@@ -173,9 +173,10 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	}
 
 	// Detect the route kinds whose CRDs the cluster serves: they gate the route
-	// watches, the AttachedRoutes counting and the supportedKinds status. Watching
-	// a resource that does not exist would trigger reconciliation for all the
-	// Gateways on every event in the cluster.
+	// watches, the AttachedRoutes counting and the supportedKinds status. A watch
+	// for a kind the cluster does not serve has no REST mapping, so its informer
+	// cannot be created and the manager would fail to start; only served kinds
+	// are watched.
 	var err error
 	r.installedRouteKinds, err = detectInstalledRouteKinds(r.RESTMapper())
 	if err != nil {

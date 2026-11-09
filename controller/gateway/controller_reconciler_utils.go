@@ -1037,15 +1037,13 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 
 		// Only report SupportedKinds for listeners whose Accepted condition is True.
 		//
-		// NOTE: this behavior is required by the Gateway API conformance test helper
-		// `gatewayListenersMatch` (sigs.k8s.io/gateway-api conformance/utils/kubernetes),
-		// which treats an empty expected SupportedKinds as an exact-empty assertion.
-		// Tests like TLSRouteListenerMixedTerminationNotSupported omit SupportedKinds
-		// for listeners they expect to be rejected, so any non-empty value here fails
-		// the test. The Gateway API spec itself does NOT explicitly require
-		// SupportedKinds to be empty when a listener is not accepted; the expected
-		// value for an unaccepted listener is not clearly defined in the spec. We
-		// follow the conformance helper's convention to remain conformant.
+		// NOTE: the Gateway API conformance helper `gatewayListenersMatch`
+		// (sigs.k8s.io/gateway-api conformance/utils/kubernetes), used by tests like
+		// TLSRouteListenerMixedTerminationNotSupported, asserts an exact-empty
+		// SupportedKinds for listeners the test expects to be rejected, so any
+		// non-empty value here fails the test. The Gateway API spec does not define
+		// the expected value for an unaccepted listener, so we follow the conformance
+		// helper's convention.
 		// setAcceptedAndAttachedRoutes() always runs before this function, so the
 		// Accepted condition is guaranteed to be present.
 		accepted, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionAccepted), lStatus)
