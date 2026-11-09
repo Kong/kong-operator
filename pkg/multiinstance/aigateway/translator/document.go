@@ -839,7 +839,9 @@ func resolveModelAliasRouteConflicts(
 		probe, idxByName := buildProbeDoc(doc)
 		_, issues, err := RenderDBLessYAML(probe, convert.Options{})
 		if err != nil {
-			// The caller's render reports the same error.
+			// The probe differs from doc only in model names, and no converter
+			// failure depends on a name, so the caller's render reports the
+			// same error.
 			return doc, statuses
 		}
 		conflicts := collectAliasConflicts(issues)
