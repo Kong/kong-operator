@@ -180,6 +180,7 @@ func TestEventGatewayListenerPolicyChainSample(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, file.Close()) })
 	decoder := yaml.NewYAMLOrJSONDecoder(file, 4096)
+	var resources []string
 	for {
 		obj := &unstructured.Unstructured{}
 		err := decoder.Decode(obj)
@@ -189,14 +190,34 @@ func TestEventGatewayListenerPolicyChainSample(t *testing.T) {
 		require.NoError(t, err)
 		obj.SetNamespace(ns.Name)
 		require.NoError(t, cl.Create(t.Context(), obj), "%s %s", obj.GetKind(), obj.GetName())
+		resources = append(resources, obj.GetKind()+"/"+obj.GetName())
 	}
+	require.ElementsMatch(t, []string{
+		"KonnectAPIAuthConfiguration/listener-chain-auth",
+		"KonnectEventGateway/listener-chain-gateway",
+		"EventGatewayListener/listener-chain-listener",
+		"EventGatewayBackendCluster/listener-chain-backend",
+		"EventGatewayVirtualCluster/listener-chain-virtual-cluster",
+		"EventGatewayListenerPolicy/listener-chain-forward",
+		"EventGatewayListenerPolicyChain/listener-chain-example",
+	}, resources)
 	var chain configurationv1alpha1.EventGatewayListenerPolicyChain
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns.Name, Name: "listener-chain-example"}, &chain))
-	require.Len(t, chain.Spec.APISpec.Policies, 2)
-	require.Equal(t, "cp-event-1-listener-1", chain.Spec.APISpec.Policies[0].Name)
-	require.Equal(t, "listener-chain-forward", chain.Spec.APISpec.Policies[1].Name)
-	require.Equal(t, "default", chain.Spec.APISpec.Policies[1].Namespace)
+	require.Equal(t, []configurationv1alpha1.EventGatewayListenerPolicyRef{
+		{Name: "listener-chain-forward", Kind: "EventGatewayListenerPolicy", Namespace: "default"},
+	}, chain.Spec.APISpec.Policies)
+	require.NotNil(t, chain.Spec.EventGatewayListenerRef.NamespacedRef)
+	require.Equal(t, "listener-chain-listener", chain.Spec.EventGatewayListenerRef.NamespacedRef.Name)
 	var policy configurationv1alpha1.EventGatewayListenerPolicy
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns.Name, Name: "listener-chain-forward"}, &policy))
 	require.Equal(t, chain.Spec.EventGatewayListenerRef, policy.Spec.EventGatewayListenerRef)
+	require.NotNil(t, policy.Spec.APISpec.EventGatewayListenerPolicyConfig)
+	require.Equal(t, configurationv1alpha1.EventGatewayListenerPolicyConfigTypeForwardToVirtualClust, policy.Spec.APISpec.Type)
+	forward := policy.Spec.APISpec.ForwardToVirtualClust
+	require.NotNil(t, forward)
+	require.NotNil(t, forward.Config)
+	require.Equal(t, configurationv1alpha1.ForwardToVirtualClusterPolicyConfigTypePortMapping, forward.Config.Type)
+	require.NotNil(t, forward.Config.PortMapping)
+	require.NotNil(t, forward.Config.PortMapping.Destination)
+	require.Equal(t, new(configurationv1alpha1.VirtualClusterName("listener-chain-virtual-cluster")), forward.Config.PortMapping.Destination.Name)
 }
