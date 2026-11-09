@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Add `ValidatingAdmissionPolicies` warning when a `DataPlane` or
+  `GatewayConfiguration` sets a `PodDisruptionBudget` while its replica floor
+  (`replicas`, or `scaling.horizontal.minReplicas`) is lower than 2.
+  Set the chart value
+  `global.validatingPolicies.podDisruptionBudgetReplicas.validationActions`
+  to `[Deny]` to reject such objects instead. Changes made through the
+  `DataPlane` scale subresource (e.g. `kubectl scale`) are not validated.
+  [#6490](https://github.com/Kong/kong-operator/pull/6490)
+
 ## 1.5.0-rapid.3.1
 
 ### Changed
