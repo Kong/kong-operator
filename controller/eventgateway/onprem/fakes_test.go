@@ -385,7 +385,9 @@ func newFakeClientWithInterceptor(t *testing.T, funcs interceptor.Funcs, objects
 	t.Helper()
 	b := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
 		WithStatusSubresource(append(entityTypes(), &eventgatewayv1alpha1.OnPremEventGateway{})...).
-		WithTypeConverters(testTypeConverter).
+		// The CRDs for the gateways and their entities, deduced for the rest.
+		WithTypeConverters(crdTypeConverter(), testTypeConverter).
+		WithReturnManagedFields().
 		WithInterceptorFuncs(funcs)
 	for _, opt := range slices.Concat(gwadminref.IndexOptions(), IndexOptions()) {
 		b = b.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)

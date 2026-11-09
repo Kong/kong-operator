@@ -136,11 +136,15 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	// An update is mapped for both the old and the new object, so an entity
 	// whose parent reference changes, which the CRDs only allow while it is not
 	// Programmed, triggers both gateways. A delete is mapped for the deleted
-	// object. Status-only writes are ignored, but termination and parent
-	// policy-chain ownership changes also trigger a rebuild.
+	// object. Every change triggers the gateway, as for the gateway itself:
+	// its finalizers, e.g. one the gateway couldn't hold or release as it
+	// changed since it was read, its status, e.g. one someone else set, which
+	// the reconcile sets back, and the parent policy-chain ownership of a
+	// virtual cluster. The status the reconcile writes on its entities triggers
+	// it once more, writing nothing.
 	mapToGateway := handler.EnqueueRequestsFromMapFunc(mapEntityToOnPremEventGateway(mgr.GetClient()))
 	for _, entity := range entityTypes() {
-		b = b.Watches(entity, mapToGateway, builder.WithPredicates(entityChanged()))
+		b = b.Watches(entity, mapToGateway)
 	}
 	b = b.Watches(&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
 		handler.EnqueueRequestsFromMapFunc(mapClusterPolicyToChainGateways(mgr.GetClient())),
@@ -220,6 +224,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
+	// An entity that can't be held or released doesn't hold back the
+	// configuration, nor what the status tells of it: one that changed since it
+	// was read triggers the gateway again, and an error is returned after the
+	// push.
+	held, _, holdErr := r.holdEntities(ctx, gateway, cfg.entitiesInUse)
+	cfg.refreshResourceVersions(held)
 	config := deriveConfig(gateway, cfg)
 	if len(cfg.invalidChains) == 0 {
 		r.lastEntities.Store(gateway.UID, cfg.built)
@@ -241,6 +251,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if statusErr := r.reportEntities(ctx, gateway, cfg, result); statusErr != nil {
 		err = errors.Join(err, statusErr)
 	}
+	err = errors.Join(err, holdErr)
 	switch {
 	case err != nil:
 	case result.retryAfter > 0:
@@ -329,9 +340,29 @@ func (r *Reconciler) event(gateway *eventgatewayv1alpha1.OnPremEventGateway, eve
 func requeueOnConflict(logger logr.Logger, res ctrl.Result, err error) (ctrl.Result, error) {
 	if err != nil && apierrors.IsConflict(err) {
 		log.Debug(logger, "conflict while reconciling, requeueing", "reason", err.Error())
+		// The other errors joined with the conflict aren't returned: they are
+		// logged, as the reconcile that comes next may not meet them again.
+		for _, other := range joinedErrors(err) {
+			if !apierrors.IsConflict(other) {
+				log.Error(logger, other, "failed while reconciling, requeueing on a conflict")
+			}
+		}
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 	return res, err
+}
+
+// joinedErrors returns the errors joined in err, at any depth, or err.
+func joinedErrors(err error) []error {
+	joined, ok := err.(interface{ Unwrap() []error })
+	if !ok {
+		return []error{err}
+	}
+	var errs []error
+	for _, e := range joined.Unwrap() {
+		errs = append(errs, joinedErrors(e)...)
+	}
+	return errs
 }
 
 // pushResult is what a push of the configuration of a gateway got to.
@@ -522,6 +553,18 @@ func (r *Reconciler) cleanup(ctx context.Context, logger logr.Logger, gateway *e
 	// can't be set: it would be held by them otherwise.
 	if err := r.reportEntitiesNotProgrammed(ctx, gateway, fmt.Sprintf("The OnPremEventGateway %s is being deleted", client.ObjectKeyFromObject(gateway))); err != nil {
 		log.Error(logger, err, "failed to report the deletion of the OnPremEventGateway on its entities")
+	}
+	// The entities of the gateway are released: no reconcile of the gateway
+	// would release them once it is gone. One that changed since it was read
+	// triggers the gateway again, which releases it then, but an error doesn't
+	// hold the deletion of the gateway: an entity left held is released once
+	// it is deleted (see releaseOrphan).
+	_, stale, err := r.holdEntities(ctx, gateway, nil)
+	if err != nil {
+		log.Error(logger, err, "failed to release the entities of the deleted OnPremEventGateway")
+	}
+	if stale {
+		return ctrl.Result{}, nil
 	}
 	started, err := r.cleanupStarted(ctx, gateway)
 	if err != nil {

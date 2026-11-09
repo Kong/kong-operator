@@ -16,11 +16,15 @@ import (
 	"sigs.k8s.io/yaml"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
@@ -58,13 +62,14 @@ func newKonnectEntityReconciler[
 }
 
 // startEventGatewayReconcilers starts the Konnect reconcilers of every Event
-// Gateway entity. No SDK call is expected: the mocks fail the test on any call.
-func startEventGatewayReconcilers(t *testing.T, ctx context.Context) (client.Client, *corev1.Namespace) {
+// Gateway entity, and with withOnPrem the OnPremEventGateway controller. No SDK
+// call is expected: the mocks fail the test on any call.
+func startEventGatewayReconcilers(t *testing.T, ctx context.Context, withOnPrem bool) (client.Client, *corev1.Namespace) {
 	t.Helper()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	factory := sdkmocks.NewMockSDKFactory(t)
-	envtest.StartReconcilers(ctx, t, mgr, logs,
+	reconcilers := []envtest.Reconciler{
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayBackendCluster](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayDataPlaneCertificate](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayListener](factory, mgr),
@@ -74,8 +79,61 @@ func startEventGatewayReconcilers(t *testing.T, ctx context.Context) (client.Cli
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualCluster](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayListenerPolicy](factory, mgr),
-	)
+	}
+	var cfgOpts []testutils.ControllerConfigOption
+	if withOnPrem {
+		cfgOpts = append(cfgOpts, testutils.WithOnPremEventGatewayController(true))
+		// No OnPremEventGateway is created: its entities are reported as such,
+		// with no GWAdmin to push to.
+		reconcilers = append(reconcilers, &egonprem.Reconciler{
+			Client:      mgr.GetClient(),
+			GWAdminSync: &gwadminsync.Syncer{Client: mgr.GetClient(), OperatorNamespace: ns.Name},
+		})
+	}
+	envtest.StartReconcilersWithConfig(ctx, t, mgr, logs, cfgOpts, reconcilers...)
 	return mgr.GetClient(), ns
+}
+
+// konnectStateOf returns a description of what the Konnect reconciler sets on
+// obj, its conditions other than the Programmed condition the
+// OnPremEventGateway controller sets, its Konnect ID and its finalizers, or an
+// empty string when there is none.
+func konnectStateOf(ctx context.Context, cl client.Client, obj client.Object) string {
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+		return "failed to get: " + err.Error()
+	}
+	var b strings.Builder
+	for _, c := range obj.(interface {
+		GetConditions() []metav1.Condition
+	}).GetConditions() {
+		if c.Type == "Programmed" && strings.HasPrefix(c.Message, "The OnPremEventGateway ") {
+			continue
+		}
+		b.WriteString(c.Type + "=" + string(c.Status) + "/" + c.Reason + " ")
+	}
+	if id := obj.(interface{ GetKonnectID() string }).GetKonnectID(); id != "" {
+		b.WriteString("id=" + id + " ")
+	}
+	if finalizers := obj.GetFinalizers(); len(finalizers) > 0 {
+		b.WriteString("finalizers=" + strings.Join(finalizers, ","))
+	}
+	return b.String()
+}
+
+// requireOnPremGatewayNotFound checks that the OnPremEventGateway controller
+// reports the objects: the gateway they reach doesn't exist.
+func requireOnPremGatewayNotFound(ct *assert.CollectT, ctx context.Context, cl client.Client, objects ...client.Object) {
+	for _, obj := range objects {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+			continue
+		}
+		cond := meta.FindStatusCondition(obj.(interface {
+			GetConditions() []metav1.Condition
+		}).GetConditions(), "Programmed")
+		if assert.NotNil(ct, cond, "%s has no Programmed condition", obj.GetName()) {
+			assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEntityGatewayNotFoundReason), cond.Reason, obj.GetName())
+		}
+	}
 }
 
 // createVisible creates the objects and waits for them to be in the manager's
@@ -185,7 +243,7 @@ func TestEventGatewayEntitiesOnPremEventGateway(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cl, ns := startEventGatewayReconcilers(t, ctx)
+	cl, ns := startEventGatewayReconcilers(t, ctx, false)
 
 	t.Log("Creating a virtual cluster whose backend cluster does not exist, to check the reconcilers run")
 	control := deploy.EventGatewayVirtualCluster(t, ctx, client.NewNamespacedClient(cl, ns.Name),
@@ -269,12 +327,13 @@ spec:
 // TestEventGatewayChildrenCreatedBeforeTheirOnPremAncestor verifies that the
 // conditions the Konnect reconciler sets on children whose parent chain is
 // not complete yet are removed once it turns out to end at an
-// OnPremEventGateway.
+// OnPremEventGateway: the Konnect reconciler stops writing their status, and
+// the OnPremEventGateway controller, which owns it, clears them.
 func TestEventGatewayChildrenCreatedBeforeTheirOnPremAncestor(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cl, ns := startEventGatewayReconcilers(t, ctx)
+	cl, ns := startEventGatewayReconcilers(t, ctx, true)
 
 	t.Log("Creating a virtual cluster and a produce policy before their backend cluster")
 	vc := virtualCluster(t, ns.Name, "virtual-cluster", `{name: backend}`)
@@ -282,18 +341,34 @@ func TestEventGatewayChildrenCreatedBeforeTheirOnPremAncestor(t *testing.T) {
 	policy := producePolicy(t, ns.Name, "produce-policy", vc.Name)
 	createVisible(t, ctx, cl, policy)
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.NotEmpty(ct, konnectStatusOf(ctx, cl, vc), "the virtual cluster must report its missing backend cluster")
-		assert.NotEmpty(ct, konnectStatusOf(ctx, cl, policy), "the policy must report its virtual cluster as not programmed")
+		assert.NotEmpty(ct, konnectStateOf(ctx, cl, vc), "the virtual cluster must report its missing backend cluster")
+		assert.NotEmpty(ct, konnectStateOf(ctx, cl, policy), "the policy must report its virtual cluster as not programmed")
 	}, consts.WaitTime, consts.TickTime)
 
 	t.Log("Creating the backend cluster, attached to an OnPremEventGateway")
 	backendCluster := onPremBackendCluster(t, ns.Name, "backend")
 	createVisible(t, ctx, cl, backendCluster)
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.Empty(ct, konnectStatusOf(ctx, cl, vc))
-		assert.Empty(ct, konnectStatusOf(ctx, cl, policy))
+		assert.Empty(ct, konnectStateOf(ctx, cl, vc))
+		assert.Empty(ct, konnectStateOf(ctx, cl, policy))
+		requireOnPremGatewayNotFound(ct, ctx, cl, backendCluster, vc, policy)
 	}, consts.WaitTime, consts.TickTime, "the Konnect conditions must be removed")
-	requireNoKonnectStatus(t, ctx, cl, 3*time.Second, backendCluster, vc, policy)
+	requireNoKonnectState(t, ctx, cl, 3*time.Second, backendCluster, vc, policy)
+}
+
+// requireNoKonnectState checks that none of the objects gets what the Konnect
+// reconciler sets during d (see konnectStateOf).
+func requireNoKonnectState(t *testing.T, ctx context.Context, cl client.Client, d time.Duration, objects ...client.Object) {
+	t.Helper()
+	require.Never(t, func() bool {
+		for _, obj := range objects {
+			if s := konnectStateOf(ctx, cl, obj); s != "" {
+				t.Logf("%T %s/%s: %s", obj, obj.GetNamespace(), obj.GetName(), s)
+				return true
+			}
+		}
+		return false
+	}, d, consts.TickTime, "entities attached to an OnPremEventGateway must get no Konnect condition, ID or finalizer")
 }
 
 // TestEventGatewayKonnectPolicyReferencingOnPremEntity verifies that a Konnect
@@ -396,12 +471,13 @@ spec:
 // TestEventGatewayChildProgrammedInKonnectMovedUnderOnPremAncestor covers a
 // child that was programmed in Konnect, whose parent was deleted and then
 // recreated attached to an OnPremEventGateway: its Programmed=True and Konnect
-// ID are stale, and are removed.
+// ID are stale, and the OnPremEventGateway controller, which owns its status
+// now, removes them.
 func TestEventGatewayChildProgrammedInKonnectMovedUnderOnPremAncestor(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := envtest.Context(t, t.Context())
 	defer cancel()
-	cl, ns := startEventGatewayReconcilers(t, ctx)
+	cl, ns := startEventGatewayReconcilers(t, ctx, true)
 
 	t.Log("Creating a virtual cluster as left behind by a deleted Konnect backend cluster")
 	vc := virtualCluster(t, ns.Name, "virtual-cluster", `{name: backend}`)
@@ -432,8 +508,9 @@ func TestEventGatewayChildProgrammedInKonnectMovedUnderOnPremAncestor(t *testing
 	t.Log("Recreating the backend cluster, attached to an OnPremEventGateway")
 	createVisible(t, ctx, cl, onPremBackendCluster(t, ns.Name, "backend"))
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.Empty(ct, konnectStatusOf(ctx, cl, vc))
-		assert.Empty(ct, vc.GetKonnectID(), "the Konnect status must be cleared")
+		assert.Empty(ct, konnectStateOf(ctx, cl, vc))
+		assert.Empty(ct, vc.Status.ServerURL, "the Konnect status must be cleared")
+		requireOnPremGatewayNotFound(ct, ctx, cl, vc)
 	}, consts.WaitTime, consts.TickTime, "the stale Programmed condition and Konnect status must be removed")
-	requireNoKonnectStatus(t, ctx, cl, 3*time.Second, vc)
+	requireNoKonnectState(t, ctx, cl, 3*time.Second, vc)
 }

@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -37,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -83,6 +85,9 @@ type configuration struct {
 	// secretHint tells how to make a Secret visible to the operator, when
 	// its Secret cache is filtered by a label.
 	secretHint string
+	// entitiesInUse are the entities the policies in the configuration reference
+	// by object, with those policies: FinalizerInUse holds them.
+	entitiesInUse map[reportedEntity][]reportedEntity
 }
 
 // entityObject is the object of an entity, which reports with its
@@ -160,6 +165,7 @@ func buildConfiguration(
 	if err := cfg.addListeners(ctx, resolver, gateway, targets); err != nil {
 		return configuration{}, err
 	}
+	cfg.entitiesInUse = entitiesInUse(cfg.included, cfg.built)
 	if err := cfg.addCertificates(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
@@ -225,19 +231,25 @@ func addAttached[T any, PT interface {
 
 // live returns a pointer to a copy of each item not being deleted: an object
 // being deleted is left out of the configuration without a reason, it is
-// going away.
+// going away, unless FinalizerInUse holds it while policies use it, which only
+// goes for the kinds it can hold.
 func live[T any, PT interface {
 	*T
 	entityObject
 }](items []T) []PT {
 	objs := make([]PT, 0, len(items))
 	for _, item := range items {
-		obj := PT(&item)
-		if obj.GetDeletionTimestamp().IsZero() {
+		if obj := PT(&item); isLive(obj) {
 			objs = append(objs, obj)
 		}
 	}
 	return objs
+}
+
+// isLive tells whether the object can be in the configuration: it isn't being
+// deleted, or FinalizerInUse holds it (see live).
+func isLive(obj client.Object) bool {
+	return obj.GetDeletionTimestamp().IsZero() || (isHeldKind(reflect.TypeOf(obj)) && controllerutil.ContainsFinalizer(obj, FinalizerInUse))
 }
 
 // addEntities adds the entities of the objects, from the oldest, and returns
@@ -454,6 +466,23 @@ func convertObject[PT entityObject, E any](
 	}
 	conv.status.kept = true
 	return conv, true, nil
+}
+
+// refreshResourceVersions sets the resource versions of the objects of the
+// configuration patched since they were read, e.g. their finalizers (see
+// holdEntities), so that their status is patched from them.
+func (c *configuration) refreshResourceVersions(versions map[reportedEntity]string) {
+	refresh := func(obj entityObject) {
+		if version, ok := versions[reportedEntity{typ: reflect.TypeOf(obj), key: client.ObjectKeyFromObject(obj)}]; ok {
+			obj.SetResourceVersion(version)
+		}
+	}
+	for _, e := range c.included {
+		refresh(e.obj)
+	}
+	for _, e := range c.excluded {
+		refresh(e.obj)
+	}
 }
 
 // record records the object an entity of the configuration comes from, at

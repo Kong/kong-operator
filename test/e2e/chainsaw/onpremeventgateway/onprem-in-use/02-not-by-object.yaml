@@ -1,0 +1,143 @@
+# Policies referencing what they use other than by object, which an
+# OnPremEventGateway doesn't allow.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: by-name-registry
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: by-name-registry
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: name
+            name:
+              name: held-registry
+          valueValidationAction: reject
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: by-id-registry
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: by-id-registry
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: id
+            id:
+              id: 6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60
+          valueValidationAction: reject
+---
+# Names the object directly: the same object as namespacedRef, which an
+# OnPremEventGateway requires all the same.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: direct-registry
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: direct-registry
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            name: held-registry
+          valueValidationAction: skip
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: by-name-key
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: by-name-key
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              name: held-key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: by-id-key
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: by-id-key
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              id: 6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: by-name-bundle
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: by-name-bundle
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.crt
+            key:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.key
+        clientAuthentication:
+          mode: required
+          tlsTrustBundles:
+            - name: held-bundle

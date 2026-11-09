@@ -184,6 +184,13 @@
   isn't deleted until they stop using it: it reports `DeletionBlocked`, naming
   them.
   [#6529](https://github.com/Kong/kong-operator/pull/6529)
+- `OnPremEventGateway`: the schema registries, static keys, TLS trust bundles
+  and parent policies its policies use are held by the finalizer
+  `gateway-operator.konghq.com/onprem-eventgateway-in-use` and report
+  `DeletionBlocked` until they stop using them. The `OnPremEventGateway`
+  controller owns the status of its entities, and clears what the Konnect
+  controllers set on them.
+  [#6530](https://github.com/Kong/kong-operator/pull/6530)
 
 ### Changed
 
