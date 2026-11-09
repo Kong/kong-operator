@@ -290,6 +290,13 @@ running pods retain their last document; new or restarted pods cannot be
 provisioned from the invalid declaration. GWAdmin access revocation and gateway
 deletion still perform their normal cleanup.
 
+If a live virtual cluster is excluded during configuration assembly, its chain
+still reports `Programmed=False`, but only its existing UID-bound owner blocks
+the gateway. Unclaimed or conflicting declarations do not acquire ownership of
+an excluded virtual cluster. Stale and terminating claims are released before
+checking whether to block. Deleting the virtual cluster removes its scope from
+the document, so its surviving chain does not block updates to the gateway.
+
 Chain changes and policy creation, updates, termination, deletion and same-name
 recreation trigger a rebuild. A pure order change changes the configuration hash
 and revision and is pushed to gw-admin. Reconciliation also detects and corrects

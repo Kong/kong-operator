@@ -34,16 +34,25 @@ func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Cl
 	if err != nil {
 		return err
 	}
-	for _, excluded := range c.excluded[before:] {
-		if excluded.obj.GetNamespace() == c.namespace {
-			c.invalidChains = append(c.invalidChains, client.ObjectKeyFromObject(excluded.obj).String()+": "+excluded.message)
-		}
-	}
+	activeClaims := make(map[client.ObjectKey]string, len(virtualClusters.keys))
 	for _, parent := range virtualClusters.keys {
 		if parent.Namespace == c.namespace {
-			if err := releaseInactiveClusterPolicyClaim(ctx, cl, parent); err != nil {
+			claim, err := releaseInactiveClusterPolicyClaim(ctx, cl, parent)
+			if err != nil {
 				return err
 			}
+			activeClaims[parent] = claim
+		}
+	}
+	for _, excluded := range c.excluded[before:] {
+		chain := excluded.obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain)
+		ref := chain.Spec.EventGatewayVirtualClusterRef
+		if chain.Namespace != c.namespace || ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
+			continue
+		}
+		parent := refKey(chain, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name)
+		if activeClaims[parent] == policychain.ClaimValue(chain) {
+			c.invalidChains = append(c.invalidChains, client.ObjectKeyFromObject(chain).String()+": "+excluded.message)
 		}
 	}
 	slices.SortFunc(chains, byCreation[*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain])
@@ -103,32 +112,33 @@ func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Cl
 
 // On-prem deletion is not a remote operation and needs no finalizer. A stale
 // or terminating owner releases its claim even when no replacement exists.
-func releaseInactiveClusterPolicyClaim(ctx context.Context, cl client.Client, key client.ObjectKey) error {
+// The surviving UID-bound claim is returned without acquiring a new one.
+func releaseInactiveClusterPolicyClaim(ctx context.Context, cl client.Client, key client.ObjectKey) (string, error) {
 	var parent configurationv1alpha1.EventGatewayVirtualCluster
 	if err := cl.Get(ctx, key, &parent); err != nil {
-		return fmt.Errorf("reading virtual cluster for policy-chain ownership: %w", err)
+		return "", fmt.Errorf("reading virtual cluster for policy-chain ownership: %w", err)
 	}
 	claim := parent.Annotations[policychain.OwnerAnnotation]
 	if claim == "" {
-		return nil
+		return "", nil
 	}
 	name, uid, valid := strings.Cut(claim, "/")
 	if valid && name != "" && uid != "" {
 		var owner configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
 		err := cl.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: name}, &owner)
 		if err != nil && !apierrors.IsNotFound(err) {
-			return fmt.Errorf("reading cluster policy-chain owner: %w", err)
+			return "", fmt.Errorf("reading cluster policy-chain owner: %w", err)
 		}
 		if err == nil && string(owner.UID) == uid && owner.DeletionTimestamp.IsZero() {
-			return nil
+			return claim, nil
 		}
 	}
 	old := parent.DeepCopy()
 	delete(parent.Annotations, policychain.OwnerAnnotation)
 	if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
-		return fmt.Errorf("releasing inactive cluster policy-chain ownership: %w", err)
+		return "", fmt.Errorf("releasing inactive cluster policy-chain ownership: %w", err)
 	}
-	return nil
+	return "", nil
 }
 
 // clusterPolicyOrder resolves Kubernetes references against this document, not

@@ -74,6 +74,142 @@ func TestBuildClusterPolicyChainOwnership(t *testing.T) {
 	require.Len(t, cfg.entities.VirtualClusters[0].ClusterPolicies, 2, "deleting chains must never delete policy entities")
 }
 
+func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		claim       func(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string
+		terminating bool
+		blocked     bool
+	}{
+		{name: "unclaimed"},
+		{name: "live owner and competitor", claim: policychain.ClaimValue, blocked: true},
+		{name: "recreated owner", claim: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
+			return c.Name + "/" + uuid.NewString()
+		}},
+		{name: "missing owner", claim: func(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
+			return "missing/" + uuid.NewString()
+		}},
+		{name: "malformed claim", claim: func(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
+			return "malformed"
+		}},
+		{name: "terminating owner", claim: policychain.ClaimValue, terminating: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, chain, _, objects := clusterPolicyChainObjects(t)
+			parent := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+			if tt.claim != nil {
+				parent.Annotations = map[string]string{policychain.OwnerAnnotation: tt.claim(chain)}
+			}
+			competitor := chain.DeepCopy()
+			competitor.Name, competitor.UID = "competitor", types.UID(uuid.NewString())
+			if tt.terminating {
+				chain.DeletionTimestamp = new(metav1.Now())
+				chain.Finalizers = []string{"test.example/finalizer"}
+			}
+			validParent := parent.DeepCopy()
+			validParent.Name, validParent.UID = "valid-vc", types.UID(uuid.NewString())
+			validParent.Annotations = nil
+			validParent.CreationTimestamp = metav1.NewTime(parent.CreationTimestamp.Add(-time.Hour))
+			f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+				return append(append(f.gwAdmin.Objects(), f.gateway), append(objects[1:], validParent, chain, competitor)...)
+			})
+			cl := f.cl
+			cfg, err := buildConfiguration(t.Context(), cl, f.gateway, "", nil)
+			require.NoError(t, err)
+			require.Len(t, cfg.entities.VirtualClusters, 1)
+			require.Equal(t, string(validParent.UID), cfg.entities.VirtualClusters[0].Id.String())
+			require.Empty(t, cfg.orderedClusterPolicies)
+			if tt.blocked {
+				require.Equal(t, []string{client.ObjectKeyFromObject(chain).String() + ": its EventGatewayVirtualCluster " +
+					client.ObjectKeyFromObject(parent).String() + " isn't in the configuration"}, cfg.invalidChains,
+					"only the UID-bound owner may block, not its competitor")
+				require.Equal(t, policychain.ClaimValue(chain), read(t, cl, parent).Annotations[policychain.OwnerAnnotation])
+			} else {
+				require.Empty(t, cfg.invalidChains)
+				require.NotContains(t, read(t, cl, parent).Annotations, policychain.OwnerAnnotation,
+					"an excluded parent must not acquire a new claim after releasing an inactive owner")
+			}
+			_, err = f.r.Reconcile(t.Context(), read(t, cl, f.gateway))
+			require.NoError(t, err)
+			if tt.blocked {
+				require.Empty(t, f.pod().recorded())
+			} else {
+				require.Contains(t, f.pod().recorded(), callEntities, "an unowned excluded scope must not block the gateway")
+			}
+			condition := apimeta.FindStatusCondition(read(t, cl, competitor).Status.Conditions, "Programmed")
+			require.NotNil(t, condition)
+			require.Equal(t, metav1.ConditionFalse, condition.Status)
+			require.Contains(t, condition.Message, "isn't in the configuration")
+		})
+	}
+}
+
+func TestReconcileClusterPolicyChainParentLifecycle(t *testing.T) {
+	for _, deleted := range []bool{false, true} {
+		t.Run(map[bool]string{false: "excluded owning parent", true: "deleted owning parent"}[deleted], func(t *testing.T) {
+			_, chain, policies, objects := clusterPolicyChainObjects(t)
+			parent := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+			f := newPushFixture(t, interceptor.Funcs{}, nil)
+			for _, obj := range append(objects[1:], chain) {
+				require.NoError(t, f.cl.Create(t.Context(), obj))
+			}
+			duplicate := parent.DeepCopy()
+			duplicate.Name, duplicate.UID, duplicate.ResourceVersion = "other-vc", types.UID(uuid.NewString()), ""
+			duplicate.Spec.APISpec.Name = "other-vc"
+			duplicate.CreationTimestamp = metav1.NewTime(parent.CreationTimestamp.Add(-time.Hour))
+			if !deleted {
+				require.NoError(t, f.cl.Create(t.Context(), duplicate))
+			}
+			reconcile := func() {
+				t.Helper()
+				_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+				require.NoError(t, err)
+			}
+			reconcile()
+			first := read(t, f.cl, f.gateway)
+			require.Equal(t, policychain.ClaimValue(chain), read(t, f.cl, parent).Annotations[policychain.OwnerAnnotation])
+			if deleted {
+				require.NoError(t, f.cl.Delete(t.Context(), read(t, f.cl, parent)))
+			} else {
+				backend := read(t, f.cl, objects[1].(*configurationv1alpha1.EventGatewayBackendCluster))
+				backend.Spec.APISpec.Name = "changed-backend"
+				require.NoError(t, f.cl.Update(t.Context(), backend))
+				duplicate = read(t, f.cl, duplicate)
+				duplicate.Spec.APISpec.Name = parent.Spec.APISpec.Name
+				require.NoError(t, f.cl.Update(t.Context(), duplicate))
+			}
+			f.pod().reset()
+			reconcile()
+			current := read(t, f.cl, f.gateway)
+			condition := apimeta.FindStatusCondition(current.Status.Conditions, "Programmed")
+			require.NotNil(t, condition)
+			if deleted {
+				require.Contains(t, f.pod().recorded(), callEntities)
+				require.Greater(t, current.Status.ConfigRevision, first.Status.ConfigRevision)
+				require.Equal(t, metav1.ConditionTrue, condition.Status, condition.Message)
+				f.pod().mu.Lock()
+				held := f.pod().gateways[f.gatewayID]
+				f.pod().mu.Unlock()
+				require.Empty(t, held.VirtualClusters)
+				require.Equal(t, "Detached", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
+			} else {
+				require.Empty(t, f.pod().recorded(), "an excluded owning scope must retain the last running document")
+				require.Equal(t, first.Status.ConfigRevision, current.Status.ConfigRevision)
+				require.Equal(t, first.Status.ConfigHash, current.Status.ConfigHash)
+				require.Equal(t, "InvalidPolicyChain", condition.Reason)
+				require.Equal(t, "Invalid", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
+				require.NoError(t, f.cl.Delete(t.Context(), duplicate))
+				reconcile()
+				require.Contains(t, f.pod().recorded(), callEntities, "repairing the owning scope must resume pending updates")
+				require.Greater(t, read(t, f.cl, f.gateway).Status.ConfigRevision, first.Status.ConfigRevision)
+			}
+			for _, policy := range policies {
+				require.NoError(t, f.cl.Get(t.Context(), client.ObjectKeyFromObject(policy), policy))
+			}
+		})
+	}
+}
+
 func TestReconcileClusterPolicyChainLifecycle(t *testing.T) {
 	_, chain, policies, objects := clusterPolicyChainObjects(t)
 	f := newPushFixture(t, interceptor.Funcs{}, nil)
