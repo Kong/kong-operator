@@ -751,6 +751,14 @@ func BuildDocument(
 
 	// Same-route alias conflicts need the converter's route grouping, so they
 	// are resolved on a probe render. See resolveModelAliasRouteConflicts.
+	// The resolution indexes both slices together. A mismatch is a bug, so
+	// fail the sync instead of a panic or a wrong exclusion.
+	if len(translatedModelCRs) != len(doc.Models) {
+		return nil, nil, fmt.Errorf(
+			"internal error: %d translated AIGatewayModel CRs for %d document models",
+			len(translatedModelCRs), len(doc.Models),
+		)
+	}
 	doc, statuses = resolveModelAliasRouteConflicts(doc, statuses, translatedModelCRs)
 
 	return doc, statuses, nil
@@ -783,7 +791,7 @@ func collectAliasConflicts(issues []convert.ConversionIssue) []aliasConflict {
 			continue
 		}
 		m := sameRouteAliasConflictRe.FindStringSubmatch(issue.Reason)
-		if m == nil {
+		if len(m) == 0 {
 			continue
 		}
 		// The converter formats the values with %q.
