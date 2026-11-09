@@ -325,7 +325,11 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	}
 	var out []string
 	{{- $cr := .}}
-	{{- if .ObjectRefField}}
+	{{- if .RefsToFunc}}
+	for _, key := range {{.RefsToFunc}}(ent) {
+		out = append(out, key.String())
+	}
+	{{- else if .ObjectRefField}}
 	{{- range .AccessorExprs}}
 	if ref := {{.Expr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
 		ns := ent.GetNamespace()
@@ -420,13 +424,10 @@ import (
 {{- if or .HasSecretRefs .HasConfigMapRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
-{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
+{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation .ReverseRefs}}
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
-{{- if .ReverseRefs}}
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 {{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -845,7 +846,11 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	}
 	var out []string
 	{{- $cr := .}}
-	{{- if .ObjectRefField}}
+	{{- if .RefsToFunc}}
+	for _, key := range {{.RefsToFunc}}(ent) {
+		out = append(out, key.String())
+	}
+	{{- else if .ObjectRefField}}
 	{{- range .AccessorExprs}}
 	if ref := {{.Expr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
 		ns := ent.GetNamespace()
@@ -969,6 +974,13 @@ type crossRefWatchData struct {
 	// ReverseSelf also enqueues this object's references for a same-kind
 	// reverse watch, without registering a duplicate watch/map function.
 	ReverseSelf bool
+	// RefsToFunc is the <Entity>RefsTo<Kind> accessor of the API package
+	// (e.g. "configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster")
+	// yielding the keys of exactly the refs the extractor scans, set when
+	// every contributing reference is a single-kind reverseWatch []<RefType>
+	// reference. The extractor then indexes those keys instead of scanning
+	// the refs itself.
+	RefsToFunc string
 }
 
 // crossRefLiteralTarget is an InjectInto target field an entity may set
@@ -1417,6 +1429,9 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 		return nil
 	}
 	byKind := make(map[string]*crossRefWatchData)
+	// refsToKind is false for a kind one of whose references the
+	// <Entity>RefsTo<Kind> accessor doesn't cover (see RefsToFunc).
+	refsToKind := make(map[string]bool)
 	var order []string
 	for _, ref := range refs {
 		// The extractor scans a []<RefType> slice for each contributing
@@ -1442,6 +1457,10 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 				cr = &crossRefWatchData{RefKind: kind}
 				byKind[kind] = cr
 				order = append(order, kind)
+				refsToKind[kind] = true
+			}
+			if !ref.ReverseWatch || multiKind || ref.ObjectRefField || ref.NestedArrayList {
+				refsToKind[kind] = false
 			}
 			if multiKind {
 				cr.MultiKind = true
@@ -1463,6 +1482,9 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 	}
 	result := make([]crossRefWatchData, 0, len(order))
 	for _, kind := range order {
+		if refsToKind[kind] {
+			byKind[kind].RefsToFunc = fmt.Sprintf("%s.%sRefsTo%s", g.config.APIGroupPackageAlias, entityName, kind)
+		}
 		result = append(result, *byKind[kind])
 	}
 	return result

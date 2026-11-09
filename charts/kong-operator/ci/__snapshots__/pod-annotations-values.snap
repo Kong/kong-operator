@@ -3439,7 +3439,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayConsumerRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayConsumerRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayConsumerRef == self.spec.aiGatewayConsumerRef'
+          rule: '!has(self.spec.aiGatewayConsumerRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayConsumerRef == self.spec.aiGatewayConsumerRef'
     served: true
     storage: true
     subresources:
@@ -37130,6 +37130,10 @@ spec:
           rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef == self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))'
+        - fieldPath: .spec.gatewayRef
+          message: spec.gatewayRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)'
     served: true
     storage: true
     subresources:
@@ -37367,6 +37371,10 @@ spec:
           rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef == self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))'
+        - fieldPath: .spec.gatewayRef
+          message: spec.gatewayRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)'
     served: true
     storage: true
     subresources:
@@ -37441,28 +37449,19 @@ spec:
                                 maxLength: 253
                                 type: string
                               destination:
-                                maxProperties: 1
-                                minProperties: 1
                                 properties:
-                                  id:
+                                  kind:
+                                    default: EventGatewayVirtualCluster
+                                    enum:
+                                    - EventGatewayVirtualCluster
                                     type: string
                                   name:
+                                    minLength: 1
                                     type: string
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewayVirtualCluster
-                                        enum:
-                                        - EventGatewayVirtualCluster
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
+                                  namespace:
+                                    type: string
+                                required:
+                                - name
                                 type: object
                               minBrokerID:
                                 type: integer
@@ -37628,28 +37627,19 @@ spec:
                                 type: string
                               tlsTrustBundles:
                                 items:
-                                  maxProperties: 1
-                                  minProperties: 1
                                   properties:
-                                    id:
+                                    kind:
+                                      default: EventGatewayTLSTrustBundle
+                                      enum:
+                                      - EventGatewayTLSTrustBundle
                                       type: string
                                     name:
+                                      minLength: 1
                                       type: string
-                                    namespacedRef:
-                                      properties:
-                                        kind:
-                                          default: EventGatewayTLSTrustBundle
-                                          enum:
-                                          - EventGatewayTLSTrustBundle
-                                          type: string
-                                        name:
-                                          minLength: 1
-                                          type: string
-                                        namespace:
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
+                                    namespace:
+                                      type: string
+                                  required:
+                                  - name
                                   type: object
                                 type: array
                             required:
@@ -37812,7 +37802,11 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayListenerRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
+          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
+        - fieldPath: .spec.eventGatewayListenerRef
+          message: spec.eventGatewayListenerRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayListenerRef) || self.spec.eventGatewayListenerRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayListenerRef) && oldSelf.value().spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef)'
         - fieldPath: .spec.eventGatewayListenerRef
           message: spec.eventGatewayListenerRef is immutable once the entity has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef'
@@ -37999,7 +37993,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayListenerRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
+          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
         - fieldPath: .spec.eventGatewayListenerRef
           message: spec.eventGatewayListenerRef is immutable
           rule: self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef
@@ -38232,6 +38226,10 @@ spec:
           rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef == self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))'
+        - fieldPath: .spec.gatewayRef
+          message: spec.gatewayRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)'
     served: true
     storage: true
     subresources:
@@ -38530,6 +38528,10 @@ spec:
           rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef == self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))'
+        - fieldPath: .spec.gatewayRef
+          message: spec.gatewayRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)'
     served: true
     storage: true
     subresources:
@@ -38781,6 +38783,10 @@ spec:
           rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef == self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))'
+        - fieldPath: .spec.gatewayRef
+          message: spec.gatewayRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)'
         - fieldPath: .spec.gatewayRef
           message: gatewayRef is immutable once the static key has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || self.spec.gatewayRef == oldSelf.spec.gatewayRef'
@@ -39045,6 +39051,10 @@ spec:
           rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef == self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))'
+        - fieldPath: .spec.gatewayRef
+          message: spec.gatewayRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)'
     served: true
     storage: true
     subresources:
@@ -39549,6 +39559,7 @@ spec:
                               schemaRegistry:
                                 properties:
                                   kind:
+                                    default: EventGatewaySchemaRegistry
                                     enum:
                                     - EventGatewaySchemaRegistry
                                     type: string
@@ -39557,33 +39568,9 @@ spec:
                                     type: string
                                   namespace:
                                     type: string
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    enum:
-                                    - namespacedRef
-                                    type: string
+                                required:
+                                - name
                                 type: object
-                                x-kubernetes-validations:
-                                - message: exactly one of name and namespacedRef must be set
-                                  rule: has(self.name) != has(self.namespacedRef)
-                                - message: type namespacedRef must be set with namespacedRef, and only with it
-                                  rule: has(self.type) == has(self.namespacedRef)
-                                - message: 'kind and namespace must not be set next to namespacedRef: remove kind, and set the namespace in namespacedRef'
-                                  rule: '!has(self.namespacedRef) || (!has(self.kind) && !has(self.__namespace__))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -39708,44 +39695,6 @@ spec:
                                 - skip
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                properties:
-                                  kind:
-                                    enum:
-                                    - EventGatewaySchemaRegistry
-                                    type: string
-                                  name:
-                                    minLength: 1
-                                    type: string
-                                  namespace:
-                                    type: string
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    enum:
-                                    - namespacedRef
-                                    type: string
-                                type: object
-                                x-kubernetes-validations:
-                                - message: exactly one of name and namespacedRef must be set
-                                  rule: has(self.name) != has(self.namespacedRef)
-                                - message: type namespacedRef must be set with namespacedRef, and only with it
-                                  rule: has(self.type) == has(self.namespacedRef)
-                                - message: 'kind and namespace must not be set next to namespacedRef: remove kind, and set the namespace in namespacedRef'
-                                  rule: '!has(self.namespacedRef) || (!has(self.kind) && !has(self.__namespace__))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -39773,10 +39722,6 @@ spec:
                         required:
                         - type
                         type: object
-                        x-kubernetes-validations:
-                        - message: 'json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry'
-                          optionalOldSelf: true
-                          rule: '!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)'
                       description:
                         maxLength: 512
                         type: string
@@ -39886,57 +39831,19 @@ spec:
                                         type: object
                                       schemaRegistry:
                                         properties:
-                                          id:
-                                            properties:
-                                              id:
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            type: object
-                                          name:
-                                            properties:
-                                              name:
-                                                maxLength: 255
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          namespacedRef:
-                                            properties:
-                                              kind:
-                                                default: EventGatewaySchemaRegistry
-                                                enum:
-                                                - EventGatewaySchemaRegistry
-                                                type: string
-                                              name:
-                                                minLength: 1
-                                                type: string
-                                              namespace:
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          type:
+                                          kind:
+                                            default: EventGatewaySchemaRegistry
                                             enum:
-                                            - id
-                                            - name
-                                            - namespacedRef
+                                            - EventGatewaySchemaRegistry
+                                            type: string
+                                          name:
                                             minLength: 1
                                             type: string
+                                          namespace:
+                                            type: string
                                         required:
-                                        - type
+                                        - name
                                         type: object
-                                        x-kubernetes-validations:
-                                        - message: id must be set only when type is id
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
-                                        - message: name must be set only when type is name
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
-                                        - message: namespacedRef must be set only when type is namespacedRef
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -40019,57 +39926,19 @@ spec:
                                         type: object
                                       schemaRegistry:
                                         properties:
-                                          id:
-                                            properties:
-                                              id:
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            type: object
-                                          name:
-                                            properties:
-                                              name:
-                                                maxLength: 255
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          namespacedRef:
-                                            properties:
-                                              kind:
-                                                default: EventGatewaySchemaRegistry
-                                                enum:
-                                                - EventGatewaySchemaRegistry
-                                                type: string
-                                              name:
-                                                minLength: 1
-                                                type: string
-                                              namespace:
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          type:
+                                          kind:
+                                            default: EventGatewaySchemaRegistry
                                             enum:
-                                            - id
-                                            - name
-                                            - namespacedRef
+                                            - EventGatewaySchemaRegistry
+                                            type: string
+                                          name:
                                             minLength: 1
                                             type: string
+                                          namespace:
+                                            type: string
                                         required:
-                                        - type
+                                        - name
                                         type: object
-                                        x-kubernetes-validations:
-                                        - message: id must be set only when type is id
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
-                                        - message: name must be set only when type is name
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
-                                        - message: namespacedRef must be set only when type is namespacedRef
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -40248,7 +40117,11 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef'
@@ -40987,7 +40860,11 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef'
@@ -41174,7 +41051,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable
           rule: self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef
@@ -41262,28 +41139,19 @@ spec:
                               static:
                                 properties:
                                   key:
-                                    maxProperties: 1
-                                    minProperties: 1
                                     properties:
-                                      id:
+                                      kind:
+                                        default: EventGatewayStaticKey
+                                        enum:
+                                        - EventGatewayStaticKey
                                         type: string
                                       name:
+                                        minLength: 1
                                         type: string
-                                      namespacedRef:
-                                        properties:
-                                          kind:
-                                            default: EventGatewayStaticKey
-                                            enum:
-                                            - EventGatewayStaticKey
-                                            type: string
-                                          name:
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            type: string
-                                        required:
-                                        - name
-                                        type: object
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
                                     type: object
                                 required:
                                 - key
@@ -41365,28 +41233,19 @@ spec:
                                     static:
                                       properties:
                                         key:
-                                          maxProperties: 1
-                                          minProperties: 1
                                           properties:
-                                            id:
+                                            kind:
+                                              default: EventGatewayStaticKey
+                                              enum:
+                                              - EventGatewayStaticKey
                                               type: string
                                             name:
+                                              minLength: 1
                                               type: string
-                                            namespacedRef:
-                                              properties:
-                                                kind:
-                                                  default: EventGatewayStaticKey
-                                                  enum:
-                                                  - EventGatewayStaticKey
-                                                  type: string
-                                                name:
-                                                  minLength: 1
-                                                  type: string
-                                                namespace:
-                                                  type: string
-                                              required:
-                                              - name
-                                              type: object
+                                            namespace:
+                                              type: string
+                                          required:
+                                          - name
                                           type: object
                                       required:
                                       - key
@@ -41758,57 +41617,19 @@ spec:
                                 type: string
                               schemaRegistry:
                                 properties:
-                                  id:
-                                    properties:
-                                      id:
-                                        maxLength: 253
-                                        minLength: 1
-                                        type: string
-                                    type: object
-                                  name:
-                                    properties:
-                                      name:
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
+                                  kind:
+                                    default: EventGatewaySchemaRegistry
                                     enum:
-                                    - id
-                                    - name
-                                    - namespacedRef
+                                    - EventGatewaySchemaRegistry
+                                    type: string
+                                  name:
                                     minLength: 1
                                     type: string
+                                  namespace:
+                                    type: string
                                 required:
-                                - type
+                                - name
                                 type: object
-                                x-kubernetes-validations:
-                                - message: id must be set only when type is id
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
-                                - message: name must be set only when type is name
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
-                                - message: namespacedRef must be set only when type is namespacedRef
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -41931,59 +41752,6 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                properties:
-                                  id:
-                                    properties:
-                                      id:
-                                        maxLength: 253
-                                        minLength: 1
-                                        type: string
-                                    type: object
-                                  name:
-                                    properties:
-                                      name:
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    enum:
-                                    - id
-                                    - name
-                                    - namespacedRef
-                                    minLength: 1
-                                    type: string
-                                required:
-                                - type
-                                type: object
-                                x-kubernetes-validations:
-                                - message: id must be set only when type is id
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
-                                - message: name must be set only when type is name
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
-                                - message: namespacedRef must be set only when type is namespacedRef
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -42011,10 +41779,6 @@ spec:
                         required:
                         - type
                         type: object
-                        x-kubernetes-validations:
-                        - message: 'json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry'
-                          optionalOldSelf: true
-                          rule: '!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)'
                       description:
                         maxLength: 512
                         type: string
@@ -42098,57 +41862,19 @@ spec:
                                         type: object
                                       schemaRegistry:
                                         properties:
-                                          id:
-                                            properties:
-                                              id:
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            type: object
-                                          name:
-                                            properties:
-                                              name:
-                                                maxLength: 255
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          namespacedRef:
-                                            properties:
-                                              kind:
-                                                default: EventGatewaySchemaRegistry
-                                                enum:
-                                                - EventGatewaySchemaRegistry
-                                                type: string
-                                              name:
-                                                minLength: 1
-                                                type: string
-                                              namespace:
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          type:
+                                          kind:
+                                            default: EventGatewaySchemaRegistry
                                             enum:
-                                            - id
-                                            - name
-                                            - namespacedRef
+                                            - EventGatewaySchemaRegistry
+                                            type: string
+                                          name:
                                             minLength: 1
                                             type: string
+                                          namespace:
+                                            type: string
                                         required:
-                                        - type
+                                        - name
                                         type: object
-                                        x-kubernetes-validations:
-                                        - message: id must be set only when type is id
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
-                                        - message: name must be set only when type is name
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
-                                        - message: namespacedRef must be set only when type is namespacedRef
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -42326,7 +42052,11 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef'
@@ -42886,7 +42616,11 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayBackendClusterRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef'
+          rule: '!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef'
+        - fieldPath: .spec.eventGatewayBackendClusterRef
+          message: spec.eventGatewayBackendClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayBackendClusterRef) || self.spec.eventGatewayBackendClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayBackendClusterRef) && oldSelf.value().spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef)'
         - fieldPath: .spec.eventGatewayBackendClusterRef
           message: spec.eventGatewayBackendClusterRef is immutable once the entity has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef == oldSelf.spec.eventGatewayBackendClusterRef'
@@ -64616,7 +64350,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.controlPlaneRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
+          rule: '!has(self.spec.controlPlaneRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
     served: true
     storage: true
     subresources:
@@ -65515,7 +65249,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:
@@ -65850,7 +65584,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:
@@ -66022,7 +65756,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:
@@ -66246,7 +65980,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:
@@ -66413,7 +66147,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:
@@ -66636,7 +66370,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
         - message: parentPageIDRef must not reference the PortalPage itself
           rule: '!has(self.spec.apiSpec.parentPageIDRef) || !has(self.spec.apiSpec.parentPageIDRef.namespacedRef) || self.spec.apiSpec.parentPageIDRef.namespacedRef.name != self.metadata.name'
     served: true
@@ -67054,7 +66788,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:

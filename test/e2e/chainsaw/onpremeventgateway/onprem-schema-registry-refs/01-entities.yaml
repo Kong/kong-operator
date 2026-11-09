@@ -91,9 +91,7 @@ spec:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
           schemaRegistry:
-            type: namespacedRef
-            namespacedRef:
-              name: orders-registry
+            name: orders-registry
           valueValidationAction: reject
 ---
 apiVersion: configuration.konghq.com/v1alpha1
@@ -124,9 +122,7 @@ spec:
                 type: none
                 none: {}
               schemaRegistry:
-                type: namespacedRef
-                namespacedRef:
-                  name: orders-registry
+                name: orders-registry
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: EventGatewayVirtualClusterConsumePolicy
@@ -165,9 +161,7 @@ spec:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
           schemaRegistry:
-            type: namespacedRef
-            namespacedRef:
-              name: orders-registry
+            name: orders-registry
           valueValidationAction: skip
 ---
 apiVersion: configuration.konghq.com/v1alpha1
@@ -198,6 +192,4 @@ spec:
                 type: none
                 none: {}
               schemaRegistry:
-                type: namespacedRef
-                namespacedRef:
-                  name: orders-registry
+                name: orders-registry

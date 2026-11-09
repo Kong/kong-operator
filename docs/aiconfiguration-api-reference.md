@@ -1374,8 +1374,6 @@ _Appears in:_
 
 
 
-
-
 #### AIGatewayAuthStrategySpec
 
 
@@ -8697,8 +8695,6 @@ ManagedByValue is the value type for ManagedBy.
 _Appears in:_
 
 - [ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)
-
-
 
 #### PublicLabels
 

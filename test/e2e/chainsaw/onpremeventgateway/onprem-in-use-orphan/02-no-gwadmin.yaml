@@ -79,7 +79,5 @@ spec:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
           schemaRegistry:
-            type: namespacedRef
-            namespacedRef:
-              name: moved
+            name: moved
           valueValidationAction: reject

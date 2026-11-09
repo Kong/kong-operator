@@ -78,23 +78,16 @@ spec:
 	t.Run("a reference by object is sent by its Konnect ID", func(t *testing.T) {
 		t.Parallel()
 
-		p := policy(t, `{namespacedRef: {name: orders}}`)
+		p := policy(t, `{name: orders}`)
 		assert.Equal(t, []client.ObjectKey{{Namespace: "default", Name: "orders"}},
 			configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(p))
 		assert.Equal(t, map[string]any{"id": "orders-id"}, destinationSent(t, p))
 	})
 
-	t.Run("references by id and by name are sent as they are", func(t *testing.T) {
-		t.Parallel()
-
-		assert.Equal(t, map[string]any{"id": "konnect-id"}, destinationSent(t, policy(t, `{id: konnect-id}`)))
-		assert.Equal(t, map[string]any{"name": "konnect-name"}, destinationSent(t, policy(t, `{name: konnect-name}`)))
-	})
-
 	t.Run("a virtual cluster that doesn't exist is reported", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := policy(t, `{namespacedRef: {name: missing}}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
+		_, err := policy(t, `{name: missing}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
 		var notFound configurationv1alpha1.ReferenceNotFoundError
 		require.ErrorAs(t, err, &notFound)
 	})
@@ -102,7 +95,7 @@ spec:
 	t.Run("a virtual cluster of another gateway is reported", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := policy(t, `{namespacedRef: {name: elsewhere}}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
+		_, err := policy(t, `{name: elsewhere}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
 		var otherGateway configurationv1alpha1.ReferenceDifferentGatewayError
 		require.ErrorAs(t, err, &otherGateway)
 	})
@@ -112,11 +105,11 @@ spec:
 	t.Run("a virtual cluster being deleted can't get a new policy, but keeps an existing one", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := policy(t, `{namespacedRef: {name: being-deleted}}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
+		_, err := policy(t, `{name: being-deleted}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
 		var beingDeleted configurationv1alpha1.ReferenceBeingDeletedError
 		require.ErrorAs(t, err, &beingDeleted)
 
-		existing := policy(t, `{namespacedRef: {name: being-deleted}}`)
+		existing := policy(t, `{name: being-deleted}`)
 		existing.SetKonnectID("policy-id")
 		assert.Equal(t, map[string]any{"id": "being-deleted-id"}, destinationSent(t, existing))
 	})
@@ -124,7 +117,7 @@ spec:
 	t.Run("a virtual cluster not in Konnect yet is reported", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := policy(t, `{namespacedRef: {name: not-programmed}}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
+		_, err := policy(t, `{name: not-programmed}`).ToCreateEventGatewayListenerPolicyRequest(t.Context(), cl)
 		var notProgrammed configurationv1alpha1.ReferenceNotProgrammedError
 		require.ErrorAs(t, err, &notProgrammed)
 	})

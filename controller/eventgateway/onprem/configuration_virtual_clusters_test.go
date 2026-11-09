@@ -121,13 +121,13 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: with-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: registry}}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: registry}, valueValidationAction: mark}}
 `, 9)
 	withMissingRegistry := consumePolicy("with-missing-registry", `
     type: schemaValidation
     schemaValidation:
       name: with-missing-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: missing}}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: missing}, valueValidationAction: mark}}
 `, 9)
 	registry := fromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, at(1), `
 metadata: {name: registry}
@@ -166,13 +166,13 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: with-other-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: other-registry}}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: other-registry}, valueValidationAction: mark}}
 `, 10)
 	withDuplicateRegistry := consumePolicy("with-duplicate-registry", `
     type: schemaValidation
     schemaValidation:
       name: with-duplicate-registry
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: duplicate-registry}}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: duplicate-registry}, valueValidationAction: mark}}
 `, 10)
 	staticKey := fromYAML[configurationv1alpha1.EventGatewayStaticKey](t, at(1), `
 metadata: {name: key}
@@ -194,7 +194,7 @@ spec:
       config:
         failureMode: error
         partOfRecord: [value]
-        encryptionKey: {type: static, static: {key: {namespacedRef: {name: key}}}}
+        encryptionKey: {type: static, static: {key: {name: key}}}
 `)
 	// Of another namespace, attached to a backend cluster of the gateway: left
 	// out, whatever its parent reference says.
@@ -309,7 +309,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: same
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: vc}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: vc}}}
 `)
 	cfg, err := buildConfiguration(t.Context(), f.objects(secondVC, produce, consume, f.listener(), listenerPolicy), f.gateway, "", nil)
 	require.NoError(t, err)
@@ -352,7 +352,7 @@ spec:
   eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc}}
   apiSpec: {name: vc2, aclMode: passthrough, authentication: [{type: anonymous}], dnsLabel: vc2}
 `)
-	parent := f.validateWith("parent", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+	parent := f.validateWith("parent", `{name: orders}`, 3)
 
 	t.Run("another namespace never blocks, a missing parent or a cycle", func(t *testing.T) {
 		cfg, err := buildConfiguration(t.Context(), f.objects(

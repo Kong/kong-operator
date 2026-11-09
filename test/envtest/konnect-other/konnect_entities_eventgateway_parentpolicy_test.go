@@ -65,6 +65,28 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 	vc.SetGatewayID("gateway-id")
 	vc.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(vc.Generation)}
 	require.NoError(t, cl.Status().Update(ctx, vc))
+	// The static key the produce child encrypts with, by object.
+	staticKey := &configurationv1alpha1.EventGatewayStaticKey{
+		Name: "test-key", Namespace: ns.Name,
+		Spec: configurationv1alpha1.EventGatewayStaticKeySpec{
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gateway.Name},
+			},
+			APISpec: configurationv1alpha1.EventGatewayStaticKeyAPISpec{
+				Name: "test-key",
+				Value: configurationv1alpha1.SensitiveDataSource{
+					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "key-secret", Key: "key"},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, staticKey))
+	staticKey.SetKonnectID("static-key-id")
+	staticKey.SetGatewayID("gateway-id")
+	staticKey.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(staticKey.Generation)}
+	require.NoError(t, cl.Status().Update(ctx, staticKey))
 
 	for _, side := range []string{"produce", "consume"} {
 		t.Run(side, func(t *testing.T) {
@@ -115,7 +137,10 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 				sdk.EXPECT().CreateEventGatewayVirtualClusterProducePolicy(mock.Anything,
 					mock.MatchedBy(func(req sdkkonnectops.CreateEventGatewayVirtualClusterProducePolicyRequest) bool {
 						p := req.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate
-						return p != nil && p.ParentPolicyID == "produce-parent-id"
+						return p != nil && p.ParentPolicyID == "produce-parent-id" &&
+							len(p.Config.EncryptFields) == 1 && p.Config.EncryptFields[0].EncryptionKey.EncryptionKeyStatic != nil &&
+							p.Config.EncryptFields[0].EncryptionKey.EncryptionKeyStatic.Key.EncryptionKeyStaticReferenceByID != nil &&
+							p.Config.EncryptFields[0].EncryptionKey.EncryptionKeyStatic.Key.EncryptionKeyStaticReferenceByID.ID == "static-key-id"
 					})).Return(&sdkkonnectops.CreateEventGatewayVirtualClusterProducePolicyResponse{
 					EventGatewayPolicy: &sdkkonnectcomp.EventGatewayPolicy{ID: "produce-child-id"},
 				}, nil).Once()

@@ -1484,16 +1484,6 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 			continue
 		}
 		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
-{{- else if .UnionMemberGoName}}
-{{- if .ArrayLeafPointer}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
-			continue
-		}
-{{- end}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}} == nil {
-			continue
-		}
-		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}})
 {{- else if .ArrayLeafPointer}}
 		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
 			continue
@@ -1519,24 +1509,12 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 		return nil
 	}
 {{- end}}
-{{- if and .UnionMemberGoName .SingleValueObjectRef}}
-	if {{$path}}.{{.UnionMemberGoName}} == nil {
-		return nil
-	}
-	return []{{.TypeName}}{*{{$path}}.{{.UnionMemberGoName}}}
-{{- else if .UnionMemberGoName}}
-	var refs []{{.TypeName}}
-	for i := range {{$path}} {
-		if {{$path}}[i].{{.UnionMemberGoName}} == nil {
-			continue
-		}
-		refs = append(refs, *{{$path}}[i].{{.UnionMemberGoName}})
-	}
-	return refs
-{{- else if and .SingleValueObjectRef .TypedMember}}
-	return []{{.TypeName}}{ {{- $path}}.Ref()}
-{{- else if .SingleValueObjectRef}}
+{{- if and .SingleValueObjectRef .LeafPointer}}
 	return []{{.TypeName}}{*{{$path}}}
+{{- else if .SingleValueObjectRef}}
+	// The field is required: an unset name is returned, for the resolver to
+	// report it rather than leave the reference in the payload.
+	return []{{.TypeName}}{ {{- $path}}}
 {{- else}}
 	return {{$path}}
 {{- end}}
@@ -1744,7 +1722,7 @@ func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.Obje
 	var keys []client.ObjectKey
 {{- range .ReverseWatchRefsExprs}}
 	for _, ref := range {{.}} {
-		if ref.Kind != "" && ref.Kind != "{{$kind}}" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "{{$kind}}") {
 			continue
 		}
 		ns := ref.Namespace
@@ -1831,23 +1809,6 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	{{- end}}
 	return checks
 }
-{{- $hasObjectRefs := false}}
-{{- range $.References}}{{if or .UnionMember .TypedMember}}{{$hasObjectRefs = true}}{{end}}{{end}}
-{{- if $hasObjectRefs}}
-
-// ObjectReferencePaths returns the paths of the references of the
-// {{$.EntityName}} that name another object either by object, with namespacedRef, or
-// otherwise, e.g. by its Konnect ID or name.
-func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
-	return []ObjectReferencePath{
-	{{- range $.References}}
-	{{- if or .UnionMember .TypedMember}}
-		{Path: "{{.Path}}", Kind: "{{.DefaultKind}}", NameIsObject: {{if .TypedMember}}true{{else}}false{{end}}},
-	{{- end}}
-	{{- end}}
-	}
-}
-{{- end}}
 {{- end}}
 {{- end}}
 {{- define "sdkOpsRefInjections"}}
@@ -1868,12 +1829,6 @@ func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
 	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
 	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
 	// that part of the config wasn't set, so the payload is left untouched.
-{{- else if .UnionMemberKey}}
-	// {{.Path}} may carry CR references: replace each reference object set to
-	// "{{.UnionMemberKey}}" in the SDK payload with one wrapping its resolved
-	// Konnect value under "{{.ObjectWrapKey}}", leaving reference objects set by
-	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
 {{- else if .ItemObjectKey}}
 	// {{.Path}} carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -1919,7 +1874,7 @@ func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
 		if err != nil {
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
-{{- if $inj.UnionMemberKey}}
+{{- if $inj.ElementObjectWrap}}
 		rewritten{{.ResolverName}} := 0
 		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
 {{- else}}
@@ -1939,12 +1894,8 @@ func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
 				}
 {{- $lp = .Var}}
 {{- end}}
-{{- if $inj.UnionMemberKey}}
-				leaf, ok := {{$lp}}["{{.LeafSDKKey}}"].(map[string]any)
-				if !ok {
-					continue
-				}
-				if _, has := leaf["{{$inj.UnionMemberKey}}"]; !has {
+{{- if $inj.ElementObjectWrap}}
+				if _, ok := {{$lp}}["{{.LeafSDKKey}}"].(map[string]any); !ok {
 					continue
 				}
 				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
@@ -1963,7 +1914,7 @@ func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
 {{- end}}
 			}
 		}
-{{- if $inj.UnionMemberKey}}
+{{- if $inj.ElementObjectWrap}}
 		// Every resolved reference must have been rewritten: a mismatch means
 		// the references and the payload disagree on which items carry one.
 		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
@@ -1981,48 +1932,6 @@ func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
 			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 		}
 {{- end}}
-{{- else if .UnionMemberKey}}
-{{- range .Variants}}
-		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
-		}
-{{- if $inj.UnionMemberArray}}
-		rewritten{{.ResolverName}} := 0
-		if arr, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].([]any); ok {
-			for i, e := range arr {
-				el, ok := e.(map[string]any)
-				if !ok {
-					continue
-				}
-				if _, has := el["{{$inj.UnionMemberKey}}"]; !has {
-					continue
-				}
-				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
-					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
-				}
-				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[rewritten{{.ResolverName}}]}
-				rewritten{{.ResolverName}}++
-			}
-		}
-		// Every resolved reference must have been rewritten: a mismatch means
-		// the references and the payload disagree on which items carry one.
-		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
-			return nil, fmt.Errorf("resolving {{.RefPath}} references: %d resolved but %d set in the payload", len(resolved{{.ResolverName}}), rewritten{{.ResolverName}})
-		}
-{{- else}}
-		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok {
-			if _, has := el["{{$inj.UnionMemberKey}}"]; has {
-				// The reference is set in the payload: it must have resolved,
-				// or it would reach Konnect unresolved.
-				if len(resolved{{.ResolverName}}) == 0 {
-					return nil, fmt.Errorf("resolving {{.RefPath}} references: reference set in the payload but not resolved")
-				}
-				{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
-			}
-		}
-{{- end}}
-{{- end}}
 {{- else}}
 {{- range .Variants}}
 		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
@@ -2034,7 +1943,13 @@ func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
 		for _, v := range resolved{{.ResolverName}} {
 			wrapped{{.ResolverName}} = append(wrapped{{.ResolverName}}, map[string]string{"{{$inj.ItemObjectKey}}": v})
 		}
+{{- if $inj.SkipEmpty}}
+		if len(wrapped{{.ResolverName}}) > 0 {
+			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = wrapped{{.ResolverName}}
+		}
+{{- else}}
 		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = wrapped{{.ResolverName}}
+{{- end}}
 {{- else}}
 		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}
 {{- end}}
@@ -4644,11 +4559,6 @@ const (
 // before calling ResolveKonnectReferences.
 type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
 
-// ObjectReferencePath is the path of a reference that names another object
-// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
-// or name.
-type ObjectReferencePath = commonv1alpha1.ObjectReferencePath
-
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 
@@ -4721,54 +4631,4 @@ type {{.TypeName}} struct {
 	// +optional
 {{end}}	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
 }
-{{end}}
-{{- range .TypedRefTypes}}
-// {{.TypeName}} references {{.KindsSentence}} in the cluster, in either
-// of two forms naming the same object: its name, with kind and namespace, set
-// directly, or type {{.Member}} with the {{.Member}} member, as written in the
-// references that also accept a Konnect ID or name.
-//
-// +kubebuilder:validation:XValidation:rule="has(self.name) != has(self.{{.Member}})",message="exactly one of name and {{.Member}} must be set"
-// +kubebuilder:validation:XValidation:rule="has(self.type) == has(self.{{.Member}})",message="type {{.Member}} must be set with {{.Member}}, and only with it"
-// +kubebuilder:validation:XValidation:rule="!has(self.{{.Member}}) || (!has(self.kind) && !has(self.__namespace__))",message="kind and namespace must not be set next to {{.Member}}: remove kind, and set the namespace in {{.Member}}"
-type {{.TypeName}} struct {
-	// Type selects the {{.Member}} form. It is left unset when name is set
-	// directly.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum={{.Member}}
-	Type string ` + "`" + `json:"type,omitempty"` + "`" + `
-
-	// {{.MemberGoName}} references the object, with type {{.Member}}.
-	//
-	// +optional
-	{{.MemberGoName}} *{{.RefTypeName}} ` + "`" + `json:"{{.Member}},omitempty"` + "`" + `
-
-	// Kind is the kind of the referenced object, when its name is set
-	// directly.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum={{.KindsEnum}}
-	Kind string ` + "`" + `json:"kind,omitempty"` + "`" + `
-
-	// Name is the name of the referenced object, set directly.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	Name string ` + "`" + `json:"name,omitempty"` + "`" + `
-
-	// Namespace defaults to the referrer's namespace, when the name is set
-	// directly. If set, it must be the same as the referrer's namespace.
-	//
-	// +optional
-	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
-}
-
-// Ref returns the reference to the object, whichever form names it.
-func (r {{.TypeName}}) Ref() {{.RefTypeName}} {
-	if r.{{.MemberGoName}} != nil {
-		return *r.{{.MemberGoName}}
-	}
-	return {{.RefTypeName}}{Kind: r.Kind, Name: r.Name, Namespace: r.Namespace}
-}
-{{- end}}`
+{{end}}`

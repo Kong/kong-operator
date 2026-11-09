@@ -439,7 +439,7 @@ spec:
         clientAuthentication:
           mode: required
           tlsTrustBundles:
-            - namespacedRef: {name: onprem-trust-bundle}
+            - {name: onprem-trust-bundle}
 `)
 	require.NoError(t, cl.Create(ctx, policy))
 

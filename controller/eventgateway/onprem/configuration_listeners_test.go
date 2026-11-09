@@ -91,18 +91,16 @@ spec:
 	l := listener("listener", "listener", 2)
 	// Left out as a duplicate: its policy is left out with it.
 	lDuplicate := listener("listener-duplicate", "listener", 3)
-	forward := forwardPolicy("forward", "listener", "{namespacedRef: {name: vc}}", 4)
-	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{namespacedRef: {name: unknown}}", 5)
-	forwardByName := forwardPolicy("forward-by-name", "listener", "{name: vc}", 9)
-	forwardByID := forwardPolicy("forward-by-id", "listener", "{id: 9524ec7d-36d9-465d-a8c5-83a3c9390458}", 6)
-	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{namespacedRef: {name: vc}}", 7)
+	forward := forwardPolicy("forward", "listener", "{name: vc}", 4)
+	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{name: unknown}", 5)
+	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{name: vc}", 7)
 	// Of another namespace, attached to a listener of the gateway: left out,
 	// whatever its parent reference says.
-	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{namespacedRef: {name: vc}}", 8)
+	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{name: vc}", 8)
 	forwardOtherNamespace.SetNamespace("other")
 	forwardOtherNamespace.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(ns)
 
-	cl := newFakeClient(t, bc, vc, l, lDuplicate, forward, forwardUnknown, forwardByName, forwardByID, forwardOfDuplicate, forwardOtherNamespace)
+	cl := newFakeClient(t, bc, vc, l, lDuplicate, forward, forwardUnknown, forwardOfDuplicate, forwardOtherNamespace)
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
 
@@ -114,8 +112,6 @@ spec:
 		"EventGatewayListener listener-duplicate": `another listener of the gateway is named "listener"`,
 		"EventGatewayListenerPolicy forward-unknown": "resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: EventGatewayVirtualCluster " + ns +
 			`/unknown: eventgatewayvirtualclusters.configuration.konghq.com "unknown" not found`,
-		"EventGatewayListenerPolicy forward-by-name":         "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references an EventGatewayVirtualCluster by name: with an OnPremEventGateway, only namespacedRef is allowed",
-		"EventGatewayListenerPolicy forward-by-id":           "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references an EventGatewayVirtualCluster by id: with an OnPremEventGateway, only namespacedRef is allowed",
 		"EventGatewayListenerPolicy forward-of-duplicate":    "its EventGatewayListener " + ns + "/listener-duplicate isn't in the configuration",
 		"EventGatewayListenerPolicy forward-other-namespace": "it must be in the namespace of the OnPremEventGateway, " + ns,
 	}, excluded)
@@ -175,7 +171,7 @@ spec:
             key: {type: secretRef, secretRef: {name: tls, key: tls.key}}
         clientAuthentication:
           mode: required
-          tlsTrustBundles: [{namespacedRef: {name: bundle}}]
+          tlsTrustBundles: [{name: bundle}]
 `)
 	secret := &corev1.Secret{Name: "tls", Namespace: ns, Data: map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")}}
 

@@ -1256,7 +1256,7 @@ func resolveAIGatewayAuthStrategyOpenidConnectDatastores(ctx context.Context, cl
 func AIGatewayAuthStrategyRefsToAIGatewayDatastore(obj *AIGatewayAuthStrategy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtAIGatewayAuthStrategyKeyAuthDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -1266,7 +1266,7 @@ func AIGatewayAuthStrategyRefsToAIGatewayDatastore(obj *AIGatewayAuthStrategy) [
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayAuthStrategyOpenidConnectDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace

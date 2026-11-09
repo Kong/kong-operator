@@ -56,7 +56,7 @@ func withKonnectStatus(policy *configurationv1alpha1.EventGatewayVirtualClusterP
 // Konnect reconciler set on one is cleared once the gateway reports it.
 func TestOwnedEntityStatusLosesWhatKonnectSet(t *testing.T) {
 	s := newSchemaRegistryFixture(t)
-	policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+	policy := s.validateWith("validate", `{name: orders}`, 3)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 		return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), s.registry("orders", "gateway", 1), policy)...)
 	})

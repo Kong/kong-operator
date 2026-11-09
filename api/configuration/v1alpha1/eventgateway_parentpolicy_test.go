@@ -48,7 +48,9 @@ func TestEventGatewayParentPolicyRequests(t *testing.T) {
 		},
 	}
 	consume.SetKonnectID("parent-id")
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(produce, consume).Build()
+	key := &EventGatewayStaticKey{Name: "key", Namespace: "default"}
+	key.SetKonnectID("key-id")
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(produce, consume, key).Build()
 
 	for _, tc := range []struct {
 		name    string
@@ -57,7 +59,7 @@ func TestEventGatewayParentPolicyRequests(t *testing.T) {
 	}{
 		{
 			name: "encryptFields", produce: true,
-			spec: `{"type":"encryptFields","encryptFields":{"name":"encrypt","config":{"failureMode":"reject","encryptFields":[{"paths":{"type":"array","array":[{"match":"secret"}]},"encryptionKey":{"type":"static","static":{"key":{"id":"key-id"}}}}]}}}`,
+			spec: `{"type":"encryptFields","encryptFields":{"name":"encrypt","config":{"failureMode":"reject","encryptFields":[{"paths":{"type":"array","array":[{"match":"secret"}]},"encryptionKey":{"type":"static","static":{"key":{"name":"key"}}}}]}}}`,
 		},
 		{
 			name: "produce modifyHeaders", produce: true,

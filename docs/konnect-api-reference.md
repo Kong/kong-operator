@@ -1800,8 +1800,6 @@ _Appears in:_
 
 - [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
 
-
-
 #### PageContent
 
 _Underlying type:_ `string`

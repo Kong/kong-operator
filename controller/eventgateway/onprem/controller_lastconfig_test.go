@@ -47,7 +47,7 @@ type lastConfigFixture struct {
 func newLastConfigFixture(t *testing.T) lastConfigFixture {
 	t.Helper()
 	s := newSchemaRegistryFixture(t)
-	policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+	policy := s.validateWith("validate", `{name: orders}`, 3)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 		return append(append(f.gwAdmin.Objects(), f.gateway),
 			append(s.virtualCluster(), s.registry("orders", "gateway", 1), s.registry("other", "gateway", 2), policy)...)
@@ -67,7 +67,7 @@ func (f lastConfigFixture) reconcile(t *testing.T) {
 // impossible to send.
 func (f lastConfigFixture) setRegistry(t *testing.T, registry string) {
 	t.Helper()
-	changed := f.s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: `+registry+`}}`, 3)
+	changed := f.s.validateWith("validate", `{name: `+registry+`}`, 3)
 	changed.ObjectMeta = read(t, f.cl, f.policy).ObjectMeta
 	changed.Generation++
 	require.NoError(t, f.cl.Update(t.Context(), changed))

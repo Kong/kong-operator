@@ -39,11 +39,6 @@ const (
 // before calling ResolveKonnectReferences.
 type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
 
-// ObjectReferencePath is the path of a reference that names another object
-// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
-// or name.
-type ObjectReferencePath = commonv1alpha1.ObjectReferencePath
-
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 
