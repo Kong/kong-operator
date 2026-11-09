@@ -485,41 +485,50 @@ func getCASecret(
 }
 
 // caBundle returns the ca.crt value for a certificate issued by ca: the CA certificate,
-// followed by the root in the CA Secret's ca.crt key when the CA Secret carries one that
-// the chain does not already hold.
+// followed by every certificate in the CA Secret's ca.crt key that the chain does not
+// already hold. A self-signed CA Secret repeats its certificate in tls.crt and ca.crt.
 func caBundle(ca *corev1.Secret) []byte {
 	bundle := ca.Data["tls.crt"]
-	root := bytes.TrimSpace(ca.Data["ca.crt"])
-	if len(root) == 0 || pemContainsCert(bundle, root) {
+	chain := pemCerts(bundle)
+	var missing [][]byte
+	for _, cert := range pemCerts(ca.Data["ca.crt"]) {
+		if !slices.ContainsFunc(chain, func(c []byte) bool {
+			return bytes.Equal(c, cert)
+		}) {
+			missing = append(missing, bytes.TrimSpace(pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: cert,
+			})))
+		}
+	}
+	if len(missing) == 0 {
 		return bundle
 	}
 	return append(bytes.Join(
-		[][]byte{
-			bytes.TrimSpace(bundle),
-			root,
-		},
+		append(
+			[][]byte{
+				bytes.TrimSpace(bundle),
+			},
+			missing...,
+		),
 		[]byte("\n"),
 	), '\n')
 }
 
-// pemContainsCert reports whether the PEM bundle already holds the first certificate in certPEM.
-// A self-signed CA Secret repeats its certificate in tls.crt and ca.crt.
-func pemContainsCert(bundle, certPEM []byte) bool {
-	target, _ := pem.Decode(certPEM)
-	if target == nil {
-		return false
-	}
-	for rest := bundle; len(rest) > 0; {
+// pemCerts returns the DER bytes of every certificate in the PEM data.
+func pemCerts(data []byte) [][]byte {
+	var certs [][]byte
+	for rest := data; len(rest) > 0; {
 		block, r := pem.Decode(rest)
 		if block == nil {
-			return false
-		}
-		if bytes.Equal(block.Bytes, target.Bytes) {
-			return true
+			break
 		}
 		rest = r
+		if block.Type == "CERTIFICATE" {
+			certs = append(certs, block.Bytes)
+		}
 	}
-	return false
+	return certs
 }
 
 // DetectCertType inspects a PEM-encoded certificate and returns its KeyConfig.

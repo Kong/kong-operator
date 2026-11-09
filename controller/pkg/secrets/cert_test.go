@@ -771,6 +771,28 @@ func TestCABundleSkipsRootAlreadyInChain(t *testing.T) {
 		}}
 		require.Equal(t, chain, caBundle(ca))
 	})
+
+	t.Run("chain in ca.crt appends only the missing certificates", func(t *testing.T) {
+		intermediate := certificate.MustGenerateCert(
+			certificate.WithCommonName("intermediate-ca"),
+			certificate.WithCATrue(),
+			certificate.WithKeyType(certificate.ECDSA),
+			certificate.WithParent(root),
+		)
+		intermediateCert, _ := certificate.CertToPEMFormat(intermediate)
+		ca := &corev1.Secret{Data: map[string][]byte{
+			// The leaf chain holds the intermediate only, so the root is missing.
+			"tls.crt": intermediateCert,
+			"ca.crt": append(bytes.Join(
+				[][]byte{
+					bytes.TrimSpace(intermediateCert),
+					bytes.TrimSpace(rootCert),
+				},
+				[]byte("\n"),
+			), '\n'),
+		}}
+		require.Equal(t, ca.Data["ca.crt"], caBundle(ca))
+	})
 }
 
 func TestEnsureCertificateAcceptsCAChainInTLSCrt(t *testing.T) {
