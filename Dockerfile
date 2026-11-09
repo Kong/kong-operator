@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 # UBI minimal is used instead of UBI micro because it ships the RHEL CA bundle
 # needed for outbound TLS (Konnect, Kubernetes API, OIDC, etc.). Keep this image
 # at the latest UBI 9.8 digest so certification does not detect unapplied errata.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:4b79c93106c14ad1c234907f83441ff0e4f8d24e78426a36e159098e9f7e6fa5 AS ubi
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:f26ef64172ea61f5ac5ba4be8c5c738bf8760b22b3e5148ce7b40f7308ab32db AS ubi
 
 ARG TAG
 ARG NAME="Kong Operator"
