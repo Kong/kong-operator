@@ -23,6 +23,7 @@ import (
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // handleTypeSpecific handles type-specific logic for Konnect entities.
@@ -191,22 +192,19 @@ func crossNamespaceSiblingReferences(ent any) []commonv1alpha1.CrossNamespaceRef
 // (isProblem=true) before any SDK calls when references fail to resolve.
 // A non-zero res is returned when the caller should requeue (e.g. the status
 // patch conflicted with a concurrent write on a stale cached object).
-func handleKonnectReferences[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](
+func handleKonnectReferences(
 	ctx context.Context,
 	cl client.Client,
-	ent TEnt,
+	ent k8sutils.ConditionsAwareObject,
 	resolver konnectReferenceResolver,
 ) (updated bool, isProblem bool, res ctrl.Result, err error) {
 	// Snapshot before any condition mutation: the patch below must be computed
 	// against the pre-mutation state, otherwise the changed conditions array is
 	// never included in the patch.
-	old := ent.DeepCopyObject().(TEnt)
+	old := ent.DeepCopyObject().(client.Object)
 
 	var refErr error
-	if grantErr := checkCrossNamespaceSiblingReferences(ctx, cl, crossNamespaceSiblingReferences(resolver)); grantErr != nil {
+	if grantErr := checkCrossNamespaceSiblingReferences(ctx, cl, crossNamespaceSiblingReferences(ent)); grantErr != nil {
 		refErr = grantErr
 	} else {
 		refErr = resolver.ResolveKonnectReferences(ctx, cl)
@@ -254,10 +252,7 @@ func checkCrossNamespaceSiblingReferences(ctx context.Context, cl client.Client,
 // setKonnectReferencesResolvedCondition reflects a reference-resolution
 // outcome (from either checkCrossNamespaceSiblingReferences or
 // ResolveKonnectReferences) in the KonnectReferencesResolved condition.
-func setKonnectReferencesResolvedCondition[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](ent TEnt, err error) (updated bool, isProblem bool, retErr error) {
+func setKonnectReferencesResolvedCondition(ent k8sutils.ConditionsAwareObject, err error) (updated bool, isProblem bool, retErr error) {
 	if err == nil {
 		updated = patch.SetStatusWithConditionIfDifferent(
 			ent,

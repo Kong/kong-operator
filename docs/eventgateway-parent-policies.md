@@ -350,8 +350,10 @@ singleton configuration. The resource is not registered with the on-prem Event
 Gateway controller.
 
 `spec.eventGatewayListenerRef` must use `namespacedRef` to reference a listener
-in the same namespace. The parent reference is immutable from creation, even
-before programming; create a new chain CR to manage a different listener.
+in the same namespace, even when a `KongReferenceGrant` permits cross-namespace
+access. Unsupported cross-namespace parents report an invalid parent-reference
+condition before parent IDs are adopted. The parent reference is immutable from
+creation, even before programming; create a new chain CR to manage a different listener.
 The chain configures its parent rather than creating an independent Konnect
 entity, so `status.id` must remain unset. The shared status structure provides
 conditions, organization/server information, and parent IDs instead.

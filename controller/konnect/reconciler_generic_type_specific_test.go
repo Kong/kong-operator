@@ -22,19 +22,88 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 type failingKonnectReferenceResolver struct {
-	err                             error
-	crossNamespaceSiblingReferences []configurationv1alpha1.CrossNamespaceReferenceCheck
+	err error
 }
 
 func (r failingKonnectReferenceResolver) ResolveKonnectReferences(context.Context, client.Client) error {
 	return r.err
 }
 
-func (r failingKonnectReferenceResolver) CrossNamespaceSiblingReferences() []configurationv1alpha1.CrossNamespaceReferenceCheck {
-	return r.crossNamespaceSiblingReferences
+type referenceCheckingEntity struct {
+	k8sutils.ConditionsAwareObject
+	checks []commonv1alpha1.CrossNamespaceReferenceCheck
+}
+
+func (e referenceCheckingEntity) CrossNamespaceSiblingReferences() []commonv1alpha1.CrossNamespaceReferenceCheck {
+	return e.checks
+}
+
+func referenceCheckingClient(t *testing.T, ent *referenceCheckingEntity, objects ...client.Object) client.Client {
+	t.Helper()
+	return newFakeClientBuilder(scheme.Get()).
+		WithStatusSubresource(ent.ConditionsAwareObject).
+		WithObjects(append(objects, ent.ConditionsAwareObject)...).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(ctx context.Context, cl client.Client, subResource string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+				if e, ok := obj.(*referenceCheckingEntity); ok {
+					obj = e.ConditionsAwareObject
+				}
+				return cl.SubResource(subResource).Patch(ctx, obj, patch, opts...)
+			},
+		}).Build()
+}
+
+func TestPolicyChainResolverAuthorizesOriginalEntity(t *testing.T) {
+	t.Parallel()
+	chain := testListenerPolicyChain("chain")
+	ent := &referenceCheckingEntity{
+		ConditionsAwareObject: chain,
+		checks: []commonv1alpha1.CrossNamespaceReferenceCheck{{
+			FromGVK:       metav1.GroupVersionKind{Group: configurationv1alpha1.GroupVersion.Group, Kind: "EventGatewayListenerPolicyChain"},
+			ToGVK:         metav1.GroupVersionKind{Group: configurationv1alpha1.GroupVersion.Group, Kind: "EventGatewayListenerPolicy"},
+			FromNamespace: chain.Namespace,
+			ToNamespace:   "other",
+			ToName:        "policy",
+		}},
+	}
+	cl := referenceCheckingClient(t, ent)
+	resolver := &policyChainReferenceResolver{chain: chain}
+	_, isProblem, res, err := handleKonnectReferences(t.Context(), cl, ent, resolver)
+	require.NoError(t, err)
+	require.True(t, res.IsZero())
+	require.True(t, isProblem, "denied references must stop reconciliation before SDK operations")
+	require.Nil(t, resolver.policyIDs, "the adapter must not resolve IDs before grant authorization")
+	persisted := chain.DeepCopy()
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), persisted))
+	condition := meta.FindStatusCondition(persisted.GetConditions(), commonv1alpha1.KonnectReferencesResolvedConditionType)
+	require.NotNil(t, condition)
+	require.Equal(t, commonv1alpha1.KonnectReferencesResolvedReasonNotPermitted, condition.Reason)
+	require.Equal(t, metav1.ConditionFalse, condition.Status)
+
+	grant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-chain", Namespace: "other",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "EventGatewayListenerPolicyChain",
+				Namespace: configurationv1alpha1.Namespace(chain.Namespace),
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:  "EventGatewayListenerPolicy",
+			}},
+		},
+	}
+	require.NoError(t, cl.Create(t.Context(), grant))
+	_, isProblem, res, err = handleKonnectReferences(t.Context(), cl, ent, resolver)
+	require.NoError(t, err)
+	require.True(t, res.IsZero())
+	require.False(t, isProblem)
+	require.NotNil(t, resolver.policyIDs, "an authorized adapter must resolve the explicit empty list")
 }
 
 func TestHandleKongConsumerSpecific(t *testing.T) {
@@ -435,23 +504,22 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	}
 
 	t.Run("cross-namespace sibling reference without a KongReferenceGrant sets condition False with NotPermitted, without calling the resolver", func(t *testing.T) {
-		cl := newFakeClientBuilder(scheme.Get()).Build()
-		ent := agent.DeepCopy()
+		ent := &referenceCheckingEntity{ConditionsAwareObject: agent.DeepCopy(), checks: []commonv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck}}
+		cl := referenceCheckingClient(t, ent)
 
 		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
 			failingKonnectReferenceResolver{
-				err:                             errors.New("resolver should not be called"),
-				crossNamespaceSiblingReferences: []configurationv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
+				err: errors.New("resolver should not be called"),
 			},
 		)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
 
-		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		cond, ok := getKonnectReferencesResolvedCondition(ent.GetConditions())
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotPermitted, cond.Reason)
@@ -472,8 +540,8 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 				}},
 			},
 		}
-		cl := newFakeClientBuilder(scheme.Get()).WithObjects(grant).Build()
-		ent := agent.DeepCopy()
+		ent := &referenceCheckingEntity{ConditionsAwareObject: agent.DeepCopy(), checks: []commonv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck}}
+		cl := referenceCheckingClient(t, ent, grant)
 		resolverErr := aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
 
 		updated, isProblem, _, err := handleKonnectReferences(
@@ -481,15 +549,14 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			cl,
 			ent,
 			failingKonnectReferenceResolver{
-				err:                             resolverErr,
-				crossNamespaceSiblingReferences: []configurationv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
+				err: resolverErr,
 			},
 		)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
 
-		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		cond, ok := getKonnectReferencesResolvedCondition(ent.GetConditions())
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
