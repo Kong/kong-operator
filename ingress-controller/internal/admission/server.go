@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,7 +15,6 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 )
 
 var (
@@ -22,15 +22,30 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
+const (
+	certFileName = "tls.crt"
+	keyFileName  = "tls.key"
+)
+
 type Server struct {
 	s           *http.Server
 	certWatcher *certwatcher.CertWatcher
+	// certDir is the directory that holds the server's TLS certificate and key.
+	certDir string
 }
 
-func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
+// MakeTLSServer creates a TLS server that reads its certificate (tls.crt) and
+// key (tls.key) from certDir, reloading them when the files change.
+func MakeTLSServer(port int32, handler http.Handler, certDir string) (*Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
 
-	watcher, err := certwatcher.New(consts.DefaultAdmissionWebhookCertPath, consts.DefaultAdmissionWebhookKeyPath)
+	if certDir == "" {
+		return nil, errors.New("the directory holding the webhook TLS certificate and key must not be empty")
+	}
+	certPath := filepath.Join(certDir, certFileName)
+	keyPath := filepath.Join(certDir, keyFileName)
+
+	watcher, err := certwatcher.New(certPath, keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 	}
@@ -47,6 +62,7 @@ func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 			ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
 		},
 		certWatcher: watcher,
+		certDir:     certDir,
 	}, nil
 }
 
@@ -54,7 +70,7 @@ func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS(consts.DefaultAdmissionWebhookCertPath, consts.DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(filepath.Join(s.certDir, certFileName), filepath.Join(s.certDir, keyFileName)); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()

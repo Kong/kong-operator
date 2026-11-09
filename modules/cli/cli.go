@@ -120,6 +120,7 @@ func New(m metadata.Info) *CLI {
 	// webhook and validation options
 	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
 	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
+	flagSet.StringVar(&cfg.ValidatingWebhookCertDir, "validating-webhook-cert-dir", manager.DefaultValidatingWebhookCertDir, "Directory that holds the validating webhook's TLS certificate (tls.crt) and key (tls.key).")
 
 	// Deprecated flags retained for printing warning messages.
 	flagSet.Var(&DiscardFlagValue{}, "cluster-ca-key-type", deprecationPrefix+"Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")

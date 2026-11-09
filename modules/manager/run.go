@@ -48,6 +48,7 @@ import (
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/internal/telemetry"
 	"github.com/kong/kong-operator/v2/internal/webhook/conversion"
 	"github.com/kong/kong-operator/v2/modules/diagnostics"
@@ -180,6 +181,9 @@ type Config struct {
 	// Webhook options.
 	ConversionWebhookEnabled bool
 	ValidatingWebhookEnabled bool
+	// ValidatingWebhookCertDir is the directory that holds the validating
+	// webhook's TLS certificate (tls.crt) and key (tls.key).
+	ValidatingWebhookCertDir string
 
 	// CertTTL is the time-to-live for certificates issued by the operator.
 	CertTTL time.Duration
@@ -195,6 +199,11 @@ const (
 	DefaultProbeAddr = ":8081"
 	// DefaultControlPlaneConfigurationDumpAddr is the default bind address for the server to dump ControlPlane configuration.
 	DefaultControlPlaneConfigurationDumpAddr = ":10256"
+	// DefaultValidatingWebhookCertDir is the default directory that holds the
+	// validating webhook's TLS certificate and key. It matches the path the
+	// Helm chart mounts them at; OLM mounts them directly in the parent
+	// directory instead, which is why the directory is configurable.
+	DefaultValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookBasePath
 )
 
 // DefaultConfig returns a default configuration for the manager.
@@ -225,6 +234,7 @@ func DefaultConfig() Config {
 		DataPlaneControllerEnabled:          true,
 		ConversionWebhookEnabled:            true,
 		ValidatingWebhookEnabled:            true,
+		ValidatingWebhookCertDir:            DefaultValidatingWebhookCertDir,
 		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
@@ -435,7 +445,7 @@ func Run(
 	}
 
 	if cfg.ValidatingWebhookEnabled {
-		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr)
+		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr, cfg.ValidatingWebhookCertDir)
 		if err != nil {
 			return fmt.Errorf("unable to set up admission server: %w", err)
 		}

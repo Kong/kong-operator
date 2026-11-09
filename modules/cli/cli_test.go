@@ -255,6 +255,20 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name: "validating webhook cert dir: cli argument takes precedence over environment variable",
+			args: []string{
+				"--validating-webhook-cert-dir=/tmp/arg-dir",
+			},
+			envVars: map[string]string{
+				"KONG_OPERATOR_VALIDATING_WEBHOOK_CERT_DIR": "/tmp/env-dir",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.ValidatingWebhookCertDir = "/tmp/arg-dir"
+				return cfg
+			},
+		},
+		{
 			name: "cluster domain argument is set",
 			args: []string{
 				"--cluster-domain=foo.bar",
@@ -486,6 +500,7 @@ func expectedDefaultCfg() manager.Config {
 		IPFamily:                                 ipfamily.Auto,
 		ConversionWebhookEnabled:                 true,
 		ValidatingWebhookEnabled:                 true,
+		ValidatingWebhookCertDir:                 manager.DefaultValidatingWebhookCertDir,
 		FQDNModeEnabled:                          false,
 		CertTTL:                                  consts.DefaultCertTTL,
 		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,
