@@ -71,6 +71,13 @@ resources:
     crdVersion: v1
     namespaced: true
   group: configuration.konghq.com
+  kind: EventGatewayListenerPolicyChain
+  path: github.com/kong/kong-operator/v2/api/configuration/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  group: configuration.konghq.com
   kind: EventGatewayVirtualClusterPolicyChain
   path: github.com/kong/kong-operator/v2/api/configuration/v1alpha1
   version: v1alpha1

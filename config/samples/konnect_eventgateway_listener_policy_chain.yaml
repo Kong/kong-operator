@@ -1,0 +1,126 @@
+# Replace the token, Kafka bootstrap server, and advertised host with your values.
+# The advertised host must resolve to your Konnect-connected Event Gateway data
+# plane, exposing ports 9092-9102. Increase the range for larger broker ID ranges.
+# Plaintext connections and anonymous authentication are for demonstration only.
+# This file declares all resources needed for the listener's policy chain;
+# it does not depend on another sample. Listener-chain controller support is
+# introduced by the next PR in the stack.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: listener-chain-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: eu.api.konghq.com
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: listener-chain-gateway
+  namespace: default
+spec:
+  apiSpec:
+    name: listener-chain-gateway
+  konnect:
+    authRef:
+      name: listener-chain-auth
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: listener-chain-listener
+  namespace: default
+spec:
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: listener-chain-gateway
+  apiSpec:
+    name: listener-chain-listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "9092-9102"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: listener-chain-backend
+  namespace: default
+spec:
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: listener-chain-gateway
+  apiSpec:
+    name: listener-chain-backend
+    bootstrapServers:
+      - kafka:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: listener-chain-virtual-cluster
+  namespace: default
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener-chain-backend
+  apiSpec:
+    name: listener-chain-virtual-cluster
+    dnsLabel: listener-chain-example
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: listener-chain-forward
+  namespace: default
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener-chain-listener
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: listener-chain-forward
+      enabled: Enabled
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: gateway.example.com
+          destination:
+            name: listener-chain-virtual-cluster
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicyChain
+metadata:
+  name: listener-chain-example
+  namespace: default
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener-chain-listener
+  apiSpec:
+    # List every listener policy exactly once, in execution order.
+    # Update this list when policies are created or deleted.
+    # An empty list is valid only when no policies exist; it does not clear them.
+    policies:
+      - name: listener-chain-forward
+        kind: EventGatewayListenerPolicy
+        namespace: default

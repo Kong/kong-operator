@@ -236,3 +236,49 @@ are no longer available; it does not PUT an empty list or delete policies.
 This controller supports Konnect only. Policy chains are not registered with
 the on-prem Event Gateway controller; on-prem ordering and gw-admin application
 are outside this layer's scope.
+
+## Listener policy-chain API
+
+`configuration.konghq.com/v1alpha1` `EventGatewayListenerPolicyChain` declares the
+execution order of all `EventGatewayListenerPolicy` resources attached to one
+`EventGatewayListener`. This is a Konnect-only API foundation: listener-chain
+controller support is not implemented yet, and the resource is not registered
+with the on-prem Event Gateway controller.
+
+`spec.eventGatewayListenerRef` must use `namespacedRef` to reference a listener
+in the same namespace. The parent reference is immutable from creation, even
+before programming; create a new chain CR to manage a different listener.
+The chain configures its parent rather than creating an independent Konnect
+entity, so `status.id` must remain unset. The shared status structure provides
+conditions, organization/server information, and parent IDs instead.
+
+Supply `spec`, `spec.apiSpec`, and `spec.apiSpec.policies` explicitly. `policies`
+is an atomic ordered list of Kubernetes references, not Konnect IDs. Each entry
+has a required `name`, an optional `kind` defaulting to
+`EventGatewayListenerPolicy`, and an optional `namespace` defaulting to the
+chain's namespace. An explicit namespace must be the same as the chain's;
+cross-namespace references are not supported. Every policy must belong to the
+referenced listener. List order, not resource names or YAML document order,
+declares execution order. See the
+[listener-chain example](../config/samples/konnect_eventgateway_listener_policy_chain.yaml).
+It includes API authentication, the gateway, listener, backend, virtual cluster,
+forwarding policy, and chain in one file. Replace the token and Kafka/data-plane
+addresses before applying it. Its plaintext, anonymous port-mapping setup is
+for demonstration only.
+
+The declaration models complete-set reordering: list every existing listener
+policy exactly once. An explicit `policies: []` is valid only when the listener
+has no policies; it does not clear an existing chain. Omitted and null lists
+are invalid. New policies append to the remote chain, deletion preserves the
+remaining order, and recreation gives the policy a new Konnect ID. Update the
+declared list when policies are created or deleted.
+
+Independent validation against the development backend `eu.api.konghq.tech`
+on 2026-11-07 confirmed that a fresh listener's chain GET returns
+`200 {"policies":[]}`, and PUT accepts an empty list only for an empty scope.
+Complete permutations are accepted and returned in the requested order.
+Partial, duplicate, unknown, wrong-parent, missing, and null policy lists are
+rejected with `400` without changing the remote order. These are observations
+from the tested development backend, not a guarantee for every production
+version. The pinned SDK already provides listener-chain GET and PUT operations;
+no SDK upgrade is required for this API.

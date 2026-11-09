@@ -1366,6 +1366,36 @@ apiGroupVersions:
           parentSDKFields:
             - GatewayID
             - ListenerID
+      - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policy-chain
+        name: EventGatewayListenerPolicyChain
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [EventGatewayListenerPolicy]
+            resolvesTo: id
+        cel:
+          _validations:
+            - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef",message="spec.eventGatewayListenerRef is immutable",fieldPath=".spec.eventGatewayListenerRef"'
+            - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayListenerRef.type == ''namespacedRef''",message="spec.eventGatewayListenerRef must use namespacedRef",fieldPath=".spec.eventGatewayListenerRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.id) || size(self.status.id) == 0",message="status.id must be unset because policy chains have no independent Konnect ID",fieldPath=".status.id"'
+          spec:
+            _validations:
+              - "+required"
+            apiSpec:
+              _validations:
+                - "+required"
+              policies:
+                _description: >-
+                  Policies lists distinct EventGatewayListenerPolicy references in execution order.
+                  Each policy must belong to the referenced EventGatewayListener
+                  and be in the same namespace as this chain.
+                  Namespace defaults to this chain's namespace and may be set explicitly
+                  to that same namespace; cross-namespace references are not supported.
+                  List every listener policy exactly once. An explicit empty list
+                  is valid only when the remote chain has no policies; it does not clear
+                  an existing chain. When a policy is created or deleted, update this
+                  list to match the complete remote set.
+                _validations:
+                  - "+listType=atomic"
       - path: /v1/event-gateways/{gatewayId}/backend-clusters
         name: EventGatewayBackendCluster
         cel:
