@@ -124,10 +124,12 @@
 - On-prem AI Gateway: an entity with a cross-namespace reference now reports a
   `ResolvedRefs` condition for cross-namespace `aiGatewayRef` and `secretRef`.
   [#6457](https://github.com/Kong/kong-operator/pull/6457)
-- `--validating-webhook-cert-dir`: directory that holds the validating
-  webhook's TLS certificate (`tls.crt`) and key (`tls.key`). Defaults to the
-  current path, so Helm installs are unaffected; OLM deployments can point it
-  at `/tmp/k8s-webhook-server/serving-certs`, where OLM mounts the webhook
+- Add the CLI argument `--validating-webhook-cert-dir`, which sets the
+  directory that holds the validating webhook's TLS certificate (`tls.crt`)
+  and key (`tls.key`). It defaults to the current path, so Helm installs are
+  unaffected. Deployments through the Operator Lifecycle Manager (OLM), which
+  is how operators are certified on OpenShift, can point it at
+  `/tmp/k8s-webhook-server/serving-certs`, where OLM mounts the webhook
   certificate without a subfolder.
   [#6515](https://github.com/Kong/kong-operator/pull/6515)
 
