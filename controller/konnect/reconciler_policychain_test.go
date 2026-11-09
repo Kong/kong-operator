@@ -54,7 +54,7 @@ func TestPolicyChainOnPremReconciliationIsLocal(t *testing.T) {
 	}
 	backend := newTestOnPremEventGatewayBackendCluster(chain.Namespace, "backend", "onprem-gw")
 	parent := newTestEventGatewayVirtualCluster(chain.Namespace, "vc", backend.Name)
-	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(chain).
+	cl := newFakeClientBuilder(scheme.Get()).WithStatusSubresource(chain).
 		WithObjects(backend, parent, chain).Build()
 	r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl)
 	for range 3 {
