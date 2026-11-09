@@ -418,8 +418,9 @@ func buildKEGEnvVars(
 // checkKonnectEventGatewayEndpoints reports whether the data plane can reach
 // the KonnectEventGateway: the Event Gateway composes a public Konnect host
 // from the region and the domain and cannot use a path, so a serverURL carrying
-// a path would send it there. A domain set on the KegDataPlane does not make
-// that connection private: it only says the user took over the domain.
+// a path would send it there. A domain without a path set on the KegDataPlane
+// does not make that connection private: it only says the user took over the
+// domain.
 func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	keg, ok := cp.(*konnectv1alpha1.KonnectEventGateway)
 	if !ok {
@@ -431,11 +432,12 @@ func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddatap
 	}
 	cfg := egdp.Spec.Config
 	if !konnectendpoint.CarriesPath(keg.Status.ServerURL) ||
-		(cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil && *cfg.Konnect.Domain != "") {
+		(cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil &&
+			*cfg.Konnect.Domain != "" && !konnectendpoint.CarriesPath(*cfg.Konnect.Domain)) {
 		return nil
 	}
 	return fmt.Errorf(
-		"cannot use the private server URL %q: the Event Gateway composes a public Konnect host from the region and the domain and cannot use a path; set spec.config.konnect.domain to let it connect over the public internet",
+		"cannot use the private server URL %q: the Event Gateway composes a public Konnect host from the region and the domain and cannot use a path; set spec.config.konnect.domain to a domain without a path to let it connect over the public internet",
 		keg.Status.ServerURL,
 	)
 }

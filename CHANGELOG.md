@@ -81,11 +81,11 @@
   deployed yet is not deployed at all. Its `KonnectEventGatewayResolved`
   condition is `False` with reason `EndpointMismatch`: the Event Gateway
   composes a public Konnect host from the region and the domain and cannot use a
-  path. Setting `spec.config.konnect.domain` does not make that connection
-  private, it only lets the data plane connect over the public internet. A
-  `KONG_KONNECT_DOMAIN` set in `spec.deployment.podTemplateSpec` does not count
-  as that override: move the value to `spec.config.konnect.domain` to keep the
-  data plane reconciled.
+  path. Setting a `spec.config.konnect.domain` without a path does not make that
+  connection private, it only lets the data plane connect over the public
+  internet. A `KONG_KONNECT_DOMAIN` set in
+  `spec.deployment.podTemplateSpec` does not count as that override: move the
+  value to `spec.config.konnect.domain` to keep the data plane reconciled.
   [#6107](https://github.com/Kong/kong-operator/issues/6107)
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
