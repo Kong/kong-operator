@@ -126,7 +126,7 @@ spec:
     - name: newcomer_model_name
       value: newcomer-model
     - name: newcomer_model_route_path
-      value: /scoped/newcomer
+      value: /scoped/plain
     # Agent and MCP server.
     - name: agent_name
       value: scoped-agent
@@ -748,10 +748,11 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
-    # The conflicting model is reported per-entity: Programmed=False with a
-    # message naming both models and the alias, instead of the whole push
-    # failing with the data plane's uniqueness violation.
-    - name: Assert-conflicting-model-programmed-false
+    # scoped-model shares the alias with plain-model on a DIFFERENT route path:
+    # cross-route alias sharing is not a conflict. The converter renders one
+    # shared ai_models row for the alias and both models keep their own route
+    # and plugin, so both report Programmed=True.
+    - name: Assert-scoped-model-programmed
       try:
         - assert:
             resource:
@@ -762,9 +763,7 @@ spec:
                 namespace: ($namespace)
               status:
                 (conditions[?type == 'Programmed']):
-                  - status: 'False'
-                    reason: Invalid
-                    (contains(message, 'duplicate model alias')): true
+                  - status: 'True'
     # --- The plain model (no policy of its own): consumer and consumer group
     # instances win over the global one, in that order.
     - name: Verify-plain-model-consumer-a-gets-consumer-policy
@@ -815,9 +814,9 @@ spec:
               value: ($scope_header)
             - name: expect_header_value
               value: global
-    # The scoped model carries the model policy, but the alias conflict
-    # excludes it from the document: its route is never rendered, so there is
-    # no traffic to drive against it (its Programmed=False is asserted above).
+    # The scoped model carries the model policy and its route is rendered (its
+    # Programmed=True is asserted above); the policy-scoping traffic checks
+    # below still drive the plain model's route.
     # --- Agent and MCP server get their own values on their own routes.
     - name: Verify-agent-gets-agent-policy
       use:
@@ -848,9 +847,11 @@ spec:
             - name: expected_header_value
               value: mcp
     # --- A newcomer that sorts first must not take the alias from the
-    # programmed plain-model: the earliest-created model keeps it.
+    # programmed plain-model: it re-claims the alias on plain-model's route
+    # path, so the two are same-route conflict participants and the
+    # earliest-created model keeps the alias.
     - name: Create-newcomer-model
-      description: Model created after plain-model, with the same alias and a name that sorts before it.
+      description: Model created after plain-model, with the same alias on plain-model's route path and a name that sorts before it.
       try:
         - apply:
             file: 01-model.yaml

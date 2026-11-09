@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -750,16 +751,22 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 }
 
 // TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector
-// alias: the converter renders one ai_models entity per alias, named after it,
-// so two identically named rows would make the data plane's declarative import
-// reject the whole payload (uniqueness violation). The earliest-created model
-// keeps the alias (ties fall back to namespace/name order); the later claimant
-// is excluded from the document and reported per-entity instead.
+// alias on one route: the converter renders one ai_models entity per alias,
+// named after it, and two models claiming one alias on one route group make
+// identically scoped ai-proxy plugins whose backend selection the data plane
+// decides internally. The earliest-created model keeps the alias (ties fall
+// back to namespace/name order); the later claimant is excluded from the
+// document and reported per-entity instead. Sharing an alias across DIFFERENT
+// routes is not a conflict: the converter renders one shared ai_models row and
+// both models stay.
 func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 	t.Parallel()
 
 	// buildClient assembles the fake client with the index every kind needs:
-	// BuildDocument lists every configuration-entity kind.
+	// BuildDocument lists every configuration-entity kind. It always includes
+	// the shared provider the alias fixtures' targets reference: a model
+	// without a target renders no route, and the same-route conflicts under
+	// test need rendered routes.
 	buildClient := func(t *testing.T, objects ...client.Object) client.Client {
 		t.Helper()
 		scheme := runtime.NewScheme()
@@ -769,6 +776,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		// The fake tracker stamps resource versions into the objects it is
 		// given, so parallel subtests must not share a fixture.
 		objs := make([]client.Object, 0, len(objects))
+		objs = append(objs, aiGatewayModelProviderFixture("provider-shared"))
 		for _, obj := range objects {
 			objs = append(objs, obj.DeepCopyObject().(client.Object))
 		}
@@ -780,13 +788,35 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		return builder.Build()
 	}
 
+	// withTarget points the model at the shared provider: without a target the
+	// converter renders no route for the model and no same-route conflict can
+	// arise.
+	withTarget := func(m *aiconfigurationv1alpha1.AIGatewayModel) *aiconfigurationv1alpha1.AIGatewayModel {
+		// Capabilities must be non-empty: without any, the converter renders
+		// the model as a bare ai_models identity row with no route, and no
+		// same-route conflict can arise.
+		m.Spec.APISpec.Model.Capabilities = []string{"generate"}
+		m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+			Name:     "t",
+			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
+			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+			},
+		}}
+		return m
+	}
+
+	// withAlias gives the model the shared alias on the shared route path, so
+	// two of these models land on one route group and conflict.
 	withAlias := func(name string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
 		m := aiGatewayModelFixture(name)
 		m.CreationTimestamp = created
+		m.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"shared-alias"},
 		}
-		return m
+		return withTarget(m)
 	}
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
@@ -808,7 +838,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		require.Len(t, doc.Models, 1)
 		require.Equal(t, "scoped-model", doc.Models[0].Name)
 
-		require.Len(t, statuses, 2)
+		require.Len(t, statuses, 3)
 		conflicts := 0
 		for _, s := range statuses {
 			if s.Err != nil {
@@ -836,7 +866,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		require.Len(t, doc.Models, 1)
 		require.Equal(t, "plain-model", doc.Models[0].Name)
 
-		require.Len(t, statuses, 2)
+		require.Len(t, statuses, 3)
 		conflicts := 0
 		for _, s := range statuses {
 			if s.Err != nil {
@@ -853,18 +883,21 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		t.Parallel()
 
 		// middle loses "x" to oldest, so its claim on "y" must not exclude newest.
-		oldest := aiGatewayModelFixture("oldest")
+		oldest := withTarget(aiGatewayModelFixture("oldest"))
 		oldest.CreationTimestamp = dayOne
+		oldest.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		oldest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"x"},
 		}
-		middle := aiGatewayModelFixture("middle")
+		middle := withTarget(aiGatewayModelFixture("middle"))
 		middle.CreationTimestamp = dayTwo
+		middle.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		middle.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"x", "y"},
 		}
-		newest := aiGatewayModelFixture("newest")
+		newest := withTarget(aiGatewayModelFixture("newest"))
 		newest.CreationTimestamp = metav1.NewTime(dayTwo.Add(24 * time.Hour))
+		newest.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		newest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"y"},
 		}
@@ -879,7 +912,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		}
 		require.ElementsMatch(t, []string{"oldest", "newest"}, names)
 
-		require.Len(t, statuses, 3)
+		require.Len(t, statuses, 4)
 		for _, s := range statuses {
 			if s.Obj.GetName() != "middle" {
 				require.NoError(t, s.Err)
@@ -904,7 +937,68 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 2)
-		require.Len(t, statuses, 2)
+		require.Len(t, statuses, 3)
+		for _, s := range statuses {
+			require.NoError(t, s.Err, s.Obj.GetName())
+		}
+	})
+
+	t.Run("a model on many routes keeps the alias on each route", func(t *testing.T) {
+		t.Parallel()
+
+		// Each capability renders its own route, so wide conflicts with each
+		// later model on a different route. All of them must lose.
+		wide := withAlias("wide", dayOne)
+		wide.Spec.APISpec.Model.Capabilities = []string{"generate", "agentic", "embeddings", "image"}
+		objs := []client.Object{gw.DeepCopy(), wide}
+		for i, capability := range []string{"generate", "agentic", "embeddings", "image"} {
+			m := withAlias("narrow-"+strings.ReplaceAll(capability, "/", "-"), metav1.NewTime(dayTwo.Add(time.Duration(i)*time.Hour)))
+			m.Spec.APISpec.Model.Capabilities = []string{capability}
+			objs = append(objs, m)
+		}
+
+		cl := buildClient(t, objs...)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 1)
+		require.Equal(t, "wide", doc.Models[0].Name)
+		_, issues, err := RenderDBLessYAML(doc, convert.Options{})
+		require.NoError(t, err)
+		require.Empty(t, collectAliasConflicts(issues))
+
+		require.Len(t, statuses, 6)
+		for _, s := range statuses {
+			if !strings.HasPrefix(s.Obj.GetName(), "narrow-") {
+				require.NoError(t, s.Err, s.Obj.GetName())
+				continue
+			}
+			require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+			require.ErrorContains(t, s.Err, `AIGatewayModel "wide"`)
+		}
+	})
+
+	t.Run("the same alias on different routes is not a conflict", func(t *testing.T) {
+		t.Parallel()
+
+		// Distinct route paths put the models on different route groups: the
+		// converter renders one shared ai_models row for the alias and both
+		// models keep their own route and plugin, so both stay Programmed.
+		left := withAlias("left-model", dayOne)
+		left.Spec.APISpec.Model.Config.Route.Paths = []string{"/left"}
+		right := withAlias("right-model", dayTwo)
+		right.Spec.APISpec.Model.Config.Route.Paths = []string{"/right"}
+
+		cl := buildClient(t, gw.DeepCopy(), left, right)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		names := make([]string, 0, len(doc.Models))
+		for _, m := range doc.Models {
+			names = append(names, m.Name)
+		}
+		require.ElementsMatch(t, []string{"left-model", "right-model"}, names)
+		require.Len(t, statuses, 3)
 		for _, s := range statuses {
 			require.NoError(t, s.Err, s.Obj.GetName())
 		}
@@ -912,9 +1006,10 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 }
 
 // TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision
-// shapes of modelAliases's fallback rule: a no-selector model's entity name is
-// itself an alias, and each value of a multi-value selector is claimed
-// separately.
+// shapes of the converter-derived alias rule: a no-selector model's entity name
+// is itself an alias, and each value of a multi-value selector is claimed
+// separately. The conflicting models share one route path so the collisions
+// are same-route ones; the non-conflicting models keep their own paths.
 func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	t.Parallel()
 
@@ -923,20 +1018,42 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// withTarget points a model at the shared provider: without a target the
+	// converter renders no route for the model and no same-route conflict can
+	// arise. Only the conflicting models need one.
+	withTarget := func(m *aiconfigurationv1alpha1.AIGatewayModel) *aiconfigurationv1alpha1.AIGatewayModel {
+		// Capabilities must be non-empty: without any, the converter renders
+		// the model as a bare ai_models identity row with no route, and no
+		// same-route conflict can arise.
+		m.Spec.APISpec.Model.Capabilities = []string{"generate"}
+		m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+			Name:     "t",
+			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
+			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+			},
+		}}
+		return m
+	}
 	// No selector: the model's entity name is its alias. model-c's selector
 	// value collides with it.
-	modelA := aiGatewayModelFixture("model-a")
-	modelC := aiGatewayModelFixture("model-c")
+	modelA := withTarget(aiGatewayModelFixture("model-a"))
+	modelA.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
+	modelC := withTarget(aiGatewayModelFixture("model-c"))
+	modelC.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelC.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"model-a", "model-c-alias"},
 	}
 	// Multi-value selectors: model-d claims two aliases, model-e shares the
 	// second one (its first alias is unique).
-	modelD := aiGatewayModelFixture("model-d")
+	modelD := withTarget(aiGatewayModelFixture("model-d"))
+	modelD.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelD.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"d-alias-1", "d-alias-2"},
 	}
-	modelE := aiGatewayModelFixture("model-e")
+	modelE := withTarget(aiGatewayModelFixture("model-e"))
+	modelE.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelE.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"e-alias", "d-alias-2"},
 	}
@@ -958,7 +1075,8 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	}
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, modelA, modelC, modelD, modelE, modelF, modelG, modelH)
+		WithObjects(gw, aiGatewayModelProviderFixture("provider-shared"),
+			modelA, modelC, modelD, modelE, modelF, modelG, modelH)
 	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -979,7 +1097,7 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 		"model-c": {`duplicate model alias "model-a"`, `AIGatewayModel "model-a"`},
 		"model-e": {`duplicate model alias "d-alias-2"`, `AIGatewayModel "model-d"`},
 	}
-	require.Len(t, statuses, 7)
+	require.Len(t, statuses, 8)
 	for _, s := range statuses {
 		want, conflict := wantConflicts[s.Obj.GetName()]
 		if !conflict {
@@ -2242,4 +2360,233 @@ func TestBuildDocument_DependentOfGatewayRefDeniedEntityIsEntityScoped(t *testin
 	modelErr := findStatusByName(t, statuses, "model-granted").Err
 	require.ErrorContains(t, modelErr, `referenced AIGatewayModelProvider "provider-denied" was excluded`)
 	require.True(t, IsEntityScopedFailure(modelErr), "the model is excluded only because of the denied provider")
+}
+
+// TestBuildDocument_ModelDuplicateSpecName covers CRs that set the same spec
+// model name: the converter names models by entity name in its warnings, so
+// the resolution probe renames the duplicates. The attribution must stay
+// exact, also for models without a selector, whose name is their alias.
+func TestBuildDocument_ModelDuplicateSpecName(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	withNamed := func(crName, specName, path string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
+		m := aiGatewayModelFixture(crName)
+		m.CreationTimestamp = created
+		// Capabilities must be non-empty: without any, the converter renders
+		// the model as a bare ai_models identity row with no route.
+		m.Spec.APISpec.Model.Capabilities = []string{"generate"}
+		m.Spec.APISpec.Model.Name = aiconfigurationv1alpha1.AIGatewayEntityIdentifier(specName)
+		m.Spec.APISpec.Model.Config.Route.Paths = []string{path}
+		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"shared-alias"},
+		}
+		m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+			Name:     "t",
+			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
+			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+			},
+		}}
+		return m
+	}
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	dayOne := metav1.NewTime(time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC))
+	// Two CRs declare the spec name "dup" on ONE route path: same-route
+	// conflict, the later-created cr-b loses. Two more declare it on distinct
+	// route paths: cross-route sharing, both stay.
+	sameA := withNamed("cr-a", "dup", "/same", dayOne)
+	sameB := withNamed("cr-b", "dup", "/same", metav1.NewTime(dayOne.Add(time.Hour)))
+	crossA := withNamed("cr-c", "dup", "/left", dayOne)
+	crossB := withNamed("cr-d", "dup", "/right", metav1.NewTime(dayOne.Add(time.Hour)))
+	// No selector: the spec name "nosel" is the alias. cr-f is created first,
+	// so cr-e loses although it sorts first by name.
+	noSelectorE := withNamed("cr-e", "nosel", "/nosel", metav1.NewTime(dayOne.Add(time.Hour)))
+	noSelectorE.Spec.APISpec.Model.Config.Route.Model.Values = nil
+	noSelectorF := withNamed("cr-f", "nosel", "/nosel", dayOne)
+	noSelectorF.Spec.APISpec.Model.Config.Route.Model.Values = nil
+
+	cl := newTestBuilder(scheme, gw, aiGatewayModelProviderFixture("provider-shared"),
+		sameA, sameB, crossA, crossB, noSelectorE, noSelectorF).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(doc.Models))
+	for _, m := range doc.Models {
+		names = append(names, m.Name)
+	}
+	require.ElementsMatch(t, []string{"dup", "dup", "dup", "nosel"}, names)
+
+	loser := findStatusByName(t, statuses, "cr-b")
+	require.ErrorContains(t, loser.Err, `duplicate model alias "shared-alias"`)
+	require.ErrorContains(t, loser.Err, `"cr-a"`)
+	loser = findStatusByName(t, statuses, "cr-e")
+	require.ErrorContains(t, loser.Err, `duplicate model alias "nosel"`)
+	require.ErrorContains(t, loser.Err, `"cr-f"`)
+	for _, name := range []string{"cr-a", "cr-c", "cr-d", "cr-f"} {
+		require.NoError(t, findStatusByName(t, statuses, name).Err, name)
+	}
+}
+
+// TestCollectAliasConflicts_ConverterContract pins the ai-deck-converter
+// warning the model-alias adjudication consumes. The conflict carries no
+// structured details, so collectAliasConflicts matches on the severity + code +
+// message triple agreed with the converter team; this test renders a real
+// same-route alias conflict and asserts the issue's exact shape, so a
+// converter bump that rewords the message (or moves the fields) fails here
+// before the adjudication silently degrades to a plain warning. It also pins
+// the negative: another ROUTING_CONFLICT emitter (the selector-shape conflict)
+// must not be collected as an alias conflict.
+func TestCollectAliasConflicts_ConverterContract(t *testing.T) {
+	t.Parallel()
+
+	withTarget := func(m aigw.Model) aigw.Model {
+		m.Capabilities = []string{"generate"}
+		m.Formats = []aigw.Format{{Type: "openai"}}
+		m.TargetModels = []aigw.TargetModel{{
+			Name:     "t",
+			Provider: "provider-shared",
+			Config: aigw.TargetModelConfig{
+				Type:    "openai",
+				Options: map[string]any{"upstream_url": "https://api.openai.com/v1"},
+			},
+		}}
+		return m
+	}
+	provider := aigw.Provider{
+		Type: "openai",
+		Name: "provider-shared",
+		Config: aigw.ProviderConfig{
+			Auth: aigw.ProviderAuth{
+				Type:    "basic",
+				Headers: []aigw.AuthHeader{{Name: "apikey", Value: "k"}},
+			},
+		},
+	}
+
+	t.Run("the same-route alias conflict is matched", func(t *testing.T) {
+		t.Parallel()
+
+		model := func(name string) aigw.Model {
+			return withTarget(aigw.Model{
+				Name: name,
+				Config: aigw.ModelConfig{
+					Route: aigw.ModelRouteConfig{
+						Paths: []string{"/chat"},
+						Model: aigw.ModelAliasConfig{Values: []string{"shared-alias"}},
+					},
+				},
+			})
+		}
+		doc := &aigw.Document{
+			ModelProviders: []aigw.Provider{provider},
+			Models:         []aigw.Model{model("model-a"), model("model-b")},
+		}
+		_, issues, err := RenderDBLessYAML(doc, convert.Options{})
+		require.NoError(t, err)
+
+		// The exact message the converter emits today. A converter bump that
+		// rewords it must update sameRouteAliasConflictRe here and now.
+		const wantReason = `model "model-b" uses the alias "shared-alias" on the route "openai-chat", ` +
+			`but model "model-a" already uses it there. Both models make plugins with the same route and ai_models scope.`
+		matched := 0
+		for _, issue := range issues {
+			if issue.Reason != wantReason {
+				continue
+			}
+			matched++
+			require.Equal(t, convert.Warning, issue.Severity)
+			require.Equal(t, convert.RoutingConflict, issue.Code)
+			require.Equal(t, "model", issue.Source.Kind)
+			require.Equal(t, "model-b", issue.Source.Name)
+			require.Equal(t, []string{"config.route.model.values"}, issue.Source.Fields)
+		}
+		require.Equal(t, 1, matched, "the converter's alias-conflict warning changed shape: update sameRouteAliasConflictRe")
+
+		conflicts := collectAliasConflicts(issues)
+		require.Len(t, conflicts, 1)
+		require.Equal(t, "openai-chat", conflicts[0].route)
+		require.Equal(t, "shared-alias", conflicts[0].alias)
+		require.Equal(t, "model-a", conflicts[0].owner)
+		require.Equal(t, "model-b", conflicts[0].claimer)
+	})
+
+	t.Run("the selector-shape conflict is not matched", func(t *testing.T) {
+		t.Parallel()
+
+		// Two models on one route reading the model name from different
+		// sources: the converter's other model-level ROUTING_CONFLICT emitter
+		// fires, and collectAliasConflicts must not treat it as an alias
+		// conflict. Built from YAML: the public aigw package does not export
+		// the header-selector config type.
+		doc := &aigw.Document{}
+		require.NoError(t, yaml.Unmarshal([]byte(`
+model_providers:
+  - name: provider-shared
+    type: openai
+    config:
+      auth:
+        type: basic
+        headers: [{name: apikey, value: k}]
+models:
+  - name: model-a
+    capabilities: [generate]
+    formats: [{type: openai}]
+    targets: [{name: t, provider: provider-shared, config: {type: openai, upstream_url: "https://api.openai.com/v1"}}]
+    config:
+      route:
+        paths: [/chat]
+        model:
+          values: [alias-a]
+  - name: model-b
+    capabilities: [generate]
+    formats: [{type: openai}]
+    targets: [{name: t, provider: provider-shared, config: {type: openai, upstream_url: "https://api.openai.com/v1"}}]
+    config:
+      route:
+        paths: [/chat]
+        model:
+          header:
+            header_param: X-Model
+`), doc))
+		_, issues, err := RenderDBLessYAML(doc, convert.Options{})
+		require.NoError(t, err)
+
+		selectorConflicts := 0
+		for _, issue := range issues {
+			if issue.Code == convert.RoutingConflict &&
+				strings.Contains(issue.Reason, "read the model name from different sources") {
+				selectorConflicts++
+			}
+		}
+		require.Positive(t, selectorConflicts, "expected the converter to emit a selector-shape conflict")
+
+		require.Empty(t, collectAliasConflicts(issues),
+			"the selector-shape conflict must not be collected as an alias conflict")
+	})
+}
+
+// TestCollectAliasConflicts_QuotedValues covers values that the converter
+// escapes with %q: they must parse back to the raw value.
+func TestCollectAliasConflicts_QuotedValues(t *testing.T) {
+	t.Parallel()
+
+	issues := []convert.ConversionIssue{{
+		Severity: convert.Warning,
+		Code:     convert.RoutingConflict,
+		Source:   convert.ConversionIssueSource{Kind: "model", Name: "model-b"},
+		Reason: fmt.Sprintf(
+			"model %q uses the alias %q on the route %q, but model %q already uses it there. "+
+				"Both models make plugins with the same route and ai_models scope.",
+			"model-b", `say "hi"`, "openai-chat", "model-a"),
+	}}
+	require.Equal(t, []aliasConflict{{
+		route: "openai-chat", alias: `say "hi"`, owner: "model-a", claimer: "model-b",
+	}}, collectAliasConflicts(issues))
 }

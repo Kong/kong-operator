@@ -131,6 +131,14 @@
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
   from being issued.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
+- The `AIGatewayModel` alias conflict is now scoped to one route: two models
+  sharing an alias on different routes of the same on-prem AI Gateway no longer
+  conflict (they share the rendered `ai_models` entity, and each keeps its own
+  route and plugin), while two models claiming one alias on the same route
+  still exclude the later-created one with `Programmed=False`. A shared
+  `ai_models` entity keeps the values of the earliest-created model, so a new
+  model cannot change it.
+  [#6510](https://github.com/Kong/kong-operator/pull/6510)
 
 ## [v2.4.0-rapid.3.1]
 
