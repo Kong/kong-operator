@@ -318,10 +318,11 @@ func GenerateCertificate[T interface {
 // wait-for-owner finalizer, which no controller removes while the owner lives, so drop that
 // finalizer first or the Secret stays terminating instead of going away.
 func deleteSecret(ctx context.Context, cl client.Client, secret *corev1.Secret) error {
-	if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, cl, secret); err != nil {
+	// The Secret was read earlier, so it can be gone before either call runs.
+	if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, cl, secret); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	return cl.Delete(ctx, secret)
+	return client.IgnoreNotFound(cl.Delete(ctx, secret))
 }
 
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
