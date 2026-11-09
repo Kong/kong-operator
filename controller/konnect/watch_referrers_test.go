@@ -20,6 +20,19 @@ func TestReferrerChanged(t *testing.T) {
 		}
 		return p
 	}
+	// otherStatusWrite changes all but the generation and the status and
+	// reason of Programmed: its message, observed generation and transition
+	// time, another condition and the Konnect ID.
+	otherStatusWrite := func() *configurationv1alpha1.EventGatewayListenerPolicy {
+		p := policy(1, metav1.ConditionTrue, "Programmed")
+		conditions := p.GetConditions()
+		conditions[0].Message = "another message"
+		conditions[0].ObservedGeneration = 1
+		conditions[0].LastTransitionTime = metav1.Now()
+		p.SetConditions(append(conditions, metav1.Condition{Type: "Other", Status: metav1.ConditionTrue, Reason: "Other"}))
+		p.SetKonnectID("konnect-id")
+		return p
+	}
 	p := referrerChanged()
 	for name, tc := range map[string]struct {
 		old, new *configurationv1alpha1.EventGatewayListenerPolicy
@@ -28,7 +41,7 @@ func TestReferrerChanged(t *testing.T) {
 		"its spec changes":                     {policy(1, metav1.ConditionTrue, "Programmed"), policy(2, metav1.ConditionTrue, "Programmed"), true},
 		"it is programmed":                     {policy(1, metav1.ConditionFalse, "Pending"), policy(1, metav1.ConditionTrue, "Programmed"), true},
 		"the reason of Programmed changes":     {policy(1, metav1.ConditionFalse, "Pending"), policy(1, metav1.ConditionFalse, "KonnectAPIOpFailed"), true},
-		"another status write leaves it alone": {policy(1, metav1.ConditionTrue, "Programmed"), policy(1, metav1.ConditionTrue, "Programmed"), false},
+		"another status write leaves it alone": {policy(1, metav1.ConditionTrue, "Programmed"), otherStatusWrite(), false},
 	} {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.want, p.Update(event.UpdateEvent{ObjectOld: tc.old, ObjectNew: tc.new}))
