@@ -26,7 +26,7 @@ type Chain interface {
 }
 
 // ClaimValue identifies a particular incarnation of a chain.
-func ClaimValue(chain client.Object) string {
+func ClaimValue[T client.Object](chain T) string {
 	return chain.GetName() + "/" + string(chain.GetUID())
 }
 

@@ -82,7 +82,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 		blocked     bool
 	}{
 		{name: "unclaimed"},
-		{name: "live owner and competitor", claim: policychain.ClaimValue, blocked: true},
+		{name: "live owner and competitor", claim: policychain.ClaimValue[*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain], blocked: true},
 		{name: "recreated owner", claim: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
 			return c.Name + "/" + uuid.NewString()
 		}},
@@ -92,7 +92,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 		{name: "malformed claim", claim: func(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
 			return "malformed"
 		}},
-		{name: "terminating owner", claim: policychain.ClaimValue, terminating: true},
+		{name: "terminating owner", claim: policychain.ClaimValue[*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain], terminating: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, chain, _, objects := clusterPolicyChainObjects(t)

@@ -486,6 +486,7 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 	ctx := t.Context()
 	chain := testPolicyChain("chain")
 	chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("parent")
+	chain.Finalizers = []string{KonnectCleanupFinalizer}
 	mapper := apimeta.NewDefaultRESTMapper([]schema.GroupVersion{configurationv1alpha1.GroupVersion, konnectv1alpha1.GroupVersion})
 	for _, kind := range []string{"EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster", "EventGatewayBackendCluster", "KongReferenceGrant"} {
 		mapper.Add(configurationv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
@@ -505,8 +506,7 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 	parent.SetGatewayID("gateway-id")
 	parent.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
 	require.NoError(t, cl.Status().Update(ctx, parent))
-	// Exercise generic grant authorization even though current grant admission
-	// does not yet allow the policy-chain kind.
+	// A grant must not override the chain's same-namespace parent requirement.
 	deploy.KongReferenceGrant(t, ctx, parentClient,
 		deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
 			Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
@@ -528,15 +528,18 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 		_, err := r.Reconcile(ctx, chain)
 		require.NoError(t, err)
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
-		if apimeta.IsStatusConditionFalse(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType) {
+		if apimeta.IsStatusConditionFalse(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid()) {
 			break
 		}
 	}
 	require.Contains(t, chain.Finalizers, KonnectCleanupFinalizer)
-	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)))
-	refs := apimeta.FindStatusCondition(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType)
-	require.NotNil(t, refs)
-	require.Equal(t, commonv1alpha1.KonnectReferencesResolvedReasonInvalid, refs.Reason)
+	require.Nil(t, apimeta.FindStatusCondition(chain.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)))
+	parentRef := apimeta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid())
+	require.NotNil(t, parentRef)
+	require.Equal(t, chain.GetStatusConditionReasonParentRefInvalid(), parentRef.Reason)
+	require.Contains(t, parentRef.Message, "same namespace")
+	require.Empty(t, chain.GetVirtualClusterID())
+	require.Empty(t, chain.GetGatewayID())
 	require.True(t, apimeta.IsStatusConditionFalse(chain.Status.Conditions, "Programmed"))
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
 	require.NotContains(t, parent.Annotations, policyChainOwnerAnnotation)
