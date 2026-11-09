@@ -203,7 +203,7 @@ const (
 	// validating webhook's TLS certificate and key. It matches the path the
 	// Helm chart mounts them at; OLM mounts them directly in the parent
 	// directory instead, which is why the directory is configurable.
-	DefaultValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookBasePath
+	DefaultValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookCertDir
 )
 
 // DefaultConfig returns a default configuration for the manager.

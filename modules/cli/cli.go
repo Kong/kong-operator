@@ -312,6 +312,12 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.LeaderElection = leaderElection
 	c.cfg.ControllerNamespace = controllerNamespace
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
+	// An explicitly empty value (e.g. an empty environment variable) means
+	// "unset": fall back to the default instead of failing at startup with an
+	// error that would not name the flag.
+	if c.cfg.ValidatingWebhookCertDir == "" {
+		c.cfg.ValidatingWebhookCertDir = manager.DefaultValidatingWebhookCertDir
+	}
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 

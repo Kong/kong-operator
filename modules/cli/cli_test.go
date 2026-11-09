@@ -269,6 +269,17 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name: "validating webhook cert dir: empty environment variable falls back to the default",
+			args: []string{},
+			envVars: map[string]string{
+				"KONG_OPERATOR_VALIDATING_WEBHOOK_CERT_DIR": "",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				return cfg
+			},
+		},
+		{
 			name: "cluster domain argument is set",
 			args: []string{
 				"--cluster-domain=foo.bar",
