@@ -1,0 +1,216 @@
+_format_version: "3.0"
+certificates:
+- cert: |-
+    -----BEGIN CERTIFICATE-----
+    MIIBoTCCAQoCCQC/V5OfTXu7xDANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDDApr
+    b25naHEuY29tMB4XDTIzMDYwMTE3NTAwOFoXDTI0MDUzMTE3NTAwOFowFTETMBEG
+    A1UEAwwKa29uZ2hxLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAuyL5
+    0o4RyWoYLQTU5wKkYXcx9nDYTn+6O6WQPcDyOfPQmm92vauBK3zNJQxnhK3pdCJs
+    /li+q2BqnBWYoFcp/DETIeOuyI43+BpARjAHntUM02sofcbTMRGA28/uCgq+46LS
+    DqPGl6LeSA1pc7muc1mEmkvklYFzQ57Gee4i5SECAwEAATANBgkqhkiG9w0BAQsF
+    AAOBgQBBvx0bdyFdWxa75R9brz8s1GYLrVmk7zCXspvy9sDy1RoaV7TnYdWxv/HU
+    9fumw+0RoSsxysQRc1iWA8qJ6y2rq3G7A3GHtIPqsDHrjoS9s9YtJo4iT4INJ3Im
+    0fB0QDr1F4F5P6TZyMu1Wjgt2CheqaZH6TLa8Em4Fz/Qrfc1Ag==
+    -----END CERTIFICATE-----
+  id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+  key: |-
+    -----BEGIN PRIVATE KEY-----
+    MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBALsi+dKOEclqGC0E
+    1OcCpGF3MfZw2E5/ujulkD3A8jnz0Jpvdr2rgSt8zSUMZ4St6XQibP5YvqtgapwV
+    mKBXKfwxEyHjrsiON/gaQEYwB57VDNNrKH3G0zERgNvP7goKvuOi0g6jxpei3kgN
+    aXO5rnNZhJpL5JWBc0OexnnuIuUhAgMBAAECgYARpvz11Zzr6Owa4wfKOr+SyhGW
+    c5KT5QyGL9npWVgAC3Wz+6uxvInUtlMLmZ3yMA2DfPPXEjv6IoAr9QWOqmo1TDou
+    vpi7n06GlT8qOMWOpbPoR7hCCa4nlsx48q8QQ+KnnChz0AgNYtlIu9H1l1a20Hut
+    /qoEW7We/GPtbHbAAQJBAPc7wVUGtmHiFtXI2N/bdRkefk67TgytMQVU1eHIhnh8
+    glAVpuGNYcyXYoDfod/yMpIJ4To2FNgRNVaHWgfOhQECQQDBxbIvw+PKrurNIbqr
+    su/fcDJXdKZ+wfuJJX2kRQeMga0nVcqLUZV1RAPmCg0Yv+QNhovq1ouwLNsZKpe5
+    w8AhAkBDGaG4LPE1EcK21SMfZpWacq8/ORDO2faTBtphxCXS76ACkk3Pq6qed3vR
+    lGB/wmE9R5csUF9J4SnDyUqDEecBAkAvVWSeiGJ3m1zd+RRJZu9zjEuv013sbuRL
+    7y2O2BHs/6xVhH5yo943hALTybbDSfSiXTCGkBwVUA/BSQdBKJEhAkA/XSV2JTle
+    g5RhxkuDZst3K8aupwWKC4E9zug+araQknzjMh6MSl6u2+RNifRrz2kThQ3HYj0g
+    5GTyl7XJmyY/
+    -----END PRIVATE KEY-----
+  snis:
+  - certificate:
+      id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+    name: example.com
+    tags:
+    - gateway-tag
+    - shared-tag
+    - gatewayclass-tag
+  tags:
+  - k8s-name:tls-secret
+  - k8s-namespace:default
+  - k8s-kind:Secret
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+  - k8s-version:v1
+  - secret-tag
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+plugins:
+- id: 789fa6cd-b526-5634-b1df-2c55c80cc1c8
+  name: correlation-id
+  route: httproute.default.httproute-tags.1.0
+  tags:
+  - k8s-name:correlation-id
+  - k8s-namespace:default
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+  - plugin-tag
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+- id: 31cd8f99-d13c-5552-8937-a39fb85bc531
+  name: correlation-id
+  route: httproute.default.httproute-tags.0.0
+  tags:
+  - k8s-name:correlation-id
+  - k8s-namespace:default
+  - k8s-kind:KongPlugin
+  - k8s-group:configuration.konghq.com
+  - k8s-version:v1
+  - plugin-tag
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+services:
+- connect_timeout: 60000
+  host: httproute.default.httproute-tags.1.invalid
+  id: 9d7e2c0c-8dfd-5ed1-96fd-275ad830b106
+  name: httproute.default.httproute-tags.1
+  plugins:
+  - config:
+      message: no existing backendRef provided
+      status_code: 500
+    name: request-termination
+    tags:
+    - gateway-tag
+    - shared-tag
+    - gatewayclass-tag
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: cb9c652a-fb7b-50d9-98c5-0157be839599
+    name: httproute.default.httproute-tags.1.0
+    path_handling: v0
+    paths:
+    - ~/missing$
+    - /missing/
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    strip_path: false
+    tags:
+    - k8s-name:httproute-tags
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - route-tag
+    - shared-tag
+    - gateway-tag
+    - gatewayclass-tag
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+  write_timeout: 60000
+- connect_timeout: 60000
+  host: httproute.default.httproute-tags.0
+  id: 034b1542-c346-5441-9557-2f8880bdac7d
+  name: httproute.default.httproute-tags.0
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - https_redirect_status_code: 426
+    id: e5cef13e-ec00-5109-bc8d-7b6fca871cc6
+    name: httproute.default.httproute-tags.0.0
+    path_handling: v0
+    paths:
+    - ~/httpbin$
+    - /httpbin/
+    plugins:
+    - config:
+        append:
+          headers:
+          - X-Test:test
+      name: request-transformer
+      tags:
+      - k8s-name:httproute-tags
+      - k8s-namespace:default
+      - k8s-kind:HTTPRoute
+      - k8s-group:gateway.networking.k8s.io
+      - k8s-version:v1
+      - route-tag
+      - shared-tag
+      - gateway-tag
+      - gatewayclass-tag
+    preserve_host: true
+    protocols:
+    - http
+    - https
+    regex_priority: 1
+    strip_path: false
+    tags:
+    - k8s-name:httproute-tags
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - route-tag
+    - shared-tag
+    - gateway-tag
+    - gatewayclass-tag
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  - service-tag
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  name: httproute.default.httproute-tags.1.invalid
+  tags:
+  - k8s-name:UNKNOWN
+  - k8s-namespace:UNKNOWN
+  - k8s-kind:Service
+  - k8s-uid:00000000-0000-0000-0000-000000000000
+  - k8s-group:core
+  - k8s-version:v1
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+- algorithm: round-robin
+  name: httproute.default.httproute-tags.0
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  - service-tag
+  - gateway-tag
+  - shared-tag
+  - gatewayclass-tag
+  targets:
+  - tags:
+    - gateway-tag
+    - shared-tag
+    - gatewayclass-tag
+    target: 10.244.0.5:80

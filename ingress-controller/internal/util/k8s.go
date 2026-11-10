@@ -218,3 +218,42 @@ func GenerateTagsForObject(obj client.Object, additionalTags ...KongTag) []*stri
 	)
 	return kong.StringSlice(tags...)
 }
+
+// MergeTags returns the ordered union of base followed by every group of tags: each tag is
+// whitespace-trimmed, empty tags are dropped and duplicates are removed keeping the first
+// occurrence.
+//
+// Order is significant. Callers pass the entity's own tags as base, followed by the tags it
+// inherits, most specific first (e.g. the parent Gateway's, then the GatewayClass's).
+//
+// The result is always a newly allocated slice, so it never aliases base. It is nil when no tag
+// survives.
+func MergeTags(base []*string, groups ...[]string) []*string {
+	var (
+		merged []*string
+		seen   = map[string]struct{}{}
+	)
+	add := func(tag string) {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			return
+		}
+		if _, ok := seen[tag]; ok {
+			return
+		}
+		seen[tag] = struct{}{}
+		merged = append(merged, kong.String(tag))
+	}
+
+	for _, tag := range base {
+		if tag != nil {
+			add(*tag)
+		}
+	}
+	for _, group := range groups {
+		for _, tag := range group {
+			add(tag)
+		}
+	}
+	return merged
+}

@@ -125,6 +125,11 @@ func ToDeckContent(
 
 	for _, c := range k8sState.Certificates {
 		cert := GetFCertificateFromKongCert(c.Certificate)
+		for i := range cert.SNIs {
+			if sni := cert.SNIs[i].Name; sni != nil {
+				cert.SNIs[i].Tags = c.SNITags[*sni]
+			}
+		}
 		content.Certificates = append(content.Certificates, cert)
 	}
 	sort.SliceStable(content.Certificates, func(i, j int) bool {

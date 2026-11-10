@@ -194,6 +194,12 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 		t.ingressRulesFromGRPCRoutes(),
 	)
 
+	// Make the entities translated from Gateway API routes inherit the konghq.com/tags of the
+	// routes' parent Gateways and their GatewayClasses. This has to happen before populateServices,
+	// which computes the Services' tags including the inherited ones.
+	inheritedTagResolver := newInheritedTagResolver(t.logger, t.storer)
+	t.applyInheritedTags(&ingressRules, t.buildInheritedTagIndex(inheritedTagResolver))
+
 	// populate any Kubernetes Service objects relevant objects and get the
 	// services to be skipped because of annotations inconsistency
 	servicesToBeSkipped := ingressRules.populateServices(t.logger, t.storer, t.failuresCollector, t.translatedObjectsCollector)
@@ -258,7 +264,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 
 	// generate Certificates and SNIs
 	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)
-	gatewayCerts := t.getGatewayCerts()
+	gatewayCerts := t.getGatewayCerts(inheritedTagResolver)
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	var certIDsSeen certIDToMergedCertID
 	result.Certificates, certIDsSeen = mergeCerts(t.logger, ingressCerts, gatewayCerts)

@@ -131,6 +131,15 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				}
 			}
 
+			// Targets carry no tags of their own, but inherit the tags of the parent Gateways (and their
+			// GatewayClasses) of the Gateway API routes the Service was translated from.
+			targets := lo.Values(targetMap)
+			if len(service.InheritedTags) > 0 {
+				for i := range targets {
+					targets[i].Tags = util.MergeTags(targets[i].Tags, service.InheritedTags)
+				}
+			}
+
 			// Define the upstream including all the newly populated targets
 			// to load-balance traffic to.
 			upstream := kongstate.Upstream{
@@ -139,7 +148,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					Tags: service.Tags, // Populated by populateServices already.
 				},
 				Service: service,
-				Targets: lo.Values(targetMap),
+				Targets: targets,
 			}
 			upstreams = append(upstreams, upstream)
 			upstreamDedup[name] = empty

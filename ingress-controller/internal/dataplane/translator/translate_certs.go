@@ -2,8 +2,10 @@ package translator
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/tls"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -43,9 +45,13 @@ type certWrapper struct {
 	cert              kong.Certificate
 	snis              []string
 	CreationTimestamp metav1.Time
+	// inheritedTags are the tags inherited from the Gateway (and its GatewayClass) whose listener
+	// requested the certificate. They are appended to the certificate's own tags and set as the
+	// tags of the SNIs the listener requested.
+	inheritedTags []string
 }
 
-func (t *Translator) getGatewayCerts() []certWrapper {
+func (t *Translator) getGatewayCerts(resolver *inheritedTagResolver) []certWrapper {
 	logger := t.logger
 	s := t.storer
 	certs := []certWrapper{}
@@ -54,7 +60,13 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 		logger.Error(err, "Failed to list Gateways")
 		return certs
 	}
+	// Sort Gateways to make the result, and thereby the merged certificates' inherited tags and the
+	// SNI assignment, independent of the store's ordering.
+	slices.SortFunc(gateways, func(a, b *gatewayapi.Gateway) int {
+		return cmp.Or(cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Name, b.Name))
+	})
 	for _, gateway := range gateways {
+		inheritedTags := resolver.forGateway(gateway).all()
 		statuses := make(map[gatewayapi.SectionName]gatewayapi.ListenerStatus, len(gateway.Status.Listeners))
 		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
@@ -126,6 +138,7 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 						},
 						CreationTimestamp: secret.CreationTimestamp,
 						snis:              []string{hostname},
+						inheritedTags:     inheritedTags,
 					})
 				}
 			}
@@ -177,6 +190,8 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
 	certIDSets := make(map[string]identicalCertIDSet)
+	// sniTags holds the inherited tags of every SNI, keyed by certificate identifier and SNI name.
+	sniTags := make(map[string]map[string][]string)
 
 	for _, cl := range certLists {
 		for _, cw := range cl {
@@ -184,6 +199,9 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 			if !ok {
 				current = cw
 			} else {
+				// The Kong certificate is shared by every requester, so it inherits the tags of all of them.
+				current.inheritedTags = slices.Concat(current.inheritedTags, cw.inheritedTags)
+
 				// multiple Secrets that contain identical certificates are collapsed, because we only create one
 				// Kong resource for a given cert+key pair. however, because we reuse the Secret ID, creation time,
 				// and tags for the Kong resource equivalents, the selection of those needs to be deterministic to
@@ -206,6 +224,13 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 				if seen, ok := snisSeen[sni]; !ok {
 					snisSeen[sni] = *current.cert.ID
 					current.cert.SNIs = append(current.cert.SNIs, new(sni))
+					// An SNI inherits the tags of the requester (e.g. Gateway listener) it was assigned from.
+					if len(cw.inheritedTags) > 0 {
+						if sniTags[current.identifier] == nil {
+							sniTags[current.identifier] = make(map[string][]string)
+						}
+						sniTags[current.identifier][sni] = cw.inheritedTags
+					}
 				} else if seen != *current.cert.ID {
 					// TODO this should really log information about the requesting Listener or Ingress-like, which is
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
@@ -231,8 +256,19 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 		sort.SliceStable(cw.cert.SNIs, func(i, j int) bool {
 			return strings.Compare(*cw.cert.SNIs[i], *cw.cert.SNIs[j]) < 0
 		})
+		if len(cw.inheritedTags) > 0 {
+			cw.cert.Tags = util.MergeTags(cw.cert.Tags, cw.inheritedTags)
+		}
+		var snisTags map[string][]*string
+		for sni, tags := range sniTags[cw.identifier] {
+			if snisTags == nil {
+				snisTags = make(map[string][]*string)
+			}
+			snisTags[sni] = util.MergeTags(nil, tags)
+		}
 		res = append(res, kongstate.Certificate{
 			Certificate: cw.cert,
+			SNITags:     snisTags,
 		})
 	}
 

@@ -22,6 +22,11 @@ type Route struct {
 	Ingress          util.K8sObjectInfo
 	Plugins          []kong.Plugin
 	ExpressionRoutes bool
+
+	// InheritedTags are the konghq.com/tags this Route inherits from the Gateways (and their
+	// GatewayClasses) that its source Gateway API route is attached to. They are already merged
+	// into the Route's tags and are kept here so that plugins bound to the Route can inherit them.
+	InheritedTags []string
 }
 
 var (
