@@ -316,8 +316,13 @@ func TestEventGatewayListenerPolicyChainCrossNamespaceDeletion(t *testing.T) {
 	chain.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(f.listener.Namespace)
 	chain.Finalizers = []string{konnect.KonnectCleanupFinalizer}
 	require.NoError(t, f.cl.Create(ctx, chain))
-	waitForListenerChainCondition(t, f.cl, chain, "ResolvedRefs", metav1.ConditionFalse, "RefNotPermitted")
+	waitForListenerChainCondition(t, f.cl, chain, chain.GetStatusConditionTypeParentRefValid(), metav1.ConditionFalse, chain.GetStatusConditionReasonParentRefInvalid())
 	waitForListenerChainCondition(t, f.cl, chain, "Programmed", metav1.ConditionFalse, "")
+	require.Contains(t, chain.Finalizers, konnect.KonnectCleanupFinalizer)
+	require.Nil(t, meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs"))
+	require.Contains(t, meta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid()).Message, "same namespace")
+	require.Empty(t, chain.GetEventGatewayListenerID())
+	require.Empty(t, chain.GetGatewayID())
 	require.NoError(t, f.cl.Delete(ctx, chain))
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.True(ct, apierrors.IsNotFound(f.cl.Get(ctx, client.ObjectKeyFromObject(chain), chain)))
