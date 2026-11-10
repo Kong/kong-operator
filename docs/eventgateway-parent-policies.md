@@ -465,3 +465,96 @@ is repaired or removed. Reconciliation corrects drift of the order of the
 policies of a listener a chain owns. Deleting the chain releases its claim and
 rebuilds the document with the default order of the policies, creation
 timestamp then resource name, deleting neither policies nor their entities.
+
+## Produce policy-chain API
+
+`configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterProducePolicyChain`
+declares the execution order of all `EventGatewayVirtualClusterProducePolicy`
+resources in one virtual cluster. **This layer provides the API, CRD, and Helm
+installation artifacts only; Produce chain reconciliation is not yet registered.**
+Controller integration and comprehensive lifecycle coverage are subsequent layers
+of [#6368](https://github.com/Kong/kong-operator/issues/6368).
+This is Konnect management-plane ordering, not a Kafka execution or traffic-routing
+guarantee. Consume ordering is separate, and on-prem Produce chain support is not
+included or registered.
+
+`spec.eventGatewayVirtualClusterRef` must use `namespacedRef` and reference an
+`EventGatewayVirtualCluster` in the chain's namespace. The reference is immutable
+from creation, even before programming. An omitted or empty namespace defaults
+locally; an explicit namespace must be the same as the chain's, regardless of
+`KongReferenceGrant` permissions. The chain is singleton configuration on that
+parent, not an independent Konnect entity: `status.id` must remain unset and
+there is no chain-ID printer column. Shared status retains conditions,
+organization/server information, `gatewayID`, and `virtualClusterID`.
+
+Supply `spec`, `spec.apiSpec`, and `spec.apiSpec.policies` explicitly.
+`policies` is one atomic ordered list of Kubernetes references, not Konnect IDs.
+Each entry requires `name`; `kind` defaults to
+`EventGatewayVirtualClusterProducePolicy`, and an omitted or empty `namespace`
+defaults to the chain's namespace. An explicit namespace must be that same
+namespace. Every policy must belong to the referenced virtual cluster.
+Resource names, YAML document order, and creation order do not declare execution
+order. See the [self-contained Produce chain example](../config/samples/konnect_eventgateway_virtualcluster_produce_policy_chain.yaml),
+which includes placeholder authentication, gateway, backend, virtual cluster,
+a schema-validation parent, two nested header policies, a separate root policy,
+and their complete ordering declaration. Replace the token and Kafka bootstrap
+address before applying. Anonymous authentication and disabled TLS are for
+demonstration only.
+
+### Complete-set and nested ordering contract
+
+The pinned SDK v0.82.2 provides GET and PUT at
+`/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policy-chain`.
+The shared `UpdateEventGatewayPolicyChainRequest` body contains `policies: []string`.
+There is no independent chain ID, POST, list-for-UID, or DELETE operation.
+Development-backend observations from `eu.api.konghq.tech` on 2026-11-07 established
+the following contract; they do not guarantee behavior for every production
+version or region.
+
+- GET returns a single flat ordered list containing **all roots and nested
+  children**. PUT must contain every existing Produce policy exactly once.
+  Complete-set permutations are accepted; partial, duplicate, unknown, foreign,
+  omitted, and null lists are rejected without changing the order.
+- An explicit `policies: []` is valid for an already-empty scope only. It never
+  clears existing policies. New policies append, deletion preserves the order
+  of surviving policies, and recreation produces a new policy ID.
+- A parent precedes its children, and each parent's group remains contiguous.
+  Root/parent groups may move, and sibling children may reorder within their
+  group. Child-before-parent order, roots inserted between a parent and its
+  children, cross-parent interleaving, roots-only lists, and children-only lists
+  are invalid.
+- Ordering does not change `parent_policy_id`. Existing `parentPolicyRef`
+  validation and immutability remain unchanged: Produce `encryptFields` requires
+  a same-kind, same-namespace, same-virtual-cluster `schemaValidation` parent;
+  `modifyHeaders` may reference one. Moving a child to another parent requires
+  recreating the policy, not moving its chain entry.
+
+No separate nested-list declaration is needed: the complete atomic list
+represents both root-group and sibling order without changing parent references.
+Update it when policies are created or deleted. The example's
+`schemaValidation.config.json.valueValidationAction: reject` is explicit because
+the observed backend requires a validation action despite incomplete OAS
+requiredness.
+
+### Deferred reconciliation boundaries
+
+Admission validates the declaration's shape, kinds, immutable parent reference,
+and absent independent ID; it cannot resolve policy resources or remote sets.
+The next controller layer must reject missing, deleting, unready, stale,
+wrong-kind, cross-namespace, wrong-virtual-cluster, duplicate, and invalid
+parent/group references without applying a shortened chain. Parent validation
+must happen before lookup or adoption of parent IDs. Complete-set validation
+must use all roots and nested children, preserving their `parentPolicyRef`.
+
+Runtime integration must reuse the singleton/no-ID facilities, with ownership
+separate from cluster and listener chains, actionable conflicting-owner status,
+drift correction, and recreation recovery using current policy IDs. Deleting a
+declaration must release ownership while retaining remote ordering and policy
+entities, without requiring working authentication or resolvable policy
+references. These lifecycle behaviors are requirements for the subsequent
+layers, not functionality delivered by this API-only layer.
+
+GET and PUT are not atomic against concurrent external policy-set changes.
+A GET failure, including `404`, must remain an error rather than an empty chain;
+a changed or incomplete set must block programming until the declaration and
+remote set agree.
