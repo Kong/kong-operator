@@ -53,6 +53,7 @@ func TestListenerPolicyChainGuardedOperations(t *testing.T) {
 			{name: "GET failure", desired: []string{}, getErr: errors.New("GET unavailable"), wantErr: "GET unavailable"},
 			{name: "GET 404", desired: []string{}, getErr: &sdkkonnecterrs.NotFoundError{Status: http.StatusNotFound, Title: "listener not found"}, wantErr: "listener not found"},
 			{name: "GET generic 404", desired: []string{}, getErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusNotFound, Message: "listener not found"}, wantErr: "listener not found"},
+			{name: "GET bad request", desired: []string{}, getErr: &sdkkonnecterrs.BadRequestError{Status: http.StatusBadRequest, Title: "invalid request"}, wantErr: "invalid request"},
 			{name: "GET forbidden", desired: []string{}, getErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusForbidden, Message: "access denied"}, wantErr: "access denied"},
 			{name: "GET rate limit", desired: []string{}, getErr: &sdkkonnecterrs.SDKError{
 				StatusCode: http.StatusTooManyRequests, Message: "rate limited",
@@ -61,6 +62,7 @@ func TestListenerPolicyChainGuardedOperations(t *testing.T) {
 			{name: "GET nil response", desired: []string{}, nilGet: true, wantErr: ErrNilResponse.Error()},
 			{name: "GET nil body", desired: []string{}, nilGetBody: true, wantErr: ErrNilResponse.Error()},
 			{name: "PUT failure", desired: []string{}, remote: []string{}, wantPUT: true, putErr: errors.New("PUT unavailable"), wantErr: "PUT unavailable"},
+			{name: "PUT bad request", desired: []string{}, remote: []string{}, wantPUT: true, putErr: &sdkkonnecterrs.BadRequestError{Status: http.StatusBadRequest, Title: "invalid request"}, wantErr: "invalid request"},
 			{name: "PUT conflict does not list for UID", desired: []string{}, remote: []string{}, wantPUT: true, putErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusConflict, Message: "concurrent update"}, wantErr: "concurrent update"},
 			{name: "PUT rate limit", desired: []string{}, remote: []string{}, wantPUT: true, putErr: &sdkkonnecterrs.SDKError{
 				StatusCode: http.StatusTooManyRequests, Message: "rate limited",

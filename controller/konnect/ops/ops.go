@@ -140,9 +140,19 @@ func Create[
 		err = CreateGeneratedOps(ctx, sdk, cl, e)
 	}
 
+	// Policy chains reorder existing singleton scopes and have no create-conflict
+	// recovery. Do not use ID persistence as a proxy: other singleton resources,
+	// such as PortalCustomDomain, can still recover through getKonnectIDForUID.
+	var isPolicyChain bool
+	switch any(e).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		isPolicyChain = true
+	}
+
 	var errGet error
 	switch {
-	case (ErrorIsCreateConflict(err) || isCreateNameConflict(e, err)) && EntityPersistsKonnectID(e):
+	case (ErrorIsCreateConflict(err) || isCreateNameConflict(e, err)) && !isPolicyChain:
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
@@ -212,9 +222,7 @@ func Create[
 
 	// Singleton chain failures must remain errors, including GET failures and
 	// conflicts: there is no create/list-for-UID recovery for a policy chain.
-	switch any(e).(type) {
-	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
-		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+	if isPolicyChain {
 		return e, policyChainOperationError(err)
 	}
 	logger := loggerForEntity(ctx, e, CreateOp)
