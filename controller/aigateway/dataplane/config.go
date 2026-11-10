@@ -424,10 +424,9 @@ func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp sharedda
 	return cp.IsResolved() && cp.Kind == onPremAIGatewayKind.Kind
 }
 
-// checkKonnectAIGatewayEndpoints reports whether the endpoints of a resolved
-// KonnectAIGateway can be used: a nil Status.Endpoints is left to
-// buildAIGatewayEnvVars, which refuses it with its own message. The verdict
-// does not depend on the AIGatewayDataPlane spec.
+// checkKonnectAIGatewayEndpoints reports whether a resolved KonnectAIGateway has
+// usable endpoints. The DataPlane the hook passes is for the verdicts that read
+// it, the KegDataPlane one; a nil Status.Endpoints is left to buildAIGatewayEnvVars.
 func checkKonnectAIGatewayEndpoints(_ shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	aigw, ok := cp.(*konnectv1alpha1.KonnectAIGateway)
 	if !ok {

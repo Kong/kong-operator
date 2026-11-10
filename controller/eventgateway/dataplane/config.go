@@ -415,12 +415,10 @@ func buildKEGEnvVars(
 	return append(envVars, commonKEGEnvVars(egdp)...), nil
 }
 
-// checkKonnectEventGatewayEndpoints reports whether the data plane can reach
-// the KonnectEventGateway: the Event Gateway composes a public Konnect host
-// from the region and the domain and cannot use a path, so a serverURL carrying
-// a path would send it there. A domain without a path set on the KegDataPlane
-// does not make that connection private: it only says the user took over the
-// domain.
+// checkKonnectEventGatewayEndpoints reports whether the data plane can reach the
+// KonnectEventGateway: the Event Gateway builds the host itself, from the region
+// and the domain, and cannot use a path. A domain without a path set on the
+// KegDataPlane lifts the check for that reason, as issue #6107 asks.
 func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	keg, ok := cp.(*konnectv1alpha1.KonnectEventGateway)
 	if !ok {
