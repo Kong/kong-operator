@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -17,6 +19,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // MetricsConsumer is an interface for consumers of metrics scraped by a MetricsScraper.
@@ -32,6 +35,22 @@ type MetricsScraper interface {
 
 // adminAPIEndpointURL is a strong type for the URL of an Admin API endpoint for metrics map indexing.
 type adminAPIEndpointURL string
+
+// dataplaneLabelURL returns the dataplane_url metric label value for an endpoint.
+// The value keeps the pod DNS name form that earlier releases used, for example
+// https://10-0-0-1.dataplane-admin-kong-abc.default.svc:8443, so that existing
+// dashboards and alerts keep working.
+func dataplaneLabelURL(endpoint adminapidiscovery.DiscoveredAdminAPI) adminAPIEndpointURL {
+	u, err := url.Parse(endpoint.Address)
+	if err != nil || u.Port() == "" {
+		return adminAPIEndpointURL(endpoint.Address)
+	}
+	// The first DNS label of the TLS server name is a placeholder ("pod"). The
+	// wildcard certificate matches any value, and earlier releases used the
+	// dashed pod IP there.
+	host := strings.ReplaceAll(u.Hostname(), ".", "-") + strings.TrimPrefix(endpoint.TLSServerName, "pod")
+	return adminAPIEndpointURL(fmt.Sprintf("%s://%s:%s", u.Scheme, host, u.Port()))
+}
 
 // metricName is a strong type for the name of a metric for metrics map indexing.
 type metricName string
@@ -99,7 +118,7 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 			return Metrics{}, err
 		}
 
-		adminAPIURL := adminAPIEndpointURL(endpoint.Address)
+		adminAPIURL := dataplaneLabelURL(endpoint)
 		m := metrics.metrics[adminAPIURL]
 		for name, metricFamily := range metricFamilies {
 			if m == nil {

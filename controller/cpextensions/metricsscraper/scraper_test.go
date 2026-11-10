@@ -38,6 +38,17 @@ func kongMetricsServer(t *testing.T) *httptest.Server {
 	return srv
 }
 
+func TestDataplaneLabelURL(t *testing.T) {
+	got := dataplaneLabelURL(adminapi.DiscoveredAdminAPI{
+		Address:       "https://10.0.0.1:8443",
+		TLSServerName: "pod.dataplane-admin-kong-abc.default.svc",
+	})
+	require.Equal(t,
+		adminAPIEndpointURL("https://10-0-0-1.dataplane-admin-kong-abc.default.svc:8443"),
+		got,
+	)
+}
+
 func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -111,11 +122,12 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			adminAPIMetricsServer := kongMetricsServer(t)
+			endpoint := adminapi.DiscoveredAdminAPI{
+				Address:       adminAPIMetricsServer.URL,
+				TLSServerName: "pod.dataplane-admin.default.svc",
+			}
 			addressProvider := &metricsmocks.MockAdminAPIAddressProvider{
-				Endpoints: []adminapi.DiscoveredAdminAPI{{
-					Address:       adminAPIMetricsServer.URL,
-					TLSServerName: "pod.dataplane-admin.default.svc",
-				}},
+				Endpoints: []adminapi.DiscoveredAdminAPI{endpoint},
 			}
 
 			httpClient := http.DefaultClient
@@ -125,7 +137,7 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 			metrics, err := scraper.Scrape(t.Context())
 			require.NoError(t, err)
 
-			expected := tt.expected(adminAPIMetricsServer.URL)
+			expected := tt.expected(string(dataplaneLabelURL(endpoint)))
 			require.Equal(t, expected, metrics)
 		})
 	}

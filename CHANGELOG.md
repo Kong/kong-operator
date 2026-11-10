@@ -164,7 +164,7 @@
   directly on a data plane. It records the configuration hash reported by each
   data plane after a successful push. At the next sync, it compares the
   reported hash with the recorded hash. If the hashes differ, it pushes the
-  desired configuration again. Healthy syncs keep the same request count.
+  desired configuration again.
   [#6518](https://github.com/Kong/kong-operator/pull/6518)
 - Embedded ingress controller: the default DB-less sync detects an out-of-band
   configuration change while the Kubernetes configuration stays the same. If

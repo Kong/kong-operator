@@ -61,8 +61,3 @@ func (e UpdateError) Unwrap() error {
 
 // ResponseParsingError is an error type that is returned when the response from Kong is not in the expected format.
 type ResponseParsingError = dataplanepush.ResponseParsingError
-
-// NewResponseParsingError creates a ResponseParsingError for the given response body.
-func NewResponseParsingError(responseBody []byte) ResponseParsingError {
-	return dataplanepush.NewResponseParsingError(responseBody)
-}

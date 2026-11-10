@@ -20,7 +20,7 @@ func (t testError) Error() string {
 }
 
 func TestResponseParsingErrorAlias(t *testing.T) {
-	err := error(sendconfig.NewResponseParsingError([]byte("body")))
+	err := error(dataplanepush.NewResponseParsingError([]byte("body")))
 
 	var publicErr dataplanepush.ResponseParsingError
 	require.ErrorAs(t, err, &publicErr)

@@ -17,8 +17,8 @@ import (
 )
 
 // TestKongGatewayConfigurationChangeDetector_DetectsDrift verifies against a real
-// Kong Gateway that the status configuration hash is MD5 of the exact request body
-// and that a non-empty mismatch forces a push.
+// Kong Gateway that the same pushed body gives the same reported configuration
+// hash and a different body gives another hash, and that a mismatch forces a push.
 func TestKongGatewayConfigurationChangeDetector_DetectsDrift(t *testing.T) {
 	t.Parallel()
 
