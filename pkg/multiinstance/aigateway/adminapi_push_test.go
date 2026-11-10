@@ -2,6 +2,7 @@ package aigateway
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -80,11 +81,18 @@ var newTestTypeConverter = sync.OnceValue(func() managedfields.TypeConverter {
 // fakePushClient records the payloads pushed through it and fails every push when
 // failErr is set.
 type fakePushClient struct {
-	payloads    []string
-	failErr     error
-	status      *kong.Status
-	statusErr   error
-	statusCalls int
+	payloads     []string
+	failErr      error
+	status       *kong.Status
+	statusErr    error
+	statusCalls  int
+	acceptedHash string
+}
+
+// fakeConfigHash is a stable stand-in for the configuration hash Kong reports
+// after accepting a push.
+func fakeConfigHash(body []byte) string {
+	return fmt.Sprintf("%x", sha256.Sum256(body))
 }
 
 func (f *fakePushClient) ReloadDeclarativeRawConfig(_ context.Context, config io.Reader, _, _ bool) error {
@@ -93,7 +101,13 @@ func (f *fakePushClient) ReloadDeclarativeRawConfig(_ context.Context, config io
 		return err
 	}
 	f.payloads = append(f.payloads, string(b))
-	return f.failErr
+	if f.failErr != nil {
+		return f.failErr
+	}
+	f.acceptedHash = fakeConfigHash(b)
+	// A successful push replaces any reported out-of-band configuration.
+	f.status = nil
+	return nil
 }
 
 func (f *fakePushClient) Status(context.Context) (*kong.Status, error) {
@@ -104,7 +118,7 @@ func (f *fakePushClient) Status(context.Context) (*kong.Status, error) {
 	if f.status != nil {
 		return f.status, nil
 	}
-	return &kong.Status{ConfigurationHash: "configured"}, nil
+	return &kong.Status{ConfigurationHash: f.acceptedHash}, nil
 }
 
 // fakePushClientFactory stubs Instance.newPushClient: it records the endpoints it
@@ -359,7 +373,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		require.Len(t, factory.built, 2)
 		for addr, c := range factory.clients {
 			require.Len(t, c.payloads, 1, "expected exactly one push to %s", addr)
-			require.Equal(t, 1, c.statusCalls, "expected one status request for %s", addr)
+			require.Equal(t, 2, c.statusCalls, "expected a status request after the push and one on the unchanged sync for %s", addr)
 		}
 		// Nothing was pushed on the second sync, and the condition says so.
 		require.Equal(t, "Configuration unchanged on all 2 Admin API endpoints, push skipped",
@@ -372,6 +386,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		require.Len(t, factory.built, 3)
 		require.Len(t, instance.pushClients, 2)
 		require.Len(t, instance.lastSuccessfulConfigSHAs, 2)
+		require.Len(t, instance.lastDBLessConfigHashes, 2)
 		require.Len(t, factory.clients["https://10.0.0.2:8444"].payloads, 1)
 		require.Len(t, factory.clients["https://10.0.0.3:8444"].payloads, 1)
 		// Only the newly discovered endpoint was pushed.
@@ -387,12 +402,35 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 
 		requirePushed(t, instance, gwNN, yamlPayload)
 		client := factory.clients["https://10.0.0.1:8444"]
-		require.Zero(t, client.statusCalls)
+		require.Equal(t, 1, client.statusCalls, "expected the post-push status request")
 
 		client.status = &kong.Status{ConfigurationHash: dataplanepush.WellKnownInitialHash}
 		requirePushed(t, instance, gwNN, yamlPayload)
-		require.Equal(t, 1, client.statusCalls)
+		require.Equal(t, 3, client.statusCalls)
 		require.Len(t, client.payloads, 2)
+	})
+
+	t.Run("repairs a configuration that drifted on the data plane", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		requirePushed(t, instance, gwNN, yamlPayload)
+		client := factory.clients["https://10.0.0.1:8444"]
+
+		// The data plane configuration changed outside the operator while the
+		// desired configuration stayed the same.
+		client.status = &kong.Status{
+			ConfigurationHash: fakeConfigHash([]byte(`{"drift":true}`)),
+		}
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, client.payloads, 2, "drift must force a push")
+
+		// After the repair the reported hash matches the pushed body again.
+		client.status = nil
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, client.payloads, 2, "the repaired configuration must not be pushed again")
 	})
 
 	t.Run("status failure prevents the push and retries it", func(t *testing.T) {
@@ -427,7 +465,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 
 		client.failErr = nil
 		requirePushed(t, instance, gwNN, yamlPayload)
-		require.Zero(t, client.statusCalls, "the retry must push without a status request")
+		require.Equal(t, 1, client.statusCalls, "the retry must push and record the reported hash")
 		require.Len(t, client.payloads, 2)
 		require.Len(t, instance.lastSuccessfulConfigSHAs, 1)
 	})
@@ -450,9 +488,9 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 
 		requirePushed(t, instance, gwNN, yamlPayload)
 		require.Len(t, failed.payloads, 2)
-		require.Zero(t, failed.statusCalls)
+		require.Equal(t, 1, failed.statusCalls)
 		require.Len(t, healthy.payloads, 1)
-		require.Equal(t, 1, healthy.statusCalls)
+		require.Equal(t, 2, healthy.statusCalls)
 	})
 
 	t.Run("empty discovery clears push state", func(t *testing.T) {
@@ -470,6 +508,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		require.False(t, pushed)
 		require.Empty(t, instance.pushClients)
 		require.Empty(t, instance.lastSuccessfulConfigSHAs)
+		require.Empty(t, instance.lastDBLessConfigHashes)
 	})
 
 	t.Run("push-client rebuild does not force a push", func(t *testing.T) {

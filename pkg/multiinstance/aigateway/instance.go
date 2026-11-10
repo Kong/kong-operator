@@ -199,6 +199,12 @@ type Instance struct {
 	// redundant push. Only the sync loop goroutine touches it.
 	lastSuccessfulConfigSHAs map[adminapi.DiscoveredAdminAPI][]byte
 
+	// lastDBLessConfigHashes holds the configuration hash reported by each
+	// endpoint after its last successful push. A later unchanged sync compares
+	// it with the reported hash to detect out-of-band changes. Only the sync
+	// loop goroutine touches it.
+	lastDBLessConfigHashes map[adminapi.DiscoveredAdminAPI]string
+
 	// statusReporter records the per-entity outcome of the configuration syncs
 	// (translation and push) and serves it to the configuration-entity
 	// reconcilers, which turn it into the entities' Programmed conditions.
@@ -232,6 +238,7 @@ func NewInstance(
 		cn:                       changenotifier.New(),
 		newPushClient:            newMTLSClientAdapter,
 		lastSuccessfulConfigSHAs: map[adminapi.DiscoveredAdminAPI][]byte{},
+		lastDBLessConfigHashes:   map[adminapi.DiscoveredAdminAPI]string{},
 		statusReporter:           NewEntityStatusReporter(env.Scheme),
 		done:                     make(chan struct{}),
 	}

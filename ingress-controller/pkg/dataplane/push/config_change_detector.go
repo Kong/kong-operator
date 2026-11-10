@@ -20,6 +20,8 @@ type ConfigurationChangeDetector interface {
 		ctx context.Context,
 		oldSHA, newSHA []byte,
 		targetConfigEmpty bool,
+		lastDBLessConfigHash string,
+		compareDBLessConfigHash bool,
 		statusClient StatusClient,
 	) (bool, error)
 }
@@ -42,26 +44,28 @@ func NewKongGatewayConfigurationChangeDetector(logger logr.Logger) *KongGatewayC
 
 // HasConfigurationChanged verifies whether configuration has changed by comparing
 // old and new config's SHAs. In case the SHAs are equal, it still can return true if a client is considered crashed or
-// just booted up based on its status. In case the status indicates an empty config and the desired config is also empty
-// this will return false to prevent continuously sending empty configuration to Gateway.
+// just booted up based on its status, or if the hash reported by Kong differs from the hash observed after the last
+// successful push. In case the status indicates an empty config and the desired config is also empty this will return
+// false to prevent continuously sending empty configuration to Gateway.
 func (d *KongGatewayConfigurationChangeDetector) HasConfigurationChanged(
 	ctx context.Context,
 	oldSHA, newSHA []byte,
 	targetConfigEmpty bool,
+	lastDBLessConfigHash string,
+	compareDBLessConfigHash bool,
 	statusClient StatusClient,
 ) (bool, error) {
 	if !bytes.Equal(oldSHA, newSHA) {
 		return true, nil
 	}
 
-	// Check if a Kong instance has no configuration yet (could mean it crashed, was rebooted, etc.).
-	hasNoConfiguration, err := kongHasNoConfiguration(ctx, statusClient)
+	status, err := statusClient.Status(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to verify kong readiness: %w", err)
 	}
 
 	// Kong instance has no configuration, we should push despite the oldSHA and newSHA being equal...
-	if hasNoConfiguration {
+	if status.ConfigurationHash == WellKnownInitialHash {
 		// ... unless we're trying to push an empty config in such case skip.
 		if targetConfigEmpty {
 			return false, nil
@@ -70,19 +74,16 @@ func (d *KongGatewayConfigurationChangeDetector) HasConfigurationChanged(
 		return true, nil
 	}
 
-	return false, nil
-}
-
-// kongHasNoConfiguration checks Kong's status endpoint and reads its config hash. If the config hash reported by Kong is
-// the known empty hash, it's considered crashed. This allows providing configuration to Kong instances that have
-// unexpectedly crashed and lost their configuration.
-func kongHasNoConfiguration(ctx context.Context, client StatusClient) (bool, error) {
-	status, err := client.Status(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	if hasNoConfig := status.ConfigurationHash == WellKnownInitialHash; hasNoConfig {
+	// A non-empty hash that differs from the hash observed after the last
+	// successful push means the DataPlane configuration changed outside the
+	// operator (for example a manual edit). An empty reported hash means Kong did
+	// not expose it, so keep the previous behavior to avoid a push loop.
+	if compareDBLessConfigHash && status.ConfigurationHash != "" &&
+		status.ConfigurationHash != lastDBLessConfigHash {
+		d.logger.V(1).Info("DataPlane configuration hash differs from the last successfully pushed configuration, pushing",
+			"lastPushed", lastDBLessConfigHash,
+			"reported", status.ConfigurationHash,
+		)
 		return true, nil
 	}
 
@@ -101,6 +102,8 @@ func NewKonnectConfigurationChangeDetector() *KonnectConfigurationChangeDetector
 func (d *KonnectConfigurationChangeDetector) HasConfigurationChanged(
 	_ context.Context,
 	oldSHA, newSHA []byte,
+	_ bool,
+	_ string,
 	_ bool,
 	_ StatusClient,
 ) (bool, error) {

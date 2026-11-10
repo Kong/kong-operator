@@ -121,6 +121,7 @@ func (i *Instance) sendConfigToDataPlanes(
 	if endpoints.Len() == 0 {
 		clear(i.pushClients)
 		clear(i.lastSuccessfulConfigSHAs)
+		clear(i.lastDBLessConfigHashes)
 		log.Info(i.logger, "no Admin API endpoints discovered for the gateway, skipping configuration push",
 			"namespace", gwNN.Namespace, "name", gwNN.Name)
 		// Report anyway: the last push may have left DataPlanesConfigured=False
@@ -148,6 +149,9 @@ func (i *Instance) sendConfigToDataPlanes(
 
 	if i.lastSuccessfulConfigSHAs == nil {
 		i.lastSuccessfulConfigSHAs = map[adminapi.DiscoveredAdminAPI][]byte{}
+	}
+	if i.lastDBLessConfigHashes == nil {
+		i.lastDBLessConfigHashes = map[adminapi.DiscoveredAdminAPI]string{}
 	}
 
 	var failures []string
@@ -177,6 +181,8 @@ func (i *Instance) sendConfigToDataPlanes(
 			i.lastSuccessfulConfigSHAs[endpoint],
 			configSHA[:],
 			false,
+			i.lastDBLessConfigHashes[endpoint],
+			true,
 			pushClient,
 		)
 		if err != nil {
@@ -208,6 +214,20 @@ func (i *Instance) sendConfigToDataPlanes(
 			continue
 		}
 		i.lastSuccessfulConfigSHAs[endpoint] = configSHA[:]
+		status, statusErr := pushClient.Status(ctx)
+		if statusErr != nil {
+			// The push succeeded, but without the reported hash the next unchanged
+			// sync cannot detect out-of-band changes yet. The next status request
+			// retries the comparison.
+			delete(i.lastDBLessConfigHashes, endpoint)
+			log.Error(i.logger, statusErr,
+				"failed to read the configuration hash after a successful push",
+				"endpoint", desc,
+				"address", endpoint.Address,
+			)
+		} else {
+			i.lastDBLessConfigHashes[endpoint] = status.ConfigurationHash
+		}
 		pushedCount++
 		log.Debug(i.logger, "pushed configuration to Admin API endpoint",
 			"endpoint", desc, "address", endpoint.Address)
@@ -223,6 +243,11 @@ func (i *Instance) sendConfigToDataPlanes(
 	for endpoint := range i.lastSuccessfulConfigSHAs {
 		if !currentEndpoints.Has(endpoint) {
 			delete(i.lastSuccessfulConfigSHAs, endpoint)
+		}
+	}
+	for endpoint := range i.lastDBLessConfigHashes {
+		if !currentEndpoints.Has(endpoint) {
+			delete(i.lastDBLessConfigHashes, endpoint)
 		}
 	}
 

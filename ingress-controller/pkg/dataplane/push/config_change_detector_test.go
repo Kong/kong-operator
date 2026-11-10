@@ -30,11 +30,13 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 	}
 
 	testCases := []struct {
-		name              string
-		oldSHA, newSHA    []byte
-		targetConfigEmpty bool
-		statusSHA         string
-		statusError       error
+		name                    string
+		oldSHA, newSHA          []byte
+		targetConfigEmpty       bool
+		lastDBLessConfigHash    string
+		compareDBLessConfigHash bool
+		statusSHA               string
+		statusError             error
 
 		expectedResult bool
 		expectError    bool
@@ -61,17 +63,45 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			expectedResult:    false,
 		},
 		{
-			name:           "oldSHA == newSHA and status signals same",
-			oldSHA:         testSHAs[0],
-			newSHA:         testSHAs[0],
-			statusSHA:      string(testSHAs[0]),
-			expectedResult: false,
+			name:                    "oldSHA == newSHA and status matches the last pushed DB-less hash",
+			oldSHA:                  testSHAs[0],
+			newSHA:                  testSHAs[0],
+			lastDBLessConfigHash:    "5d41402abc4b2a76b9719d911017c592",
+			compareDBLessConfigHash: true,
+			statusSHA:               "5d41402abc4b2a76b9719d911017c592",
+			expectedResult:          false,
 		},
 		{
-			name:           "oldSHA == newSHA and status signals other",
+			name:                    "oldSHA == newSHA and status differs from the last pushed DB-less hash",
+			oldSHA:                  testSHAs[0],
+			newSHA:                  testSHAs[0],
+			lastDBLessConfigHash:    "5d41402abc4b2a76b9719d911017c592",
+			compareDBLessConfigHash: true,
+			statusSHA:               "d41d8cd98f00b204e9800998ecf8427e",
+			expectedResult:          true,
+		},
+		{
+			name:                    "oldSHA == newSHA, status signals non-empty and no last pushed hash is recorded",
+			oldSHA:                  testSHAs[0],
+			newSHA:                  testSHAs[0],
+			compareDBLessConfigHash: true,
+			statusSHA:               "d41d8cd98f00b204e9800998ecf8427e",
+			expectedResult:          true,
+		},
+		{
+			name:                    "oldSHA == newSHA and status has no configuration hash",
+			oldSHA:                  testSHAs[0],
+			newSHA:                  testSHAs[0],
+			lastDBLessConfigHash:    "5d41402abc4b2a76b9719d911017c592",
+			compareDBLessConfigHash: true,
+			statusSHA:               "",
+			expectedResult:          false,
+		},
+		{
+			name:           "oldSHA == newSHA and DB-less hash comparison is disabled",
 			oldSHA:         testSHAs[0],
 			newSHA:         testSHAs[0],
-			statusSHA:      string(testSHAs[1]),
+			statusSHA:      "d41d8cd98f00b204e9800998ecf8427e",
 			expectedResult: false,
 		},
 		{
@@ -93,7 +123,15 @@ func TestDefaultConfigurationChangeDetector_HasConfigurationChanged(t *testing.T
 			}
 			detector := dataplanepush.NewKongGatewayConfigurationChangeDetector(zapr.NewLogger(zap.NewNop()))
 
-			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, tc.targetConfigEmpty, statusClient)
+			result, err := detector.HasConfigurationChanged(
+				ctx,
+				tc.oldSHA,
+				tc.newSHA,
+				tc.targetConfigEmpty,
+				tc.lastDBLessConfigHash,
+				tc.compareDBLessConfigHash,
+				statusClient,
+			)
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -135,7 +173,7 @@ func TestKonnectConfigurationChangeDetector(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			detector := dataplanepush.NewKonnectConfigurationChangeDetector()
 
-			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, false, nil)
+			result, err := detector.HasConfigurationChanged(ctx, tc.oldSHA, tc.newSHA, false, "", false, nil)
 			require.NoError(t, err)
 			require.Equal(t, tc.expectedResult, result)
 		})
