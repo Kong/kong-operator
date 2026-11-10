@@ -1,0 +1,77 @@
+# Policies created once what they reference started being deleted.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: late-registry
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: late-registry
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: namespacedRef
+            namespacedRef:
+              name: held-registry
+          valueValidationAction: reject
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: late-key
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: late-key
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              namespacedRef:
+                name: held-key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: late-bundle
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: late-bundle
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.crt
+            key:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.key
+        clientAuthentication:
+          mode: required
+          tlsTrustBundles:
+            - namespacedRef:
+                name: held-bundle

@@ -86,6 +86,8 @@ traffic_acked_at_least() { [ "$(traffic_log "$1" | grep -c '^ok ')" -ge "$2" ]; 
 traffic_stopped() { traffic_log "$1" | grep -q '^stopped '; }
 
 PROBE_IMAGE=alpine/k8s:1.33.4
+OPERATOR_NAMESPACE=kong-system
+OPERATOR_SELECTOR=app.kubernetes.io/name=kong-operator
 
 # gwadmin_replaced gwadmin_ns gwadmin old_pods...: none of the old gw-admin
 # pods is left, and the Deployment has every replica Ready.
@@ -225,6 +227,40 @@ manual_copies_are() {
   done
   [ "$(printf '%s' "$got" | sort)" = "$(printf '%s' "$want" | sort)" ] ||
     { echo "the certificates of $dp are registered from copies of [$got], not of [$want]" >&2; return 1; }
+}
+
+# gwadmin_entities gateway: prints the entities gw-admin serves for the gateway,
+# read from its API from a pod in the cluster, as Kong Operator reads them: under
+# the name of the API Service, with the operator client certificate.
+gwadmin_entities() {
+  local gateway uid gw gw_ns gwadmin svc port bundle ca client
+  gateway=$(kubectl get onpremeventgateway -n "$(ns)" "$1" -o json)
+  uid=$(printf '%s' "$gateway" | jq -er '.metadata.uid')
+  gw=$(printf '%s' "$gateway" | jq -er '.spec.gwAdminRef.name')
+  gw_ns=$(printf '%s' "$gateway" | jq -r --arg ns "$(ns)" '.spec.gwAdminRef.namespace // $ns')
+  gwadmin=$(kubectl get gwadmin -n "$gw_ns" "$gw" -o json)
+  svc=$(printf '%s' "$gwadmin" | jq -er '.status.api.serviceName')
+  port=$(printf '%s' "$gwadmin" | jq -er '.status.api.port')
+  bundle=$(printf '%s' "$gwadmin" | jq -er '.status.tls.apiCABundleSecretName')
+  ca=$(kubectl get secret -n "$gw_ns" "$bundle" -o json | jq -er '.data["ca.crt"]')
+  client=$(kubectl get secret -n "$OPERATOR_NAMESPACE" "gwadmin-$(printf '%s' "$gwadmin" | jq -er '.metadata.uid')-operator-client-tls" -o json)
+  # The TLS material goes through stdin, not the environment: the pod spec
+  # would show the operator client key.
+  printf '%s\n%s\n%s\n' "$ca" "$(printf '%s' "$client" | jq -er '.data["tls.crt"]')" "$(printf '%s' "$client" | jq -er '.data["tls.key"]')" |
+    bounded 60 env kubectl run -n "$(ns)" "gwadmin-read-$(date +%s)-$RANDOM" --image="$PROBE_IMAGE" --rm -i --restart=Never --quiet \
+      --env="URL=https://$svc.$gw_ns.svc:$port/v1/event-gateways/$uid/entities" \
+      --command -- sh -c 'read -r CA; read -r CRT; read -r KEY
+        echo "$CA" | base64 -d >/tmp/ca.crt; echo "$CRT" | base64 -d >/tmp/c.crt; echo "$KEY" | base64 -d >/tmp/c.key
+        curl -sS --fail --max-time 20 --cacert /tmp/ca.crt --cert /tmp/c.crt --key /tmp/c.key "$URL"' 2>/dev/null
+}
+
+# gwadmin_entities_match gateway filter: the jq filter holds on the entities
+# gw-admin serves for the gateway. kubectl run can print the output of the pod
+# twice: only the first document counts.
+gwadmin_entities_match() {
+  local got
+  got=$(gwadmin_entities "$1") || { echo "gw-admin can't be read for $1" >&2; return 1; }
+  printf '%s' "$got" | jq -se ".[0] | $2" >/dev/null || { echo "gw-admin serves $(printf '%s' "$got" | jq -sc '.[0].entities | map_values(length)'), not matching: $2" >&2; return 1; }
 }
 
 cmd=$1
@@ -481,6 +517,64 @@ echo "expected $EXPECT, got $ok accepted and $failed rejected: $(cat /tmp/out)" 
     --env="CA=$(base64 <"$2/tls.crt" | tr -d '\n')" --env="CRT=$crt" --env="KEY=$key" \
     --command -- sh -c "$inner")
   result data_plane "$1" expected "$4" kubectl_output "$output"
+  ;;
+wait-gwadmin-entities) # gateway timeout filter: waits for the jq filter to hold on what gw-admin serves for the gateway, e.g. .entities.static_keys | length == 1
+  until_true "$2" "gw-admin serves for $1: $3" gwadmin_entities_match "$1" "$3"
+  until_result gateway "$1"
+  ;;
+record-produce) # dp topic value: produces a record through the data plane
+  inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+EOF
+i=0
+until kafkactl -C /tmp/k.yml --context keg create topic "$TOPIC" >/dev/null 2>&1 ||
+  kafkactl -C /tmp/k.yml --context keg describe topic "$TOPIC" >/dev/null 2>&1; do
+  i=$((i + 1)); [ "$i" -ge 180 ] && { echo "creating the topic through keg fails" >&2; exit 1; }; sleep 1
+done
+i=0
+until kafkactl -C /tmp/k.yml --context keg produce "$TOPIC" --value "$VALUE" >/tmp/out 2>&1; do
+  i=$((i + 1)); [ "$i" -ge 180 ] && { echo "producing through keg fails: $(cat /tmp/out)" >&2; exit 1; }; sleep 1
+done
+echo "ok: produced"'
+  output=$(bounded 300 env kubectl run -n "$(ns)" "record-produce-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" --env="VALUE=$3" \
+    --command -- sh -c "$inner")
+  result data_plane "$1" topic "$2" kubectl_output "$output"
+  ;;
+record-consumed) # dp topic value timeout: waits for the data plane to hand back the value, decrypted
+  inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+EOF
+start=$(date +%s)
+until got=$(kafkactl -C /tmp/k.yml --context keg consume "$TOPIC" --from-beginning --exit 2>&1) && echo "$got" | grep -qF "$VALUE"; do
+  [ $(($(date +%s) - start)) -ge "$LIMIT" ] && { echo "keg does not hand back $VALUE after ${LIMIT}s, it answers: $got" >&2; exit 1; }
+  sleep 2
+done
+echo "ok: keg hands back $VALUE"'
+  output=$(bounded "$(($4 + 60))" env kubectl run -n "$(ns)" "record-consume-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" --env="VALUE=$3" --env="LIMIT=$4" \
+    --command -- sh -c "$inner")
+  result data_plane "$1" topic "$2" kubectl_output "$output"
+  ;;
+record-key-id-is) # topic id: the records of the topic in Kafka name the encryption key by the id, in their kong/enc header
+  inner='cat >/tmp/k.yml <<EOF
+contexts:
+  kafka:
+    brokers: ["$KAFKA_DIRECT"]
+EOF
+got=$(kafkactl -C /tmp/k.yml --context kafka consume "$KAFKA_TOPIC" --from-beginning --exit --print-headers 2>&1)
+echo "$got" | grep -aq "static://$ID" || { echo "the records of $KAFKA_TOPIC do not name the key $ID: $got" >&2; exit 1; }
+echo "ok: the records name the key $ID"'
+  output=$(bounded 120 env kubectl run -n "$(ns)" "record-key-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="KAFKA_DIRECT=kafka-bootstrap.kafka-shared.svc:9092" --env="KAFKA_TOPIC=$(ns)_$1" --env="ID=$2" \
+    --command -- sh -c "$inner")
+  result topic "$1" id "$2" kubectl_output "$output"
   ;;
 wait-operator-idle) # timeout: waits for the Kong Operator to finish what it has to do for data planes and gateways, e.g. after a change or a restart
   until_true "$1" "the Kong Operator is idle" operator_settled

@@ -274,11 +274,21 @@ var (
 // one without a type.
 const namespacedRefMember = "namespacedRef"
 
+// checkPolicyReferences returns why a policy can't reference what it does, on
+// prem: see referencesByObject and noNewUserOfDeletedEntities.
+func checkPolicyReferences(ctx context.Context, cl client.Client, policy entityObject, apiSpec any) error {
+	if err := referencesByObject(apiSpec); err != nil {
+		return err
+	}
+	return noNewUserOfDeletedEntities(ctx, cl, policy)
+}
+
 // referencesByObject returns an error when the API spec of a policy references
 // a schema registry, a static key or a TLS trust bundle other than by object:
 // an id or a name means nothing to gw-admin, whose entities are identified by
-// the UID of their object. It must be called on the spec, before the
-// conversion turns a reference by object into a reference by id or by name.
+// the UID of their object, and such a reference wouldn't hold the entity (see
+// entitiesInUse). It must be called on the spec, before the conversion turns a
+// reference by object into a reference by id or by name.
 func referencesByObject(apiSpec any) error {
 	value, err := jsonValue(apiSpec)
 	if err != nil {

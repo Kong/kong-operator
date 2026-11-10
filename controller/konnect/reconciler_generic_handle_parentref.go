@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
@@ -180,13 +181,22 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 	// OnPremEventGateway. It runs before the KongReferenceGrant check, which
 	// only applies to Konnect-managed entities.
 	parent, nn, err := getParentForRef[p, pPTr](ctx, cl, parentRef, obj.GetNamespace())
-	if err == nil && skipsKonnectReconciliation(ctx, cl, parent) {
-		if res, errStatus := removeKonnectConditions(ctx, cl, obj); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
-			Reference: nn,
-			TypeName:  parentType,
+	if err == nil {
+		if skipping := skippingAncestor(ctx, cl, parent); skipping != nil {
+			// The OnPremEventGateway controller owns the status of the entities
+			// of its gateways, and clears what the Konnect reconciler set on one
+			// before, e.g. while its on-prem ancestor did not exist yet: nothing
+			// is written here. For other on-prem gateways, the Konnect reconciler
+			// clears it itself.
+			if !targetsOnPremEventGateway(skipping) {
+				if res, errStatus := removeKonnectConditions(ctx, cl, obj); errStatus != nil || !res.IsZero() {
+					return res, errStatus
+				}
+			}
+			return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
+				Reference: nn,
+				TypeName:  parentType,
+			}
 		}
 	}
 
@@ -345,7 +355,7 @@ func getParentForRef[
 	}
 }
 
-// maxAncestorDepth bounds the walk of skipsKonnectReconciliation. The deepest
+// maxAncestorDepth bounds the walk of skippingAncestor. The deepest
 // chain is a policy, its virtual cluster, the backend cluster and the gateway.
 const maxAncestorDepth = 4
 
@@ -355,31 +365,41 @@ type objectWithParentGVK interface {
 	GetParentGVK() schema.GroupVersionKind
 }
 
-// skipsKonnectReconciliation reports whether obj, or one of its ancestors, is
-// not managed by the Konnect reconciler, e.g. an EventGatewayBackendCluster
-// targeting an OnPremEventGateway. The walk stops at the first ancestor that
-// cannot be resolved, e.g. one that does not exist (yet): the regular parent
-// handling reports it.
-func skipsKonnectReconciliation(ctx context.Context, cl client.Client, obj client.Object) bool {
+// targetsOnPremEventGateway reports whether the entity, one the Konnect
+// reconciler skips (see skippingAncestor), targets an OnPremEventGateway.
+func targetsOnPremEventGateway(obj client.Object) bool {
+	child, ok := obj.(objectWithParentGVK)
+	return ok && child.GetParentGVK().GroupKind() == onPremEventGatewayGroupKind
+}
+
+// onPremEventGatewayGroupKind is the group and kind of an OnPremEventGateway.
+var onPremEventGatewayGroupKind = eventgatewayv1alpha1.SchemeGroupVersion.WithKind("OnPremEventGateway").GroupKind()
+
+// skippingAncestor returns obj, or the first of its ancestors, that the Konnect
+// reconciler doesn't manage, e.g. an EventGatewayBackendCluster targeting an
+// OnPremEventGateway, or nil. The walk stops at the first ancestor that cannot
+// be resolved, e.g. one that does not exist (yet): the regular parent handling
+// reports it.
+func skippingAncestor(ctx context.Context, cl client.Client, obj client.Object) client.Object {
 	for range maxAncestorDepth {
 		if skipper, ok := obj.(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
-			return true
+			return obj
 		}
 		child, ok := obj.(objectWithParentGVK)
 		if !ok {
-			return false
+			return nil
 		}
 		ref := child.GetParentRef()
 		if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
-			return false
+			return nil
 		}
 		o, err := cl.Scheme().New(child.GetParentGVK())
 		if err != nil {
-			return false
+			return nil
 		}
 		parent, ok := o.(client.Object)
 		if !ok {
-			return false
+			return nil
 		}
 		nn := types.NamespacedName{
 			Namespace: obj.GetNamespace(),
@@ -389,11 +409,11 @@ func skipsKonnectReconciliation(ctx context.Context, cl client.Client, obj clien
 			nn.Namespace = *ns
 		}
 		if err := cl.Get(ctx, nn, parent); err != nil {
-			return false
+			return nil
 		}
 		obj = parent
 	}
-	return false
+	return nil
 }
 
 // konnectProgrammedReasons are the reasons of the Programmed condition that

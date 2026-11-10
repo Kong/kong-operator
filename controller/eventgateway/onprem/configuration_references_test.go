@@ -34,11 +34,10 @@ import (
 
 // TestReferencesByObjectCoversConfiguredReferences checks referencesByObject
 // against the references the CRD generator declares in crd-from-oas/config.yaml:
-// each reference of a policy to a schema registry, a static key or a TLS trust
-// bundle must be refused when not by object, and accepted by object. A
-// reference added there, or a field renamed, that referencesByObjectIn doesn't
-// recognize fails here, rather than letting a reference by id or by name
-// through on prem.
+// each reference of a policy to an entity FinalizerInUse holds must be refused
+// when not by object, and accepted by object. A reference added there, or a
+// field renamed, that referencesByObjectIn doesn't recognize fails here, rather
+// than letting a reference by id or by name through on prem.
 func TestReferencesByObjectCoversConfiguredReferences(t *testing.T) {
 	data, err := os.ReadFile("../../../crd-from-oas/config.yaml")
 	require.NoError(t, err)
@@ -46,9 +45,9 @@ func TestReferencesByObjectCoversConfiguredReferences(t *testing.T) {
 	require.NoError(t, yaml.Unmarshal(data, &config))
 
 	policies := []string{"EventGatewayListenerPolicy", "EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualClusterConsumePolicy"}
-	// A parent policy reference is by object only: it has no other form to
-	// refuse.
-	heldKindNames := []string{"EventGatewaySchemaRegistry", "EventGatewayStaticKey", "EventGatewayTLSTrustBundle"}
+	// A parent policy reference, the other kind FinalizerInUse holds, is by
+	// object only: it has no other form to refuse.
+	heldKindNames := []string{schemaRegistryType.Elem().Name(), staticKeyType.Elem().Name(), tlsTrustBundleType.Elem().Name()}
 	type reference struct{ entity, path string }
 	var references []reference
 	var walk func(any)

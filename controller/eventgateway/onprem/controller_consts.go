@@ -41,6 +41,13 @@ const annotationCleanupStarted = "gateway-operator.konghq.com/gw-admin-cleanup-s
 // again, or until the finalizer is removed by hand.
 const FinalizerGWAdminCleanup = "gateway-operator.konghq.com/onprem-eventgateway-gw-admin-cleanup"
 
+// FinalizerInUse holds a schema registry, a static key, a TLS trust bundle, or
+// a produce or consume policy child policies name as their parent, of a gateway
+// while policies in the configuration of the gateway reference it: it stays in
+// the configuration until they stop referencing it. Only this controller
+// removes it, also when the gateway is deleted or gone.
+const FinalizerInUse = "gateway-operator.konghq.com/onprem-eventgateway-in-use"
+
 // -----------------------------------------------------------------------------
 // OnPremEventGateway - Reconciles
 // -----------------------------------------------------------------------------
