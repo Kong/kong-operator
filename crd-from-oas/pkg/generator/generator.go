@@ -4846,6 +4846,13 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			conds = append(conds, "obj.Spec.APISpec."+strings.Join(names, ".")+" != nil")
 		}
 	}
+	// A plain (non-union) ACL reference writes into an acls/defaultToolAcls
+	// object. Konnect rejects that object when it is sent empty, so only inject
+	// it when the CR actually lists refs. Union-shaped ACL refs are guarded by
+	// their union pointer instead.
+	if !isACL && !isArrayElement && !isObjectRefLeaf && strings.HasSuffix(ref.TypeName(), "ACLRef") {
+		conds = append(conds, "len(obj.Spec.APISpec."+strings.Join(names, ".")+") > 0")
+	}
 	groupKey := strings.Join(names, ".")
 	if idx, ok := groupIndex[groupKey]; ok {
 		for _, existing := range groups[idx].Variants {
