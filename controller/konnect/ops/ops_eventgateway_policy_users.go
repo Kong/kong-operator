@@ -21,6 +21,13 @@ type konnectPolicyUser struct {
 	parentName string
 }
 
+// policyConfig is a Konnect policy with its raw config.
+type policyConfig struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Config any    `json:"config"`
+}
+
 // policyUsers are the users of an entity whose deletion is blocked, split
 // between the policy objects in the entity's namespace, those in other
 // namespaces and the Konnect policies managed from outside the cluster.

@@ -180,6 +180,10 @@
   - A `type: id` reference now keeps its id (`id: {id: <uuid>}`).
   - `transcode` and `maskFields` policies accept `parentPolicyRef`.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- `EventGatewaySchemaRegistry`: a schema registry policies use in Konnect
+  isn't deleted until they stop using it: it reports `DeletionBlocked`, naming
+  them.
+  [#6529](https://github.com/Kong/kong-operator/pull/6529)
 
 ### Changed
 
