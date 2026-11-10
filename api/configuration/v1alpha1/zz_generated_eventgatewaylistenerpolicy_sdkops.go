@@ -165,6 +165,7 @@ func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]a
 	if err := normalizeEventGatewayListenerPolicySDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize EventGatewayListenerPolicyAPISpec SDK payload: %w", err)
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 

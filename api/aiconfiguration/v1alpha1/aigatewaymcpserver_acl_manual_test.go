@@ -16,7 +16,8 @@ import (
 // where an oauth access-configured listener request always carried an empty
 // "acls"/"default_tool_acls" object. Konnect rejects that object because its
 // properties (allow, deny, allow_when, deny_when) are required, so it must be
-// left out unless the CR lists consumer group references.
+// left out unless the CR lists consumer group references. An explicitly empty
+// list (allow: []) decodes to a non-nil empty slice and must be left out too.
 func TestAIGatewayMCPServer_OAuthAccessACLsWireShape(t *testing.T) {
 	t.Parallel()
 
@@ -65,6 +66,17 @@ spec:
 	t.Run("no acls configured", func(t *testing.T) {
 		t.Parallel()
 		got := access(t, "")
+		require.NotContains(t, got, "acls")
+		require.NotContains(t, got, "default_tool_acls")
+	})
+
+	t.Run("empty acls lists configured", func(t *testing.T) {
+		t.Parallel()
+		got := access(t, `
+          acls:
+            allow: []
+          defaultToolAcls:
+            allow: []`)
 		require.NotContains(t, got, "acls")
 		require.NotContains(t, got, "default_tool_acls")
 	})

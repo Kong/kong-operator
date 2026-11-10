@@ -302,6 +302,7 @@ func (s *AIGatewayModelAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	if err := normalizeAIGatewayModelSDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize AIGatewayModelAPISpec SDK payload: %w", err)
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 

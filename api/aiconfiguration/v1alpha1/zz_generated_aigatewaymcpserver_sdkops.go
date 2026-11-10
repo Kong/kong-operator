@@ -995,6 +995,7 @@ func (s *AIGatewayMCPServerAPISpec) marshalSDKOpsPayload() (map[string]any, erro
 	if err := normalizeAIGatewayMCPServerSDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize AIGatewayMCPServerAPISpec SDK payload: %w", err)
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 

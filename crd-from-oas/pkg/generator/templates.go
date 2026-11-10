@@ -1515,6 +1515,7 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	{{- if $.ConstFields}}
 	injectSDKOpsConstFields(payload, {{$.EntityName}}SDKOpsConstFields)
 	{{- end }}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 
@@ -2454,6 +2455,8 @@ import (
 ` + unwrapSDKOpsUnionFieldsHelper + `
 
 ` + assignSDKOpsUnionMembersHelper + `
+
+` + dropEmptySDKOpsACLsHelper + `
 `
 
 // opsPerEntityFileHeaderTemplate renders the shared file header (preamble,

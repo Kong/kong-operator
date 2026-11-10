@@ -139,6 +139,7 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) marshalSDKOpsPayload() (map[st
 	if err := normalizeEventGatewayVirtualClusterPolicySDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize EventGatewayVirtualClusterPolicyAPISpec SDK payload: %w", err)
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 

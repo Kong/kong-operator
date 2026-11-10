@@ -576,3 +576,24 @@ func sdkJSONFieldName(field reflect.StructField) string {
 	}
 	return name
 }
+
+// dropEmptySDKOpsACLs removes "acls" and "default_tool_acls" objects that
+// carry no members. Konnect rejects them because allow and deny are required
+// properties, and an explicitly empty CR list ("allow: []") decodes to a
+// non-nil empty slice that omitzero keeps, so the request would carry them.
+func dropEmptySDKOpsACLs(v any) {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			if child, ok := val.(map[string]any); ok && len(child) == 0 && (k == "acls" || k == "default_tool_acls") {
+				delete(x, k)
+				continue
+			}
+			dropEmptySDKOpsACLs(val)
+		}
+	case []any:
+		for _, val := range x {
+			dropEmptySDKOpsACLs(val)
+		}
+	}
+}

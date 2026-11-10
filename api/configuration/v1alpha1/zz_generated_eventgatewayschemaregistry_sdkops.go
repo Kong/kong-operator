@@ -44,6 +44,7 @@ func (s *EventGatewaySchemaRegistryAPISpec) marshalSDKOpsPayload() (map[string]a
 	if !ok {
 		return nil, fmt.Errorf("failed to convert EventGatewaySchemaRegistryAPISpec SDK payload to map")
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 
