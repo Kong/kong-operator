@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,12 +26,23 @@ var (
 type Server struct {
 	s           *http.Server
 	certWatcher *certwatcher.CertWatcher
+	// certPath and keyPath are the paths to the server's TLS certificate and key.
+	certPath string
+	keyPath  string
 }
 
-func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
+// MakeTLSServer creates a TLS server that reads its certificate (tls.crt) and
+// key (tls.key) from certDir, reloading them when the files change.
+func MakeTLSServer(port int32, handler http.Handler, certDir string) (*Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
 
-	watcher, err := certwatcher.New(consts.DefaultAdmissionWebhookCertPath, consts.DefaultAdmissionWebhookKeyPath)
+	if certDir == "" {
+		return nil, errors.New("the directory holding the webhook TLS certificate and key must not be empty")
+	}
+	certPath := filepath.Join(certDir, consts.DefaultAdmissionWebhookCertFileName)
+	keyPath := filepath.Join(certDir, consts.DefaultAdmissionWebhookKeyFileName)
+
+	watcher, err := certwatcher.New(certPath, keyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 	}
@@ -47,6 +59,8 @@ func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 			ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
 		},
 		certWatcher: watcher,
+		certPath:    certPath,
+		keyPath:     keyPath,
 	}, nil
 }
 
@@ -54,7 +68,7 @@ func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS(consts.DefaultAdmissionWebhookCertPath, consts.DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(s.certPath, s.keyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()
