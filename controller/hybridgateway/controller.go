@@ -40,9 +40,18 @@ const (
 )
 
 // orderedCleanupRequeue continues a multi-GVK cleanup pass on the next step.
-// RequeueAfter keeps the rate limiter from growing the delay for each step.
-func orderedCleanupRequeue() ctrl.Result {
+// RequeueAfter keeps the rate limiter from growing the delay for each step. A pass
+// that deleted nothing only waits for in-flight deletions, so it uses the
+// rate-limited requeue instead: a child held by a foreign finalizer then backs off
+// instead of driving a fixed 5 Hz loop.
+func orderedCleanupRequeue(progressed bool) ctrl.Result {
 	priority := deletionRequeuePriority
+	if !progressed {
+		return ctrl.Result{
+			Requeue:  true,
+			Priority: &priority,
+		}
+	}
 	return ctrl.Result{
 		RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 		Priority:     &priority,
@@ -329,7 +338,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	}
 
 	// Phase 5: Orphan Cleanup.
-	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+	orphansDeleted, progressed, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 	if err != nil {
 		if result, ok := requeueOnConflict(err, logger, "Orphan cleanup conflicted, requeueing"); ok {
 			return result, nil
@@ -356,7 +365,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			eventconst.EventReasonOrphanCleanupSucceeded,
 			"Orphan cleanup in progress",
 		)
-		return orderedCleanupRequeue(), nil
+		return orderedCleanupRequeue(progressed), nil
 	}
 
 	// Remove finalizer if it is no longer needed.
@@ -390,7 +399,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 
 	// Clean up all generated resources by calling the same cleanup logic as orphan cleanup
 	// but with no desired resources (simulating what cleanOrphanedResources does when desiredObjects is empty)
-	orphansDeleted, err := r.cleanupGeneratedResources(ctx, logger, conv)
+	orphansDeleted, progressed, err := r.cleanupGeneratedResources(ctx, logger, conv)
 	if err != nil {
 		if result, ok := requeueOnConflict(err, logger, "Deletion cleanup conflicted, requeueing"); ok {
 			return result, nil
@@ -416,8 +425,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 			"Deletion cleanup in progress",
 		)
 		// Deletion continuations must run before ordinary Gateway-fanout work.
-		// RequeueAfter also avoids the rate limiter's increasing retry delay.
-		return orderedCleanupRequeue(), nil
+		return orderedCleanupRequeue(progressed), nil
 	}
 
 	// All resources have been deleted, now we can remove the finalizer.
@@ -450,12 +458,13 @@ func requeueOnConflict(err error, logger logr.Logger, message string) (ctrl.Resu
 // since we want to delete everything when the Route is being deleted.
 // Returns:
 //   - bool: true if any resources were deleted and a requeue is needed
+//   - bool: true when this pass deleted at least one resource
 //   - error: any error that occurred during cleanup
 func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	ctx context.Context,
 	logger logr.Logger,
 	conv converter.APIConverter[t],
-) (bool, error) {
+) (requeue, progressed bool, err error) {
 	// On the deletion path we create a fresh converter but do not run Translate(),
 	// so cleanOrphanedResources() sees no desired output objects. That makes all
 	// owned generated resources orphan candidates, and we wait for their deletion

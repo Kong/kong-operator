@@ -858,7 +858,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 							outputStoreErr: tt.outputStoreErr,
 						},
 					}
-					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+					requeue, _, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				} else {
 					conv := &fakeHTTPRouteConverter{
 						gvks:           tt.gvks,
@@ -866,7 +866,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 						desired:        tt.desired,
 						outputStoreErr: tt.outputStoreErr,
 					}
-					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+					requeue, _, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				}
 				if !tt.runUntilDone || !requeue || err != nil {
 					break
@@ -936,7 +936,7 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 
 	t.Run("normal cleanup waits for deleting child before later GVKs", func(t *testing.T) {
 		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: true})
+		requeue, _, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.True(t, requeue)
 
@@ -976,7 +976,7 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 			root: *root,
 		}
 
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conflictConv, orphanCleanupOptions{waitForDeletes: true})
+		requeue, _, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conflictConv, orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.True(t, requeue)
 
@@ -1073,7 +1073,7 @@ func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 
 	t.Run("the live listing finds a child the cache misses", func(t *testing.T) {
 		cl := newClient(cachedChild)
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, newConverter(cl),
+		requeue, _, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, newConverter(cl),
 			orphanCleanupOptions{waitForDeletes: true, listLive: true})
 		require.NoError(t, err)
 		require.True(t, requeue, "cleanup must requeue to wait for the deletion")
@@ -1082,7 +1082,7 @@ func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 
 	t.Run("steady-state cleanup keeps trusting the cached listing", func(t *testing.T) {
 		cl := newClient(nil)
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, newConverter(cl),
+		requeue, _, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, newConverter(cl),
 			orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.False(t, requeue)
@@ -1105,48 +1105,80 @@ func TestHandleDeletionPrioritizesContinuation(t *testing.T) {
 		Kind:    "KongService",
 	}
 	deletionTimestamp := metav1.NewTime(time.Now())
-	root := &gwtypes.HTTPRoute{
-		APIVersion:        gatewayv1.GroupVersion.String(),
-		Kind:              "HTTPRoute",
-		Name:              "httproute-owner",
-		Namespace:         "ns",
-		DeletionTimestamp: &deletionTimestamp,
-		Finalizers:        []string{finalizerconst.HybridHTTPRouteFinalizer},
+
+	// setup builds a deleting root with its children, so both cases below share
+	// the same root, labels and annotations.
+	setup := func(children func(labels, annotations map[string]string) []client.Object) (*HybridGatewayReconciler[gwtypes.HTTPRoute, *gwtypes.HTTPRoute], *gwtypes.HTTPRoute) {
+		root := &gwtypes.HTTPRoute{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: gatewayv1.GroupVersion.String(),
+				Kind:       "HTTPRoute",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "httproute-owner",
+				Namespace:         "ns",
+				DeletionTimestamp: &deletionTimestamp,
+				Finalizers:        []string{finalizerconst.HybridHTTPRouteFinalizer},
+			},
+		}
+		ownerLabels := metadata.BuildLabels(root, nil)
+		ownerAnnotations := map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+		}
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(children(ownerLabels, ownerAnnotations)...).
+			Build()
+		r := &HybridGatewayReconciler[gwtypes.HTTPRoute, *gwtypes.HTTPRoute]{
+			Client:        cl,
+			eventRecorder: events.NewTypedEventRecorder(clientevents.NewFakeRecorder(1)),
+		}
+		return r, root
 	}
-	ownerLabels := metadata.BuildLabels(root, nil)
-	ownerAnnotations := map[string]string{
-		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
-	}
 
-	terminatingRoute := newUnstructured("ns", "terminating-route", routeGVK, ownerLabels)
-	terminatingRoute.SetAnnotations(ownerAnnotations)
-	terminatingRoute.SetDeletionTimestamp(&deletionTimestamp)
-	terminatingRoute.SetFinalizers([]string{"example.com/test"})
+	t.Run("a pass that only waits for an in-flight deletion backs off", func(t *testing.T) {
+		r, root := setup(func(labels, annotations map[string]string) []client.Object {
+			terminatingRoute := newUnstructured("ns", "terminating-route", routeGVK, labels)
+			terminatingRoute.SetAnnotations(annotations)
+			terminatingRoute.SetDeletionTimestamp(&deletionTimestamp)
+			terminatingRoute.SetFinalizers([]string{"example.com/test"})
+			service := newUnstructured("ns", "service", serviceGVK, labels)
+			service.SetAnnotations(annotations)
+			return []client.Object{&terminatingRoute, &service}
+		})
 
-	service := newUnstructured("ns", "service", serviceGVK, ownerLabels)
-	service.SetAnnotations(ownerAnnotations)
+		result, err := r.handleDeletion(ctx, logger, root, *root)
+		require.NoError(t, err)
+		// Nothing was deleted, so the requeue goes through the rate limiter: a child
+		// held by a foreign finalizer then backs off instead of polling at 5 Hz.
+		assert.True(t, result.Requeue) //nolint:staticcheck // The backed-off requeue is the point.
+		assert.Zero(t, result.RequeueAfter)
+		require.NotNil(t, result.Priority)
+		assert.Positive(t, *result.Priority, "the continuation must outrank ordinary work")
+		assert.Equal(t, deletionRequeuePriority, *result.Priority)
+		assert.Contains(t, root.Finalizers, finalizerconst.HybridHTTPRouteFinalizer)
 
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
-		WithObjects(&terminatingRoute, &service).
-		Build()
-	r := &HybridGatewayReconciler[gwtypes.HTTPRoute, *gwtypes.HTTPRoute]{
-		Client:        cl,
-		eventRecorder: events.NewTypedEventRecorder(clientevents.NewFakeRecorder(1)),
-	}
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(serviceGVK)
+		require.NoError(t, r.List(ctx, serviceList))
+		assert.Len(t, serviceList.Items, 1, "a terminating earlier GVK must block later GVKs")
+	})
 
-	result, err := r.handleDeletion(ctx, logger, root, *root)
-	require.NoError(t, err)
-	assert.False(t, result.Requeue) //nolint:staticcheck // The continuation must not use rate-limited requeue.
-	assert.Equal(t, ctrlconsts.RequeueWithoutBackoff, result.RequeueAfter)
-	require.NotNil(t, result.Priority)
-	assert.Equal(t, deletionRequeuePriority, *result.Priority)
-	assert.Contains(t, root.Finalizers, finalizerconst.HybridHTTPRouteFinalizer)
+	t.Run("a pass that deleted a child keeps the short requeue", func(t *testing.T) {
+		r, root := setup(func(labels, annotations map[string]string) []client.Object {
+			service := newUnstructured("ns", "service", serviceGVK, labels)
+			service.SetAnnotations(annotations)
+			return []client.Object{&service}
+		})
 
-	serviceList := &unstructured.UnstructuredList{}
-	serviceList.SetGroupVersionKind(serviceGVK)
-	require.NoError(t, cl.List(ctx, serviceList))
-	assert.Len(t, serviceList.Items, 1, "a terminating earlier GVK must block later GVKs")
+		result, err := r.handleDeletion(ctx, logger, root, *root)
+		require.NoError(t, err)
+		assert.False(t, result.Requeue) //nolint:staticcheck // The continuation must not use rate-limited requeue.
+		assert.Equal(t, ctrlconsts.RequeueWithoutBackoff, result.RequeueAfter)
+		require.NotNil(t, result.Priority)
+		assert.Positive(t, *result.Priority, "the continuation must outrank ordinary work")
+		assert.Equal(t, deletionRequeuePriority, *result.Priority)
+	})
 }
 
 // Minimal fake converter for HTTPRoute
@@ -3593,7 +3625,7 @@ func TestCleanOrphanedResourcesDoesNotFetchForeignChildren(t *testing.T) {
 				cl: cl,
 			}
 
-			requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](
+			requeue, _, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](
 				ctx, cl, logger, fakeConv, mode.opts,
 			)
 			require.NoError(t, err)
