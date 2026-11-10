@@ -78,3 +78,52 @@ These are management-plane ordering checks, not traffic-routing tests or a
 guarantee that GET and PUT are atomic against concurrent out-of-band policy-set
 changes. Use a disposable, isolated cluster with this branch's CRDs and operator;
 do not replace a shared operator deployment to run this scenario.
+
+## Produce policy chain lifecycle
+
+The `producepolicychain-lifecycle` scenario uses a dedicated test-labeled gateway,
+two virtual clusters, two `schemaValidation` parent groups, multiple
+`modifyHeaders` children, an `encryptFields` child with a test-owned static key,
+and independent roots. It checks full ID sequences independently of creation
+order, sibling and whole-group movement, immutable Kubernetes and remote parent
+relationships, invalid grouping, missing/unready references, complete-set
+mismatches, watch recovery, real policy recreation, periodic drift repair,
+independent cluster-level ownership on the same virtual cluster, contender
+handover, an empty scope, and deletion without authentication or valid refs.
+
+```bash
+make test.e2e.chainsaw \
+  CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/producepolicychain-lifecycle
+```
+
+By default the running operator must use its normal `--konnect-sync-period=60s`.
+Only three observations hold state for a full 65-second window: repaired drift,
+an unready reference, and an omitted-policy mismatch. Other transitions wait for
+current-generation conditions and exact backend convergence, rather than adding
+a full sync window to every assertion. The minimum observation budget is 195
+seconds; setup, reconciliation, API calls and cleanup add to this. The lifecycle
+script has a 15-minute limit and cleanup a separate five-minute limit, leaving
+ten minutes of the 30-minute job budget for setup and other parallel scenarios.
+This does not change suite-wide controller timing or shorten the Listener test;
+total matrix runtime still depends on those other scenarios.
+
+If running an explicitly configured isolated operator with another sync period,
+set `KONNECT_SYNC_PERIOD_SECONDS` to its **actual** integer-second value and
+`WINDOW_SECONDS` to a strictly larger value. Merely changing the test environment
+does not reconfigure the operator. Increase the script timeout when increasing
+these windows. These overrides do not change the Listener scenario.
+
+Baselines stay in one process, not cross-step Chainsaw outputs. Each identity
+check compares Kubernetes UIDs, current Konnect IDs, policy types, and unchanged
+`parent_policy_id`; no Kafka traffic, deeper nesting, Consume ordering, on-prem
+support, or atomic GET/PUT guarantee is implied. Authentication restoration runs
+on exit before cleanup. Cleanup deletes children before parents, verifies the
+exact-name/test-labeled gateway's remote 404 and collection absence, and confirms
+the named local resources are absent before returning.
+
+The local helper regressions exercise the actual HTTP helper, condition waiter,
+and authentication restoration handler using disposable command stubs:
+
+```bash
+go test ./test/e2e/chainsaw/eventgateway/producepolicychain-lifecycle
+```
