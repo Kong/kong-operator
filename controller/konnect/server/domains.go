@@ -29,7 +29,7 @@ func NewDomains(flagValue string) (Domains, error) {
 		if domain == "" {
 			return nil, errors.New("the list of server URL domains cannot contain an empty entry")
 		}
-		if !isDomain(domain) {
+		if !IsDomain(domain) {
 			return nil, fmt.Errorf("invalid server URL domain %q: expected a bare domain, e.g. konghq.com", domain)
 		}
 		domains = append(domains, domain)
@@ -42,11 +42,12 @@ func (d Domains) String() string {
 	return strings.Join(d, ",")
 }
 
-// isDomain reports whether domain is a bare host: parsed as an authority, it
+// IsDomain reports whether domain is a bare host: parsed as an authority, it
 // gives back the same host, with no scheme, port, path or userinfo. An entry
 // that is a valid host but not a DNS name, e.g. a wildcard, matches no host.
 // An IP is refused: NewServer reads the first label as a region, so it cannot match.
-func isDomain(domain string) bool {
+// An empty string is a bare host too: callers that need a value check it.
+func IsDomain(domain string) bool {
 	if net.ParseIP(domain) != nil {
 		return false
 	}

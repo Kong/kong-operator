@@ -386,6 +386,12 @@ func TestCheckKonnectEventGatewayEndpoints(t *testing.T) {
 		{name: "explicit domain", serverURL: privateServerURL, domain: new("us.svc.konghq.tech")},
 		{name: "explicit empty domain", serverURL: privateServerURL, domain: new(""), wantErr: true, wantErrContains: privateServerURL},
 		{name: "explicit domain that carries a path", serverURL: privateServerURL, domain: new("us.svc.konghq.tech/api"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain with a scheme", serverURL: privateServerURL, domain: new("https://konghq.tech"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain with a port", serverURL: privateServerURL, domain: new("proxy.corp:8443")},
+		{name: "explicit domain with a port and a path", serverURL: privateServerURL, domain: new("proxy.corp:8443/api"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain with a non-numeric port", serverURL: privateServerURL, domain: new("proxy.corp:http"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain that is not a host", serverURL: privateServerURL, domain: new("not a host"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain that is an IP", serverURL: privateServerURL, domain: new("10.0.0.1"), wantErr: true, wantErrContains: privateServerURL},
 	}
 
 	for _, tc := range tests {

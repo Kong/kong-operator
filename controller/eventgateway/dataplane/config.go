@@ -19,6 +19,7 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"net"
 	"slices"
 	"strconv"
 	"time"
@@ -417,8 +418,8 @@ func buildKEGEnvVars(
 
 // checkKonnectEventGatewayEndpoints reports whether the data plane can reach the
 // KonnectEventGateway: the Event Gateway builds the host itself, from the region
-// and the domain, and cannot use a path. A domain without a path set on the
-// KegDataPlane lifts the check for that reason, as issue #6107 asks.
+// and the domain, and cannot use a path. A host set on the KegDataPlane, with an
+// optional port, lifts the check for that reason, as issue #6107 asks.
 func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	keg, ok := cp.(*konnectv1alpha1.KonnectEventGateway)
 	if !ok {
@@ -428,14 +429,23 @@ func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddatap
 	if !ok {
 		return fmt.Errorf("unexpected DataPlane object %T", dp)
 	}
-	cfg := egdp.Spec.Config
-	if !konnectendpoint.CarriesPath(keg.Status.ServerURL) ||
-		(cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil &&
-			*cfg.Konnect.Domain != "" && !konnectendpoint.CarriesPath(*cfg.Konnect.Domain)) {
+	var domain string
+	if cfg := egdp.Spec.Config; cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil {
+		domain = *cfg.Konnect.Domain
+	}
+	// A host with an optional port is what the Event Gateway can build its own
+	// host from: anything else lands in the hostname it composes.
+	host := domain
+	if h, port, err := net.SplitHostPort(domain); err == nil {
+		if _, err := strconv.ParseUint(port, 10, 16); err == nil {
+			host = h
+		}
+	}
+	if !konnectendpoint.CarriesPath(keg.Status.ServerURL) || (host != "" && server.IsDomain(host)) {
 		return nil
 	}
 	return fmt.Errorf(
-		"cannot use the private server URL %q: the Event Gateway composes a public Konnect host from the region and the domain and cannot use a path; set spec.config.konnect.domain to a domain without a path to let it connect over the public internet",
+		"cannot use the private server URL %q: the Event Gateway composes a public Konnect host from the region and the domain and cannot use a path; set spec.config.konnect.domain to a host, e.g. proxy.corp:8443, to let it connect over the public internet",
 		keg.Status.ServerURL,
 	)
 }
