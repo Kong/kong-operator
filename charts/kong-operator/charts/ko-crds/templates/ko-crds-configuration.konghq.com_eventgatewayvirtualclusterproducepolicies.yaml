@@ -576,8 +576,6 @@ spec:
                                         maxLength: 253
                                         minLength: 1
                                         type: string
-                                    required:
-                                    - id
                                     type: object
                                   name:
                                     properties:
@@ -615,14 +613,21 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: id must be set only when type is id
-                                  rule: 'self.type == ''id'' ? has(self.id) : !has(self.id)'
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
+                                    self) || (self.type == ''id'' ? has(self.id) &&
+                                    has(self.id.id) : !has(self.id))'
                                 - message: name must be set only when type is name
-                                  rule: 'self.type == ''name'' ? has(self.name) :
-                                    !has(self.name)'
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
+                                    self) || (self.type == ''name'' ? has(self.name)
+                                    : !has(self.name))'
                                 - message: namespacedRef must be set only when type
                                     is namespacedRef
-                                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                                    : !has(self.namespacedRef)'
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
+                                    self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef)
+                                    : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -753,8 +758,6 @@ spec:
                                         maxLength: 253
                                         minLength: 1
                                         type: string
-                                    required:
-                                    - id
                                     type: object
                                   name:
                                     properties:
@@ -792,14 +795,21 @@ spec:
                                 type: object
                                 x-kubernetes-validations:
                                 - message: id must be set only when type is id
-                                  rule: 'self.type == ''id'' ? has(self.id) : !has(self.id)'
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
+                                    self) || (self.type == ''id'' ? has(self.id) &&
+                                    has(self.id.id) : !has(self.id))'
                                 - message: name must be set only when type is name
-                                  rule: 'self.type == ''name'' ? has(self.name) :
-                                    !has(self.name)'
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
+                                    self) || (self.type == ''name'' ? has(self.name)
+                                    : !has(self.name))'
                                 - message: namespacedRef must be set only when type
                                     is namespacedRef
-                                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                                    : !has(self.namespacedRef)'
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
+                                    self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef)
+                                    : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -833,7 +843,8 @@ spec:
                           optionalOldSelf: true
                           rule: '!has(self.json) || !has(self.json.schemaRegistry)
                             || (oldSelf.hasValue() && has(oldSelf.value().json) &&
-                            has(oldSelf.value().json.schemaRegistry))'
+                            has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry
+                            == self.json.schemaRegistry)'
                       description:
                         maxLength: 512
                         type: string
@@ -923,8 +934,6 @@ spec:
                                                 maxLength: 253
                                                 minLength: 1
                                                 type: string
-                                            required:
-                                            - id
                                             type: object
                                           name:
                                             properties:
@@ -963,16 +972,22 @@ spec:
                                         x-kubernetes-validations:
                                         - message: id must be set only when type is
                                             id
-                                          rule: 'self.type == ''id'' ? has(self.id)
-                                            : !has(self.id)'
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value()
+                                            == self) || (self.type == ''id'' ? has(self.id)
+                                            && has(self.id.id) : !has(self.id))'
                                         - message: name must be set only when type
                                             is name
-                                          rule: 'self.type == ''name'' ? has(self.name)
-                                            : !has(self.name)'
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value()
+                                            == self) || (self.type == ''name'' ? has(self.name)
+                                            : !has(self.name))'
                                         - message: namespacedRef must be set only
                                             when type is namespacedRef
-                                          rule: 'self.type == ''namespacedRef'' ?
-                                            has(self.namespacedRef) : !has(self.namespacedRef)'
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value()
+                                            == self) || (self.type == ''namespacedRef''
+                                            ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1

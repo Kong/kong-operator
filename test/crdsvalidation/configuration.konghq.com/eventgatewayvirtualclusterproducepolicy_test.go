@@ -241,6 +241,59 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 					Name: &configurationv1alpha1.SchemaRegistryReferenceByName{Name: "orders-registry"},
 				}),
 			},
+			{
+				Name: "type id with an id passes, and so does an unrelated update",
+				TestObject: withConfluent(&configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{
+					Type: configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID,
+					ID:   &configurationv1alpha1.SchemaRegistryReferenceByID{ID: "6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60"},
+				}),
+				Update: func(obj *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+					obj.Spec.APISpec.ProduceSchemaValidationPolicy.Config.SchemaRegistry.ValueValidationAction = "mark"
+				},
+			},
+			{
+				// The id isn't a required property, so that a stored type id
+				// reference, which the released CRD stored without its id,
+				// can still be updated: the rule of the union requires it,
+				// for a new or changed reference.
+				Name: "type id without its id fails",
+				TestObject: withConfluent(&configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{
+					Type: configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID,
+					ID:   &configurationv1alpha1.SchemaRegistryReferenceByID{},
+				}),
+				ExpectedErrorMessage: new("id must be set only when type is id"),
+			},
+			{
+				Name: "changing the reference to type id without its id fails",
+				TestObject: withConfluent(&configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{
+					Type: configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName,
+					Name: &configurationv1alpha1.SchemaRegistryReferenceByName{Name: "orders-registry"},
+				}),
+				Update: func(obj *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+					obj.Spec.APISpec.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry = &configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{
+						Type: configurationv1alpha1.EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID,
+						ID:   &configurationv1alpha1.SchemaRegistryReferenceByID{},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("id must be set only when type is id"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+
+		// A json schema validation with a schema registry, refused since, is
+		// only kept by stored objects: they can't be created in envtest, but
+		// a json schema validation gaining one on update is still refused.
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy]{
+			{
+				Name:       "a json schema validation gaining a schema registry on update fails",
+				TestObject: withRegistry(nil),
+				Update: func(obj *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+					obj.Spec.APISpec.ProduceSchemaValidationPolicy.Config.JSON.SchemaRegistry = &configurationv1alpha1.EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry{
+						Type:          configurationv1alpha1.EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeNamespacedRef,
+						NamespacedRef: &configurationv1alpha1.EventGatewaySchemaRegistryRef{Name: "orders-registry"},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("json.schemaRegistry can not be set with the type json, which parses without a schema"),
+			},
 		}.RunWithConfig(t, cfg, scheme)
 
 		// The typed client only encodes the member of the type: a stray member,

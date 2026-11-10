@@ -95,9 +95,11 @@
 - `EventGatewayVirtualClusterProducePolicy` and
   `EventGatewayVirtualClusterConsumePolicy`: schema registry references.
   - The CRDs reject specs Konnect refuses: a schema registry reference whose
-    `type` doesn't match the member set, `schemaRegistry` in a `json` schema
-    validation, and a `transcode` or `maskFields` policy without
-    `parentPolicyRef`. Stored objects can still be updated.
+    `type` doesn't match the member set, or of `type: id` without its id,
+    `schemaRegistry` in a `json` schema validation, and a `transcode` or
+    `maskFields` policy without `parentPolicyRef`. A stored object that
+    doesn't follow them can still be updated, e.g. its finalizer removed, as
+    long as it keeps or drops the schema registry reference it has.
   - For a consume `schemaValidation` policy, the Go type of the schema registry
     field is now `EventGatewaySchemaRegistryRefWithNamespacedRef`, and a
     reference moved to `namespacedRef` must drop `kind`.

@@ -2456,6 +2456,18 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		if freeformObjectRef(g.parsed, prop) {
 			tags = append(tags, markerValidationTypeObject())
 		}
+		if isReferenceByIDField(typeName, prop) {
+			// The id was left out of the released CRDs, so a stored by-id
+			// reference may lack it: the union holding the reference requires
+			// it with a rule stored objects still pass (see
+			// emitDiscriminatedUnionCode), rather than a required marker every
+			// update of them would fail without CRD validation ratcheting.
+			for i, tag := range tags {
+				if tag == markerRequired() {
+					tags[i] = markerOptional()
+				}
+			}
+		}
 		for _, tag := range tags {
 			fmt.Fprintf(buf, "\t// %s\n", tag)
 		}
@@ -4452,11 +4464,24 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "// Only one of the fields should be set based on the %s.\n", discriminatorFieldName)
 	buf.WriteString("//\n")
 	if shouldEmitTypeMatchCEL(typeName) {
+		storedObjectsPass := typeMatchCELLetsStoredObjectsPass(typeName)
 		for _, v := range variants {
 			camelDiscValue := jsonName(v.discValue)
-			rule := fmt.Sprintf("self.%s == '%s' ? has(self.%s) : !has(self.%s)", discriminatorJSONName, camelDiscValue, camelDiscValue, camelDiscValue)
+			present := fmt.Sprintf("has(self.%s)", camelDiscValue)
+			if storedObjectsPass && strings.HasSuffix(v.goTypeName, "ReferenceByID") {
+				// The by-id member holds an id it lacked in the released CRDs
+				// (see isReferenceByIDField): it is required here.
+				present = fmt.Sprintf("has(self.%s) && has(self.%s.id)", camelDiscValue, camelDiscValue)
+			}
+			rule := fmt.Sprintf("self.%s == '%s' ? %s : !has(self.%s)", discriminatorJSONName, camelDiscValue, present, camelDiscValue)
 			if legacyOptional {
 				rule = fmt.Sprintf("!has(self.%s) || (%s)", discriminatorJSONName, rule)
+			}
+			if storedObjectsPass {
+				rule = fmt.Sprintf("(oldSelf.hasValue() && oldSelf.value() == self) || (%s)", rule)
+				fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=%q,message=\"%s must be set only when %s is %s\",optionalOldSelf=true\n",
+					rule, camelDiscValue, discriminatorJSONName, camelDiscValue)
+				continue
 			}
 			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=%q,message=\"%s must be set only when %s is %s\"\n",
 				rule, camelDiscValue, discriminatorJSONName, camelDiscValue)
@@ -4631,6 +4656,21 @@ func shouldEmitTypeMatchCEL(typeName string) bool {
 		// type namespacedRef without namespacedRef, would otherwise fail only
 		// when the SDK payload is built.
 		"EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry",
+		"EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry",
+		"EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry":
+		return true
+	default:
+		return false
+	}
+}
+
+// typeMatchCELLetsStoredObjectsPass reports whether the type-match rules of
+// the union, added after its CRD was released, let an unchanged value pass, so
+// stored objects that don't follow them can still be updated, e.g. their
+// finalizers removed, without CRD validation ratcheting.
+func typeMatchCELLetsStoredObjectsPass(typeName string) bool {
+	switch typeName {
+	case "EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry",
 		"EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry",
 		"EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry":
 		return true

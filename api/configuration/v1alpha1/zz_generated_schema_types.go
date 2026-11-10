@@ -395,7 +395,7 @@ type BackendClusterName string
 type BackendClusterReferenceByID struct {
 	// The unique identifier of the backend cluster.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	ID string `json:"id,omitzero"`
@@ -674,7 +674,7 @@ type EncryptionKeyStaticReference struct {
 type EncryptionKeyStaticReferenceByID struct {
 	// The ID of the static key defined in the key source.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	ID string `json:"id,omitzero"`
@@ -1100,7 +1100,7 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 	// The configuration of the policy.
 	//
 	// +required
-	// +kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry))",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true
+	// +kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true
 	Config *EventGatewayConsumeSchemaValidationPolicyConfig `json:"config,omitempty"`
 	// A human-readable description of the policy.
 	//
@@ -5654,9 +5654,9 @@ func (u *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinat
 // EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'id' ? has(self.id) : !has(self.id)",message="id must be set only when type is id"
-// +kubebuilder:validation:XValidation:rule="self.type == 'name' ? has(self.name) : !has(self.name)",message="name must be set only when type is name"
-// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef)",message="namespacedRef must be set only when type is namespacedRef"
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'id' ? has(self.id) && has(self.id.id) : !has(self.id))",message="id must be set only when type is id",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'name' ? has(self.name) : !has(self.name))",message="name must be set only when type is name",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef))",message="namespacedRef must be set only when type is namespacedRef",optionalOldSelf=true
 type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -5868,7 +5868,7 @@ type EventGatewayProduceSchemaValidationPolicy struct {
 	// The configuration of the policy.
 	//
 	// +required
-	// +kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry))",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true
+	// +kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true
 	Config *EventGatewayProduceSchemaValidationPolicyConfig `json:"config,omitempty"`
 	// A human-readable description of the policy.
 	//
@@ -6397,9 +6397,9 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 // EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'id' ? has(self.id) : !has(self.id)",message="id must be set only when type is id"
-// +kubebuilder:validation:XValidation:rule="self.type == 'name' ? has(self.name) : !has(self.name)",message="name must be set only when type is name"
-// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef)",message="namespacedRef must be set only when type is namespacedRef"
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'id' ? has(self.id) && has(self.id.id) : !has(self.id))",message="id must be set only when type is id",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'name' ? has(self.name) : !has(self.name))",message="name must be set only when type is name",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef))",message="namespacedRef must be set only when type is namespacedRef",optionalOldSelf=true
 type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -6607,9 +6607,9 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 // EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
 // Only one of the fields should be set based on the Type.
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'id' ? has(self.id) : !has(self.id)",message="id must be set only when type is id"
-// +kubebuilder:validation:XValidation:rule="self.type == 'name' ? has(self.name) : !has(self.name)",message="name must be set only when type is name"
-// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef)",message="namespacedRef must be set only when type is namespacedRef"
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'id' ? has(self.id) && has(self.id.id) : !has(self.id))",message="id must be set only when type is id",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'name' ? has(self.name) : !has(self.name))",message="name must be set only when type is name",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef))",message="namespacedRef must be set only when type is namespacedRef",optionalOldSelf=true
 type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
 	// Type designates the type of configuration.
 	//
@@ -8099,7 +8099,7 @@ type SchemaRegistryReference map[string]string
 type SchemaRegistryReferenceByID struct {
 	// The unique identifier of the schema registry.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	ID string `json:"id,omitzero"`
@@ -8299,7 +8299,7 @@ type TLSTrustBundleReference struct {
 type TLSTrustBundleReferenceByID struct {
 	// The unique identifier of the TLS trust bundle.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	ID string `json:"id,omitzero"`
@@ -9093,7 +9093,7 @@ type VirtualClusterReference struct {
 type VirtualClusterReferenceByID struct {
 	// The unique identifier of the virtual cluster.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	ID string `json:"id,omitzero"`

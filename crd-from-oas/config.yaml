@@ -1537,11 +1537,12 @@ apiGroupVersions:
               schemaValidation:
                 config:
                   # The type json parses without a schema: Konnect and gw-admin both
-                  # refuse a schema registry with it. A stored object that sets it
-                  # can still be updated, e.g. to remove its finalizer, without
-                  # relying on CRD validation ratcheting.
+                  # refuse a schema registry with it. A stored object that sets one
+                  # can still be updated, e.g. its finalizer removed, as long as it
+                  # keeps that schema registry or drops it: the rule compares with
+                  # the old object rather than relying on CRD validation ratcheting.
                   _validations:
-                    - '+kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry))",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true'
+                    - '+kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
@@ -1628,11 +1629,12 @@ apiGroupVersions:
               schemaValidation:
                 config:
                   # The type json parses without a schema: Konnect and gw-admin both
-                  # refuse a schema registry with it. A stored object that sets it
-                  # can still be updated, e.g. to remove its finalizer, without
-                  # relying on CRD validation ratcheting.
+                  # refuse a schema registry with it. A stored object that sets one
+                  # can still be updated, e.g. its finalizer removed, as long as it
+                  # keeps that schema registry or drops it: the rule compares with
+                  # the old object rather than relying on CRD validation ratcheting.
                   _validations:
-                    - '+kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry))",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true'
+                    - '+kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
