@@ -183,6 +183,17 @@
 
 ### Changed
 
+- On-prem AI Gateway: the operator detects a configuration change made
+  directly on a data plane. It records the configuration hash reported by each
+  data plane after a successful push. At the next sync, it compares the
+  reported hash with the recorded hash. If the hashes differ, it pushes the
+  desired configuration again.
+  [#6518](https://github.com/Kong/kong-operator/pull/6518)
+- Embedded ingress controller: the default DB-less sync detects an out-of-band
+  configuration change while the Kubernetes configuration stays the same. If
+  the reported hash differs from the hash recorded after the last successful
+  push, the sync pushes the configuration again.
+  [#6518](https://github.com/Kong/kong-operator/pull/6518)
 - `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
   from being issued.

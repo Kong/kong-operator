@@ -2,6 +2,7 @@ package aigateway
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr/testr"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -31,6 +33,7 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	dataplanepush "github.com/kong/kong-operator/v2/ingress-controller/pkg/dataplane/push"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
@@ -78,8 +81,18 @@ var newTestTypeConverter = sync.OnceValue(func() managedfields.TypeConverter {
 // fakePushClient records the payloads pushed through it and fails every push when
 // failErr is set.
 type fakePushClient struct {
-	payloads []string
-	failErr  error
+	payloads     []string
+	failErr      error
+	status       *kong.Status
+	statusErr    error
+	statusCalls  int
+	acceptedHash string
+}
+
+// fakeConfigHash is a stable stand-in for the configuration hash Kong reports
+// after accepting a push.
+func fakeConfigHash(body []byte) string {
+	return fmt.Sprintf("%x", sha256.Sum256(body))
 }
 
 func (f *fakePushClient) ReloadDeclarativeRawConfig(_ context.Context, config io.Reader, _, _ bool) error {
@@ -88,7 +101,24 @@ func (f *fakePushClient) ReloadDeclarativeRawConfig(_ context.Context, config io
 		return err
 	}
 	f.payloads = append(f.payloads, string(b))
-	return f.failErr
+	if f.failErr != nil {
+		return f.failErr
+	}
+	f.acceptedHash = fakeConfigHash(b)
+	// A successful push replaces any reported out-of-band configuration.
+	f.status = nil
+	return nil
+}
+
+func (f *fakePushClient) Status(context.Context) (*kong.Status, error) {
+	f.statusCalls++
+	if f.statusErr != nil {
+		return nil, f.statusErr
+	}
+	if f.status != nil {
+		return f.status, nil
+	}
+	return &kong.Status{ConfigurationHash: f.acceptedHash}, nil
 }
 
 // fakePushClientFactory stubs Instance.newPushClient: it records the endpoints it
@@ -224,6 +254,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		condition := getGatewayPushCondition(t, instance)
 		require.Equal(t, metav1.ConditionTrue, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushSucceededReason), condition.Reason)
+		require.Equal(t, "Configuration pushed to 2 Admin API endpoints", condition.Message)
 	})
 
 	t.Run("pushes to the remaining endpoints when one fails", func(t *testing.T) {
@@ -302,6 +333,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, pushed)
 		require.Empty(t, factory.built)
+		require.Equal(t, "No Admin API endpoints discovered", getGatewayPushCondition(t, instance).Message)
 	})
 
 	t.Run("missing certificate material fails", func(t *testing.T) {
@@ -325,27 +357,208 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason), condition.Reason)
 	})
 
-	t.Run("caches push clients across syncs and prunes churned endpoints", func(t *testing.T) {
+	t.Run("caches push clients and skips unchanged configurations", func(t *testing.T) {
 		instance := testPushInstance(t, adminClientCertSecret())
 		factory := &fakePushClientFactory{}
 		instance.newPushClient = factory.newPushClient
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444"), adminAPI("https://10.0.0.2:8444")))
 
-		// The first sync builds one client per endpoint; the retry loop re-runs
-		// the sync, so the second one must reuse the cached clients.
+		// The first sync builds one client per endpoint and pushes.
 		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, factory.built, 2)
+
+		// The retry loop re-runs the sync: the clients are reused and the
+		// unchanged configuration is not pushed again.
 		requirePushed(t, instance, gwNN, yamlPayload)
 		require.Len(t, factory.built, 2)
 		for addr, c := range factory.clients {
-			require.Len(t, c.payloads, 2, "expected exactly two pushes to %s", addr)
+			require.Len(t, c.payloads, 1, "expected exactly one push to %s", addr)
+			require.Equal(t, 2, c.statusCalls, "expected a status request after the push and one on the unchanged sync for %s", addr)
 		}
+		// Nothing was pushed on the second sync, and the condition says so.
+		require.Equal(t, "Configuration unchanged on all 2 Admin API endpoints, push skipped",
+			getGatewayPushCondition(t, instance).Message)
 
-		// Endpoints no longer discovered get their cached clients pruned, and
-		// newly discovered ones get fresh clients.
+		// Endpoints no longer discovered get their cached clients and SHAs
+		// pruned, and newly discovered ones get fresh clients.
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.2:8444"), adminAPI("https://10.0.0.3:8444")))
 		requirePushed(t, instance, gwNN, yamlPayload)
 		require.Len(t, factory.built, 3)
 		require.Len(t, instance.pushClients, 2)
+		require.Len(t, instance.lastSuccessfulConfigSHAs, 2)
+		require.Len(t, instance.lastDBLessConfigHashes, 2)
+		require.Len(t, factory.clients["https://10.0.0.2:8444"].payloads, 1)
+		require.Len(t, factory.clients["https://10.0.0.3:8444"].payloads, 1)
+		// Only the newly discovered endpoint was pushed.
+		require.Equal(t, "Configuration pushed to 1 of 2 Admin API endpoints, the rest were unchanged",
+			getGatewayPushCondition(t, instance).Message)
+	})
+
+	t.Run("forces a push when the endpoint reports the initial hash", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		requirePushed(t, instance, gwNN, yamlPayload)
+		client := factory.clients["https://10.0.0.1:8444"]
+		require.Equal(t, 1, client.statusCalls, "expected the post-push status request")
+
+		client.status = &kong.Status{ConfigurationHash: dataplanepush.WellKnownInitialHash}
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Equal(t, 3, client.statusCalls)
+		require.Len(t, client.payloads, 2)
+	})
+
+	t.Run("repairs a configuration that drifted on the data plane", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		requirePushed(t, instance, gwNN, yamlPayload)
+		client := factory.clients["https://10.0.0.1:8444"]
+
+		// The data plane configuration changed outside the operator while the
+		// desired configuration stayed the same.
+		client.status = &kong.Status{
+			ConfigurationHash: fakeConfigHash([]byte(`{"drift":true}`)),
+		}
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, client.payloads, 2, "drift must force a push")
+
+		// After the repair the reported hash matches the pushed body again.
+		client.status = nil
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, client.payloads, 2, "the repaired configuration must not be pushed again")
+	})
+
+	t.Run("status failure prevents the push and retries it", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		requirePushed(t, instance, gwNN, yamlPayload)
+		client := factory.clients["https://10.0.0.1:8444"]
+		client.statusErr = errors.New("status unavailable")
+
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.ErrorContains(t, err, "failed to check configuration change")
+		require.ErrorContains(t, err, "status unavailable")
+		require.Len(t, client.payloads, 1)
+	})
+
+	t.Run("failed push does not record the SHA", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{failures: map[string]error{
+			"https://10.0.0.1:8444": errors.New("connection refused"),
+		}}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.Error(t, err)
+		require.Empty(t, instance.lastSuccessfulConfigSHAs)
+		client := factory.clients["https://10.0.0.1:8444"]
+		require.Zero(t, client.statusCalls)
+
+		client.failErr = nil
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Equal(t, 1, client.statusCalls, "the retry must push and record the reported hash")
+		require.Len(t, client.payloads, 2)
+		require.Len(t, instance.lastSuccessfulConfigSHAs, 1)
+	})
+
+	t.Run("healthy endpoints skip while failed endpoints retry", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{failures: map[string]error{
+			"https://10.0.0.1:8444": errors.New("connection refused"),
+		}}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444"), adminAPI("https://10.0.0.2:8444")))
+
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.Error(t, err)
+		require.Len(t, instance.lastSuccessfulConfigSHAs, 1)
+
+		failed := factory.clients["https://10.0.0.1:8444"]
+		healthy := factory.clients["https://10.0.0.2:8444"]
+		failed.failErr = nil
+
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, failed.payloads, 2)
+		require.Equal(t, 1, failed.statusCalls)
+		require.Len(t, healthy.payloads, 1)
+		require.Equal(t, 2, healthy.statusCalls)
+	})
+
+	t.Run("empty discovery clears push state", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.NotEmpty(t, instance.pushClients)
+		require.NotEmpty(t, instance.lastSuccessfulConfigSHAs)
+
+		instance.setAdminAPIs(sets.New[adminapi.DiscoveredAdminAPI]())
+		pushed, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.NoError(t, err)
+		require.False(t, pushed)
+		require.Empty(t, instance.pushClients)
+		require.Empty(t, instance.lastSuccessfulConfigSHAs)
+		require.Empty(t, instance.lastDBLessConfigHashes)
+	})
+
+	t.Run("push-client rebuild does not force a push", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, factory.built, 1)
+
+		// Simulate a rebuild after certificate material changed: the SHA is
+		// keyed by endpoint, so the rebuilt client does not force a push.
+		instance.pushClients = nil
+
+		requirePushed(t, instance, gwNN, yamlPayload)
+		require.Len(t, factory.built, 2)
+		require.Len(t, factory.clients["https://10.0.0.1:8444"].payloads, 1)
+	})
+
+	t.Run("flattened entity errors are reported", func(t *testing.T) {
+		body := []byte(`{
+			"message": "declarative config is invalid",
+			"flattened_errors": [{
+				"entity_type": "certificates",
+				"entity_name": "ca-cert-a",
+				"entity_tags": ["ai-gateway-name:ca-cert-a"],
+				"errors": [{"type": "field", "field": "cert", "message": "invalid certificate"}]
+			}]
+		}`)
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{failures: map[string]error{
+			"https://10.0.0.1:8444": kong.NewAPIErrorWithRaw(400, "declarative config is invalid", body),
+		}}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.ErrorContains(t, err, "certificates/ca-cert-a: cert: invalid certificate")
+	})
+
+	t.Run("malformed flattened errors preserve the push error", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{failures: map[string]error{
+			"https://10.0.0.1:8444": kong.NewAPIErrorWithRaw(400, "declarative config is invalid", []byte(`{`)),
+		}}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.ErrorContains(t, err, "declarative config is invalid")
 	})
 }
 
@@ -552,7 +765,7 @@ func TestReportTranslationStatus(t *testing.T) {
 
 		// Translation reported first, push second.
 		instance.reportTranslationStatus(ctx, gwNN, errors.New("rendering failed"), nil, nil)
-		require.NoError(t, instance.reportPushStatus(ctx, gwNN, 1, nil))
+		require.NoError(t, instance.reportPushStatus(ctx, gwNN, 1, 1, nil))
 		require.Equal(t, metav1.ConditionFalse,
 			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType).Status)
 		require.Equal(t, metav1.ConditionTrue,
@@ -561,7 +774,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		// Push reported first, translation second: the translation condition
 		// must not have been pruned by the push apply.
 		instance = testPushInstance(t)
-		require.NoError(t, instance.reportPushStatus(ctx, gwNN, 1, []string{"endpoint down"}))
+		require.NoError(t, instance.reportPushStatus(ctx, gwNN, 0, 1, []string{"endpoint down"}))
 		instance.reportTranslationStatus(ctx, gwNN, nil, nil, nil)
 		require.Equal(t, metav1.ConditionTrue,
 			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType).Status)

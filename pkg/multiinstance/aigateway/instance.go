@@ -193,6 +193,18 @@ type Instance struct {
 	// touches it, so no locking.
 	pushClients map[string]pusher
 
+	// lastSuccessfulConfigSHAs holds the SHA of the last configuration pushed
+	// successfully to each discovered endpoint. It is keyed by endpoint rather
+	// than by push-client cache key so certificate rotation does not force a
+	// redundant push. Only the sync loop goroutine touches it.
+	lastSuccessfulConfigSHAs map[adminapi.DiscoveredAdminAPI][]byte
+
+	// lastDBLessConfigHashes holds the configuration hash reported by each
+	// endpoint after its last successful push. A later unchanged sync compares
+	// it with the reported hash to detect out-of-band changes. Only the sync
+	// loop goroutine touches it.
+	lastDBLessConfigHashes map[adminapi.DiscoveredAdminAPI]string
+
 	// statusReporter records the per-entity outcome of the configuration syncs
 	// (translation and push) and serves it to the configuration-entity
 	// reconcilers, which turn it into the entities' Programmed conditions.
@@ -219,14 +231,16 @@ func NewInstance(
 	env Env,
 ) *Instance {
 	return &Instance{
-		id:             id,
-		logger:         logger.WithValues("instanceID", id.String()),
-		env:            env,
-		cfg:            cfg,
-		cn:             changenotifier.New(),
-		newPushClient:  newMTLSClientAdapter,
-		statusReporter: NewEntityStatusReporter(env.Scheme),
-		done:           make(chan struct{}),
+		id:                       id,
+		logger:                   logger.WithValues("instanceID", id.String()),
+		env:                      env,
+		cfg:                      cfg,
+		cn:                       changenotifier.New(),
+		newPushClient:            newMTLSClientAdapter,
+		lastSuccessfulConfigSHAs: map[adminapi.DiscoveredAdminAPI][]byte{},
+		lastDBLessConfigHashes:   map[adminapi.DiscoveredAdminAPI]string{},
+		statusReporter:           NewEntityStatusReporter(env.Scheme),
+		done:                     make(chan struct{}),
 	}
 }
 

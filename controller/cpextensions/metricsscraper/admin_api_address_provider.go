@@ -1,38 +1,48 @@
 package metricsscraper
 
 import (
+	"cmp"
 	"context"
-	"fmt"
-	"strings"
+	"slices"
 
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // AdminAPIAddressProvider is an interface for providing the admin API addresses for a DataPlane.
 type AdminAPIAddressProvider interface {
-	AdminAddressesForDP(ctx context.Context, dataplane *operatorv1beta1.DataPlane) ([]string, error)
+	AdminAddressesForDP(ctx context.Context, dataplane *operatorv1beta1.DataPlane) ([]adminapidiscovery.DiscoveredAdminAPI, error)
 }
 
 type adminAPIAddressProvider struct {
-	client client.Client
+	client     client.Client
+	discoverer *adminapidiscovery.Discoverer
 }
 
 // NewAdminAPIAddressProvider creates a new AdminAPIAddressProvider.
-func NewAdminAPIAddressProvider(cl client.Client) *adminAPIAddressProvider {
-	return &adminAPIAddressProvider{
-		client: cl,
+func NewAdminAPIAddressProvider(cl client.Client) (*adminAPIAddressProvider, error) {
+	discoverer, err := adminapidiscovery.NewDiscoverer(sets.New(consts.DataPlaneAdminServicePortName))
+	if err != nil {
+		return nil, err
 	}
+	return &adminAPIAddressProvider{
+		client:     cl,
+		discoverer: discoverer,
+	}, nil
 }
 
 // AdminAddressesForDP returns the admin API addresses for the given DataPlane.
-func (a *adminAPIAddressProvider) AdminAddressesForDP(ctx context.Context, dataplane *operatorv1beta1.DataPlane) ([]string, error) {
+func (a *adminAPIAddressProvider) AdminAddressesForDP(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+) ([]adminapidiscovery.DiscoveredAdminAPI, error) {
 	labelReqs := []struct {
 		labelName string
 		selector  selection.Operator
@@ -69,10 +79,7 @@ func (a *adminAPIAddressProvider) AdminAddressesForDP(ctx context.Context, datap
 		labelselector = labelselector.Add(*labelReq)
 	}
 
-	var (
-		endpointsList discoveryv1.EndpointSliceList
-		urls          []string
-	)
+	var endpointsList discoveryv1.EndpointSliceList
 	if err := a.client.List(ctx, &endpointsList, &client.ListOptions{
 		LabelSelector: labelselector,
 		Namespace:     dataplane.Namespace,
@@ -80,102 +87,56 @@ func (a *adminAPIAddressProvider) AdminAddressesForDP(ctx context.Context, datap
 		return nil, err
 	}
 
+	discovered := sets.New[adminapidiscovery.DiscoveredAdminAPI]()
 	for _, es := range endpointsList.Items {
-		var serviceName string
-		for _, or := range es.OwnerReferences {
-			if or.Kind == "Service" && or.APIVersion == "v1" {
-				serviceName = or.Name
-				break
-			}
+		// The scraper keeps its IPv4-only behavior.
+		if es.AddressType != discoveryv1.AddressTypeIPv4 {
+			continue
 		}
-		if serviceName == "" {
+		if !hasServiceOwner(es) {
 			continue
 		}
 
-		for _, port := range es.Ports {
-			if port.Port == nil {
-				continue
+		// The scraper must not use unready endpoints during a rollout.
+		es.Endpoints = slices.DeleteFunc(es.Endpoints, func(endpoint discoveryv1.Endpoint) bool {
+			if len(endpoint.Addresses) == 0 {
+				return true
 			}
-
-			for _, endpoint := range es.Endpoints {
-				if len(endpoint.Addresses) == 0 {
-					continue
-				}
-				if endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating {
-					continue
-				}
-				if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
-					continue
-				}
-				if endpoint.Conditions.Serving != nil && !*endpoint.Conditions.Serving {
-					continue
-				}
-
-				svc := k8stypes.NamespacedName{
-					Name:      serviceName,
-					Namespace: es.Namespace,
-				}
-
-				// TODO: support IPv6
-				if es.AddressType != discoveryv1.AddressTypeIPv4 {
-					continue
-				}
-
-				url, err := adminAPIFromEndpoint(endpoint, port, svc)
-				if err != nil {
-					return nil, err
-				}
-
-				urls = append(urls, url.Address)
+			if endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating {
+				return true
 			}
+			if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
+				return true
+			}
+			return endpoint.Conditions.Serving != nil && !*endpoint.Conditions.Serving
+		})
+
+		adminAPIs, err := a.discoverer.AdminAPIsFromEndpointSlice(es)
+		if err != nil {
+			return nil, err
+		}
+		discovered = discovered.Union(adminAPIs)
+	}
+
+	if discovered.Len() == 0 {
+		return nil, nil
+	}
+
+	addresses := make([]adminapidiscovery.DiscoveredAdminAPI, 0, discovered.Len())
+	for endpoint := range discovered {
+		addresses = append(addresses, endpoint)
+	}
+	slices.SortFunc(addresses, func(a, b adminapidiscovery.DiscoveredAdminAPI) int {
+		return cmp.Compare(a.Address, b.Address)
+	})
+	return addresses, nil
+}
+
+func hasServiceOwner(endpointSlice discoveryv1.EndpointSlice) bool {
+	for _, owner := range endpointSlice.OwnerReferences {
+		if owner.Kind == "Service" && owner.APIVersion == "v1" && owner.Name != "" {
+			return true
 		}
 	}
-
-	return urls, nil
-}
-
-// DiscoveredAdminAPI represents an Admin API discovered from a Kubernetes Service.
-type DiscoveredAdminAPI struct {
-	// Address is the Admin API's URL reachable from within the cluster.
-	Address string
-}
-
-func adminAPIFromEndpoint(
-	endpoint discoveryv1.Endpoint,
-	port discoveryv1.EndpointPort,
-	service k8stypes.NamespacedName,
-) (DiscoveredAdminAPI, error) {
-	// NOTE: Endpoint's addresses are assumed to be fungible, therefore we pick
-	// only the first one.
-	// For the context please see the `Endpoint.Addresses` godoc.
-	eAddress := endpoint.Addresses[0]
-
-	// NOTE: We assume https below because the referenced Admin API
-	// server will live in another Pod/elsewhere so allowing http would
-	// not be considered best practice.
-
-	if service.Name == "" {
-		return DiscoveredAdminAPI{}, fmt.Errorf(
-			"service name is empty for an endpoint with TargetRef %s/%s",
-			endpoint.TargetRef.Namespace, endpoint.TargetRef.Name,
-		)
-	}
-
-	// NOTE: This uses the service scoped Pod DNS strategy similar to the one
-	// used by KIC but in here that's the only one available because when the
-	// operator generates the DataPlane certifcates it uses only the DNS names
-	// and not IPs (primarily because the IPs are not known at the time of creation
-	// and it would be infeasible to reissue the certificates every time the IPs
-	// change).
-	// Alternatively this could use the namespace scope Pod DNS strategy but that
-	// would be less secure (only namespace scoped, not bound to DataPlane Service)
-	// and it would require change in the DataPlane certificate generation logic.
-	// Hence for now we only allow service scoped DNS names.
-
-	ipAddr := strings.ReplaceAll(eAddress, ".", "-")
-	address := fmt.Sprintf("%s.%s.%s.svc", ipAddr, service.Name, service.Namespace)
-
-	return DiscoveredAdminAPI{
-		Address: fmt.Sprintf("https://%s:%d", address, *port.Port),
-	}, nil
+	return false
 }

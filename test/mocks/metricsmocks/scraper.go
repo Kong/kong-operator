@@ -5,15 +5,19 @@ import (
 	"time"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 )
 
 type MockAdminAPIAddressProvider struct {
-	Addresses []string
+	Endpoints []adminapi.DiscoveredAdminAPI
 }
 
-func (m *MockAdminAPIAddressProvider) AdminAddressesForDP(ctx context.Context, dataplane *operatorv1beta1.DataPlane) ([]string, error) {
-	return m.Addresses, nil
+func (m *MockAdminAPIAddressProvider) AdminAddressesForDP(
+	ctx context.Context,
+	dataplane *operatorv1beta1.DataPlane,
+) ([]adminapi.DiscoveredAdminAPI, error) {
+	return m.Endpoints, nil
 }
 
 type MockRecorder struct{}

@@ -34,6 +34,9 @@ type Client struct {
 
 	lastConfigSHALock sync.RWMutex
 	lastConfigSHA     []byte
+	// lastDBLessConfigHash is the configuration hash reported by Kong after the
+	// last successful push. It is used to detect out-of-band configuration drift.
+	lastDBLessConfigHash string
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
 	// tlsServerName stores the SNI used to verify the Admin API certificate.
@@ -191,6 +194,22 @@ func (c *Client) LastConfigSHA() []byte {
 	c.lastConfigSHALock.RLock()
 	defer c.lastConfigSHALock.RUnlock()
 	return c.lastConfigSHA
+}
+
+// SetLastDBLessConfigHash stores the configuration hash reported by Kong after
+// the last successful push.
+func (c *Client) SetLastDBLessConfigHash(hash string) {
+	c.lastConfigSHALock.Lock()
+	defer c.lastConfigSHALock.Unlock()
+	c.lastDBLessConfigHash = hash
+}
+
+// LastDBLessConfigHash returns the configuration hash reported by Kong after the
+// last successful push.
+func (c *Client) LastDBLessConfigHash() string {
+	c.lastConfigSHALock.RLock()
+	defer c.lastConfigSHALock.RUnlock()
+	return c.lastDBLessConfigHash
 }
 
 // AttachPodReference allows attaching a Pod reference to the client. Should be used in case we know what Pod the client

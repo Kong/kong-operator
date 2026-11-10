@@ -343,6 +343,28 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want:      sets.New[DiscoveredAdminAPI](),
 		},
 		{
+			name: "matching named ports without a number are skipped",
+			endpoints: discoveryv1.EndpointSlice{
+				ObjectMeta:  endpointsSliceObjectMeta,
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       new(true),
+							Terminating: new(false),
+						},
+						TargetRef: testPodReference(namespaceName, "pod-1"),
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{{
+					Name: new("admin"),
+				}},
+			},
+			portNames: sets.New("admin"),
+			want:      sets.New[DiscoveredAdminAPI](),
+		},
+		{
 			name: "multiple ports names",
 			endpoints: discoveryv1.EndpointSlice{
 				ObjectMeta:  endpointsSliceWithOwnerReferenceObjectMeta,
