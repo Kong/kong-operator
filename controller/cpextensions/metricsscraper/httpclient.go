@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -31,6 +32,35 @@ func httpClientWithCerts(certs certs) *http.Client {
 		},
 	}
 	return &httpClient
+}
+
+// endpointHTTPClients caches the per-endpoint HTTP clients. Each cloned
+// transport owns its own connection pool, so cloning on every call would pay a
+// new TCP and TLS handshake every time and leak the dropped pool's connections.
+type endpointHTTPClients struct {
+	lock    sync.Mutex
+	clients map[string]*http.Client
+}
+
+// ForEndpoint returns the cached client for serverName. It clones base on the
+// first call for that server name.
+func (c *endpointHTTPClients) ForEndpoint(base *http.Client, serverName string) (*http.Client, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if client, ok := c.clients[serverName]; ok {
+		return client, nil
+	}
+
+	client, err := httpClientForEndpoint(base, serverName)
+	if err != nil {
+		return nil, err
+	}
+	if c.clients == nil {
+		c.clients = make(map[string]*http.Client)
+	}
+	c.clients[serverName] = client
+	return client, nil
 }
 
 // httpClientForEndpoint clones the base client and its transport, then sets the

@@ -50,6 +50,7 @@ type Metrics struct {
 type PrometheusMetricsScraper struct {
 	logger                  logr.Logger
 	httpClient              *http.Client
+	endpointClients         endpointHTTPClients
 	dp                      *operatorv1beta1.DataPlane
 	adminAPIAddressProvider AdminAPIAddressProvider
 
@@ -89,7 +90,7 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 	}
 
 	for _, endpoint := range endpoints {
-		httpClient, err := httpClientForEndpoint(p.httpClient, endpoint.TLSServerName)
+		httpClient, err := p.endpointClients.ForEndpoint(p.httpClient, endpoint.TLSServerName)
 		if err != nil {
 			return Metrics{}, err
 		}

@@ -43,3 +43,18 @@ func TestHTTPClientForEndpointRejectsCustomTransport(t *testing.T) {
 	_, err := httpClientForEndpoint(base, "pod.default.svc")
 	require.ErrorContains(t, err, "unsupported HTTP transport type")
 }
+
+func TestEndpointHTTPClientsReuseClientPerServerName(t *testing.T) {
+	base := &http.Client{Transport: &http.Transport{}}
+	var clients endpointHTTPClients
+
+	first, err := clients.ForEndpoint(base, "pod.first.default.svc")
+	require.NoError(t, err)
+	again, err := clients.ForEndpoint(base, "pod.first.default.svc")
+	require.NoError(t, err)
+	other, err := clients.ForEndpoint(base, "pod.second.default.svc")
+	require.NoError(t, err)
+
+	require.Same(t, first, again)
+	require.NotSame(t, first, other)
+}

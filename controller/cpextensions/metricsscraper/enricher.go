@@ -43,6 +43,7 @@ type metricsEnricher struct {
 	dataplane               *operatorv1beta1.DataPlane
 	adminAPIAddressProvider AdminAPIAddressProvider
 	httpClient              *http.Client
+	endpointClients         *endpointHTTPClients
 	cl                      client.Client
 	logger                  logr.Logger
 }
@@ -59,6 +60,7 @@ func NewEnricher(
 		dataplane:               dataplane,
 		adminAPIAddressProvider: adminAPIAddressProvider,
 		httpClient:              httpClientWithCerts(certs),
+		endpointClients:         &endpointHTTPClients{},
 		cl:                      cl,
 		logger:                  logger,
 	}, nil
@@ -91,7 +93,7 @@ func (me metricsEnricher) Consume(ctx context.Context, m Metrics) error {
 
 	// A DataPlane has homogenous configuration so we just take the first
 	// address available and use it to get the Kong services from the configuration.
-	httpClient, err := httpClientForEndpoint(me.httpClient, endpoints[0].TLSServerName)
+	httpClient, err := me.endpointClients.ForEndpoint(me.httpClient, endpoints[0].TLSServerName)
 	if err != nil {
 		return fmt.Errorf("failed creating HTTP client for DataPlane %s error: %w",
 			client.ObjectKeyFromObject(me.dataplane), err,

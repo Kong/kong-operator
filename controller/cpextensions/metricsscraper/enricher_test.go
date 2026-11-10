@@ -41,7 +41,8 @@ func TestMetricsEnricher_UsesEndpointAddressAndTLSServerName(t *testing.T) {
 		httpClient: &http.Client{Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // test server certificate
 		}},
-		logger: logr.Discard(),
+		endpointClients: &endpointHTTPClients{},
+		logger:          logr.Discard(),
 	}
 
 	err := enricher.Consume(t.Context(), Metrics{metrics: metricsMap{}})
