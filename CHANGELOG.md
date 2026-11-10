@@ -114,6 +114,12 @@
 - A missing CA Secret now reports an error that names the Secret and the
   secret label selector, instead of a bare `not found` message.
   [#6500](https://github.com/Kong/kong-operator/issues/6500)
+- `Gateway`: Missing route CRDs are now skipped when counting attached routes, and
+  listener `supportedKinds` reflects the route CRDs installed in the cluster.
+  Listeners whose protocol has no installed route kind at all report `ResolvedRefs=False`
+  with reason `InvalidRouteKinds`, and so do listeners that explicitly allow a
+  route kind whose CRD is not installed in the cluster.
+  [#6482](https://github.com/Kong/kong-operator/pull/6482)
 
 ### Added
 

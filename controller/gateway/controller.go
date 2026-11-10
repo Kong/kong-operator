@@ -89,6 +89,10 @@ type Reconciler struct {
 	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
 	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
 	ReferenceGrantVersion schema.GroupVersion
+
+	// installedRouteKinds holds the route kinds whose CRDs exist at startup.
+	// The watches use the same set, so a CRD installed later needs an operator restart.
+	installedRouteKinds routeKindSet
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -168,6 +172,9 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
+	// HTTPRoute is a required CRD, so it is always installed.
+	r.installedRouteKinds = routeKindSet{"HTTPRoute": {}}
+
 	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
 	tlsRouteGVR := schema.GroupVersionResource{
 		Group:    gatewayv1.GroupVersion.Group,
@@ -179,6 +186,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
 	}
 	if tlsRouteExist {
+		r.installedRouteKinds["TLSRoute"] = struct{}{}
 		blder.Watches(
 			&gatewayv1.TLSRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTLSRoute),
@@ -198,6 +206,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		return fmt.Errorf("failed to check if GRPCRoute CRD exists: %w", err)
 	}
 	if grpcRouteExist {
+		r.installedRouteKinds["GRPCRoute"] = struct{}{}
 		blder.Watches(
 			&gatewayv1.GRPCRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByGRPCRoute),
@@ -217,6 +226,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		return fmt.Errorf("failed to check if UDPRoute CRD exists: %w", err)
 	}
 	if udpRouteExist {
+		r.installedRouteKinds["UDPRoute"] = struct{}{}
 		blder.Watches(
 			&gwtypes.UDPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByUDPRoute),
@@ -236,6 +246,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		return err
 	}
 	if tcpRouteExist {
+		r.installedRouteKinds["TCPRoute"] = struct{}{}
 		blder.Watches(
 			&gatewayv1.TCPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysAttachedByTCPRoute),
@@ -315,12 +326,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	log.Trace(logger, "resource is supported that it gets marked as accepted")
 	gwConditionAware.initListenersStatus()
 	gwConditionAware.setConflicted()
-	if err = gwConditionAware.setAcceptedAndAttachedRoutes(ctx, r.Client); err != nil {
+	if err = gwConditionAware.setAcceptedAndAttachedRoutes(ctx, r.Client, r.installedRouteKinds); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	gwConditionAware.initProgrammedAndListenersStatus()
-	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion); err != nil {
+	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion, r.installedRouteKinds); err != nil {
 		return ctrl.Result{}, err
 	}
 	// Validate the infrastructure.parametersRef early. If it references an
