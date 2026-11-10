@@ -506,6 +506,12 @@ func resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDe
 			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayVirtualCluster %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue

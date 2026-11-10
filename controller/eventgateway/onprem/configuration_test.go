@@ -752,3 +752,42 @@ func mustPolicyID(t *testing.T, e gwadminapi.GatewayEntitySet) string {
 	require.NotEmpty(t, id)
 	return id
 }
+
+// A Secret key holding an empty value can't be sent: gw-admin refuses it. It is
+// reported as a problem of the Secret, and the entity sent as it was last.
+func TestBuildConfigurationEmptySecretValue(t *testing.T) {
+	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: "gateway", Namespace: ns}
+	gateway.SetUID(types.UID(uuid.NewString()))
+	created := time.Date(2026, 11, 5, 10, 0, 0, 500_000_000, time.UTC)
+	bundle := fromYAML[configurationv1alpha1.EventGatewayTLSTrustBundle](t, created, `
+metadata: {name: bundle}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: bundle
+    config: {trustedCa: {type: secretRef, secretRef: {name: ca, key: ca.crt}}}
+`)
+	secret := func(value string) *corev1.Secret {
+		return &corev1.Secret{Name: "ca", Namespace: ns, Data: map[string][]byte{"ca.crt": []byte(value)}}
+	}
+
+	cfg, err := buildConfiguration(t.Context(), newFakeClient(t, bundle, secret("")), gateway, "", nil)
+	require.NoError(t, err)
+	require.Len(t, cfg.excluded, 1)
+	assert.True(t, cfg.excluded[0].blocks)
+	assert.Equal(t, `the key "ca.crt" of the Secret default/ca is empty`, cfg.excluded[0].message)
+	require.NotNil(t, cfg.excluded[0].secretRefValid)
+	assert.Equal(t, metav1.ConditionFalse, cfg.excluded[0].secretRefValid.Status)
+
+	t.Run("sent as it was last, once it was sent", func(t *testing.T) {
+		sent, err := buildConfiguration(t.Context(), newFakeClient(t, bundle, secret("ca-pem")), gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, sent.excluded)
+		kept, err := buildConfiguration(t.Context(), newFakeClient(t, bundle, secret("")), gateway, "", sent.built)
+		require.NoError(t, err)
+		require.Empty(t, kept.excluded)
+		require.Len(t, kept.included, 1)
+		assert.True(t, kept.included[0].kept)
+		assert.Equal(t, "ca-pem", kept.entities.TlsTrustBundles[0].Config.TrustedCa)
+	})
+}

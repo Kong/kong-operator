@@ -28,6 +28,20 @@ func TestEventGatewayReferencesToOnPremEntities(t *testing.T) {
 			&EventGatewaySchemaRegistry{Name: "registry", Namespace: ns, Spec: EventGatewaySchemaRegistrySpec{ParentRef: onPremRef}},
 			&EventGatewayStaticKey{Name: "key", Namespace: ns, Spec: EventGatewayStaticKeySpec{ParentRef: onPremRef}},
 			&EventGatewayTLSTrustBundle{Name: "bundle", Namespace: ns, Spec: EventGatewayTLSTrustBundleSpec{ParentRef: onPremRef}},
+			&EventGatewayBackendCluster{Name: "backend", Namespace: ns, Spec: EventGatewayBackendClusterSpec{ParentRef: onPremRef}},
+			&EventGatewayVirtualCluster{Name: "virtual-cluster", Namespace: ns, Spec: EventGatewayVirtualClusterSpec{
+				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
+					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "backend"},
+				},
+			}},
+			// Its backend cluster doesn't exist (yet): it waits to be programmed.
+			&EventGatewayVirtualCluster{Name: "orphan", Namespace: ns, Spec: EventGatewayVirtualClusterSpec{
+				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
+					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "missing"},
+				},
+			}},
 		).Build()
 	}
 
@@ -92,5 +106,27 @@ spec:
 		_, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(t.Context(), newClient(t), policy)
 		require.ErrorAs(t, err, new(ReferenceNotKonnectManagedError))
 		require.ErrorContains(t, err, "EventGatewayTLSTrustBundle default/bundle is not attached to a Konnect gateway")
+	})
+
+	t.Run("listener policy forwarding to a virtual cluster of an on-prem backend cluster", func(t *testing.T) {
+		forwardTo := func(t *testing.T, name string) *EventGatewayListenerPolicy {
+			policy := &EventGatewayListenerPolicy{}
+			unmarshal(t, `
+metadata: {name: forward, namespace: default}
+spec:
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: `+name+`}}}}
+`, policy)
+			return policy
+		}
+		_, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(t.Context(), newClient(t), forwardTo(t, "virtual-cluster"))
+		require.ErrorAs(t, err, new(ReferenceNotKonnectManagedError))
+		require.ErrorContains(t, err, "EventGatewayVirtualCluster default/virtual-cluster is not attached to a Konnect gateway")
+
+		_, err = resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(t.Context(), newClient(t), forwardTo(t, "orphan"))
+		require.ErrorAs(t, err, new(ReferenceNotProgrammedError))
 	})
 }

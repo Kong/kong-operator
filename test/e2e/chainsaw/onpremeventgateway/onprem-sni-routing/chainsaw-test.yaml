@@ -12,8 +12,9 @@ spec:
     Two virtual clusters, analytics and payments, behind a single keg listener
     port, of an OnPremEventGateway:
     1. The TLS server policy reads its certificate from a Secret of another
-       namespace: without a KongReferenceGrant it isn't pushed to gw-admin
-       (Programmed False, RefNotPermitted).
+       namespace: without a KongReferenceGrant it can't be sent (Programmed
+       False, RefNotPermitted), and the configuration isn't pushed to gw-admin
+       (the gateway reports InvalidEntities).
     2. Once a KongReferenceGrant allows it, both policies are pushed.
     3. Through the hostname of each virtual cluster, keg shows the topics of
        its prefix and the shared topic, never those of the other one, and
@@ -90,6 +91,17 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: "False"
                     reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidEntities
+                    "(contains(message, 'EventGatewayListenerPolicy'))": true
         - apply:
             file: 03-grant.yaml
         - assert:

@@ -211,14 +211,29 @@ spec:
 	require.NoError(t, err)
 
 	excluded := map[string]string{}
+	notBlocking := []string{}
 	for _, e := range cfg.excluded {
-		excluded[reflect.TypeOf(e.obj).Elem().Name()+" "+e.obj.GetName()] = e.message
+		name := reflect.TypeOf(e.obj).Elem().Name() + " " + e.obj.GetName()
+		excluded[name] = e.message
+		if !e.blocks {
+			notBlocking = append(notBlocking, name)
+		}
 	}
+	// Only those that don't belong to the gateway, go along with their
+	// parent, or are virtual clusters conflicting with an older one, don't
+	// hold back the push.
+	assert.ElementsMatch(t, []string{
+		"EventGatewayVirtualCluster vc-duplicate",
+		"EventGatewayVirtualCluster vc-of-duplicate",
+		"EventGatewayVirtualCluster vc-other-namespace",
+	}, notBlocking)
+	require.Error(t, cfg.blocked())
+	assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason, failureReason(cfg.blocked()))
 	assert.Equal(t, map[string]string{
 		"EventGatewayBackendCluster bc-duplicate":                       `another backend cluster of the gateway is named "bc"`,
 		"EventGatewayVirtualCluster vc-duplicate":                       `another virtual cluster of the gateway is named "vc"`,
 		"EventGatewayVirtualCluster vc-of-duplicate":                    "its EventGatewayBackendCluster " + ns + "/bc-duplicate isn't in the configuration",
-		"EventGatewayVirtualClusterConsumePolicy orphan":                "its parent policy " + ns + "/missing isn't in the configuration",
+		"EventGatewayVirtualClusterConsumePolicy orphan":                "its parent policy " + ns + "/missing doesn't exist, is being deleted, or is in a cycle of parent policies",
 		"EventGatewayVirtualClusterConsumePolicy with-missing-registry": "resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: EventGatewaySchemaRegistry " + ns + "/missing: eventgatewayschemaregistries.configuration.konghq.com \"missing\" not found",
 		"EventGatewayVirtualCluster vc-other-namespace":                 "it must be in the namespace of the OnPremEventGateway, " + ns,
 		"EventGatewaySchemaRegistry duplicate-registry":                 `another schema registry of the gateway is named "registry"`,
@@ -263,4 +278,103 @@ spec:
 
 	assert.Equal(t, "EventGatewayVirtualClusterConsumePolicy "+client.ObjectKeyFromObject(child).String()+" (virtual_clusters.0.consume_policies.2.config)",
 		cfg.describeField("virtual_clusters.0.consume_policies.2.config"))
+}
+
+// Konnect refuses two policies of a gateway with the same name, whatever their
+// kind or their virtual cluster or listener, and two virtual clusters with the
+// same DNS label: gw-admin takes them, so they are caught here.
+func TestBuildConfigurationUniqueAcrossKinds(t *testing.T) {
+	f := newSchemaRegistryFixture(t)
+	modifyHeaders := func(name string) string {
+		return `
+    type: modifyHeaders
+    modifyHeaders:
+      name: ` + name + `
+      config: {actions: [{op: remove, remove: {key: x-header}}]}
+`
+	}
+	secondVC := fromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, f.at(2), `
+metadata: {name: vc2}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc}}
+  apiSpec: {name: vc2, aclMode: passthrough, authentication: [{type: anonymous}], dnsLabel: vc}
+`)
+	produce := f.producePolicy("produce", modifyHeaders("same"), 3)
+	consume := f.consumePolicy("consume", modifyHeaders("same"), 4)
+	listenerPolicy := fromYAML[configurationv1alpha1.EventGatewayListenerPolicy](t, f.at(5), `
+metadata: {name: forward}
+spec:
+  eventGatewayListenerRef: {type: namespacedRef, namespacedRef: {name: listener}}
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: same
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: vc}}}}
+`)
+	cfg, err := buildConfiguration(t.Context(), f.objects(secondVC, produce, consume, f.listener(), listenerPolicy), f.gateway, "", nil)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{
+		"EventGatewayVirtualCluster vc2": `its DNS label "vc" is already the one of EventGatewayVirtualCluster default/vc`,
+		// The oldest policy keeps the name, whatever the order of the kinds.
+		"EventGatewayVirtualClusterConsumePolicy consume": `its policy name "same" is already the one of EventGatewayVirtualClusterProducePolicy default/produce`,
+		"EventGatewayListenerPolicy forward":              `its policy name "same" is already the one of EventGatewayVirtualClusterProducePolicy default/produce`,
+	}, excludedMessages(cfg))
+	// A policy conflicting with an older one stops the push, a virtual
+	// cluster doesn't: the older one keeps running.
+	for _, e := range cfg.excluded {
+		assert.Equal(t, e.obj.GetName() != "vc2", e.blocks, "%s stops the push", e.obj.GetName())
+	}
+}
+
+// A policy of another namespace naming a virtual cluster of the gateway is
+// only left out, whatever its parent policy: it can't hold the gateway back.
+// A parent policy attached to another virtual cluster stops the push, as
+// Konnect refuses it.
+func TestBuildConfigurationParentPolicyScope(t *testing.T) {
+	f := newSchemaRegistryFixture(t)
+	child := func(name, namespace, vc, parent string, minutes int) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
+		p := fromYAML[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](t, f.at(minutes), `
+metadata: {name: `+name+`, namespace: `+namespace+`}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: `+vc+`, namespace: `+ns+`}}
+  apiSpec:
+    parentPolicyRef: {name: `+parent+`}
+    type: modifyHeaders
+    modifyHeaders:
+      name: `+name+`
+      config: {actions: [{op: remove, remove: {key: x}}]}
+`)
+		return p
+	}
+	secondVC := fromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, f.at(2), `
+metadata: {name: vc2}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc}}
+  apiSpec: {name: vc2, aclMode: passthrough, authentication: [{type: anonymous}], dnsLabel: vc2}
+`)
+	parent := f.validateWith("parent", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+
+	t.Run("another namespace never blocks, a missing parent or a cycle", func(t *testing.T) {
+		cfg, err := buildConfiguration(t.Context(), f.objects(
+			child("orphan", "elsewhere", "vc", "nope", 4),
+			child("loop-a", "elsewhere", "vc", "loop-b", 5),
+			child("loop-b", "elsewhere", "vc", "loop-a", 6),
+		), f.gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		assert.Len(t, cfg.excluded, 3)
+		for _, e := range cfg.excluded {
+			assert.Equal(t, "it must be in the namespace of the OnPremEventGateway, "+ns, e.message)
+		}
+	})
+
+	t.Run("a parent of another virtual cluster blocks", func(t *testing.T) {
+		cfg, err := buildConfiguration(t.Context(), f.objects(secondVC, f.registry("orders", "gateway", 1), parent,
+			child("child", ns, "vc2", "parent", 4)), f.gateway, "", nil)
+		require.NoError(t, err)
+		require.Error(t, cfg.blocked())
+		assert.Equal(t, map[string]string{
+			"EventGatewayVirtualClusterProducePolicy child": "its parent policy " + ns + "/parent is attached to another virtual cluster",
+		}, excludedMessages(cfg))
+	})
 }
