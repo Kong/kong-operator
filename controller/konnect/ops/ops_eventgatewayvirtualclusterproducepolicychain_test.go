@@ -67,11 +67,14 @@ func TestProducePolicyChainGuardedOperations(t *testing.T) {
 			{name: "PUT null is not empty", desired: []string{}, remote: []string{}, put: true, wantErr: "does not match"},
 			{name: "PUT ignored order", desired: []string{"second", "first"}, remote: []string{"first", "second"}, response: []string{"first", "second"}, put: true, wantErr: "does not match"},
 			{name: "PUT omitted child", desired: []string{"parent", "child"}, remote: []string{"parent", "child"}, response: []string{"parent"}, put: true, wantErr: "does not match"},
+			{name: "PUT unknown ID", desired: []string{"parent", "child"}, remote: []string{"parent", "child"}, response: []string{"parent", "foreign"}, put: true, wantErr: "does not match"},
+			{name: "PUT duplicate ID", desired: []string{"parent", "child"}, remote: []string{"parent", "child"}, response: []string{"parent", "parent"}, put: true, wantErr: "does not match"},
 		} {
 			t.Run(string(op)+"/"+tt.name, func(t *testing.T) {
 				chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
 					Name: "chain", Namespace: "default", UID: "chain-uid", Generation: 1,
 				}
+
 				chain.SetGatewayID("gateway-id")
 				chain.SetVirtualClusterID("vc-id")
 				ctx := WithResolvedPolicyChainIDs(t.Context(), chain, tt.desired)
@@ -82,6 +85,7 @@ func TestProducePolicyChainGuardedOperations(t *testing.T) {
 					}}).Build()
 				sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 				policySDK := sdk.EventGatewayVirtualClusterProducePoliciesSDK
+				gotRemote := false
 				if tt.desired != nil {
 					var response *sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyChainResponse
 					if !tt.nilGet {
@@ -90,7 +94,9 @@ func TestProducePolicyChainGuardedOperations(t *testing.T) {
 							response.EventGatewayPolicyChainResponse = &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: tt.remote}
 						}
 					}
-					policySDK.EXPECT().GetEventGatewayVirtualClusterProducePolicyChain(mock.Anything, "gateway-id", "vc-id").Return(response, tt.getErr).Once()
+					policySDK.EXPECT().GetEventGatewayVirtualClusterProducePolicyChain(mock.Anything, "gateway-id", "vc-id").
+						Run(func(context.Context, string, string, ...sdkkonnectops.Option) { gotRemote = true }).
+						Return(response, tt.getErr).Once()
 				}
 				if tt.put {
 					var response *sdkkonnectops.UpdateEventGatewayVirtualClusterProducePolicyChainResponse
@@ -104,7 +110,9 @@ func TestProducePolicyChainGuardedOperations(t *testing.T) {
 						sdkkonnectops.UpdateEventGatewayVirtualClusterProducePolicyChainRequest{
 							GatewayID: "gateway-id", VirtualClusterID: "vc-id",
 							UpdateEventGatewayPolicyChainRequest: &sdkkonnectcomp.UpdateEventGatewayPolicyChainRequest{Policies: tt.desired},
-						}).Return(response, tt.putErr).Once()
+						}).Run(func(context.Context, sdkkonnectops.UpdateEventGatewayVirtualClusterProducePolicyChainRequest, ...sdkkonnectops.Option) {
+						require.True(t, gotRemote, "the complete remote set must be read before any PUT")
+					}).Return(response, tt.putErr).Once()
 				}
 				var err error
 				if op == CreateOp {
@@ -136,6 +144,59 @@ func TestProducePolicyChainGuardedOperations(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestProducePolicyChainMissingAncestry(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct{ gateway, vc, missing string }{
+		{missing: "Gateway"}, {gateway: "gateway-id", missing: "EventGatewayVirtualCluster"}, {vc: "vc-id", missing: "Gateway"},
+	} {
+		t.Run(tt.gateway+"/"+tt.vc, func(t *testing.T) {
+			chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{Name: "chain", Namespace: "default"}
+			chain.SetGatewayID(tt.gateway)
+			chain.SetVirtualClusterID(tt.vc)
+			ctx := WithResolvedPolicyChainIDs(t.Context(), chain, []string{})
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+			sdk := sdkmocks.NewMockSDKWrapperWithT(t)
+			for _, op := range []Op{CreateOp, UpdateOp} {
+				_, err := applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), chain, op, true)
+				var missing CantPerformOperationWithoutParentIDError
+				require.ErrorAs(t, err, &missing)
+				require.Equal(t, tt.missing, missing.Parent)
+			}
+		})
+	}
+}
+
+func TestProducePolicyChainSnapshotIdentity(t *testing.T) {
+	t.Parallel()
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
+		Name: "chain", Namespace: "default", UID: "original-uid", Generation: 1,
+	}
+	ids := []string{"parent", "child"}
+	ctx := WithResolvedPolicyChainIDs(t.Context(), chain, ids)
+	ids[0] = "mutated"
+	got, ok := resolvedPolicyChainIDsFromContext(ctx, chain.DeepCopy())
+	require.True(t, ok)
+	require.Equal(t, []string{"parent", "child"}, got)
+	for _, mutate := range []func(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain){
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) { c.UID = "recreated-uid" },
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) { c.Generation++ },
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) { c.Name = "other" },
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) { c.Namespace = "other" },
+	} {
+		current := chain.DeepCopy()
+		mutate(current)
+		_, ok := resolvedPolicyChainIDsFromContext(ctx, current)
+		require.False(t, ok, "a different declaration must resolve its own complete snapshot")
+	}
+	for _, other := range []policyChainObject{
+		&configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{Name: chain.Name, Namespace: chain.Namespace, UID: chain.UID, Generation: chain.Generation},
+		&configurationv1alpha1.EventGatewayListenerPolicyChain{Name: chain.Name, Namespace: chain.Namespace, UID: chain.UID, Generation: chain.Generation},
+	} {
+		_, ok := resolvedPolicyChainIDsFromContext(ctx, other)
+		require.False(t, ok, "execution scopes must not share resolved IDs")
 	}
 }
 

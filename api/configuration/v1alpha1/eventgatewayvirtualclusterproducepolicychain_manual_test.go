@@ -210,6 +210,16 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 			p["parent"].DeletionTimestamp = new(metav1.Now())
 			p["parent"].Finalizers = []string{"test"}
 		}, err: "being deleted"},
+		{name: "deleting child", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].DeletionTimestamp = new(metav1.Now())
+			p["first"].Finalizers = []string{"test"}
+		}, err: "being deleted"},
+		{name: "unready child", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Status.Conditions[0].Status = metav1.ConditionFalse
+		}, err: "not programmed"},
+		{name: "policy declares foreign namespace", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
+		}, err: "different EventGatewayVirtualCluster"},
 		{name: "children only", order: []string{"first", "second"}, err: "must be included"},
 		{name: "child before parent", order: []string{"first", "parent", "second", "root"}, err: "contiguous group"},
 		{name: "interleaved root", order: []string{"parent", "first", "root", "second"}, err: "contiguous group"},
@@ -234,6 +244,9 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 		}, err: "root schemaValidation"},
 		{name: "missing configuration", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = nil
+		}, err: "supported apiSpec.type"},
+		{name: "wrong configuration payload", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.Type = EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy
 		}, err: "supported apiSpec.type"},
 		{name: "encryptFields requires parent", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
@@ -335,6 +348,19 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 					for name, count := range reads {
 						require.Equal(t, 1, count, "snapshot for %s must not be re-read as a parent", name)
 					}
+					resolverReads := len(reads)
+					if !tt.fail {
+						for name, original := range policies {
+							var current EventGatewayVirtualClusterProducePolicy
+							require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(original), &current))
+							before, err := json.Marshal(original.Spec)
+							require.NoError(t, err)
+							after, err := json.Marshal(current.Spec)
+							require.NoError(t, err)
+							require.JSONEq(t, string(before), string(after), "ordering must not rewrite %s parentPolicyRef or configuration", name)
+							require.Equal(t, original.GetKonnectID(), current.GetKonnectID())
+						}
+					}
 					if tt.err != "" {
 						require.ErrorContains(t, err, tt.err)
 						require.Nil(t, ids, "invalid declarations cannot yield shortened chains")
@@ -349,7 +375,7 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 						want = append(want, policies[ref.Name].GetKonnectID())
 					}
 					require.Equal(t, want, ids)
-					require.Len(t, reads, len(chain.Spec.APISpec.Policies))
+					require.Equal(t, len(chain.Spec.APISpec.Policies), resolverReads)
 				})
 			}
 		})
