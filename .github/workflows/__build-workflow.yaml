@@ -563,7 +563,7 @@ jobs:
       # per report named "<asset_prefix>-<kind>" — the same artifact contract sca uses, and what
       # the attest job turns into referrers on the image.
       - name: Scan the image
-        uses: Kong/public-shared-actions/security-actions/scan-docker-image@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # scan-docker-image@6.1.1
+        uses: Kong/public-shared-actions/security-actions/scan-docker-image@a92df3beb1e69e27d86be56346488f15fecaf0de # scan-docker-image@6.1.1
         with:
           asset_prefix: image-linux-${{ matrix.arch }}
           image: ${{ env.IMAGE }}
