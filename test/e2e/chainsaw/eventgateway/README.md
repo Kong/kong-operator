@@ -103,7 +103,9 @@ current-generation conditions and exact backend convergence, rather than adding
 a full sync window to every assertion. The minimum observation budget is 195
 seconds; setup, reconciliation, API calls and cleanup add to this. The lifecycle
 script has a 15-minute limit and cleanup a separate five-minute limit, leaving
-ten minutes of the 30-minute job budget for setup and other parallel scenarios.
+25 minutes of the default 45-minute Event Gateway job budget for setup and other
+parallel scenarios. Other suites retain a 30-minute default; the repository's
+`GHA_EXTENDED_TIMEOUT_MINUTES` variable can override these job budgets.
 This does not change suite-wide controller timing or shorten the Listener test;
 total matrix runtime still depends on those other scenarios.
 
