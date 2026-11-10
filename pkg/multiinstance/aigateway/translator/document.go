@@ -345,14 +345,20 @@ type ModelAliasConflictError struct {
 	Alias string
 	// Route is the name of the rendered route both models land on.
 	Route string
+	// Paths are the route paths that the excluded model configures.
+	Paths []string
 	// First is the name of the AIGatewayModel that keeps the alias (the earliest created).
 	First string
 }
 
 func (e *ModelAliasConflictError) Error() string {
+	var paths string
+	if len(e.Paths) > 0 {
+		paths = fmt.Sprintf(" (paths %s)", strings.Join(e.Paths, ", "))
+	}
 	return fmt.Sprintf(
-		"duplicate model alias %q on route %q: AIGatewayModel %q already uses it, and two models claiming one alias on one route make identically scoped ai-proxy plugins whose backend selection the data plane decides internally (the earliest-created model keeps the alias, ties go to namespace/name order)",
-		e.Alias, e.Route, e.First,
+		"duplicate model alias %q on route %q%s: AIGatewayModel %q already uses it there.",
+		e.Alias, e.Route, paths, e.First,
 	)
 }
 
@@ -759,7 +765,7 @@ func BuildDocument(
 			len(translatedModelCRs), len(doc.Models),
 		)
 	}
-	doc, statuses = resolveModelAliasRouteConflicts(doc, statuses, translatedModelCRs)
+	resolveModelAliasRouteConflicts(doc, statuses, translatedModelCRs)
 
 	return doc, statuses, nil
 }
@@ -833,15 +839,23 @@ func collectAliasConflicts(issues []convert.ConversionIssue) []aliasConflict {
 // lose waits for the next pass, because an excluded model must not exclude
 // other models. The earliest claimer always has an owner that is not a
 // claimer, so each pass excludes at least one model and the loop ends.
+//
+// The function changes doc.Models and the Err of the excluded models' statuses
+// in place.
 func resolveModelAliasRouteConflicts(
 	doc *aigw.Document,
 	statuses []EntityStatus,
 	crs []*aiconfigurationv1alpha1.AIGatewayModel,
-) (*aigw.Document, []EntityStatus) {
+) {
 	if len(doc.Models) < 2 {
-		return doc, statuses
+		return
 	}
 	sortModelsByCreation(doc.Models, crs)
+	// A conflict needs one alias on two enabled models. Most gateways have
+	// none, so skip the probe render, which is a full converter run.
+	if !hasSharedAlias(doc.Models) {
+		return
+	}
 
 	for {
 		probe, idxByName := buildProbeDoc(doc)
@@ -850,7 +864,7 @@ func resolveModelAliasRouteConflicts(
 			// The probe differs from doc only in model names, and no converter
 			// failure depends on a name, so the caller's render reports the
 			// same error.
-			return doc, statuses
+			return
 		}
 		conflicts := collectAliasConflicts(issues)
 
@@ -866,11 +880,16 @@ func resolveModelAliasRouteConflicts(
 				continue
 			}
 			if _, ok := losers[claimer]; !ok {
-				losers[claimer] = &ModelAliasConflictError{Alias: c.alias, Route: c.route, First: crs[owner].Name}
+				losers[claimer] = &ModelAliasConflictError{
+					Alias: c.alias,
+					Route: c.route,
+					Paths: doc.Models[claimer].Config.Route.Paths,
+					First: crs[owner].Name,
+				}
 			}
 		}
 		if len(losers) == 0 {
-			return doc, statuses
+			return
 		}
 
 		keptModels := make([]aigw.Model, 0, len(doc.Models)-len(losers))
@@ -894,6 +913,23 @@ func resolveModelAliasRouteConflicts(
 		doc.Models = keptModels
 		crs = keptCRs
 	}
+}
+
+// hasSharedAlias reports whether two enabled models use one alias. Disabled
+// models render nothing, so they cannot conflict.
+func hasSharedAlias(models []aigw.Model) bool {
+	seen := make(map[string]bool, len(models))
+	for i := range models {
+		if m := &models[i]; m.Enabled == nil || *m.Enabled {
+			for _, alias := range modelAliases(m) {
+				if seen[alias] {
+					return true
+				}
+				seen[alias] = true
+			}
+		}
+	}
+	return false
 }
 
 // sortModelsByCreation sorts models and their index-aligned crs by the CR

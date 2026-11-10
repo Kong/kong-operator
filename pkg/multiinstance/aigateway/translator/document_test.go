@@ -74,6 +74,22 @@ func aiGatewayModelFixture(name string) *aiconfigurationv1alpha1.AIGatewayModel 
 	}
 }
 
+// withRoutedTarget gives the model a capability and a target on the
+// "provider-shared" provider. Without both, the converter renders no route
+// for the model, and no same-route alias conflict can occur.
+func withRoutedTarget(m *aiconfigurationv1alpha1.AIGatewayModel) *aiconfigurationv1alpha1.AIGatewayModel {
+	m.Spec.APISpec.Model.Capabilities = []string{"generate"}
+	m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+		Name:     "t",
+		Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
+		Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+			Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+			Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+		},
+	}}
+	return m
+}
+
 func aiGatewayModelProviderFixture(name string) *aiconfigurationv1alpha1.AIGatewayModelProvider {
 	return &aiconfigurationv1alpha1.AIGatewayModelProvider{
 		Name: name, Namespace: "default",
@@ -788,25 +804,6 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		return builder.Build()
 	}
 
-	// withTarget points the model at the shared provider: without a target the
-	// converter renders no route for the model and no same-route conflict can
-	// arise.
-	withTarget := func(m *aiconfigurationv1alpha1.AIGatewayModel) *aiconfigurationv1alpha1.AIGatewayModel {
-		// Capabilities must be non-empty: without any, the converter renders
-		// the model as a bare ai_models identity row with no route, and no
-		// same-route conflict can arise.
-		m.Spec.APISpec.Model.Capabilities = []string{"generate"}
-		m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
-			Name:     "t",
-			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
-			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
-				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
-				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
-			},
-		}}
-		return m
-	}
-
 	// withAlias gives the model the shared alias on the shared route path, so
 	// two of these models land on one route group and conflict.
 	withAlias := func(name string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
@@ -816,7 +813,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"shared-alias"},
 		}
-		return withTarget(m)
+		return withRoutedTarget(m)
 	}
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
@@ -844,7 +841,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 			if s.Err != nil {
 				conflicts++
 				require.Equal(t, "plain-model", s.Obj.GetName())
-				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias" on route "openai-chat" (paths /shared)`)
 				require.ErrorContains(t, s.Err, `"scoped-model"`)
 			}
 		}
@@ -883,19 +880,19 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		t.Parallel()
 
 		// middle loses "x" to oldest, so its claim on "y" must not exclude newest.
-		oldest := withTarget(aiGatewayModelFixture("oldest"))
+		oldest := withRoutedTarget(aiGatewayModelFixture("oldest"))
 		oldest.CreationTimestamp = dayOne
 		oldest.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		oldest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"x"},
 		}
-		middle := withTarget(aiGatewayModelFixture("middle"))
+		middle := withRoutedTarget(aiGatewayModelFixture("middle"))
 		middle.CreationTimestamp = dayTwo
 		middle.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		middle.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"x", "y"},
 		}
-		newest := withTarget(aiGatewayModelFixture("newest"))
+		newest := withRoutedTarget(aiGatewayModelFixture("newest"))
 		newest.CreationTimestamp = metav1.NewTime(dayTwo.Add(24 * time.Hour))
 		newest.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		newest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
@@ -1018,41 +1015,23 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// withTarget points a model at the shared provider: without a target the
-	// converter renders no route for the model and no same-route conflict can
-	// arise. Only the conflicting models need one.
-	withTarget := func(m *aiconfigurationv1alpha1.AIGatewayModel) *aiconfigurationv1alpha1.AIGatewayModel {
-		// Capabilities must be non-empty: without any, the converter renders
-		// the model as a bare ai_models identity row with no route, and no
-		// same-route conflict can arise.
-		m.Spec.APISpec.Model.Capabilities = []string{"generate"}
-		m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
-			Name:     "t",
-			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
-			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
-				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
-				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
-			},
-		}}
-		return m
-	}
 	// No selector: the model's entity name is its alias. model-c's selector
 	// value collides with it.
-	modelA := withTarget(aiGatewayModelFixture("model-a"))
+	modelA := withRoutedTarget(aiGatewayModelFixture("model-a"))
 	modelA.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
-	modelC := withTarget(aiGatewayModelFixture("model-c"))
+	modelC := withRoutedTarget(aiGatewayModelFixture("model-c"))
 	modelC.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelC.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"model-a", "model-c-alias"},
 	}
 	// Multi-value selectors: model-d claims two aliases, model-e shares the
 	// second one (its first alias is unique).
-	modelD := withTarget(aiGatewayModelFixture("model-d"))
+	modelD := withRoutedTarget(aiGatewayModelFixture("model-d"))
 	modelD.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelD.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"d-alias-1", "d-alias-2"},
 	}
-	modelE := withTarget(aiGatewayModelFixture("model-e"))
+	modelE := withRoutedTarget(aiGatewayModelFixture("model-e"))
 	modelE.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelE.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"e-alias", "d-alias-2"},
@@ -2070,7 +2049,7 @@ func TestIsEntityScopedFailure(t *testing.T) {
 		err  error
 		want bool
 	}{
-		{name: "model alias conflict", err: fmt.Errorf("converting: %w", &ModelAliasConflictError{Alias: "a", First: "m"}), want: true},
+		{name: "model alias conflict", err: fmt.Errorf("converting: %w", &ModelAliasConflictError{Alias: "a", Route: "openai-chat", First: "m"}), want: true},
 		{name: "cross-namespace reference not granted", err: fmt.Errorf("converting: %w", notGranted), want: true},
 		{
 			name: "reference to an entity excluded for a reference not granted",
@@ -2374,24 +2353,13 @@ func TestBuildDocument_ModelDuplicateSpecName(t *testing.T) {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
 	withNamed := func(crName, specName, path string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
-		m := aiGatewayModelFixture(crName)
+		m := withRoutedTarget(aiGatewayModelFixture(crName))
 		m.CreationTimestamp = created
-		// Capabilities must be non-empty: without any, the converter renders
-		// the model as a bare ai_models identity row with no route.
-		m.Spec.APISpec.Model.Capabilities = []string{"generate"}
 		m.Spec.APISpec.Model.Name = aiconfigurationv1alpha1.AIGatewayEntityIdentifier(specName)
 		m.Spec.APISpec.Model.Config.Route.Paths = []string{path}
 		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"shared-alias"},
 		}
-		m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
-			Name:     "t",
-			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
-			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
-				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
-				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
-			},
-		}}
 		return m
 	}
 
@@ -2589,4 +2557,35 @@ func TestCollectAliasConflicts_QuotedValues(t *testing.T) {
 	require.Equal(t, []aliasConflict{{
 		route: "openai-chat", alias: `say "hi"`, owner: "model-a", claimer: "model-b",
 	}}, collectAliasConflicts(issues))
+}
+
+// TestHasSharedAlias covers the check that skips the probe render: only an
+// alias on two enabled models can conflict.
+func TestHasSharedAlias(t *testing.T) {
+	t.Parallel()
+
+	model := func(name string, enabled *bool, values ...string) aigw.Model {
+		return aigw.Model{
+			Name:    name,
+			Enabled: enabled,
+			Config:  aigw.ModelConfig{Route: aigw.ModelRouteConfig{Model: aigw.ModelAliasConfig{Values: values}}},
+		}
+	}
+	tests := []struct {
+		name   string
+		models []aigw.Model
+		want   bool
+	}{
+		{name: "distinct aliases", models: []aigw.Model{model("a", nil, "x"), model("b", nil, "y")}},
+		{name: "repeated value in one model", models: []aigw.Model{model("a", nil, "x", "x"), model("b", nil, "y")}},
+		{name: "shared selector value", models: []aigw.Model{model("a", nil, "x"), model("b", nil, "y", "x")}, want: true},
+		{name: "entity name is the alias without a selector", models: []aigw.Model{model("x", nil), model("b", nil, "x")}, want: true},
+		{name: "a disabled model uses no alias", models: []aigw.Model{model("a", new(false), "x"), model("b", new(true), "x")}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, hasSharedAlias(tc.models))
+		})
+	}
 }
