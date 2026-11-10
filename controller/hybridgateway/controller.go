@@ -35,7 +35,20 @@ const (
 	// requeueWhileWaiting is a short safety requeue used when we intentionally
 	// wait for prerequisites (e.g., Programmed dependencies) before proceeding.
 	requeueWhileWaiting = time.Second
+	// deletionRequeuePriority keeps ordered deletion continuations ahead of normal work.
+	// Lower positive values remain available for future intermediate priorities.
+	deletionRequeuePriority = 1000
 )
+
+// orderedCleanupRequeue continues a multi-GVK cleanup pass on the next step.
+// RequeueAfter keeps the rate limiter from growing the delay for each step.
+func orderedCleanupRequeue() ctrl.Result {
+	priority := deletionRequeuePriority
+	return ctrl.Result{
+		RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
+		Priority:     &priority,
+	}
+}
 
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;patch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes/status,verbs=get;update
@@ -291,7 +304,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			return ctrl.Result{}, fmt.Errorf("failed to clean up invalid client certificate bindings: %w", err)
 		}
 		if deleted {
-			return ctrl.Result{Requeue: true}, nil
+			return orderedCleanupRequeue(), nil
 		}
 	}
 
@@ -378,7 +391,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			eventconst.EventReasonOrphanCleanupSucceeded,
 			"Orphan cleanup in progress",
 		)
-		return ctrl.Result{Requeue: true}, nil
+		return orderedCleanupRequeue(), nil
 	}
 
 	// Remove finalizer if it is no longer needed.
@@ -440,7 +453,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 			eventconst.EventReasonOrphanCleanupSucceeded,
 			"Deletion cleanup in progress",
 		)
-		return ctrl.Result{Requeue: true}, nil
+		// Deletion continuations must run before ordinary Gateway-fanout work.
+		// RequeueAfter also avoids the rate limiter's increasing retry delay.
+		return orderedCleanupRequeue(), nil
 	}
 
 	// All resources have been deleted, now we can remove the finalizer.
