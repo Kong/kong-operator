@@ -36,8 +36,9 @@ spec:
     plain-model's traffic. The newcomer must get Programmed=False instead,
     and plain-model must keep serving.
 
-    Model scope itself (a model's own policy winning over the global one) is
-    not asserted here: the traffic checks drive plain-model only.
+    scoped-model carries the model policy. On its route, the consumer and
+    consumer group instances still win, and consumer C gets the model policy
+    instead of the global one: this proves model scope.
 
     Model scope needs the custom plugin to run after ai-model-selector
     (PRIORITY 957), which selects the model the request is scoped to: the data
@@ -810,9 +811,57 @@ spec:
               value: ($scope_header)
             - name: expect_header_value
               value: global
-    # The scoped model carries the model policy and its route is rendered (its
-    # Programmed=True is asserted above); the policy-scoping traffic checks
-    # below still drive the plain model's route.
+    # --- The scoped model shares the alias with plain-model on another route.
+    # Its model policy is scoped to its own route and the shared ai_models
+    # entity, so it applies here and not on plain-model's route.
+    - name: Verify-scoped-model-consumer-a-gets-consumer-policy
+      description: A consumer policy still wins on a model with its own policy. This alone does not prove model scope.
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($scoped_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_a_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer
+    - name: Verify-scoped-model-consumer-b-gets-consumer-group-policy
+      description: A consumer group policy still wins on a model with its own policy. This alone does not prove model scope.
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($scoped_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_b_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer-group
+    - name: Verify-scoped-model-consumer-c-gets-model-policy
+      description: The model's policy wins over the global one. This proves model scope.
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($scoped_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_c_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: model
     # --- Agent and MCP server get their own values on their own routes.
     - name: Verify-agent-gets-agent-policy
       use:

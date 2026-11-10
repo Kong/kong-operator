@@ -1005,8 +1005,8 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 // TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision
 // shapes of the converter-derived alias rule: a no-selector model's entity name
 // is itself an alias, and each value of a multi-value selector is claimed
-// separately. The conflicting models share one route path so the collisions
-// are same-route ones; the non-conflicting models keep their own paths.
+// separately. All models share one route path, so a wrong alias rule makes a
+// same-route conflict and fails the test.
 func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	t.Parallel()
 
@@ -1038,17 +1038,20 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	}
 	// Duplicate values within one model collapse to their first occurrence
 	// (mirroring the converter's extractModelAliases): no conflict, one entity.
-	modelF := aiGatewayModelFixture("model-f")
+	modelF := withRoutedTarget(aiGatewayModelFixture("model-f"))
+	modelF.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelF.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"f-alias", "f-alias"},
 	}
 	// With a selector, the entity name is not an alias: model-h's value equal
 	// to model-g's name is no conflict.
-	modelG := aiGatewayModelFixture("model-g")
+	modelG := withRoutedTarget(aiGatewayModelFixture("model-g"))
+	modelG.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelG.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"g-alias"},
 	}
-	modelH := aiGatewayModelFixture("model-h")
+	modelH := withRoutedTarget(aiGatewayModelFixture("model-h"))
+	modelH.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelH.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"model-g"},
 	}
