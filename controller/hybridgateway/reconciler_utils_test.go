@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
+	clientevents "k8s.io/client-go/tools/events"
 	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
 	validationspec "k8s.io/kube-openapi/pkg/validation/spec"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,6 +40,7 @@ import (
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -1087,6 +1089,64 @@ func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 		assert.Equal(t, []string{"live-child"}, listNames(t, cl, gvks[0]),
 			"steady state retries on the next reconcile, so it trusts the cache")
 	})
+}
+
+func TestHandleDeletionPrioritizesContinuation(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	routeGVK := schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: "v1alpha1",
+		Kind:    "KongRoute",
+	}
+	serviceGVK := schema.GroupVersionKind{
+		Group:   "configuration.konghq.com",
+		Version: "v1alpha1",
+		Kind:    "KongService",
+	}
+	deletionTimestamp := metav1.NewTime(time.Now())
+	root := &gwtypes.HTTPRoute{
+		APIVersion:        gatewayv1.GroupVersion.String(),
+		Kind:              "HTTPRoute",
+		Name:              "httproute-owner",
+		Namespace:         "ns",
+		DeletionTimestamp: &deletionTimestamp,
+		Finalizers:        []string{finalizerconst.HybridHTTPRouteFinalizer},
+	}
+	ownerLabels := metadata.BuildLabels(root, nil)
+	ownerAnnotations := map[string]string{
+		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+	}
+
+	terminatingRoute := newUnstructured("ns", "terminating-route", routeGVK, ownerLabels)
+	terminatingRoute.SetAnnotations(ownerAnnotations)
+	terminatingRoute.SetDeletionTimestamp(&deletionTimestamp)
+	terminatingRoute.SetFinalizers([]string{"example.com/test"})
+
+	service := newUnstructured("ns", "service", serviceGVK, ownerLabels)
+	service.SetAnnotations(ownerAnnotations)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(&terminatingRoute, &service).
+		Build()
+	r := &HybridGatewayReconciler[gwtypes.HTTPRoute, *gwtypes.HTTPRoute]{
+		Client:        cl,
+		eventRecorder: events.NewTypedEventRecorder(clientevents.NewFakeRecorder(1)),
+	}
+
+	result, err := r.handleDeletion(ctx, logger, root, *root)
+	require.NoError(t, err)
+	assert.False(t, result.Requeue) //nolint:staticcheck // The continuation must not use rate-limited requeue.
+	assert.Equal(t, ctrlconsts.RequeueWithoutBackoff, result.RequeueAfter)
+	require.NotNil(t, result.Priority)
+	assert.Equal(t, deletionRequeuePriority, *result.Priority)
+	assert.Contains(t, root.Finalizers, finalizerconst.HybridHTTPRouteFinalizer)
+
+	serviceList := &unstructured.UnstructuredList{}
+	serviceList.SetGroupVersionKind(serviceGVK)
+	require.NoError(t, cl.List(ctx, serviceList))
+	assert.Len(t, serviceList.Items, 1, "a terminating earlier GVK must block later GVKs")
 }
 
 // Minimal fake converter for HTTPRoute
