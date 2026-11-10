@@ -242,7 +242,7 @@ func MergeTags(base []*string, groups ...[]string) []*string {
 			return
 		}
 		seen[tag] = struct{}{}
-		merged = append(merged, kong.String(tag))
+		merged = append(merged, new(tag))
 	}
 
 	for _, tag := range base {

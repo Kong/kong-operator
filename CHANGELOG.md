@@ -359,6 +359,7 @@
   appended after the entity's own tags (the Gateway's first, then the
   GatewayClass's) and the result is deduplicated. Only `Gateway`s reconciled by
   this controller, and only `GatewayClass`es it controls, contribute tags.
+  [#6539](https://github.com/Kong/kong-operator/pull/6539)
 
 ### Changed
 
