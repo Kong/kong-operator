@@ -538,10 +538,9 @@ type orphanCleanupOptions struct {
 // but are no longer needed (due to configuration changes) are properly removed from the cluster.
 //
 // When opts.waitForDeletes is true, deletion is performed in a multi-step process ensuring resources are
-// deleted in the order defined by conv.GetExpectedGVKs(): the function returns (true, nil) to requeue as
-// soon as a GVK has any orphan deleted or still in deletion, so each type is fully removed before the next
-// one is processed. When false, all GVKs are processed in a single pass and in-flight deletions are not
-// waited on.
+// deleted in the order defined by conv.GetExpectedGVKs(): the function reports a requeue as soon as a GVK
+// has any orphan deleted or still in deletion, so each type is fully removed before the next one is
+// processed. When false, all GVKs are processed in a single pass and in-flight deletions are not waited on.
 //
 // Parameters:
 //   - ctx: The context for API calls and cancellation
@@ -552,6 +551,8 @@ type orphanCleanupOptions struct {
 //
 // Returns:
 //   - bool: true if a requeue is needed to continue/complete the cleanup
+//   - bool: true when this pass deleted at least one resource. A requeue without
+//     progress only waits for in-flight deletions, so the caller must back off.
 //   - error: Any error that occurred during the cleanup process
 //
 // The function resolves child ownership through the hybrid-routes annotation field index (on the
@@ -563,13 +564,13 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	logger logr.Logger,
 	conv converter.APIConverter[t],
 	opts orphanCleanupOptions,
-) (bool, error) {
+) (requeue, progressed bool, err error) {
 	logger = logger.WithValues("phase", "orphan-cleanup")
 	log.Debug(logger, "Starting orphaned resource cleanup", "waitForDeletes", opts.waitForDeletes)
 
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
-		return false, fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
+		return false, false, fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
 	}
 
 	desiredSet := make(map[string]struct{})
@@ -586,7 +587,7 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	case tPtr:
 		rootObjPtr = v
 	default:
-		return false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
+		return false, false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
 	}
 
 	// Build a set of desired resource keys.
@@ -601,7 +602,6 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	// For each expected GVK, list resources and delete orphans. When waiting for deletes, reconciliation
 	// processes one GVK at a time and waits for resources to be fully deleted before moving to the next type
 	// or releasing the root finalizer.
-	orphansDeleted := 0
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
 
@@ -618,7 +618,7 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			list, err = metadata.ListOwnedChildResources(ctx, cl, rootObjPtr, gvk)
 		}
 		if err != nil {
-			return false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
+			return false, false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
@@ -637,7 +637,7 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			if customHandler, ok := conv.(converter.OrphanedResourceHandler); ok {
 				skipDelete, err := customHandler.HandleOrphanedResource(ctx, logger, &item)
 				if err != nil {
-					return false, fmt.Errorf("failed to handle orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+					return false, false, fmt.Errorf("failed to handle orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 				}
 				if skipDelete {
 					log.Trace(logger, "Skipping orphaned resource as per converter decision", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
@@ -679,32 +679,26 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 					}
 					log.Debug(logger, "Orphaned resource changed before deletion, requeueing cleanup",
 						"kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-					return true, nil
+					return true, false, nil
 				default:
-					return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+					return false, false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 				}
 			}
 			orphansDeletedForGVK++
 		}
-		orphansDeleted += orphansDeletedForGVK
 
 		// When waiting for deletes, if we deleted any orphan resource or found any that is currently being
 		// deleted, return true to trigger a requeue. This ensures we wait for the current GVK's resources to
 		// be fully deleted before moving to the next GVK, enforcing deletion order among resource types.
 		if opts.waitForDeletes && (orphansDeletedForGVK > 0 || orphansInDeletionForGVK > 0) {
 			log.Debug(logger, "Requeuing to wait for orphaned resources deletion for GVK", "gvk", gvk.String(), "orphansDeleted", orphansDeletedForGVK)
-			return true, nil
+			return true, orphansDeletedForGVK > 0, nil
 		}
 		log.Debug(logger, "Finished processing GVK for orphan cleanup", "gvk", gvk.String())
 	}
 
-	if opts.waitForDeletes && orphansDeleted > 0 {
-		log.Debug(logger, "Requeuing after deleting orphaned resources", "orphansDeleted", orphansDeleted)
-		return true, nil
-	}
-
 	log.Debug(logger, "Finished orphaned resource cleanup")
-	return false, nil
+	return false, false, nil
 }
 
 // shouldProcessObject determines if an object should be processed in the reconcile loop.
