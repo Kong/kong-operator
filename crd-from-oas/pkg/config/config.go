@@ -1251,6 +1251,10 @@ type FieldConfig struct {
 	// Description replaces the field's OpenAPI description in the CRD, e.g.
 	// when it describes Konnect behavior that doesn't hold for the CR.
 	Description string `yaml:"_description,omitempty"`
+	// OmitZero emits `json:",omitzero"` instead of the default tag for the
+	// field's Go type. Use it for optional collections whose explicitly empty
+	// value must reach the API instead of being dropped by `omitempty`.
+	OmitZero bool `yaml:"_omitZero,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.
 	Fields map[string]*FieldConfig `yaml:",inline"`

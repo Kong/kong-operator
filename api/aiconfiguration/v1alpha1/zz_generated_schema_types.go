@@ -29,7 +29,7 @@ type AIGWKeyAuthGeneratedConfig struct {
 	// consumer from.
 	//
 	// +optional
-	IdentityRealms []AIGWKeyAuthGeneratedConfigIdentityRealms `json:"identityRealms,omitempty"`
+	IdentityRealms []AIGWKeyAuthGeneratedConfigIdentityRealms `json:"identityRealms,omitzero"`
 	// If enabled, the plugin reads the request body.
 	// Supported MIME types: `application/www-form-urlencoded`, `application/json`,
 	// and `multipart/form-data`.

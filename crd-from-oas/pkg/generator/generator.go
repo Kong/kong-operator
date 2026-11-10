@@ -1311,7 +1311,7 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	if fc == nil {
 		return true
 	}
-	if len(fc.Validations) > 0 || fc.Description != "" {
+	if len(fc.Validations) > 0 || fc.Description != "" || fc.OmitZero {
 		return false
 	}
 	for _, child := range fc.Fields {
@@ -1372,6 +1372,7 @@ func cloneFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
 		clone.Validations = append([]string(nil), fc.Validations...)
 	}
 	clone.Description = fc.Description
+	clone.OmitZero = fc.OmitZero
 	if len(fc.Fields) > 0 {
 		clone.Fields = cloneFieldConfigMap(fc.Fields)
 	}
@@ -2534,7 +2535,8 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	case isInlineObjectWithProperties(prop):
 		goType = g.inlineTypeName("", typeName, prop.Name)
 	}
-	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
+	fieldCfg := fieldCursor.Sub(jsonTagForProperty(prop))
+	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType, fieldCfg != nil && fieldCfg.OmitZero))
 }
 
 // freeformObjectRef reports whether prop references a free-form object schema,
@@ -2937,9 +2939,12 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	funcMap := template.FuncMap{
-		"goType":          goTypeInCRD,
-		"goFieldName":     goFieldName,
-		"jsonTag":         jsonTag,
+		"goType":      goTypeInCRD,
+		"goFieldName": goFieldName,
+		"jsonTag": func(p *parser.Property, goType string) string {
+			fieldCfg := apiSpecCursor.Sub(jsonTagForProperty(p))
+			return jsonTag(p, goType, fieldCfg != nil && fieldCfg.OmitZero)
+		},
 		"jsonPropName":    func(p *parser.Property) string { return jsonName(p.Name) },
 		"refJSONTag":      func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
 		"kubebuilderTags": kubebuilderTagsWithConfig,
@@ -8869,7 +8874,11 @@ func lowerCamelCase(s string) string {
 // Pointer, slice, and map types use omitempty (zero value is nil/empty, omitempty works).
 // All other types (named structs, primitives, type aliases) use omitzero — omitempty
 // has no effect on struct types, producing {"namespace":{}} for zero-valued struct fields.
-func tagOmitSuffix(resolvedGoType string) string {
+// forceOmitZero overrides the type default so an allocated empty collection survives.
+func tagOmitSuffix(resolvedGoType string, forceOmitZero bool) string {
+	if forceOmitZero {
+		return ",omitzero"
+	}
 	if strings.HasPrefix(resolvedGoType, "*") ||
 		strings.HasPrefix(resolvedGoType, "[]") ||
 		strings.HasPrefix(resolvedGoType, "map[") {
@@ -8881,8 +8890,8 @@ func tagOmitSuffix(resolvedGoType string) string {
 // jsonTag generates the json struct tag using camelCase for K8s wire format.
 // resolvedGoType is the Go type string as it appears in the emitted field declaration
 // (e.g. "string", "*KonnectEntityRef", "[]Foo", "VirtualClusterNamespace").
-func jsonTag(prop *parser.Property, resolvedGoType string) string {
-	return jsonName(prop.Name) + tagOmitSuffix(resolvedGoType)
+func jsonTag(prop *parser.Property, resolvedGoType string, forceOmitZero bool) string {
+	return jsonName(prop.Name) + tagOmitSuffix(resolvedGoType, forceOmitZero)
 }
 
 // isRefProperty checks if a property is a reference.

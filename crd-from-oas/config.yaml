@@ -65,6 +65,16 @@ apiGroupVersions:
             refTypeName: AIGatewayDatastoreNamespacedRef
             resolvesTo: name
             reverseWatch: true
+        cel:
+          spec:
+            apiSpec:
+              key-auth:
+                config:
+                  identityRealms:
+                    # Konnect applies a default identity realm when the field is
+                    # absent, which conflicts with principals.enabled. An explicit
+                    # empty list must reach the request to clear that default.
+                    _omitZero: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAuthStrategiesSDK

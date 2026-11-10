@@ -878,6 +878,36 @@ func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	assert.Equal(t, []string{"/v3/portals", "/v3/portals/{portalId}/teams"}, agv.GetPaths())
 }
 
+func TestFieldConfig_OmitZero(t *testing.T) {
+	var agv APIGroupVersionConfig
+	require.NoError(t, yaml.Unmarshal([]byte(`
+types:
+  - path: /v1/ai-gateways/{gatewayId}/auth-strategies
+    name: AIGatewayAuthStrategy
+    cel:
+      spec:
+        apiSpec:
+          key-auth:
+            config:
+              identityRealms:
+                _omitZero: true
+`), &agv))
+
+	fc := agv.FieldConfig(map[string]string{
+		"/v1/ai-gateways/{gatewayId}/auth-strategies": "AIGatewayAuthStrategy",
+	})
+	identityRealms := fc.GetFieldConfig(
+		"AIGatewayAuthStrategy",
+		"spec",
+		"apiSpec",
+		"key-auth",
+		"config",
+		"identityRealms",
+	)
+	require.NotNil(t, identityRealms)
+	assert.True(t, identityRealms.OmitZero)
+}
+
 func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 	t.Run("with cel validations", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
