@@ -298,7 +298,8 @@ type parents struct {
 // childrenOf lists into list, whose items are items, the objects whose
 // parent, by the index field, is one of the parents. It returns those whose
 // parent is in the configuration, with the index of their parent, and the
-// keys of every object not being deleted: the others are left out.
+// keys of every object live returns, whether its parent is in the
+// configuration or not.
 func childrenOf[T any, PT interface {
 	*T
 	entityObject
