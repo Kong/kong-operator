@@ -92,6 +92,22 @@
   objects still decode, because a bare string reads as an inline value, but any
   update must use the object shape.**
   [#6433](https://github.com/Kong/kong-operator/pull/6433)
+- `EventGatewayVirtualClusterProducePolicy` and
+  `EventGatewayVirtualClusterConsumePolicy`: schema registry references.
+  - The CRDs reject specs Konnect refuses: a schema registry reference whose
+    `type` doesn't match the member set, or of `type: id` without its id,
+    `schemaRegistry` in a `json` schema validation, and a `transcode` or
+    `maskFields` policy without `parentPolicyRef`. A stored object that
+    doesn't follow them can still be updated, e.g. its finalizer removed, as
+    long as it keeps or drops the schema registry reference it has.
+  - For a consume `schemaValidation` policy, the Go type of the schema registry
+    field is now `EventGatewaySchemaRegistryRefWithNamespacedRef`, and a
+    reference moved to `namespacedRef` must drop `kind`.
+  - With an `OnPremEventGateway`, only `namespacedRef` references to schema
+    registries, static keys and TLS trust bundles are allowed. A policy that
+    references one by id or by name, including a consume schema registry
+    reference by a name set directly, is refused.
+  [#6491](https://github.com/Kong/kong-operator/pull/6491)
 
 ### Fixed
 
@@ -157,6 +173,13 @@
   `/tmp/k8s-webhook-server/serving-certs`, where OLM mounts the webhook
   certificate without a subfolder.
   [#6515](https://github.com/Kong/kong-operator/pull/6515)
+- `EventGatewayVirtualClusterProducePolicy` and
+  `EventGatewayVirtualClusterConsumePolicy`: schema registry references.
+  - A schema registry can be referenced by object, with `type: namespacedRef`,
+    next to `id` and `name`.
+  - A `type: id` reference now keeps its id (`id: {id: <uuid>}`).
+  - `transcode` and `maskFields` policies accept `parentPolicyRef`.
+  [#6491](https://github.com/Kong/kong-operator/pull/6491)
 
 ### Changed
 

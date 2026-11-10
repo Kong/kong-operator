@@ -103,6 +103,9 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 		entityKind[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy, gwadminapi.EventGatewayConsumePolicyOnPrem]{
 			kind: "EventGatewayVirtualClusterConsumePolicy",
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) (any, error) {
+				if err := referencesByObject(p.Spec.APISpec); err != nil {
+					return nil, err
+				}
 				req, err := p.ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx, cl)
 				if err != nil {
 					return nil, err
@@ -127,6 +130,9 @@ func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidRes
 		entityKind[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, gwadminapi.EventGatewayProducePolicyOnPrem]{
 			kind: "EventGatewayVirtualClusterProducePolicy",
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) (any, error) {
+				if err := referencesByObject(p.Spec.APISpec); err != nil {
+					return nil, err
+				}
 				req, err := p.ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
 				if err != nil {
 					return nil, err

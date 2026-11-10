@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/google/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -267,6 +268,105 @@ var (
 		virtualClusterAt("config", "destination"),
 	}
 )
+
+// namespacedRefMember is the only way a policy of an OnPremEventGateway can
+// reference another entity: as the type of a tagged union, or as the member of
+// one without a type.
+const namespacedRefMember = "namespacedRef"
+
+// referencesByObject returns an error when the API spec of a policy references
+// a schema registry, a static key or a TLS trust bundle other than by object:
+// an id or a name means nothing to gw-admin, whose entities are identified by
+// the UID of their object. It must be called on the spec, before the
+// conversion turns a reference by object into a reference by id or by name.
+func referencesByObject(apiSpec any) error {
+	value, err := jsonValue(apiSpec)
+	if err != nil {
+		return fmt.Errorf("failed to read the references of the policy: %w", err)
+	}
+	return referencesByObjectIn(value, "spec.apiSpec")
+}
+
+// referencesByObjectIn is referencesByObject for the JSON value at the path.
+// Only the union members in use are encoded, so one left set in another member
+// doesn't count.
+func referencesByObjectIn(v any, path string) error {
+	switch v := v.(type) {
+	case map[string]any:
+		for _, key := range slices.Sorted(maps.Keys(v)) {
+			field := path + "." + key
+			var err error
+			switch {
+			case key == "labels":
+				// Labels are user data: a label key isn't a reference.
+				continue
+			case key == "schemaRegistry":
+				err = notByObjectError(field, "its schema registry", schemaRegistryRefForm(v[key]))
+			case key == "key" && strings.HasSuffix(path, ".static"):
+				err = notByObjectError(field, "its static key", untypedRefForm(v[key]))
+			case key == "tlsTrustBundles":
+				bundles, _ := v[key].([]any)
+				for i, bundle := range bundles {
+					if err = notByObjectError(fmt.Sprintf("%s.%d", field, i), "a TLS trust bundle", untypedRefForm(bundle)); err != nil {
+						break
+					}
+				}
+			default:
+				err = referencesByObjectIn(v[key], field)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	case []any:
+		for i, item := range v {
+			if err := referencesByObjectIn(item, fmt.Sprintf("%s.%d", path, i)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// notByObjectError returns the error of a reference at the field in the form,
+// or nil for the empty form of a reference by object.
+func notByObjectError(field, what, form string) error {
+	if form == "" {
+		return nil
+	}
+	return fmt.Errorf("%s references %s by %s: with an OnPremEventGateway, only %s is allowed", field, what, form, namespacedRefMember)
+}
+
+// schemaRegistryRefForm returns how a reference to a schema registry that isn't
+// by namespacedRef names it, or "". One without a type, as a consume schema
+// validation policy may set, names the object directly: it means the same, but
+// with an OnPremEventGateway every reference is written with namespacedRef.
+func schemaRegistryRefForm(ref any) string {
+	fields, _ := ref.(map[string]any)
+	switch refType, _ := fields["type"].(string); refType {
+	case namespacedRefMember:
+		return ""
+	case "":
+		return "a name set directly"
+	default:
+		return refType
+	}
+}
+
+// untypedRefForm returns how a reference without a type, whose set member tells
+// its form, names the entity when it isn't by object, or "".
+func untypedRefForm(ref any) string {
+	fields, _ := ref.(map[string]any)
+	if _, ok := fields[namespacedRefMember]; ok {
+		return ""
+	}
+	for _, form := range []string{"id", "name"} {
+		if _, ok := fields[form]; ok {
+			return form
+		}
+	}
+	return ""
+}
 
 // resolveReferences returns an adjustment of the payload of a policy that
 // rewrites its references, at the paths of its kind, in order: the first

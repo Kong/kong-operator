@@ -688,6 +688,288 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFie
 	return resolved, nil
 }
 
+// RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry returns the references at spec.apiSpec.schemaValidation.config.json.schemaRegistry,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewaySchemaRegistryRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON.SchemaRegistry == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.Type != EventGatewayProduceSchemaValidationPolicyConfigTypeJSON {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON.SchemaRegistry.NamespacedRef == nil {
+		return nil
+	}
+	return []EventGatewaySchemaRegistryRef{*obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON.SchemaRegistry.NamespacedRef}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry resolves the CR references in spec.apiSpec.schemaValidation.config.json.schemaRegistry
+// to Konnect names.
+func resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewaySchemaRegistry
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewaySchemaRegistry objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry returns the references at spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewaySchemaRegistryRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.Type != EventGatewayProduceSchemaValidationPolicyConfigTypeSchemaRegistry {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry.NamespacedRef == nil {
+		return nil
+	}
+	return []EventGatewaySchemaRegistryRef{*obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry.NamespacedRef}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry resolves the CR references in spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
+// to Konnect names.
+func resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewaySchemaRegistry
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewaySchemaRegistry objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry returns the references at spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewaySchemaRegistryRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc.SchemaRegistry == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.OutputFormat != EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeEventGatewayParsedRecordTranscodeProduceConfigAvro {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Type != EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeReferenc {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc.SchemaRegistry.NamespacedRef == nil {
+		return nil
+	}
+	return []EventGatewaySchemaRegistryRef{*obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc.SchemaRegistry.NamespacedRef}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry resolves the CR references in spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry
+// to Konnect names.
+func resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewaySchemaRegistry
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewaySchemaRegistry objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy returns the keys of the EventGatewayVirtualClusterProducePolicy
 // objects obj references through spec.apiSpec.parentPolicyRef, with the default namespace applied.
 func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
@@ -732,6 +1014,43 @@ func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(obj *Eve
 	return keys
 }
 
+// EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry returns the keys of the EventGatewaySchemaRegistry
+// objects obj references through spec.apiSpec.schemaValidation.config.json.schemaRegistry, spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry, spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry, with the default namespace applied.
+func EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
@@ -743,6 +1062,15 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx
 		errs = append(errs, err)
 	}
 	if _, err := resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -862,6 +1190,113 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 			payload["encrypt_fields"] = encryptFields
 		}
 	}
+	// spec.apiSpec.schemaValidation.config.json.schemaRegistry may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "name", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON.SchemaRegistry != nil {
+		schemaValidation, _ := payload["schema_validation"].(map[string]any)
+		if schemaValidation != nil {
+			config3, _ := schemaValidation["config"].(map[string]any)
+			if config3 != nil {
+				json, _ := config3["json"].(map[string]any)
+				if json != nil {
+					resolvedSchemaValidationConfigJSONSchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.json.schemaRegistry references: %w", err)
+					}
+					if el, ok := json["schema_registry"].(map[string]any); ok {
+						if _, has := el["namespaced_ref"]; has {
+							// The reference is set in the payload: it must have resolved,
+							// or it would reach Konnect unresolved.
+							if len(resolvedSchemaValidationConfigJSONSchemaRegistry) == 0 {
+								return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.json.schemaRegistry references: reference set in the payload but not resolved")
+							}
+							json["schema_registry"] = map[string]any{"name": resolvedSchemaValidationConfigJSONSchemaRegistry[0]}
+						}
+					}
+					config3["json"] = json
+				}
+				schemaValidation["config"] = config3
+			}
+			payload["schema_validation"] = schemaValidation
+		}
+	}
+	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "name", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
+		schemaValidation2, _ := payload["schema_validation"].(map[string]any)
+		if schemaValidation2 != nil {
+			config4, _ := schemaValidation2["config"].(map[string]any)
+			if config4 != nil {
+				confluentSchemaRegistry, _ := config4["confluent_schema_registry"].(map[string]any)
+				if confluentSchemaRegistry != nil {
+					resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: %w", err)
+					}
+					if el, ok := confluentSchemaRegistry["schema_registry"].(map[string]any); ok {
+						if _, has := el["namespaced_ref"]; has {
+							// The reference is set in the payload: it must have resolved,
+							// or it would reach Konnect unresolved.
+							if len(resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry) == 0 {
+								return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: reference set in the payload but not resolved")
+							}
+							confluentSchemaRegistry["schema_registry"] = map[string]any{"name": resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry[0]}
+						}
+					}
+					config4["confluent_schema_registry"] = confluentSchemaRegistry
+				}
+				schemaValidation2["config"] = config4
+			}
+			payload["schema_validation"] = schemaValidation2
+		}
+	}
+	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "name", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc.SchemaRegistry != nil {
+		transcode, _ := payload["transcode"].(map[string]any)
+		if transcode != nil {
+			config5, _ := transcode["config"].(map[string]any)
+			if config5 != nil {
+				avro, _ := config5["avro"].(map[string]any)
+				if avro != nil {
+					schemaSource, _ := avro["schema_source"].(map[string]any)
+					if schemaSource != nil {
+						reference, _ := schemaSource["reference"].(map[string]any)
+						if reference != nil {
+							resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx, cl, obj)
+							if err != nil {
+								return nil, fmt.Errorf("resolving spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry references: %w", err)
+							}
+							if el, ok := reference["schema_registry"].(map[string]any); ok {
+								if _, has := el["namespaced_ref"]; has {
+									// The reference is set in the payload: it must have resolved,
+									// or it would reach Konnect unresolved.
+									if len(resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry) == 0 {
+										return nil, fmt.Errorf("resolving spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry references: reference set in the payload but not resolved")
+									}
+									reference["schema_registry"] = map[string]any{"name": resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry[0]}
+								}
+							}
+							schemaSource["reference"] = reference
+						}
+						avro["schema_source"] = schemaSource
+					}
+					config5["avro"] = avro
+				}
+				transcode["config"] = config5
+			}
+			payload["transcode"] = transcode
+		}
+	}
 	return spec.toCreateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload)
 }
 
@@ -968,6 +1403,113 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 				encryptFields["config"] = config2
 			}
 			payload["encrypt_fields"] = encryptFields
+		}
+	}
+	// spec.apiSpec.schemaValidation.config.json.schemaRegistry may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "name", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.JSON.SchemaRegistry != nil {
+		schemaValidation, _ := payload["schema_validation"].(map[string]any)
+		if schemaValidation != nil {
+			config3, _ := schemaValidation["config"].(map[string]any)
+			if config3 != nil {
+				json, _ := config3["json"].(map[string]any)
+				if json != nil {
+					resolvedSchemaValidationConfigJSONSchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.json.schemaRegistry references: %w", err)
+					}
+					if el, ok := json["schema_registry"].(map[string]any); ok {
+						if _, has := el["namespaced_ref"]; has {
+							// The reference is set in the payload: it must have resolved,
+							// or it would reach Konnect unresolved.
+							if len(resolvedSchemaValidationConfigJSONSchemaRegistry) == 0 {
+								return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.json.schemaRegistry references: reference set in the payload but not resolved")
+							}
+							json["schema_registry"] = map[string]any{"name": resolvedSchemaValidationConfigJSONSchemaRegistry[0]}
+						}
+					}
+					config3["json"] = json
+				}
+				schemaValidation["config"] = config3
+			}
+			payload["schema_validation"] = schemaValidation
+		}
+	}
+	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "name", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
+		schemaValidation2, _ := payload["schema_validation"].(map[string]any)
+		if schemaValidation2 != nil {
+			config4, _ := schemaValidation2["config"].(map[string]any)
+			if config4 != nil {
+				confluentSchemaRegistry, _ := config4["confluent_schema_registry"].(map[string]any)
+				if confluentSchemaRegistry != nil {
+					resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: %w", err)
+					}
+					if el, ok := confluentSchemaRegistry["schema_registry"].(map[string]any); ok {
+						if _, has := el["namespaced_ref"]; has {
+							// The reference is set in the payload: it must have resolved,
+							// or it would reach Konnect unresolved.
+							if len(resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry) == 0 {
+								return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: reference set in the payload but not resolved")
+							}
+							confluentSchemaRegistry["schema_registry"] = map[string]any{"name": resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry[0]}
+						}
+					}
+					config4["confluent_schema_registry"] = confluentSchemaRegistry
+				}
+				schemaValidation2["config"] = config4
+			}
+			payload["schema_validation"] = schemaValidation2
+		}
+	}
+	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "name", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc.SchemaRegistry != nil {
+		transcode, _ := payload["transcode"].(map[string]any)
+		if transcode != nil {
+			config5, _ := transcode["config"].(map[string]any)
+			if config5 != nil {
+				avro, _ := config5["avro"].(map[string]any)
+				if avro != nil {
+					schemaSource, _ := avro["schema_source"].(map[string]any)
+					if schemaSource != nil {
+						reference, _ := schemaSource["reference"].(map[string]any)
+						if reference != nil {
+							resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx, cl, obj)
+							if err != nil {
+								return nil, fmt.Errorf("resolving spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry references: %w", err)
+							}
+							if el, ok := reference["schema_registry"].(map[string]any); ok {
+								if _, has := el["namespaced_ref"]; has {
+									// The reference is set in the payload: it must have resolved,
+									// or it would reach Konnect unresolved.
+									if len(resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry) == 0 {
+										return nil, fmt.Errorf("resolving spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry references: reference set in the payload but not resolved")
+									}
+									reference["schema_registry"] = map[string]any{"name": resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry[0]}
+								}
+							}
+							schemaSource["reference"] = reference
+						}
+						avro["schema_source"] = schemaSource
+					}
+					config5["avro"] = avro
+				}
+				transcode["config"] = config5
+			}
+			payload["transcode"] = transcode
 		}
 	}
 	return spec.toUpdateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload)
