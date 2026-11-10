@@ -127,7 +127,10 @@ func TestReconcileInvalidClientCertificateCleansOldBindings(t *testing.T) {
 			for range 6 {
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(route), route))
 				route.SetGroupVersionKind(schema.GroupVersionKind{Group: gatewayv1.GroupName, Version: "v1", Kind: "HTTPRoute"})
-				_, err := reconciler.Reconcile(t.Context(), route)
+				result, err := reconciler.Reconcile(t.Context(), route)
+				// Progress continuations use RequeueAfter. A rate-limited requeue accumulates
+				// exponential backoff across the one-resource-per-reconcile sequence.
+				require.False(t, result.Requeue) //nolint:staticcheck // The continuation must not use rate-limited requeue.
 				if state == "API failure" {
 					require.Error(t, err)
 					break

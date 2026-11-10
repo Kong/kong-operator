@@ -214,7 +214,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		)
 		return ctrl.Result{}, err
 	} else if apierrors.IsConflict(err) {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 	if stop {
 		log.Debug(logger, "Stopping further reconciliation as the resource is not ready for processing")
@@ -230,7 +230,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			"Status successfully updated",
 		)
 		log.Trace(logger, "Status updated, requeueing")
-		return ctrl.Result{Requeue: true}, nil
+		// RequeueAfter bypasses the rate limiter. A rate-limited requeue here would
+		// add to a delay that grows with every Programmed transition.
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	// Phase 2: Translation.
@@ -330,7 +332,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			fmt.Sprintf("Kong resources successfully enforced: %d total", resourceCount),
 		)
 		log.Trace(logger, "State changed, requeueing")
-		return ctrl.Result{Requeue: true}, nil
+		// RequeueAfter bypasses the rate limiter so the next Kong resource is
+		// applied without an accumulating delay (see the status update above).
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	// If we are intentionally waiting for prerequisites (e.g., Programmed deps),
