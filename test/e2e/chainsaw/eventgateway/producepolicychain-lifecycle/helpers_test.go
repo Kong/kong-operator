@@ -148,6 +148,21 @@ func TestObservationMustExceedSyncPeriod(t *testing.T) {
 	require.Contains(t, string(output), "must exceed the actual operator sync period")
 }
 
+func TestStaticKeySecretIsVisibleToOperatorCache(t *testing.T) {
+	cmd := helperCommand(t, `source scripts/chain.sh
+create_static_key
+jq -s -e '
+  .[0].kind == "Secret" and .[0].metadata.labels["konghq.com/secret"] == "true" and
+  .[1].kind == "EventGatewayStaticKey" and
+  .[1].spec.apiSpec.value.secretRef.name == .[0].metadata.name and
+  .[1].spec.apiSpec.value.secretRef.key == "key"
+' "$APPLIED_FILE"
+`, "GATEWAY_NAME=probe-gateway",
+		`RESOURCE_JSON={"metadata":{"generation":1},"status":{"conditions":[{"type":"Programmed","status":"True","observedGeneration":1}]}}`)
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "%s", output)
+}
+
 func TestCheckPropagatesFailureInsideSnapshotSubshell(t *testing.T) {
 	cmd := helperCommand(t, `source scripts/chain.sh
 result="$(check '[]' ready)"

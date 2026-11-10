@@ -173,20 +173,25 @@ hold() {
   done
 }
 
+create_static_key() {
+  # Public test-only key material, not the Konnect credential.
+  jq -n --arg ns "${NAMESPACE}" --arg gateway "${GATEWAY_NAME}" '
+    {apiVersion: "v1", kind: "Secret",
+     metadata: {name: "chain-key", namespace: $ns, labels: {"konghq.com/secret": "true"}},
+     stringData: {key: "Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE="}},
+    {apiVersion: "configuration.konghq.com/v1alpha1", kind: "EventGatewayStaticKey",
+     metadata: {name: "chain-key", namespace: $ns},
+     spec: {gatewayRef: {type: "namespacedRef", namespacedRef: {name: $gateway}},
+       apiSpec: {name: "chain-key", value: {type: "secretRef", secretRef: {name: "chain-key", key: "key"}}}}}
+  ' | kubectl apply -f - >/dev/null
+  wait_resource eventgatewaystatickeys.configuration.konghq.com chain-key \
+    '.metadata.generation as $g | any(.status.conditions[]?; .type == "Programmed" and .status == "True" and .observedGeneration == $g)'
+}
+
 # Allow the helper regression tests to exercise the real functions without provisioning.
 if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then return; fi
 
-# Public test-only key material, not the Konnect credential.
-jq -n --arg ns "${NAMESPACE}" --arg gateway "${GATEWAY_NAME}" '
-  {apiVersion: "v1", kind: "Secret", metadata: {name: "chain-key", namespace: $ns},
-   stringData: {key: "Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE="}},
-  {apiVersion: "configuration.konghq.com/v1alpha1", kind: "EventGatewayStaticKey",
-   metadata: {name: "chain-key", namespace: $ns},
-   spec: {gatewayRef: {type: "namespacedRef", namespacedRef: {name: $gateway}},
-     apiSpec: {name: "chain-key", value: {type: "secretRef", secretRef: {name: "chain-key", key: "key"}}}}}
-' | kubectl apply -f - >/dev/null
-wait_resource eventgatewaystatickeys.configuration.konghq.com chain-key \
-  '.metadata.generation as $g | any(.status.conditions[]?; .type == "Programmed" and .status == "True" and .observedGeneration == $g)'
+create_static_key
 
 create_policy root modifyHeaders; wait_policy root
 create_policy parse-b schemaValidation; wait_policy parse-b
