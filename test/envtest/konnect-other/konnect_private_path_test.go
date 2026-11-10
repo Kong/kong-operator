@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect"
@@ -56,6 +57,10 @@ func TestKonnectPrivatePath(t *testing.T) {
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayNetwork](consts.KonnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[konnectv1alpha1.KonnectCloudGatewayNetwork](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](&metricsmocks.MockRecorder{}),
 		),
 	)
 
@@ -164,6 +169,63 @@ func TestKonnectPrivatePath(t *testing.T) {
 			assert.Equal(t, r.Host, r.ServerName, "the TLS handshake must present the host being called")
 			assert.Contains(t, r.Path, "/api/", "the configured path prefix must be preserved")
 		}
+
+		t.Log("Deleting the network")
+		require.NoError(t, cl.Delete(ctx, network))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, network, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("reconciles a cloud gateway configuration over the private global host", func(t *testing.T) {
+		cp := deploy.KonnectGatewayControlPlane(t, ctx, clientNamespaced, apiAuth)
+
+		networkWatch := envtest.SetupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+		network := deploy.KonnectCloudGatewayNetwork(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Waiting for the referenced network to be programmed")
+		envtest.WatchFor(t, ctx, networkWatch, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+			return client.ObjectKeyFromObject(n) == client.ObjectKeyFromObject(network) &&
+				envtest.ConditionsContainProgrammed(n.GetConditions(), metav1.ConditionTrue) &&
+				n.GetKonnectID() == envtest.KonnectPrivateNetworkID
+		}, "KonnectCloudGatewayNetwork did not get programmed with the fake Konnect ID")
+
+		configurationWatch := envtest.SetupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+		configuration := deploy.KonnectCloudGatewayDataPlaneGroupConfiguration(t, ctx, clientNamespaced,
+			// Referencing the network by its Konnect ID makes the reconciler
+			// look it up with GetNetwork, which leaves the ops package.
+			dataplaneGroup(commonv1alpha1.ObjectRef{
+				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+				KonnectID: new(envtest.KonnectPrivateNetworkID),
+			}),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+
+		t.Log("Waiting for the configuration to be programmed with the fake Konnect ID")
+		envtest.WatchFor(t, ctx, configurationWatch, apiwatch.Modified, func(c *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration) bool {
+			return client.ObjectKeyFromObject(c) == client.ObjectKeyFromObject(configuration) &&
+				envtest.ConditionsContainProgrammed(c.GetConditions(), metav1.ConditionTrue) &&
+				c.GetKonnectID() == envtest.KonnectPrivateConfigurationID
+		}, "KonnectCloudGatewayDataPlaneGroupConfiguration did not get programmed with the fake Konnect ID")
+
+		t.Log("Checking the requests the fake received")
+		assert.Contains(t, fake.Requests(), envtest.KonnectRequest{
+			Method:        http.MethodGet,
+			Host:          envtest.KonnectPrivateGlobalHost,
+			ServerName:    envtest.KonnectPrivateGlobalHost,
+			Path:          "/api/v2/cloud-gateways/networks/" + envtest.KonnectPrivateNetworkID,
+			Authorization: "Bearer " + konnectPrivateToken,
+		}, "the network lookup behind the konnectID ref must go to the private global host, authenticated")
+
+		assert.Contains(t, fake.Requests(), envtest.KonnectRequest{
+			Method:        http.MethodPut,
+			Host:          envtest.KonnectPrivateGlobalHost,
+			ServerName:    envtest.KonnectPrivateGlobalHost,
+			Path:          "/api/v2/cloud-gateways/configurations",
+			Authorization: "Bearer " + konnectPrivateToken,
+		}, "the configuration create must go to the private global host's path, authenticated")
+
+		t.Log("Deleting the configuration")
+		require.NoError(t, cl.Delete(ctx, configuration))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, configuration, consts.WaitTime, consts.TickTime)
 
 		t.Log("Deleting the network")
 		require.NoError(t, cl.Delete(ctx, network))
