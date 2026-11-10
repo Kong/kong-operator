@@ -567,9 +567,15 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	// generate ATC matcher from split HTTPRouteMatch itself.
 	matchers = append(matchers, generateMatcherFromHTTPRouteMatch(match.Match, containReplacePrefixMatchURLRewriteFilter))
 
+	// NOTE: Kong's `net.dst.port` is the Host header port when the header carries one,
+	// and the listener port otherwise, so requests like `Host: example.com:1234` don't
+	// match. A listener-port-only predicate is needed in Kong to make this deterministic:
+	// https://konghq.aha.io/ideas/ideas/GTWY-I-1612
+	// and for more context https://konghq.atlassian.net/browse/FTI-8001.
 	portMatchers := make([]atc.Matcher, 0, len(httpRouteMatchWithPriority.Match.Ports))
 	for _, p := range httpRouteMatchWithPriority.Match.Ports {
-		portMatcher, _ := atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(int(p)))
+		lo.Must(atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(int(p))))
+		portMatcher := lo.Must(atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(int(p))))
 		portMatchers = append(portMatchers, portMatcher)
 	}
 	matchers = append(matchers, atc.Or(portMatchers...))

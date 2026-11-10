@@ -22,6 +22,18 @@ var skippedTestsForStandardTraditionalCompatibleRouter = []string{
 	tests.HTTPRouteMethodMatching.ShortName,
 }
 
+// skippedTestsForStandardExpressionsRouter are ShortNames of tests skipped only
+// for the standard gateway with the expressions router flavor.
+var skippedTestsForStandardExpressionsRouter = []string{
+	// Listener port isolation is implemented with `net.dst.port`, which Kong
+	// takes from the Host header port when present (e.g. `Host: very.specific.com:1234`
+	// on a listener at port 80), so such requests don't match their routes.
+	// A dedicated listener-port predicate is needed in Kong:
+	// https://konghq.aha.io/ideas/ideas/GTWY-I-1612
+	// and for more context https://konghq.atlassian.net/browse/FTI-8001.
+	tests.HTTPRouteHostnameIntersection.ShortName,
+}
+
 var skippedTestsForHybrid = []string{
 
 	// Extended profile.
@@ -39,6 +51,10 @@ func skippedTestsForConfig(routerFlavor consts.RouterFlavor, gwType gatewayType)
 		if routerFlavor == consts.RouterFlavorTraditionalCompatible {
 			skipped = append(skipped, skippedTestsForStandardTraditionalCompatibleRouter...)
 		}
+	}
+
+	if gwType == standardGateway && routerFlavor == consts.RouterFlavorExpressions {
+		skipped = append(skipped, skippedTestsForStandardExpressionsRouter...)
 	}
 
 	if gwType == hybridGateway {
