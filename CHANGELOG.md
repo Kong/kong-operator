@@ -347,6 +347,18 @@
   running, and a cluster policy chain competing for a virtual cluster another
   chain owns.
   [#6495](https://github.com/Kong/kong-operator/pull/6495)
+- On-prem (self-managed) gateways: Kong entities translated from `HTTPRoute`,
+  `GRPCRoute`, `TLSRoute`, `TCPRoute` and `UDPRoute` now also inherit the
+  `konghq.com/tags` annotation from the route's parent `Gateway` and from that
+  Gateway's `GatewayClass`, as Konnect hybrid gateways already do. This applies
+  to services, routes, upstreams, targets, plugins generated from route filters
+  or for routes without valid backends, and `KongPlugin`/`KongClusterPlugin`
+  instances bound to such routes or services through `konghq.com/plugins`.
+  Certificates and SNIs translated from a Gateway listener's TLS configuration
+  inherit the tags of that Gateway and its GatewayClass. Inherited tags are
+  appended after the entity's own tags (the Gateway's first, then the
+  GatewayClass's) and the result is deduplicated. Only `Gateway`s reconciled by
+  this controller, and only `GatewayClass`es it controls, contribute tags.
 
 ### Changed
 

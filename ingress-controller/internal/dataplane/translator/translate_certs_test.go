@@ -298,6 +298,62 @@ func TestMergeCerts(t *testing.T) {
 				"certificate-3": "certificate-1",
 			},
 		},
+		{
+			name: "same certificate requested by an Ingress and Gateway listeners inherits the Gateways' tags",
+			certs: []certWrapper{
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("secret-1-tag"),
+					},
+					snis: []string{"ingress.com"},
+				},
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   new("certificate-2"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("secret-2-tag"),
+					},
+					snis:          []string{"a.com"},
+					inheritedTags: []string{"gw-a", "gwc"},
+				},
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   new("certificate-3"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("secret-3-tag"),
+					},
+					// a.com is already served from gw-a's listener, so it keeps gw-a's tags.
+					snis:          []string{"a.com", "b.com"},
+					inheritedTags: []string{"gw-b", "gwc"},
+				},
+			},
+			mergedCerts: []kongstate.Certificate{
+				{
+					ID:   new("certificate-1"),
+					Cert: new(string(crt1)),
+					Key:  new(string(key1)),
+					Tags: kong.StringSlice("secret-1-tag", "gw-a", "gwc", "gw-b"),
+					SNIs: kong.StringSlice("a.com", "b.com", "ingress.com"),
+					SNITags: map[string][]*string{
+						"a.com": kong.StringSlice("gw-a", "gwc"),
+						"b.com": kong.StringSlice("gw-b", "gwc"),
+					},
+				},
+			},
+			idToMergedID: certIDToMergedCertID{
+				"certificate-1": "certificate-1",
+				"certificate-2": "certificate-1",
+				"certificate-3": "certificate-1",
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

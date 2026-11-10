@@ -59,6 +59,12 @@ type Service struct {
 	// For example, if this Service was created as a result of translating a Kubernetes Ingress, then
 	// Parent is expected to be the Ingress object itself.
 	Parent client.Object
+
+	// InheritedTags are the konghq.com/tags this Service inherits from the Gateways (and their
+	// GatewayClasses) that the Gateway API routes it was translated from are attached to.
+	// They are appended to the Service's own tags and propagated to its Upstream, Targets and
+	// the plugins bound to it.
+	InheritedTags []string
 }
 
 func (s *Service) overridePath(anns map[string]string) {

@@ -307,6 +307,20 @@ func (ir *ingressRules) generateKongServiceTags(
 	service kongstate.Service,
 	logger logr.Logger,
 ) []*string {
+	// Tags inherited from the parent Gateways (and their GatewayClasses) of the Gateway API routes
+	// this Service was translated from come after the Service's own tags.
+	tags := ir.generateKongServiceOwnTags(k8sServices, service, logger)
+	if len(service.InheritedTags) == 0 {
+		return tags
+	}
+	return util.MergeTags(tags, service.InheritedTags)
+}
+
+func (ir *ingressRules) generateKongServiceOwnTags(
+	k8sServices []*corev1.Service,
+	service kongstate.Service,
+	logger logr.Logger,
+) []*string {
 	// For multi-backend Services we expect ServiceNameToParent to be populated.
 	if len(k8sServices) > 1 {
 		if parent, ok := ir.ServiceNameToParent[*service.Name]; ok {
