@@ -75,7 +75,9 @@ func (e EventGatewaySchemaRegistryInUseError) usersDescription() string {
 // but when Konnect refuses the deletion, it checks whether Konnect produce or
 // consume policies still use the schema registry and, if so, returns an
 // EventGatewaySchemaRegistryInUseError naming them, so the reconciler can
-// report a DeletionBlocked condition. The probe avoids relying on
+// report a DeletionBlocked condition. The policies are matched on the Konnect
+// ID of the schema registry and on its name as stored in Konnect (a rename may
+// not have reached it yet). The probe avoids relying on
 // human-readable error details from Konnect: any other refusal, or a failed
 // probe, returns Konnect's error as it is.
 func deleteEventGatewaySchemaRegistryGuarded(
@@ -93,9 +95,15 @@ func deleteEventGatewaySchemaRegistryGuarded(
 	}
 
 	logger := ctrllog.FromContext(ctx)
-	produce, consume, probeErr := konnectPoliciesUsingSchemaRegistry(
-		ctx, virtualClustersSDK, producePoliciesSDK, consumePoliciesSDK, obj.GetGatewayID(), obj.GetKonnectID(), obj.GetKonnectName(),
-	)
+	// A policy referencing the schema registry by name holds the name stored in
+	// Konnect, which a rename in the spec may not have reached yet.
+	name, probeErr := konnectSchemaRegistryName(ctx, schemaRegistriesSDK, obj.GetGatewayID(), obj.GetKonnectID())
+	var produce, consume []konnectPolicyUser
+	if probeErr == nil {
+		produce, consume, probeErr = konnectPoliciesUsingSchemaRegistry(
+			ctx, virtualClustersSDK, producePoliciesSDK, consumePoliciesSDK, obj.GetGatewayID(), obj.GetKonnectID(), name,
+		)
+	}
 	if probeErr != nil {
 		logger.Info("failed to determine whether policies using the schema registry blocked deletion",
 			"type", obj.GetTypeName(), "id", obj.GetKonnectID(), "error", probeErr.Error(),
@@ -144,6 +152,23 @@ func managedPolicies[T any, PT interface {
 		}
 	}
 	return managed
+}
+
+// konnectSchemaRegistryName returns the name of the schema registry as stored
+// in Konnect.
+func konnectSchemaRegistryName(
+	ctx context.Context,
+	sdk sdkkonnectgo.EventGatewaySchemaRegistriesSDK,
+	gatewayID, registryID string,
+) (string, error) {
+	resp, err := sdk.GetEventGatewaySchemaRegistry(ctx, gatewayID, registryID)
+	if err != nil {
+		return "", fmt.Errorf("getting the schema registry: %w", err)
+	}
+	if resp == nil || resp.SchemaRegistry == nil {
+		return "", ErrNilResponse
+	}
+	return resp.SchemaRegistry.GetName(), nil
 }
 
 // konnectPoliciesUsingSchemaRegistry returns the Konnect produce and consume

@@ -95,6 +95,16 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		}
 		sdk.EXPECT().DeleteEventGatewaySchemaRegistry(mock.Anything, gatewayID, registryID).Return(resp, err).Once()
 	}
+	// expectRefused expects Konnect to refuse the deletion, and the probe to
+	// read the name of the schema registry stored in Konnect.
+	expectRefused := func(sdk *sdkmocks.MockEventGatewaySchemaRegistriesSDK, konnectName string) {
+		expectDelete(sdk, badRequest())
+		sdk.EXPECT().GetEventGatewaySchemaRegistry(mock.Anything, gatewayID, registryID).
+			Return(&sdkkonnectops.GetEventGatewaySchemaRegistryResponse{
+				SchemaRegistry: &sdkkonnectcomp.SchemaRegistry{ID: registryID, Name: konnectName},
+			}, nil).
+			Once()
+	}
 	expectVirtualClusters := func(sdk *sdkmocks.MockEventGatewayVirtualClustersSDK, vcs ...sdkkonnectcomp.VirtualCluster) {
 		sdk.EXPECT().
 			ListEventGatewayVirtualClusters(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListEventGatewayVirtualClustersRequest) bool {
@@ -148,7 +158,7 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		t.Parallel()
 
 		s := newSDKs(t)
-		expectDelete(s.registries, badRequest())
+		expectRefused(s.registries, registryName)
 		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"), vc("vc-2", "payments"))
 		expectProduce(s.producePolicies, "vc-1", produceValidateByID)
 		expectConsume(s.consumePolicies, "vc-1", none)
@@ -178,7 +188,7 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		t.Parallel()
 
 		s := newSDKs(t)
-		expectDelete(s.registries, badRequest())
+		expectRefused(s.registries, registryName)
 		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"))
 		expectProduce(s.producePolicies, "vc-1", none)
 		expectConsume(s.consumePolicies, "vc-1", strings.ReplaceAll(consumeTranscodeByName, "orders-in-konnect", registryName))
@@ -191,11 +201,45 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		assert.NotContains(t, inUse.DeletionBlockedMessage(), "other/transcode")
 	})
 
+	t.Run("matches policies on the name stored in Konnect, not a rename not yet applied there", func(t *testing.T) {
+		t.Parallel()
+
+		s := newSDKs(t)
+		expectRefused(s.registries, registryName)
+		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"))
+		expectProduce(s.producePolicies, "vc-1", none)
+		expectConsume(s.consumePolicies, "vc-1", consumeTranscodeByName)
+
+		renamed := newRegistry()
+		renamed.Spec.APISpec.SchemaRegistryConfluent.Name = "orders-renamed"
+		err := deleteEventGatewaySchemaRegistryGuarded(t.Context(), s.registries, s.virtualClusters, s.producePolicies, s.consumePolicies, newClient(t), renamed)
+		inUse, ok := errors.AsType[EventGatewaySchemaRegistryInUseError](err)
+		require.True(t, ok, "expected EventGatewaySchemaRegistryInUseError, got %v", err)
+		assert.Equal(t, []string{"orders/transcode"}, inUse.UnmanagedConsumePolicies)
+	})
+
+	t.Run("returns the Konnect error when reading the schema registry fails", func(t *testing.T) {
+		t.Parallel()
+
+		// No list expectation: the policies aren't probed.
+		s := newSDKs(t)
+		expectDelete(s.registries, badRequest())
+		s.registries.EXPECT().GetEventGatewaySchemaRegistry(mock.Anything, gatewayID, registryID).
+			Return(nil, errors.New("konnect unavailable")).
+			Once()
+
+		err := guardedDelete(t, s, newClient(t))
+		_, blocked := errors.AsType[DeletionBlockedError](err)
+		assert.False(t, blocked)
+		var badReq *sdkkonnecterrs.BadRequestError
+		assert.ErrorAs(t, err, &badReq)
+	})
+
 	t.Run("returns the Konnect error when no policy uses the schema registry", func(t *testing.T) {
 		t.Parallel()
 
 		s := newSDKs(t)
-		expectDelete(s.registries, badRequest())
+		expectRefused(s.registries, registryName)
 		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"))
 		expectProduce(s.producePolicies, "vc-1", produceNotUsing)
 		expectConsume(s.consumePolicies, "vc-1", none)
@@ -213,7 +257,7 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		t.Parallel()
 
 		s := newSDKs(t)
-		expectDelete(s.registries, badRequest())
+		expectRefused(s.registries, registryName)
 		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"))
 		expectProduce(s.producePolicies, "vc-1", none)
 		s.consumePolicies.EXPECT().
@@ -231,7 +275,7 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		t.Parallel()
 
 		s := newSDKs(t)
-		expectDelete(s.registries, badRequest())
+		expectRefused(s.registries, registryName)
 		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"))
 		notFound := &sdkkonnecterrs.NotFoundError{Status: http.StatusNotFound, Title: "Not Found"}
 		s.producePolicies.EXPECT().
@@ -254,7 +298,7 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		t.Parallel()
 
 		s := newSDKs(t)
-		expectDelete(s.registries, badRequest())
+		expectRefused(s.registries, registryName)
 		expectVirtualClusters(s.virtualClusters, vc("vc-1", "orders"))
 		expectProduce(s.producePolicies, "vc-1", produceValidateByID)
 		expectConsume(s.consumePolicies, "vc-1", none)
@@ -287,7 +331,7 @@ func TestDeleteEventGatewaySchemaRegistryGuarded(t *testing.T) {
 		t.Parallel()
 
 		sdk := sdkwrappermocks.NewMockSDKWrapperWithT(t)
-		expectDelete(sdk.EventGatewaySchemaRegistriesSDK, badRequest())
+		expectRefused(sdk.EventGatewaySchemaRegistriesSDK, registryName)
 		expectVirtualClusters(sdk.EventGatewayVirtualClustersSDK, vc("vc-1", "orders"))
 		expectProduce(sdk.EventGatewayVirtualClusterProducePoliciesSDK, "vc-1", produceValidateByID)
 		expectConsume(sdk.EventGatewayVirtualClusterConsumePoliciesSDK, "vc-1", none)
