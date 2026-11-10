@@ -16,6 +16,7 @@ import (
 
 	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -511,7 +512,7 @@ func expectedDefaultCfg() manager.Config {
 		IPFamily:                                 ipfamily.Auto,
 		ConversionWebhookEnabled:                 true,
 		ValidatingWebhookEnabled:                 true,
-		ValidatingWebhookCertDir:                 manager.DefaultValidatingWebhookCertDir,
+		ValidatingWebhookCertDir:                 validationconsts.DefaultAdmissionWebhookCertDir,
 		FQDNModeEnabled:                          false,
 		CertTTL:                                  consts.DefaultCertTTL,
 		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,

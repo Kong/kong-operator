@@ -199,11 +199,6 @@ const (
 	DefaultProbeAddr = ":8081"
 	// DefaultControlPlaneConfigurationDumpAddr is the default bind address for the server to dump ControlPlane configuration.
 	DefaultControlPlaneConfigurationDumpAddr = ":10256"
-	// DefaultValidatingWebhookCertDir is the default directory that holds the
-	// validating webhook's TLS certificate and key. It matches the path the
-	// Helm chart mounts them at; OLM mounts them directly in the parent
-	// directory instead, which is why the directory is configurable.
-	DefaultValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookCertDir
 )
 
 // DefaultConfig returns a default configuration for the manager.
@@ -234,7 +229,7 @@ func DefaultConfig() Config {
 		DataPlaneControllerEnabled:          true,
 		ConversionWebhookEnabled:            true,
 		ValidatingWebhookEnabled:            true,
-		ValidatingWebhookCertDir:            DefaultValidatingWebhookCertDir,
+		ValidatingWebhookCertDir:            validationconsts.DefaultAdmissionWebhookCertDir,
 		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,

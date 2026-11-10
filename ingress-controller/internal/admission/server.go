@@ -15,6 +15,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 )
 
 var (
@@ -22,16 +23,12 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
-const (
-	certFileName = "tls.crt"
-	keyFileName  = "tls.key"
-)
-
 type Server struct {
 	s           *http.Server
 	certWatcher *certwatcher.CertWatcher
-	// certDir is the directory that holds the server's TLS certificate and key.
-	certDir string
+	// certPath and keyPath are the paths to the server's TLS certificate and key.
+	certPath string
+	keyPath  string
 }
 
 // MakeTLSServer creates a TLS server that reads its certificate (tls.crt) and
@@ -42,8 +39,8 @@ func MakeTLSServer(port int32, handler http.Handler, certDir string) (*Server, e
 	if certDir == "" {
 		return nil, errors.New("the directory holding the webhook TLS certificate and key must not be empty")
 	}
-	certPath := filepath.Join(certDir, certFileName)
-	keyPath := filepath.Join(certDir, keyFileName)
+	certPath := filepath.Join(certDir, consts.DefaultAdmissionWebhookCertFileName)
+	keyPath := filepath.Join(certDir, consts.DefaultAdmissionWebhookKeyFileName)
 
 	watcher, err := certwatcher.New(certPath, keyPath)
 	if err != nil {
@@ -62,7 +59,8 @@ func MakeTLSServer(port int32, handler http.Handler, certDir string) (*Server, e
 			ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
 		},
 		certWatcher: watcher,
-		certDir:     certDir,
+		certPath:    certPath,
+		keyPath:     keyPath,
 	}, nil
 }
 
@@ -70,7 +68,7 @@ func MakeTLSServer(port int32, handler http.Handler, certDir string) (*Server, e
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS(filepath.Join(s.certDir, certFileName), filepath.Join(s.certDir, keyFileName)); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(s.certPath, s.keyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()
