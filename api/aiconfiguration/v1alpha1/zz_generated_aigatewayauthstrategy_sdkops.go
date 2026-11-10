@@ -288,6 +288,7 @@ func (s *AIGatewayAuthStrategyAPISpec) marshalSDKOpsPayload() (map[string]any, e
 	if err := normalizeAIGatewayAuthStrategySDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize AIGatewayAuthStrategyAPISpec SDK payload: %w", err)
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 

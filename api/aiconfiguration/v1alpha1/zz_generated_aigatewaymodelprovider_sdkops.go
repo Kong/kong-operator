@@ -406,6 +406,7 @@ func (s *AIGatewayModelProviderAPISpec) marshalSDKOpsPayload() (map[string]any, 
 		return nil, fmt.Errorf("failed to convert AIGatewayModelProviderAPISpec SDK payload to map")
 	}
 	injectSDKOpsConstFields(payload, AIGatewayModelProviderSDKOpsConstFields)
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 

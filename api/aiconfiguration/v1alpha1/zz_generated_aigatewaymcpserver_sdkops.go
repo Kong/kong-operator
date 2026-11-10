@@ -995,6 +995,7 @@ func (s *AIGatewayMCPServerAPISpec) marshalSDKOpsPayload() (map[string]any, erro
 	if err := normalizeAIGatewayMCPServerSDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize AIGatewayMCPServerAPISpec SDK payload: %w", err)
 	}
+	dropEmptySDKOpsACLs(payload)
 	return payload, nil
 }
 
@@ -4701,7 +4702,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls.Allow) > 0 {
 		listener5, _ := payload["listener"].(map[string]any)
 		if listener5 == nil {
 			listener5 = map[string]any{}
@@ -4732,7 +4733,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls.Deny) > 0 {
 		listener6, _ := payload["listener"].(map[string]any)
 		if listener6 == nil {
 			listener6 = map[string]any{}
@@ -4763,7 +4764,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultToolAcls.Allow) > 0 {
 		listener7, _ := payload["listener"].(map[string]any)
 		if listener7 == nil {
 			listener7 = map[string]any{}
@@ -4794,7 +4795,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultToolAcls.Deny) > 0 {
 		listener8, _ := payload["listener"].(map[string]any)
 		if listener8 == nil {
 			listener8 = map[string]any{}
@@ -4825,7 +4826,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls.Allow) > 0 {
 		listener9, _ := payload["listener"].(map[string]any)
 		if listener9 == nil {
 			listener9 = map[string]any{}
@@ -4856,7 +4857,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls.Deny) > 0 {
 		listener10, _ := payload["listener"].(map[string]any)
 		if listener10 == nil {
 			listener10 = map[string]any{}
@@ -4887,7 +4888,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultToolAcls.Allow) > 0 {
 		listener11, _ := payload["listener"].(map[string]any)
 		if listener11 == nil {
 			listener11 = map[string]any{}
@@ -4918,7 +4919,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultToolAcls.Deny) > 0 {
 		listener12, _ := payload["listener"].(map[string]any)
 		if listener12 == nil {
 			listener12 = map[string]any{}
@@ -4949,7 +4950,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls.Allow) > 0 {
 		conversionListener4, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener4 == nil {
 			conversionListener4 = map[string]any{}
@@ -4980,7 +4981,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls.Deny) > 0 {
 		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener5 == nil {
 			conversionListener5 = map[string]any{}
@@ -5011,7 +5012,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultToolAcls.Allow) > 0 {
 		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener6 == nil {
 			conversionListener6 = map[string]any{}
@@ -5042,7 +5043,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultToolAcls.Deny) > 0 {
 		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener7 == nil {
 			conversionListener7 = map[string]any{}
@@ -5073,7 +5074,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls.Allow) > 0 {
 		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener8 == nil {
 			conversionListener8 = map[string]any{}
@@ -5104,7 +5105,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls.Deny) > 0 {
 		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener9 == nil {
 			conversionListener9 = map[string]any{}
@@ -5135,7 +5136,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultToolAcls.Allow) > 0 {
 		conversionListener10, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener10 == nil {
 			conversionListener10 = map[string]any{}
@@ -5166,7 +5167,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultToolAcls.Deny) > 0 {
 		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener11 == nil {
 			conversionListener11 = map[string]any{}
@@ -5197,7 +5198,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls.Allow) > 0 {
 		passthroughListener4, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener4 == nil {
 			passthroughListener4 = map[string]any{}
@@ -5228,7 +5229,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls.Deny) > 0 {
 		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener5 == nil {
 			passthroughListener5 = map[string]any{}
@@ -5259,7 +5260,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultToolAcls.Allow) > 0 {
 		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener6 == nil {
 			passthroughListener6 = map[string]any{}
@@ -5290,7 +5291,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultToolAcls.Deny) > 0 {
 		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener7 == nil {
 			passthroughListener7 = map[string]any{}
@@ -5321,7 +5322,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls.Allow) > 0 {
 		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener8 == nil {
 			passthroughListener8 = map[string]any{}
@@ -5352,7 +5353,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls.Deny) > 0 {
 		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener9 == nil {
 			passthroughListener9 = map[string]any{}
@@ -5383,7 +5384,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultToolAcls.Allow) > 0 {
 		passthroughListener10, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener10 == nil {
 			passthroughListener10 = map[string]any{}
@@ -5414,7 +5415,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultToolAcls.Deny) > 0 {
 		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener11 == nil {
 			passthroughListener11 = map[string]any{}
@@ -5976,7 +5977,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls.Allow) > 0 {
 		listener5, _ := payload["listener"].(map[string]any)
 		if listener5 == nil {
 			listener5 = map[string]any{}
@@ -6007,7 +6008,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls.Deny) > 0 {
 		listener6, _ := payload["listener"].(map[string]any)
 		if listener6 == nil {
 			listener6 = map[string]any{}
@@ -6038,7 +6039,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultToolAcls.Allow) > 0 {
 		listener7, _ := payload["listener"].(map[string]any)
 		if listener7 == nil {
 			listener7 = map[string]any{}
@@ -6069,7 +6070,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.DefaultToolAcls.Deny) > 0 {
 		listener8, _ := payload["listener"].(map[string]any)
 		if listener8 == nil {
 			listener8 = map[string]any{}
@@ -6100,7 +6101,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls.Allow) > 0 {
 		listener9, _ := payload["listener"].(map[string]any)
 		if listener9 == nil {
 			listener9 = map[string]any{}
@@ -6131,7 +6132,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls.Deny) > 0 {
 		listener10, _ := payload["listener"].(map[string]any)
 		if listener10 == nil {
 			listener10 = map[string]any{}
@@ -6162,7 +6163,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultToolAcls.Allow) > 0 {
 		listener11, _ := payload["listener"].(map[string]any)
 		if listener11 == nil {
 			listener11 = map[string]any{}
@@ -6193,7 +6194,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.DefaultToolAcls.Deny) > 0 {
 		listener12, _ := payload["listener"].(map[string]any)
 		if listener12 == nil {
 			listener12 = map[string]any{}
@@ -6224,7 +6225,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls.Allow) > 0 {
 		conversionListener4, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener4 == nil {
 			conversionListener4 = map[string]any{}
@@ -6255,7 +6256,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls.Deny) > 0 {
 		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener5 == nil {
 			conversionListener5 = map[string]any{}
@@ -6286,7 +6287,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultToolAcls.Allow) > 0 {
 		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener6 == nil {
 			conversionListener6 = map[string]any{}
@@ -6317,7 +6318,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.DefaultToolAcls.Deny) > 0 {
 		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener7 == nil {
 			conversionListener7 = map[string]any{}
@@ -6348,7 +6349,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls.Allow) > 0 {
 		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener8 == nil {
 			conversionListener8 = map[string]any{}
@@ -6379,7 +6380,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls.Deny) > 0 {
 		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener9 == nil {
 			conversionListener9 = map[string]any{}
@@ -6410,7 +6411,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultToolAcls.Allow) > 0 {
 		conversionListener10, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener10 == nil {
 			conversionListener10 = map[string]any{}
@@ -6441,7 +6442,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.DefaultToolAcls.Deny) > 0 {
 		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener11 == nil {
 			conversionListener11 = map[string]any{}
@@ -6472,7 +6473,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls.Allow) > 0 {
 		passthroughListener4, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener4 == nil {
 			passthroughListener4 = map[string]any{}
@@ -6503,7 +6504,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls.Deny) > 0 {
 		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener5 == nil {
 			passthroughListener5 = map[string]any{}
@@ -6534,7 +6535,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultToolAcls.Allow) > 0 {
 		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener6 == nil {
 			passthroughListener6 = map[string]any{}
@@ -6565,7 +6566,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.DefaultToolAcls.Deny) > 0 {
 		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener7 == nil {
 			passthroughListener7 = map[string]any{}
@@ -6596,7 +6597,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls.Allow) > 0 {
 		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener8 == nil {
 			passthroughListener8 = map[string]any{}
@@ -6627,7 +6628,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls.Deny) > 0 {
 		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener9 == nil {
 			passthroughListener9 = map[string]any{}
@@ -6658,7 +6659,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultToolAcls.Allow) > 0 {
 		passthroughListener10, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener10 == nil {
 			passthroughListener10 = map[string]any{}
@@ -6689,7 +6690,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.DefaultToolAcls.Deny) > 0 {
 		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener11 == nil {
 			passthroughListener11 = map[string]any{}
