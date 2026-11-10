@@ -75,3 +75,25 @@ spec:
           tlsTrustBundles:
             - namespacedRef:
                 name: held-bundle
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: late-destination
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: late-destination
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: placeholder.invalid
+          destination:
+            namespacedRef:
+              name: held-vc

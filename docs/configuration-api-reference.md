@@ -1229,7 +1229,7 @@ EncryptionKeyStaticReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _*string_ |  |
-| `namespacedRef` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | NamespacedRef references an in-cluster EventGatewayStaticKey object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | NamespacedRef references an in-cluster EventGatewayStaticKey object: with a Konnect gateway, it is resolved to the Konnect id of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -3820,7 +3820,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
-| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object, resolved to its Konnect name. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object: with a Konnect gateway, it is resolved to the Konnect name of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -4095,7 +4095,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
-| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object, resolved to its Konnect name. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object: with a Konnect gateway, it is resolved to the Konnect name of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -4157,7 +4157,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
-| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object, resolved to its Konnect name. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object: with a Konnect gateway, it is resolved to the Konnect name of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -5114,6 +5114,24 @@ EventGatewayVirtualClusterProducePolicyStatus defines the observed state of Even
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+
+#### EventGatewayVirtualClusterRef
+
+
+EventGatewayVirtualClusterRef references an EventGatewayVirtualCluster in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)
 
 #### EventGatewayVirtualClusterSpec
 
@@ -6759,6 +6777,8 @@ _Appears in:_
 
 - [KongCustomEntitySpec](#configuration-konghq-com-v1alpha1-types-kongcustomentityspec)
 
+
+
 #### PEMKeyPair
 
 
@@ -7236,7 +7256,7 @@ TLSTrustBundleReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _[TLSTrustBundleName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlename)_ |  |
-| `namespacedRef` _[EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object: with a Konnect gateway, it is resolved to the Konnect id of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -7724,6 +7744,7 @@ VirtualClusterReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ |  |
+| `namespacedRef` _[EventGatewayVirtualClusterRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterref)_ | NamespacedRef references an in-cluster EventGatewayVirtualCluster object: with a Konnect gateway, it is resolved to the Konnect id of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 

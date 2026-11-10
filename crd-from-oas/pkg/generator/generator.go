@@ -6755,7 +6755,7 @@ func (g *Generator) unionRefMembers() map[string]unionRefMember {
 				GoName:      goFieldName(ref.UnionMember),
 				JSONName:    ref.UnionMember,
 				RefTypeName: ref.TypeName(),
-				Description: fmt.Sprintf("%s references an in-cluster %s object, resolved to its Konnect %s.\nIt is mutually exclusive with the other fields.", goFieldName(ref.UnionMember), kinds, ref.ResolvesTo),
+				Description: fmt.Sprintf("%s references an in-cluster %s object: with a Konnect gateway, it is resolved to the Konnect %s of the object, and with an on-prem gateway, to its UID.\nIt is mutually exclusive with the other fields.", goFieldName(ref.UnionMember), kinds, ref.ResolvesTo),
 			}
 		}
 	}

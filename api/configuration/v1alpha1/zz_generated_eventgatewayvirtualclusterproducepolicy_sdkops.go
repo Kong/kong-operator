@@ -1085,6 +1085,19 @@ func (obj *EventGatewayVirtualClusterProducePolicy) CrossNamespaceSiblingReferen
 	return checks
 }
 
+// ObjectReferencePaths returns the paths of the references of the
+// EventGatewayVirtualClusterProducePolicy that name another object either by object, with namespacedRef, or
+// otherwise, e.g. by its Konnect ID or name.
+func (obj *EventGatewayVirtualClusterProducePolicy) ObjectReferencePaths() []ObjectReferencePath {
+	return []ObjectReferencePath{
+		{Path: "spec.apiSpec.encrypt.config.encryptionKey.static.key", Kind: "EventGatewayStaticKey", NameIsObject: false},
+		{Path: "spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key", Kind: "EventGatewayStaticKey", NameIsObject: false},
+		{Path: "spec.apiSpec.schemaValidation.config.json.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: false},
+		{Path: "spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: false},
+		{Path: "spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: false},
+	}
+}
+
 // ToCreateEventGatewayVirtualClusterProducePolicyRequest converts the EventGatewayVirtualClusterProducePolicy to the SDK type
 // sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest, resolving referenced CRs via the provided client.
 func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest, error) {

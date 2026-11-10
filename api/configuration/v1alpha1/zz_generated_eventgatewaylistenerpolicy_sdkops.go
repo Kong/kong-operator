@@ -444,12 +444,116 @@ func resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrus
 	return resolved, nil
 }
 
+// RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination returns the references at spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj *EventGatewayListenerPolicy) []EventGatewayVirtualClusterRef {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping.Destination == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.Type != EventGatewayListenerPolicyConfigTypeForwardToVirtualClust {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.Type != ForwardToVirtualClusterPolicyConfigTypePortMapping {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping.Destination.NamespacedRef == nil {
+		return nil
+	}
+	return []EventGatewayVirtualClusterRef{*obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping.Destination.NamespacedRef}
+}
+
+// resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination resolves the CR references in spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
+// to Konnect IDs.
+func resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx context.Context, cl client.Client, obj *EventGatewayListenerPolicy) ([]string, error) {
+	refs := RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualCluster"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewayVirtualCluster
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayVirtualCluster %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewayVirtualCluster objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle returns the keys of the EventGatewayTLSTrustBundle
 // objects obj references through spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles, with the default namespace applied.
 func EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(obj *EventGatewayListenerPolicy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj) {
 		if ref.Kind != "" && ref.Kind != "EventGatewayTLSTrustBundle" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster returns the keys of the EventGatewayVirtualCluster
+// objects obj references through spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination, with the default namespace applied.
+func EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(obj *EventGatewayListenerPolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualCluster" {
 			continue
 		}
 		ns := ref.Namespace
@@ -468,6 +572,9 @@ func (obj *EventGatewayListenerPolicy) ResolveKonnectReferences(ctx context.Cont
 	if _, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
+	if _, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
 	return errors.Join(errs...)
 }
 
@@ -478,6 +585,16 @@ func (obj *EventGatewayListenerPolicy) ResolveKonnectReferences(ctx context.Cont
 func (obj *EventGatewayListenerPolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
 	return checks
+}
+
+// ObjectReferencePaths returns the paths of the references of the
+// EventGatewayListenerPolicy that name another object either by object, with namespacedRef, or
+// otherwise, e.g. by its Konnect ID or name.
+func (obj *EventGatewayListenerPolicy) ObjectReferencePaths() []ObjectReferencePath {
+	return []ObjectReferencePath{
+		{Path: "spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles", Kind: "EventGatewayTLSTrustBundle", NameIsObject: false},
+		{Path: "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination", Kind: "EventGatewayVirtualCluster", NameIsObject: false},
+	}
 }
 
 // ToCreateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
@@ -534,6 +651,39 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 				tlsServer["config"] = config
 			}
 			payload["tls_server"] = tlsServer
+		}
+	}
+	// spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "id", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping.Destination != nil {
+		forwardToVirtualCluster, _ := payload["forward_to_virtual_cluster"].(map[string]any)
+		if forwardToVirtualCluster != nil {
+			config2, _ := forwardToVirtualCluster["config"].(map[string]any)
+			if config2 != nil {
+				portMapping, _ := config2["port_mapping"].(map[string]any)
+				if portMapping != nil {
+					resolvedForwardToVirtualClusterConfigPortMappingDestination, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: %w", err)
+					}
+					if el, ok := portMapping["destination"].(map[string]any); ok {
+						if _, has := el["namespaced_ref"]; has {
+							// The reference is set in the payload: it must have resolved,
+							// or it would reach Konnect unresolved.
+							if len(resolvedForwardToVirtualClusterConfigPortMappingDestination) == 0 {
+								return nil, fmt.Errorf("resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: reference set in the payload but not resolved")
+							}
+							portMapping["destination"] = map[string]any{"id": resolvedForwardToVirtualClusterConfigPortMappingDestination[0]}
+						}
+					}
+					config2["port_mapping"] = portMapping
+				}
+				forwardToVirtualCluster["config"] = config2
+			}
+			payload["forward_to_virtual_cluster"] = forwardToVirtualCluster
 		}
 	}
 	return spec.toCreateEventGatewayListenerPolicyRequestFromPayload(payload)
@@ -593,6 +743,39 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 				tlsServer["config"] = config
 			}
 			payload["tls_server"] = tlsServer
+		}
+	}
+	// spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "id", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping.Destination != nil {
+		forwardToVirtualCluster, _ := payload["forward_to_virtual_cluster"].(map[string]any)
+		if forwardToVirtualCluster != nil {
+			config2, _ := forwardToVirtualCluster["config"].(map[string]any)
+			if config2 != nil {
+				portMapping, _ := config2["port_mapping"].(map[string]any)
+				if portMapping != nil {
+					resolvedForwardToVirtualClusterConfigPortMappingDestination, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: %w", err)
+					}
+					if el, ok := portMapping["destination"].(map[string]any); ok {
+						if _, has := el["namespaced_ref"]; has {
+							// The reference is set in the payload: it must have resolved,
+							// or it would reach Konnect unresolved.
+							if len(resolvedForwardToVirtualClusterConfigPortMappingDestination) == 0 {
+								return nil, fmt.Errorf("resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: reference set in the payload but not resolved")
+							}
+							portMapping["destination"] = map[string]any{"id": resolvedForwardToVirtualClusterConfigPortMappingDestination[0]}
+						}
+					}
+					config2["port_mapping"] = portMapping
+				}
+				forwardToVirtualCluster["config"] = config2
+			}
+			payload["forward_to_virtual_cluster"] = forwardToVirtualCluster
 		}
 	}
 	return spec.toUpdateEventGatewayListenerPolicyRequestFromPayload(payload)

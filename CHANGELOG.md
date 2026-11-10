@@ -103,10 +103,10 @@
   - For a consume `schemaValidation` policy, the Go type of the schema registry
     field is now `EventGatewaySchemaRegistryRefWithNamespacedRef`, and a
     reference moved to `namespacedRef` must drop `kind`.
-  - With an `OnPremEventGateway`, only `namespacedRef` references to schema
-    registries, static keys and TLS trust bundles are allowed. A policy that
-    references one by id or by name, including a consume schema registry
-    reference by a name set directly, is refused.
+  - With an `OnPremEventGateway`, the policies reference schema registries,
+    static keys and TLS trust bundles by object only, with `namespacedRef`, or,
+    in a consume `schemaValidation` policy, the name of the object set
+    directly. A policy that references one by id or by name is refused.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
 
 ### Fixed
@@ -182,15 +182,26 @@
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
 - `EventGatewaySchemaRegistry`: a schema registry policies use in Konnect
   isn't deleted until they stop using it: it reports `DeletionBlocked`, naming
-  them.
+  the policies, created in Konnect, that use it.
   [#6529](https://github.com/Kong/kong-operator/pull/6529)
 - `OnPremEventGateway`: the schema registries, static keys, TLS trust bundles
   and parent policies its policies use are held by the finalizer
-  `gateway-operator.konghq.com/onprem-eventgateway-in-use` and report
-  `DeletionBlocked` until they stop using them. The `OnPremEventGateway`
-  controller owns the status of its entities, and clears what the Konnect
-  controllers set on them.
+  `gateway-operator.konghq.com/onprem-eventgateway-in-use`: deleted, one stays
+  in the configuration, reporting `DeletionBlocked` naming the policies, as
+  with Konnect, until they stop using it. A Warning event
+  `HoldEntitiesInUseFailed` on the gateway tells when it can't be held. The
+  `OnPremEventGateway` controller owns the status of its entities, and clears
+  what the Konnect controllers set on them.
   [#6530](https://github.com/Kong/kong-operator/pull/6530)
+- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy can
+  reference its virtual cluster by object, with `destination.namespacedRef`. A
+  virtual cluster, or its backend cluster, that listener policies forward to
+  isn't deleted until they stop: it reports `DeletionBlocked`, naming the
+  policies, created in Konnect, that forward to it.
+  - `OnPremEventGateway`: only `destination.namespacedRef` is allowed, and the
+    virtual cluster and its backend cluster are held by the finalizer
+    `gateway-operator.konghq.com/onprem-eventgateway-in-use` while in use.
+  [#6492](https://github.com/Kong/kong-operator/pull/6492)
 
 ### Changed
 

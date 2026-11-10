@@ -1371,8 +1371,9 @@ spec:
                                             type: object
                                           namespacedRef:
                                             description: |-
-                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
-                                              resolved to its Konnect name.
+                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
+                                              with a Konnect gateway, it is resolved to the Konnect name of the object,
+                                              and with an on-prem gateway, to its UID.
                                               It is mutually exclusive with the other fields.
                                             properties:
                                               kind:
@@ -1584,8 +1585,9 @@ spec:
                                             type: object
                                           namespacedRef:
                                             description: |-
-                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object,
-                                              resolved to its Konnect name.
+                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
+                                              with a Konnect gateway, it is resolved to the Konnect name of the object,
+                                              and with an on-prem gateway, to its UID.
                                               It is mutually exclusive with the other fields.
                                             properties:
                                               kind:

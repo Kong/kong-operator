@@ -82,6 +82,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongDataPlaneClientCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.MCPServer:
 		return MCPServerReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayBackendCluster:
+		return eventGatewayBackendClusterReconciliationWatchOptions(cl)
 	default:
 		// This handles watch options for generated entities.
 		// reconciliationWatchOptionsForEntity is generated via crd-from-oas.

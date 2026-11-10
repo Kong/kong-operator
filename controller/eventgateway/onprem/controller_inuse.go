@@ -43,16 +43,22 @@ var (
 	schemaRegistryType = reflect.TypeFor[*configurationv1alpha1.EventGatewaySchemaRegistry]()
 	staticKeyType      = reflect.TypeFor[*configurationv1alpha1.EventGatewayStaticKey]()
 	tlsTrustBundleType = reflect.TypeFor[*configurationv1alpha1.EventGatewayTLSTrustBundle]()
+	virtualClusterType = reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster]()
+	backendClusterType = reflect.TypeFor[*configurationv1alpha1.EventGatewayBackendCluster]()
 	producePolicyType  = reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy]()
 	consumePolicyType  = reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy]()
 
 	// heldKinds are the kinds of entity FinalizerInUse can hold. A produce or
 	// consume policy is held while child policies name it as their parent:
 	// without it, they aren't applied, e.g. fields are no longer encrypted. A
-	// data plane certificate is not one: nothing references it, and it must
-	// stop being trusted as soon as it is deleted. Neither is a listener:
-	// deleting one takes its policies out of the configuration.
-	heldKinds = []reflect.Type{schemaRegistryType, staticKeyType, tlsTrustBundleType, producePolicyType, consumePolicyType}
+	// backend cluster is held while listener policies forward to one of its
+	// virtual clusters, which can't be sent without it, as Konnect refuses to
+	// delete it then: otherwise, deleting one takes its virtual clusters out of
+	// the configuration. A data plane certificate is not one: nothing
+	// references it, and it must stop being trusted as soon as it is deleted.
+	// Neither is a listener: deleting one takes its policies out of the
+	// configuration.
+	heldKinds = []reflect.Type{schemaRegistryType, staticKeyType, tlsTrustBundleType, virtualClusterType, backendClusterType, producePolicyType, consumePolicyType}
 
 	// produceParentOf and consumeParentOf return the parent policy of a
 	// policy, when it names one.
@@ -94,6 +100,7 @@ func heldReferencesOf(obj entityObject) []reportedEntity {
 		}
 	case *configurationv1alpha1.EventGatewayListenerPolicy:
 		add(tlsTrustBundleType, configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(p))
+		add(virtualClusterType, configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(p))
 	}
 	return refs
 }
@@ -159,6 +166,25 @@ func entitiesInUse(included []entityStatus, built map[types.UID]any) map[reporte
 			}
 		}
 	}
+	// A virtual cluster in use holds its backend cluster, for the same
+	// policies: it can't be sent without it.
+	for _, e := range included {
+		vc, ok := e.obj.(*configurationv1alpha1.EventGatewayVirtualCluster)
+		if !ok || vc.Spec.EventGatewayBackendClusterRef.NamespacedRef == nil {
+			continue
+		}
+		policies := inUse[reportedEntity{typ: virtualClusterType, key: client.ObjectKeyFromObject(vc)}]
+		if len(policies) == 0 {
+			continue
+		}
+		ref := vc.Spec.EventGatewayBackendClusterRef.NamespacedRef
+		backendCluster := reportedEntity{typ: backendClusterType, key: refKey(vc, ref.Namespace, ref.Name)}
+		for _, policy := range policies {
+			if !slices.Contains(inUse[backendCluster], policy) {
+				inUse[backendCluster] = append(inUse[backendCluster], policy)
+			}
+		}
+	}
 	return inUse
 }
 
@@ -210,7 +236,7 @@ func (r *Reconciler) holdEntities(
 	)
 	for _, kind := range heldKinds {
 		// The entities of the kind reaching the gateway, also through their
-		// parents: a policy is the child of a virtual cluster.
+		// parents: a virtual cluster is the child of a backend cluster.
 		for _, req := range mapGatewayToEntities(r.Client, kind)(ctx, gateway) {
 			entity, err := newEntityOf(kind)
 			if err != nil {

@@ -188,7 +188,7 @@ func setByController(t *testing.T, r *Reconciler, obj entityObject) {
 	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(obj), obj))
 	conditions := obj.GetConditions()
 	require.NoError(t, r.Status().Patch(t.Context(), obj, client.RawPatch(types.MergePatchType, []byte(`{"status":{"conditions":null}}`))))
-	require.NoError(t, r.applyEntityConditions(t.Context(), obj, true, conditions))
+	require.NoError(t, r.applyEntityConditions(t.Context(), obj, entityConditionOwnership(obj), true, conditions))
 	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(obj), obj))
 	require.True(t, ownsEntityCondition(obj, "Programmed"))
 }

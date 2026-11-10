@@ -14,8 +14,11 @@ func TestReferenceByIDHoldsItsID(t *testing.T) {
 	t.Parallel()
 
 	for name, ref := range map[string]any{
-		"schema registry": &SchemaRegistryReferenceByID{},
-		"static key":      &EncryptionKeyStaticReferenceByID{},
+		"schema registry":  &SchemaRegistryReferenceByID{},
+		"static key":       &EncryptionKeyStaticReferenceByID{},
+		"virtual cluster":  &VirtualClusterReferenceByID{},
+		"TLS trust bundle": &TLSTrustBundleReferenceByID{},
+		"backend cluster":  &BackendClusterReferenceByID{},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

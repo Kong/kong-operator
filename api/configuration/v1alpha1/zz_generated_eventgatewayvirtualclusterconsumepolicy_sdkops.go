@@ -997,6 +997,18 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) CrossNamespaceSiblingReferen
 	return checks
 }
 
+// ObjectReferencePaths returns the paths of the references of the
+// EventGatewayVirtualClusterConsumePolicy that name another object either by object, with namespacedRef, or
+// otherwise, e.g. by its Konnect ID or name.
+func (obj *EventGatewayVirtualClusterConsumePolicy) ObjectReferencePaths() []ObjectReferencePath {
+	return []ObjectReferencePath{
+		{Path: "spec.apiSpec.schemaValidation.config.json.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: true},
+		{Path: "spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: true},
+		{Path: "spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: false},
+		{Path: "spec.apiSpec.transcode.config.json.schemaSource.reference.schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: false},
+	}
+}
+
 // ToCreateEventGatewayVirtualClusterConsumePolicyRequest converts the EventGatewayVirtualClusterConsumePolicy to the SDK type
 // sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest, resolving referenced CRs via the provided client.
 func (obj *EventGatewayVirtualClusterConsumePolicy) ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest, error) {
