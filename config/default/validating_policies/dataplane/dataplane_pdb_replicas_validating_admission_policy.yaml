@@ -1,0 +1,51 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: pdb-replicas.dataplane.gateway-operator.konghq.com
+spec:
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - "gateway-operator.konghq.com"
+        apiVersions:
+          - "v1beta1"
+        operations:
+          - "CREATE"
+          - "UPDATE"
+        resources:
+          - "dataplanes"
+  variables:
+    - name: hasPDB
+      expression: |
+        has(object.spec.resources) && has(object.spec.resources.podDisruptionBudget)
+    # Matches the operator's floor: replicas and scaling are mutually exclusive (CRD rule),
+    # so checking replicas before HPA minReplicas gives the same result. Defaults to 1.
+    - name: replicaFloor
+      expression: |
+        !has(object.spec.deployment) ? 1 :
+        has(object.spec.deployment.replicas) ? object.spec.deployment.replicas :
+        (has(object.spec.deployment.scaling) &&
+          has(object.spec.deployment.scaling.horizontal) &&
+          has(object.spec.deployment.scaling.horizontal.minReplicas)) ?
+          object.spec.deployment.scaling.horizontal.minReplicas : 1
+    # Skip metadata-only updates, so that Deny never blocks e.g. finalizer removal.
+    - name: specChanged
+      expression: |
+        request.operation == 'CREATE' || object.spec != oldObject.spec
+  validations:
+    - expression: |
+        !variables.specChanged || !variables.hasPDB || variables.replicaFloor > 1
+      messageExpression: |
+        'spec.resources.podDisruptionBudget is set but the replica floor is ' + string(variables.replicaFloor) +
+        ': set spec.deployment.replicas or spec.deployment.scaling.horizontal.minReplicas to at least 2'
+      reason: Invalid
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: binding-pdb-replicas.dataplane.gateway-operator.konghq.com
+spec:
+  policyName: pdb-replicas.dataplane.gateway-operator.konghq.com
+  validationActions:
+    - Warn
+    - Audit

@@ -1,0 +1,55 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com
+spec:
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - "gateway-operator.konghq.com"
+        # Both versions share the field paths below, so no conversion is needed.
+        apiVersions:
+          - "v1beta1"
+          - "v2beta1"
+        operations:
+          - "CREATE"
+          - "UPDATE"
+        resources:
+          - "gatewayconfigurations"
+  variables:
+    - name: hasPDB
+      expression: |
+        has(object.spec.dataPlaneOptions) &&
+        has(object.spec.dataPlaneOptions.resources) &&
+        has(object.spec.dataPlaneOptions.resources.podDisruptionBudget)
+    # Matches the operator's floor: replicas and scaling are mutually exclusive (CRD rule),
+    # so checking replicas before HPA minReplicas gives the same result. Defaults to 1.
+    - name: replicaFloor
+      expression: |
+        !has(object.spec.dataPlaneOptions.deployment) ? 1 :
+        has(object.spec.dataPlaneOptions.deployment.replicas) ? object.spec.dataPlaneOptions.deployment.replicas :
+        (has(object.spec.dataPlaneOptions.deployment.scaling) &&
+          has(object.spec.dataPlaneOptions.deployment.scaling.horizontal) &&
+          has(object.spec.dataPlaneOptions.deployment.scaling.horizontal.minReplicas)) ?
+          object.spec.dataPlaneOptions.deployment.scaling.horizontal.minReplicas : 1
+    # Skip metadata-only updates, so that Deny never blocks e.g. finalizer removal.
+    - name: specChanged
+      expression: |
+        request.operation == 'CREATE' || object.spec != oldObject.spec
+  validations:
+    - expression: |
+        !variables.specChanged || !variables.hasPDB || variables.replicaFloor > 1
+      messageExpression: |
+        'spec.dataPlaneOptions.resources.podDisruptionBudget is set but the replica floor is ' + string(variables.replicaFloor) +
+        ': set spec.dataPlaneOptions.deployment.replicas or spec.dataPlaneOptions.deployment.scaling.horizontal.minReplicas to at least 2'
+      reason: Invalid
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: binding-pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com
+spec:
+  policyName: pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com
+  validationActions:
+    - Warn
+    - Audit
