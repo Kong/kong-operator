@@ -29,7 +29,7 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 	// A chain of another namespace than its parent needs a KongReferenceGrant
 	// (see TestPolicyChainCrossNamespaceGrantedLifecycle and
 	// TestListenerPolicyChainCrossNamespaceGrantedLifecycle).
-	for _, kind := range []string{"listener", "virtual cluster"} {
+	for _, kind := range []string{"listener", "virtual cluster", "produce"} {
 		for _, tc := range []struct {
 			name      string
 			namespace *string
@@ -43,7 +43,8 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 				var parent objectWithParentRef
 				var handleParent func(context.Context, client.Client, objectWithParentRef) (ctrl.Result, error)
 				var reconcile func(context.Context, client.Client) (ctrl.Result, error)
-				if kind == "listener" {
+				switch kind {
+				case "listener":
 					c := testListenerPolicyChain("chain")
 					chain = c
 					parent = &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: "default"}
@@ -51,7 +52,15 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 					reconcile = func(ctx context.Context, cl client.Client) (ctrl.Result, error) {
 						return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayListenerPolicyChain](nil, logging.DevelopmentMode, cl).Reconcile(ctx, c)
 					}
-				} else {
+				case "produce":
+					c := testProducePolicyChain("chain")
+					chain = c
+					parent = &configurationv1alpha1.EventGatewayVirtualCluster{Name: "vc", Namespace: "default"}
+					handleParent = (parentRefHandler[configurationv1alpha1.EventGatewayVirtualCluster, *configurationv1alpha1.EventGatewayVirtualCluster]{}).handleParentRef
+					reconcile = func(ctx context.Context, cl client.Client) (ctrl.Result, error) {
+						return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain](nil, logging.DevelopmentMode, cl).Reconcile(ctx, c)
+					}
+				default:
 					c := testPolicyChain("chain")
 					chain = c
 					parent = &configurationv1alpha1.EventGatewayVirtualCluster{Name: "vc", Namespace: "default"}
@@ -62,6 +71,9 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 				}
 				chain.GetParentRef().NamespacedRef.Namespace = tc.namespace
 				chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(chain.GetParentGVK().Kind + "PolicyChain"))
+				if kind == "produce" {
+					chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayVirtualClusterProducePolicyChain"))
+				}
 				chain.SetFinalizers([]string{KonnectCleanupFinalizer})
 				konnectEntityStatusOf(parent).ID = "parent-id"
 				parent.(interface{ SetGatewayID(string) }).SetGatewayID("gateway-id")

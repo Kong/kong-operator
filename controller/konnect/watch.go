@@ -348,6 +348,7 @@ type WatchableEntityType interface {
 		configurationv1alpha1.EventGatewayVirtualClusterPolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewaySchemaRegistry |
 		configurationv1alpha1.EventGatewayTLSTrustBundle |
