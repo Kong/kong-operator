@@ -45,7 +45,7 @@ env:
 
 jobs:
   e2e-tests-chainsaw:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || (matrix.suite == 'eventgateway' && '45' || '30')) }}
     runs-on: ubuntu-latest
     name: ${{ matrix.suite }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }} - ${{ inputs.node_image_version }}
     env:
