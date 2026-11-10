@@ -155,7 +155,7 @@ func TestPush(t *testing.T) {
 	for _, tc := range failures {
 		t.Run(tc.name, func(t *testing.T) {
 			r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: tc.respond}
-			require.ErrorContains(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true), tc.wantErr, true)
+			require.ErrorContains(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true), tc.wantErr)
 			assert.Equal(t, all[:tc.wantCalls], gwAdmin.recorded())
 
 			gwAdmin.respond = nil

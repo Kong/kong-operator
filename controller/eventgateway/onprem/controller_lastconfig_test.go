@@ -180,6 +180,48 @@ func TestLastGoodConfig(t *testing.T) {
 	})
 }
 
+func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
+	// The last configuration orders the cluster policies of its virtual
+	// cluster by a chain, not by id.
+	var entities gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"virtual_clusters": [
+			{"id":"00000000-0000-4000-8000-000000000001", "destination":{"id":"00000000-0000-4000-8000-000000000099"},
+			 "cluster_policies":[
+				{"id":"00000000-0000-4000-8000-000000000012","type":"acls"},
+				{"id":"00000000-0000-4000-8000-000000000011","type":"acls"}]}
+		]
+	}`), &entities))
+	ordered := []uuid.UUID{entities.VirtualClusters[0].Id}
+	last := &lastGoodConfig{
+		revision:               3,
+		config:                 gatewayConfig{Entities: entities},
+		orderedClusterPolicies: ordered,
+	}
+
+	for name, current := range map[string]configuration{
+		"the current configuration orders them too":       {namespace: ns, orderedClusterPolicies: ordered},
+		"the current configuration no longer orders them": {namespace: ns},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, pushing, err := last.pushedAs(current)
+			require.NoError(t, err)
+
+			held := withGWAdminDefaults(entities)
+			same, err := sameEntities(held, pushing.pushedKey, pushing.orderedClusterPolicies...)
+			require.NoError(t, err)
+			assert.True(t, same, "a pod holding the last entities isn't pushed them again")
+
+			held.VirtualClusters = slices.Clone(held.VirtualClusters)
+			held.VirtualClusters[0].ClusterPolicies = slices.Clone(held.VirtualClusters[0].ClusterPolicies)
+			slices.Reverse(held.VirtualClusters[0].ClusterPolicies)
+			same, err = sameEntities(held, pushing.pushedKey, pushing.orderedClusterPolicies...)
+			require.NoError(t, err)
+			assert.False(t, same, "a pod holding them in another order is")
+		})
+	}
+}
+
 func TestEntitiesInUseBySent(t *testing.T) {
 	obj := func(o entityObject, name string) entityObject {
 		o.SetNamespace(ns)

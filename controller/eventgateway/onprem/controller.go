@@ -275,7 +275,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 				return requeueOnConflict(logger, ctrl.Result{}, err)
 			}
 			// Remembered before any pod is pushed, like the revision.
-			if err := r.rememberConfig(gateway, config, cfg.entitiesInUse); err != nil {
+			if err := r.rememberConfig(gateway, config, cfg); err != nil {
 				return requeueOnConflict(logger, ctrl.Result{}, err)
 			}
 		}
