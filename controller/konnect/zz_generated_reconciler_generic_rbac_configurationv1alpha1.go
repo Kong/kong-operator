@@ -41,3 +41,6 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicychains,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicychains/status,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusterproducepolicychains/finalizers,verbs=update;patch
