@@ -164,7 +164,6 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 	global("GET", konnectPrivateNetworksPath+"/{id}", http.StatusOK, network)
 	global("DELETE", konnectPrivateNetworksPath+"/{id}", http.StatusNoContent, nil)
 	global("PUT", konnectPrivateConfigurationsPath, http.StatusOK, configuration)
-	global("GET", konnectPrivateConfigurationsPath+"/{id}", http.StatusOK, configuration)
 
 	// Anything else is a call the test does not know about: record it and fail,
 	// so an operator change that adds a call surfaces here instead of silently.

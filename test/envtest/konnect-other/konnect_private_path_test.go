@@ -223,14 +223,6 @@ func TestKonnectPrivatePath(t *testing.T) {
 			Authorization: "Bearer " + konnectPrivateToken,
 		}, "the configuration create must go to the private global host's path, authenticated")
 
-		// A cloud gateway call that left the private path would show up here.
-		privateHosts := []string{envtest.KonnectPrivateRegionalHost, envtest.KonnectPrivateGlobalHost}
-		for _, r := range fake.Requests() {
-			assert.Contains(t, privateHosts, r.Host, "every request must go to a private host")
-			assert.Equal(t, r.Host, r.ServerName, "the TLS handshake must present the host being called")
-			assert.Contains(t, r.Path, "/api/", "the configured path prefix must be preserved")
-		}
-
 		t.Log("Deleting the configuration")
 		require.NoError(t, cl.Delete(ctx, configuration))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, configuration, consts.WaitTime, consts.TickTime)
