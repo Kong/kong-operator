@@ -602,7 +602,6 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	// For each expected GVK, list resources and delete orphans. When waiting for deletes, reconciliation
 	// processes one GVK at a time and waits for resources to be fully deleted before moving to the next type
 	// or releasing the root finalizer.
-	orphansDeleted := 0
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
 
@@ -687,7 +686,6 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			}
 			orphansDeletedForGVK++
 		}
-		orphansDeleted += orphansDeletedForGVK
 
 		// When waiting for deletes, if we deleted any orphan resource or found any that is currently being
 		// deleted, return true to trigger a requeue. This ensures we wait for the current GVK's resources to
@@ -697,11 +695,6 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			return true, orphansDeletedForGVK > 0, nil
 		}
 		log.Debug(logger, "Finished processing GVK for orphan cleanup", "gvk", gvk.String())
-	}
-
-	if opts.waitForDeletes && orphansDeleted > 0 {
-		log.Debug(logger, "Requeuing after deleting orphaned resources", "orphansDeleted", orphansDeleted)
-		return true, true, nil
 	}
 
 	log.Debug(logger, "Finished orphaned resource cleanup")

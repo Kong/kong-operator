@@ -457,7 +457,7 @@ func requeueOnConflict(err error, logger logr.Logger, message string) (ctrl.Resu
 // This is similar to cleanOrphanedResources but treats all owned resources as orphans
 // since we want to delete everything when the Route is being deleted.
 // Returns:
-//   - bool: true if any resources were deleted and a requeue is needed
+//   - bool: true when cleanup must continue on the next pass
 //   - bool: true when this pass deleted at least one resource
 //   - error: any error that occurred during cleanup
 func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
