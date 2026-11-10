@@ -297,6 +297,9 @@ func referencesByObjectIn(v any, path string) error {
 			field := path + "." + key
 			var err error
 			switch {
+			case key == "labels":
+				// Labels are user data: a label key isn't a reference.
+				continue
 			case key == "schemaRegistry":
 				err = notByObjectError(field, "its schema registry", schemaRegistryRefForm(v[key]))
 			case key == "key" && strings.HasSuffix(path, ".static"):

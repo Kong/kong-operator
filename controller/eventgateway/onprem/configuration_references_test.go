@@ -28,6 +28,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // TestReferencesByObjectCoversConfiguredReferences checks referencesByObject
@@ -104,6 +106,20 @@ func TestReferencesByObjectCoversConfiguredReferences(t *testing.T) {
 			require.NoError(t, referencesByObject(specAt(r.path, byObject)))
 		})
 	}
+}
+
+// TestReferencesByObjectIgnoresLabels checks that a label whose key is the
+// name of a reference field isn't read as a reference.
+func TestReferencesByObjectIgnoresLabels(t *testing.T) {
+	var spec configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyAPISpec
+	require.NoError(t, yaml.UnmarshalStrict([]byte(`
+type: schemaValidation
+schemaValidation:
+  name: validate
+  labels: {schemaRegistry: orders, tlsTrustBundles: bundle, key: static}
+  config: {type: json, json: {valueValidationAction: mark}}
+`), &spec))
+	require.NoError(t, referencesByObject(spec))
 }
 
 func TestResolveReferences(t *testing.T) {
