@@ -57,7 +57,9 @@ before image downloads or cluster creation. The action requests an enveloped JWS
 at runtime from `POST https://license.api.konghq.tech/v1/license/enveloped`,
 using Basic authentication and the explicit `customer`, `license_key`,
 `license_expiration_date` fields with `entitlements: ["event_gateway"]`.
-It expects the original compact JWS response body, not legacy JSON.
+The confirmed successful response is the original compact JWS text, not a JSON
+object wrapper. The action preserves its bytes without extracting a `.license`
+field or imposing a response Content-Type requirement.
 
 Configure the authorized signing inputs in the repository:
 
@@ -71,10 +73,10 @@ Configure the authorized signing inputs in the repository:
 
 The customer/key must be approved for this use. The expiration input is a future
 UTC `YYYY-MM-DD` date: no customer, key, date or lifetime is guessed, and no old
-example date is reused. The authorized customer/key, expiration policy and actual
-service response contract must be confirmed before live validation. In
-particular, this explicit date contract does not choose a rolling license
-lifetime; a desired per-run lifetime still needs an authorized policy.
+example date is reused. Authorized signing credentials, customer/key and the
+expiration policy are still required before live validation. This explicit date
+contract does not choose a rolling license lifetime; a desired per-run lifetime
+still needs an authorized policy.
 
 CI sets `GW_ADMIN_LICENSE_REQUIRED=true` and passes only the issued file path to
 both suite preflight and per-namespace fixtures. Missing configuration, failed
