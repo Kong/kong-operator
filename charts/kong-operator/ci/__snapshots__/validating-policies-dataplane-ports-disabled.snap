@@ -64635,6 +64635,18 @@ spec:
                   konnectID:
                     maxLength: 36
                     type: string
+                  konnectNamespacedRef:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                    - name
+                    type: object
                   namespacedRef:
                     properties:
                       name:
@@ -64651,6 +64663,7 @@ spec:
                     enum:
                     - konnectID
                     - namespacedRef
+                    - konnectNamespacedRef
                     type: string
                 required:
                 - type
@@ -64664,6 +64677,10 @@ spec:
                   rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                - message: konnectNamespacedRef must be set only when type is konnectNamespacedRef
+                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef) : !has(self.konnectNamespacedRef)'
+                - message: when type is konnectNamespacedRef, namespacedRef and konnectID must not be set
+                  rule: self.type != 'konnectNamespacedRef' || (!has(self.namespacedRef) && !has(self.konnectID))
             required:
             - controlPlaneRef
             type: object

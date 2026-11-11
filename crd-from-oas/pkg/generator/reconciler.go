@@ -424,12 +424,12 @@ import (
 {{- if or .HasSecretRefs .HasConfigMapRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
-{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation .ReverseRefs}}
+{{- if or (eq .ParentRefCustomTypeName "AIGatewayRef") .SkipsKonnectReconciliation .ReverseRefs}}
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
+{{- if or (eq .ParentRefCustomTypeName "AIGatewayRef") .SkipsKonnectReconciliation}}
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -451,7 +451,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-{{- if .ParentRefCustomTypeName}}
+{{- if eq .ParentRefCustomTypeName "AIGatewayRef"}}
 			// Entities whose AIGatewayRef targets an OnPremAIGateway are not
 			// managed by the Konnect reconciler and must never be enqueued into
 			// it: they are handled by the on-prem controllers where supported,
@@ -666,7 +666,7 @@ import (
 const (
 	// IndexField{{.EntityName}}On{{.ParentEntityName}}Ref is the index field for {{.EntityName}} -> {{.ParentEntityName}}.
 	IndexField{{.EntityName}}On{{.ParentEntityName}}Ref = "{{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref"
-	{{- if .ParentRefCustomTypeName}}
+	{{- if eq .ParentRefCustomTypeName "AIGatewayRef"}}
 	// IndexField{{.EntityName}}OnOnPremAIGatewayRef is the index field for {{.EntityName}} -> OnPremAIGateway.
 	IndexField{{.EntityName}}OnOnPremAIGatewayRef = "{{.EntityNameLowerCamel}}OnOnPremAIGatewayRef"
 	{{- end}}
@@ -701,7 +701,7 @@ func OptionsFor{{.EntityName}}() []Option {
 			Field:          IndexField{{.EntityName}}On{{.ParentEntityName}}Ref,
 			ExtractValueFn: {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref,
 		},
-		{{- if .ParentRefCustomTypeName}}
+		{{- if eq .ParentRefCustomTypeName "AIGatewayRef"}}
 		{
 			Object:         &{{.APIGroupPackageAlias}}.{{.EntityName}}{},
 			Field:          IndexField{{.EntityName}}OnOnPremAIGatewayRef,
@@ -742,13 +742,14 @@ func OptionsFor{{.EntityName}}() []Option {
 	}
 }
 
-{{- if .GatewayRef}}
+{{- if or .GatewayRef (and .ParentRefCustomTypeName (ne .ParentRefCustomTypeName "AIGatewayRef"))}}
 
 func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) []string {
 	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
 	if !ok {
 		return nil
 	}
+{{- if .GatewayRef}}
 {{- if .GatewayRef.AdditionalKinds}}
 	// Only entities referencing a {{.GatewayRef.KonnectKind}} are visible to the Konnect
 	// reconciler: the others are indexed separately.
@@ -757,6 +758,7 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 	}
 {{- end}}
 	// The reference comes from spec.{{.GatewayRef.JSONFieldName}} or the deprecated spec.{{.GatewayRef.LegacyJSONFieldName}}.
+{{- end}}
 	ref := ent.GetParentRef()
 	if ref.NamespacedRef == nil {
 		return nil
@@ -769,6 +771,7 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 
 	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
 }
+{{- if .GatewayRef}}
 {{- range .GatewayRef.AdditionalKinds}}
 
 func {{$.EntityNameLowerCamel}}On{{.Kind}}Ref(object client.Object) []string {
@@ -788,6 +791,7 @@ func {{$.EntityNameLowerCamel}}On{{.Kind}}Ref(object client.Object) []string {
 
 	return []string{refNamespace + "/" + ref.Name}
 }
+{{- end}}
 {{- end}}
 {{- else}}
 

@@ -71,19 +71,21 @@ func (obj *KonnectConfigStore) SetControlPlaneID(id string) {
 	obj.Status.ControlPlaneID.ID = id
 }
 
-// GetControlPlaneRef returns the reference to the root ControlPlane.
-func (obj *KonnectConfigStore) GetControlPlaneRef() commonv1alpha1.ObjectRef {
+// GetConfigStoreControlPlaneRef returns the reference to the parent KonnectGatewayControlPlane.
+func (obj *KonnectConfigStore) GetConfigStoreControlPlaneRef() ConfigStoreControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
 
-// GetParentRef returns the reference to the parent entity.
+// GetParentRef returns the reference to the parent entity as a generic
+// ObjectRef.
 func (obj *KonnectConfigStore) GetParentRef() commonv1alpha1.ObjectRef {
-	return obj.GetControlPlaneRef()
+	return obj.GetConfigStoreControlPlaneRef().ToObjectRef()
 }
 
-// SetParentRef sets the reference to the parent entity.
+// SetParentRef sets the reference to the parent entity from a generic
+// ObjectRef.
 func (obj *KonnectConfigStore) SetParentRef(ref commonv1alpha1.ObjectRef) {
-	obj.Spec.ControlPlaneRef = ref
+	obj.Spec.ControlPlaneRef = ConfigStoreControlPlaneRefFromObjectRef(ref)
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
@@ -134,4 +136,12 @@ func (obj *KonnectConfigStore) GetAncestorIDs() map[string]string {
 		m["KonnectGatewayControlPlane"] = ""
 	}
 	return m
+}
+
+// SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
+func (obj *KonnectConfigStore) SetAncestorID(kind, id string) {
+	switch kind {
+	case "KonnectGatewayControlPlane":
+		obj.SetControlPlaneID(id)
+	}
 }

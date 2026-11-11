@@ -1009,7 +1009,7 @@ func (r *KonnectConfigStoreSyncReconciler) configStoreSecretsSDK(
 	ctx context.Context,
 	store *konnectv1alpha1.KonnectConfigStore,
 ) (sdkkonnectgo.ConfigStoreSecretsSDK, error) {
-	ref := store.Spec.ControlPlaneRef
+	ref := store.GetControlPlaneRef()
 	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
 		// A store whose controlPlaneRef points directly at a Konnect ID has no
 		// in-cluster Control Plane object to read credentials from. The store
