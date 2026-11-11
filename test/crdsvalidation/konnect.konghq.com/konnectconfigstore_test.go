@@ -1,10 +1,13 @@
 package crdsvalidation
 
 import (
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -36,6 +39,35 @@ func TestKonnectConfigStore(t *testing.T) {
 	ctx := t.Context()
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
+
+	t.Run("shared Chainsaw template is accepted", func(t *testing.T) {
+		data, err := os.ReadFile("../../e2e/chainsaw/common/_step_templates/apply-assert-konnectConfigStore.yaml")
+		require.NoError(t, err)
+		manifest := strings.NewReplacer(
+			"($config_store_name)", "chainsaw-config-store",
+			"($config_store_namespace)", ns.Name,
+			"($cp_name)", "test-control-plane",
+		).Replace(string(data))
+
+		var template struct {
+			Spec struct {
+				Try []struct {
+					Apply struct {
+						Resource *unstructured.Unstructured `json:"resource"`
+					} `json:"apply"`
+				} `json:"try"`
+			} `json:"spec"`
+		}
+		require.NoError(t, yaml.Unmarshal([]byte(manifest), &template))
+		require.NotEmpty(t, template.Spec.Try)
+		require.NotNil(t, template.Spec.Try[0].Apply.Resource)
+
+		tc := common.TestCase[*unstructured.Unstructured]{
+			Name:       "shared Chainsaw ConfigStore manifest",
+			TestObject: template.Spec.Try[0].Apply.Resource,
+		}
+		tc.RunWithConfig(t, cfg, scheme)
+	})
 
 	t.Run("controlPlaneRef validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectConfigStore]{
