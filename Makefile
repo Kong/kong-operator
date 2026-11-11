@@ -612,7 +612,7 @@ INTEGRATION_TEST_TIMEOUT ?= "30m"
 # Allow for the hybrid suite's 30s test isolation interval and the up-to-5m
 # post-suite wait for conformance namespaces to terminate (suite_test.go),
 # so the test binary is not interrupted before tests and cleanup complete.
-CONFORMANCE_TEST_TIMEOUT ?= "60m"
+CONFORMANCE_TEST_TIMEOUT ?= "90m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))

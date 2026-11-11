@@ -408,6 +408,11 @@
 
 ### Changed
 
+- Gateway API conformance tests for hybrid gateways now wait 30 seconds between
+  tests, and `GRPCRouteWeight` runs again. The conformance suite's Go test
+  timeout is 90 minutes, with a matching GitHub Actions job budget, so the
+  hybrid legs can finish on their own.
+  [#6552](https://github.com/Kong/kong-operator/pull/6552)
 - On-prem AI Gateway: the operator detects a configuration change made
   directly on a data plane. It records the configuration hash reported by each
   data plane after a successful push. At the next sync, it compares the
