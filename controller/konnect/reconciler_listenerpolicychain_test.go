@@ -587,19 +587,20 @@ func TestListenerPolicyChainOwnershipReadErrors(t *testing.T) {
 				Annotations: map[string]string{listenerPolicyChainOwnerAnnotation: policyChainOwnerClaim(owner)},
 			}
 			readErr := errors.New("live reader unavailable")
-			cl := newFakeClientBuilder(scheme.Get()).WithStatusSubresource(chain).WithObjects(chain, owner, parent).
-				WithInterceptorFuncs(interceptor.Funcs{
-					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if key.Name == failingName {
-							return readErr
-						}
-						return cl.Get(ctx, key, obj, opts...)
-					},
-				}).Build()
-			owned, res, err := claimPolicyChain(t.Context(), cl, chain, consts.DefaultKonnectSyncPeriod)
+			cl := newFakeClientBuilder(scheme.Get()).WithStatusSubresource(chain).WithObjects(chain, owner, parent).Build()
+			live := interceptor.NewClient(cl, interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if key.Name == failingName {
+						return readErr
+					}
+					return cl.Get(ctx, key, obj, opts...)
+				},
+			})
+			owned, res, err := claimPolicyChain(t.Context(), policyChainLiveGetClient{Client: cl, apiReader: live}, chain, consts.DefaultKonnectSyncPeriod)
 			require.ErrorIs(t, err, readErr)
 			require.False(t, owned)
 			require.True(t, res.IsZero())
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(parent), parent))
 			require.Equal(t, policyChainOwnerClaim(owner), parent.Annotations[listenerPolicyChainOwnerAnnotation])
 		})
 	}
