@@ -121,6 +121,7 @@
   rejecting values above 5120 bytes. This allows larger TLS certificate/key
   pairs and certificate chains. `status.entries[].valueBytes` still reports
   the value size in bytes.
+  [#6564](https://github.com/Kong/kong-operator/pull/6564)
 - A `KonnectExtension` whose Konnect endpoints cannot be used now reports
   `Ready=False` and holds its data plane, instead of letting it reach Konnect
   through the public endpoint: reason `InvalidEndpoint` for a
