@@ -116,6 +116,9 @@
 
 ### Fixed
 
+- Upgrade Go to 1.27.4 to fix an HTTP/1 server crash caused by a `net/http`
+  header race.
+  [GO-2026-6859 (CVE-2026-97054)](https://pkg.go.dev/vuln/GO-2026-6859)
 - A `KonnectExtension` whose Konnect endpoints cannot be used now reports
   `Ready=False` and holds its data plane, instead of letting it reach Konnect
   through the public endpoint: reason `InvalidEndpoint` for a
