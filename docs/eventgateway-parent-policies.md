@@ -1,7 +1,8 @@
 # Event Gateway parent policies
 
-`encryptFields` produce policies and `decryptFields`, `maskFields`, and
-`transcode` consume policies operate on records parsed by a `schemaValidation` policy. Set
+Produce `encryptFields`, `maskFields`, and `transcode` policies and Consume
+`decryptFields`, `maskFields`, and `transcode` policies operate on records parsed
+by a `schemaValidation` policy. Set
 `spec.apiSpec.parentPolicyRef.name` to the Kubernetes name of that parent policy.
 The operator resolves the reference to Konnect's `parent_policy_id`.
 
@@ -15,6 +16,7 @@ reference resolution (`KonnectReferencesResolved=False`).
 | Child policy type | `parentPolicyRef` |
 | ----------------- | ----------------- |
 | Produce `encryptFields` | Required |
+| Produce `maskFields` or `transcode` | Required |
 | Consume `decryptFields` | Required |
 | Consume `maskFields` or `transcode` | Required |
 | Produce or consume `modifyHeaders` | Optional |
@@ -124,8 +126,8 @@ Parents and children may be applied together. A child reports
 `KonnectReferencesResolved=False` until its parent exists in Konnect. Changes
 to the parent trigger reconciliation of referencing children.
 
-New Produce `encryptFields` and Consume `decryptFields`, `maskFields`, and
-`transcode` policies must have a parent reference.
+New Produce `encryptFields`, `maskFields`, and `transcode` policies and Consume
+`decryptFields`, `maskFields`, and `transcode` policies must have a parent reference.
 Existing parent-less policies from an older operator version can still be
 updated or deleted after an upgrade, so their finalizers can be removed.
 They remain unprogrammable until a parent reference is added. Once repaired,
