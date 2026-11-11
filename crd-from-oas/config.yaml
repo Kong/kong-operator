@@ -1915,8 +1915,10 @@ apiGroupVersions:
             # The generated EventGatewayVirtualClusterConsumePolicyRef type is
             # shared with parentPolicyRef, which supports cross-namespace
             # references. The chain keeps its policies in its namespace, which
-            # its reference validation enforces.
+            # ResolveValidatedPolicyIDs enforces.
             supportCrossNamespaceReference: true
+            resolverMethod: ResolveValidatedPolicyIDs
+            watchSameParent: true
         cel:
           _validations:
             - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable",fieldPath=".spec.eventGatewayVirtualClusterRef"'
@@ -1948,6 +1950,23 @@ apiGroupVersions:
                   When a policy is created or deleted, update this list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
+            fieldName: EventGatewayVirtualClusterConsumePolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyChainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyChainRequest
+        reconciler:
+          skipOnPremEventGateway: true
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policies
         name: EventGatewayVirtualClusterPolicy
         # The parent reference is immutable once the entity has been created in
