@@ -74,7 +74,7 @@ spec:
                       'EventGatewayListenerPolicy', 'EventGatewaySchemaRegistry',
                       'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster',
                       'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy',
-                      'EventGatewayVirtualClusterProducePolicy']
+                      'EventGatewayVirtualClusterPolicyChain', 'EventGatewayVirtualClusterProducePolicy']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com'
                       group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind
@@ -129,7 +129,7 @@ spec:
                       'KongUpstream', 'EventGatewayBackendCluster', 'EventGatewayListener',
                       'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle',
                       'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy',
-                      'EventGatewayVirtualClusterProducePolicy']
+                      'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterProducePolicy']
                   - message: Only 'AIGatewayConsumerGroup' kind is supported for 'aiconfiguration.konghq.com'
                       group
                     rule: .self.group != 'aiconfiguration.konghq.com' || .self.kind

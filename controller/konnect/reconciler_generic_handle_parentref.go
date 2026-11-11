@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -185,12 +186,16 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 
 	parentRef := obj.GetParentRef()
 
-	if _, isChain := obj.(policyChain); isChain && parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
+	// A listener policy chain must be in the namespace of its listener. A
+	// cluster policy chain may reference a virtual cluster of another
+	// namespace, with a KongReferenceGrant, checked below as for any parent.
+	if chain, isChain := obj.(policyChain); isChain && !policychain.CrossNamespaceAllowed(chain) &&
+		parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
 		parentRef.NamespacedRef != nil && parentRef.NamespacedRef.Namespace != nil &&
 		*parentRef.NamespacedRef.Namespace != "" && *parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
 		err := ReferencedObjectIsInvalidError{
 			Reference: *parentRef.NamespacedRef.Namespace + "/" + parentRef.NamespacedRef.Name,
-			Msg:       fmt.Sprintf("policy chains require a %s in the same namespace as the chain (%s); cross-namespace parents are not supported", parentType, obj.GetNamespace()),
+			Msg:       fmt.Sprintf("listener policy chains require a %s in the same namespace as the chain (%s); cross-namespace parents are not supported", parentType, obj.GetNamespace()),
 		}
 		old := obj.DeepCopyObject().(client.Object)
 		// Older reconciliations could adopt parent IDs and grant conditions

@@ -42,6 +42,13 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 			{name: "different with grant", namespace: new("other"), grant: true},
 			{name: "different with stale status", namespace: new("other"), grant: true, stale: true},
 		} {
+			crossNamespace := tc.namespace != nil && *tc.namespace == "other"
+			if kind == "virtual cluster" && crossNamespace {
+				// A cluster policy chain may reference a virtual cluster of
+				// another namespace, with a KongReferenceGrant (see
+				// TestPolicyChainCrossNamespaceGrantedLifecycle).
+				continue
+			}
 			t.Run(kind+"/"+tc.name, func(t *testing.T) {
 				var chain objectWithParentRef
 				var parent objectWithParentRef
@@ -64,7 +71,6 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 						return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl).Reconcile(ctx, c)
 					}
 				}
-				crossNamespace := tc.namespace != nil && *tc.namespace == "other"
 				chain.GetParentRef().NamespacedRef.Namespace = tc.namespace
 				chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(chain.GetParentGVK().Kind + "PolicyChain"))
 				chain.SetFinalizers([]string{KonnectCleanupFinalizer})

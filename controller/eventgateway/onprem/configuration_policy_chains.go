@@ -1,8 +1,11 @@
 package onprem
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"maps"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -44,41 +47,63 @@ func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Cl
 	}
 	activeClaims := make(map[client.ObjectKey]string, len(virtualClusters.keys))
 	for _, parent := range virtualClusters.keys {
-		if parent.Namespace == c.namespace {
-			claim, err := releaseInactiveClusterPolicyClaim(ctx, cl, parent)
-			if err != nil {
-				return err
-			}
-			activeClaims[parent] = claim
+		// A virtual cluster of another namespace no KongReferenceGrant lets
+		// reference its backend cluster doesn't belong to the gateway: neither
+		// it nor its chains hold back the configuration, and its claim isn't
+		// the gateway's to release.
+		if c.leftOutNotPermitted(reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster](), parent) {
+			continue
 		}
+		claim, err := releaseInactiveClusterPolicyClaim(ctx, cl, parent)
+		if err != nil {
+			return err
+		}
+		activeClaims[parent] = claim
 	}
 	for _, excluded := range c.excluded[before:] {
 		chain := excluded.obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain)
-		ref := chain.Spec.EventGatewayVirtualClusterRef
-		if chain.Namespace != c.namespace || ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
+		parent, ok := policychain.ParentKey(chain)
+		// A chain of another namespace no KongReferenceGrant lets reference its
+		// virtual cluster doesn't belong to the gateway: owning it, it keeps
+		// the default order of its policies, as a chain whose claim is taken.
+		if !ok || excluded.reason == eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason {
 			continue
 		}
-		parent := refKey(chain, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name)
-		if activeClaims[parent] == policychain.ClaimValue(chain) {
+		if claim, ok := activeClaims[parent]; ok && claim == policychain.ClaimValue(chain) {
 			c.invalidChains = append(c.invalidChains, client.ObjectKeyFromObject(chain).String()+": "+excluded.message)
 		}
 	}
 	slices.SortFunc(chains, byCreation[*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain])
+	// owned are the virtual clusters a chain owns; notPermitted, the chains
+	// no KongReferenceGrant lets order their policies, by virtual cluster.
+	owned := map[client.ObjectKey]bool{}
+	notPermitted := map[client.ObjectKey][]string{}
 	for _, chain := range chains {
 		status := entityStatus{obj: chain}
-		parent := chain.Spec.EventGatewayVirtualClusterRef
-		if chain.Namespace != c.namespace || parent.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
-			parent.NamespacedRef == nil || parent.NamespacedRef.Name == "" ||
-			(parent.NamespacedRef.Namespace != nil && *parent.NamespacedRef.Namespace != "" && *parent.NamespacedRef.Namespace != chain.Namespace) {
-			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, "the chain must reference a virtual cluster in its own namespace and in the namespace of the OnPremEventGateway")
+		parent, ok := policychain.ParentKey(chain)
+		if !ok {
+			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, "the chain must reference an EventGatewayVirtualCluster")
+			continue
+		}
+		// Policies of another namespace no KongReferenceGrant lets it
+		// reference: reported as such, like for any other entity. As against
+		// Konnect, such a chain doesn't claim its virtual cluster.
+		message, err := siblingsNotGranted(ctx, cl, chain)
+		if err != nil {
+			return err
+		}
+		if message != "" {
+			c.exclude(status, eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason, message)
+			notPermitted[parent] = append(notPermitted[parent], client.ObjectKeyFromObject(chain).String()+": "+message)
 			continue
 		}
 		owner, err := policychain.Claim(ctx, cl, chain)
 		if err != nil {
 			return err
 		}
+		owned[parent] = true
 		if owner != "" {
-			message := fmt.Sprintf("EventGatewayVirtualCluster %s is owned by policy chain %s; delete that chain before claiming it", parent.NamespacedRef.Name, owner)
+			message := fmt.Sprintf("EventGatewayVirtualCluster %s is owned by policy chain %s; delete that chain before claiming it", policychain.NameIn(parent, chain.Namespace), owner)
 			status.conditions = []metav1.Condition{entityCondition(chain, "PolicyChainOwnerValid", metav1.ConditionFalse, "ConflictingChain", message)}
 			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 			continue
@@ -115,7 +140,19 @@ func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Cl
 		c.orderedClusterPolicies = append(c.orderedClusterPolicies, vc.Id)
 		c.included = append(c.included, status)
 	}
+	// A chain that can't order its policies holds back the configuration of a
+	// virtual cluster no other chain owns: it would keep the default order of
+	// its policies.
+	for _, parent := range slices.SortedFunc(maps.Keys(notPermitted), compareKeys) {
+		if !owned[parent] {
+			c.invalidChains = append(c.invalidChains, notPermitted[parent]...)
+		}
+	}
 	return nil
+}
+
+func compareKeys(a, b client.ObjectKey) int {
+	return cmp.Or(cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Name, b.Name))
 }
 
 // On-prem deletion is not a remote operation and needs no finalizer. A stale
@@ -130,16 +167,12 @@ func releaseInactiveClusterPolicyClaim(ctx context.Context, cl client.Client, ke
 	if claim == "" {
 		return "", nil
 	}
-	name, uid, valid := strings.Cut(claim, "/")
-	if valid && name != "" && uid != "" {
-		var owner configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
-		err := cl.Get(ctx, client.ObjectKey{Namespace: key.Namespace, Name: name}, &owner)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return "", fmt.Errorf("reading cluster policy-chain owner: %w", err)
-		}
-		if err == nil && string(owner.UID) == uid && owner.DeletionTimestamp.IsZero() {
-			return claim, nil
-		}
+	owner, err := policychain.Holder(ctx, cl, &configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{}, key, claim)
+	if err != nil {
+		return "", err
+	}
+	if owner != nil && owner.GetDeletionTimestamp().IsZero() {
+		return claim, nil
 	}
 	old := parent.DeepCopy()
 	delete(parent.Annotations, policychain.OwnerAnnotation)
@@ -154,35 +187,40 @@ func releaseInactiveClusterPolicyClaim(ctx context.Context, cl client.Client, ke
 func (c *configuration) clusterPolicyOrder(
 	ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
 ) ([]gwadminapi.EventGatewayClusterPolicyOnPrem, string, error) {
-	if chain.Namespace != c.namespace {
-		return nil, "the chain must be in the namespace of the OnPremEventGateway, " + c.namespace, nil
-	}
 	parent := chain.Spec.EventGatewayVirtualClusterRef
-	ref := parent.NamespacedRef
-	if parent.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref == nil || ref.Name == "" ||
-		(ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace) {
-		return nil, "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace", nil
+	parentKey, ok := policychain.ParentKey(chain)
+	if !ok {
+		return nil, "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster", nil
 	}
 	if chain.Spec.APISpec.Policies == nil {
 		return nil, "spec.apiSpec.policies must be supplied explicitly", nil
 	}
+	// The policies of another namespace need a KongReferenceGrant: without
+	// it, the chain can't order them.
+	message, err := siblingsNotGranted(ctx, cl, chain)
+	if err != nil {
+		return nil, "", err
+	}
+	if message != "" {
+		return nil, message, nil
+	}
 	ordered := make([]gwadminapi.EventGatewayClusterPolicyOnPrem, 0, len(chain.Spec.APISpec.Policies))
-	seen := make(map[string]struct{}, len(chain.Spec.APISpec.Policies))
+	seen := make(map[client.ObjectKey]struct{}, len(chain.Spec.APISpec.Policies))
 	for i, ref := range chain.Spec.APISpec.Policies {
 		const kind = "EventGatewayVirtualClusterPolicy"
 		path := fmt.Sprintf("spec.apiSpec.policies[%d]", i)
 		if ref.Name == "" || (ref.Kind != "" && ref.Kind != kind) {
 			return nil, path + " must name an " + kind, nil
 		}
-		if ref.Namespace != "" && ref.Namespace != chain.Namespace {
-			return nil, path + " must reference a policy in the same namespace as the chain", nil
-		}
-		if _, duplicate := seen[ref.Name]; duplicate {
-			return nil, path + " duplicates policy " + ref.Name, nil
-		}
-		seen[ref.Name] = struct{}{}
-		var policy configurationv1alpha1.EventGatewayVirtualClusterPolicy
 		key := client.ObjectKey{Namespace: chain.Namespace, Name: ref.Name}
+		if ref.Namespace != "" {
+			key.Namespace = ref.Namespace
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return nil, path + " duplicates policy " + key.String(), nil
+		}
+		seen[key] = struct{}{}
+		var policy configurationv1alpha1.EventGatewayVirtualClusterPolicy
 		if err := cl.Get(ctx, key, &policy); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, fmt.Sprintf("%s references %s %s, which does not exist", path, kind, key), nil
@@ -202,18 +240,30 @@ func (c *configuration) clusterPolicyOrder(
 		ordered = append(ordered, entity)
 	}
 
+	// Every policy of the virtual cluster, of any namespace, in the
+	// configuration must be listed: a policy of another namespace no
+	// KongReferenceGrant lets reference the virtual cluster is left out of
+	// the configuration, and needn't be.
 	var policies configurationv1alpha1.EventGatewayVirtualClusterPolicyList
-	parentKey := client.ObjectKey{Namespace: chain.Namespace, Name: ref.Name}
-	if err := cl.List(ctx, &policies, client.InNamespace(chain.Namespace), client.MatchingFields{
+	if err := cl.List(ctx, &policies, client.MatchingFields{
 		index.IndexFieldEventGatewayVirtualClusterPolicyOnEventGatewayVirtualClusterRef: parentKey.String(),
 	}); err != nil {
 		return nil, "", fmt.Errorf("listing the complete cluster policy set of %s: %w", parentKey, err)
 	}
 	for _, policy := range policies.Items {
-		if policy.DeletionTimestamp.IsZero() {
-			if _, declared := seen[policy.Name]; !declared {
-				return nil, fmt.Sprintf("spec.apiSpec.policies must list every cluster-level policy exactly once; policy %s is missing", policy.Name), nil
-			}
+		if !policy.DeletionTimestamp.IsZero() {
+			continue
+		}
+		key := client.ObjectKeyFromObject(&policy)
+		if _, declared := seen[key]; declared {
+			continue
+		}
+		message, err := c.parentNotGranted(ctx, cl, &policy, "EventGatewayVirtualClusterPolicy")
+		if err != nil {
+			return nil, "", err
+		}
+		if message == "" {
+			return nil, fmt.Sprintf("spec.apiSpec.policies must list every cluster-level policy exactly once; policy %s is missing", policychain.NameIn(key, parentKey.Namespace)), nil
 		}
 	}
 	return ordered, "", nil
