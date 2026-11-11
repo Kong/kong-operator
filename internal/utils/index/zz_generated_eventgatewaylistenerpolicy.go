@@ -13,6 +13,8 @@ const (
 	IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef = "eventGatewayListenerPolicyOnEventGatewayListenerRef"
 	// IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef is the index field for EventGatewayListenerPolicy -> EventGatewayTLSTrustBundle.
 	IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef = "eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef"
+	// IndexFieldEventGatewayListenerPolicyOnEventGatewayVirtualClusterRef is the index field for EventGatewayListenerPolicy -> EventGatewayVirtualCluster.
+	IndexFieldEventGatewayListenerPolicyOnEventGatewayVirtualClusterRef = "eventGatewayListenerPolicyOnEventGatewayVirtualClusterRef"
 	// IndexFieldEventGatewayListenerPolicyOnSecretRef is the index field for EventGatewayListenerPolicy -> the Secrets it reads.
 	IndexFieldEventGatewayListenerPolicyOnSecretRef = "eventGatewayListenerPolicyOnSecretRef"
 )
@@ -29,6 +31,11 @@ func OptionsForEventGatewayListenerPolicy() []Option {
 			Object:         &configurationv1alpha1.EventGatewayListenerPolicy{},
 			Field:          IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef,
 			ExtractValueFn: eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayListenerPolicy{},
+			Field:          IndexFieldEventGatewayListenerPolicyOnEventGatewayVirtualClusterRef,
+			ExtractValueFn: eventGatewayListenerPolicyOnEventGatewayVirtualClusterRef,
 		},
 		{
 			Object:         &configurationv1alpha1.EventGatewayListenerPolicy{},
@@ -63,6 +70,25 @@ func eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef(object client.Obj
 	var out []string
 	for _, ref := range configurationv1alpha1.RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ent) {
 		if ref.Kind != "" && ref.Kind != "EventGatewayTLSTrustBundle" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func eventGatewayListenerPolicyOnEventGatewayVirtualClusterRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayListenerPolicy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualCluster" {
 			continue
 		}
 		ns := ref.Namespace

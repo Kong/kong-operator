@@ -43,5 +43,10 @@ package onprem
 // Cluster policy chains claim their parent with an optimistic-lock patch.
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayvirtualclusters,verbs=patch
 
+// The entities of a gateway its policies use, parent policies included, are
+// held with a finalizer, added and removed with a patch.
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusters;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusterconsumepolicies,verbs=patch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/finalizers;eventgatewayschemaregistries/finalizers;eventgatewaystatickeys/finalizers;eventgatewaytlstrustbundles/finalizers;eventgatewayvirtualclusters/finalizers;eventgatewayvirtualclusterproducepolicies/finalizers;eventgatewayvirtualclusterconsumepolicies/finalizers,verbs=update
+
 // The RBAC to read the entities that can belong to an OnPremEventGateway is in
 // zz_generated_entities.go.

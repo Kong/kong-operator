@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
 - dataplane_ports_validating_admission_policy.yaml
+- dataplane_pdb_replicas_validating_admission_policy.yaml

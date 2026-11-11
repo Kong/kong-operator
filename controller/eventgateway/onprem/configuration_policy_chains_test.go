@@ -156,6 +156,7 @@ func TestReconcileClusterPolicyChainParentLifecycle(t *testing.T) {
 			duplicate := parent.DeepCopy()
 			duplicate.Name, duplicate.UID, duplicate.ResourceVersion = "other-vc", types.UID(uuid.NewString()), ""
 			duplicate.Spec.APISpec.Name = "other-vc"
+			duplicate.Spec.APISpec.DNSLabel = "other-vc"
 			duplicate.CreationTimestamp = metav1.NewTime(parent.CreationTimestamp.Add(-time.Hour))
 			if !deleted {
 				require.NoError(t, f.cl.Create(t.Context(), duplicate))
@@ -456,6 +457,7 @@ func TestClusterPolicyChainUsesAssembledParentPolicies(t *testing.T) {
 				parent := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster).DeepCopy()
 				parent.Name, parent.UID = "other-vc", types.UID(uuid.NewString())
 				parent.Spec.APISpec.Name = "other-vc"
+				parent.Spec.APISpec.DNSLabel = "other-vc"
 				objects = append(objects, parent)
 				policies[1].Spec.EventGatewayVirtualClusterRef = namespacedRef(parent.Name)
 				chain.Spec.APISpec.Policies[0].Name = policies[1].Name

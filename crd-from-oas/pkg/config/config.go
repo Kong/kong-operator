@@ -135,6 +135,17 @@ type ReferenceConfig struct {
 	// object type gains the member wherever it is used, so every other field
 	// of that type must declare the same reference.
 	UnionMember string `yaml:"unionMember,omitempty"`
+	// TypedMember makes a reference replacing a field's type also accept the
+	// tagged form of a unionMember reference under this JSON name (e.g.
+	// "namespacedRef"): next to the ref struct's own fields (kind, name,
+	// namespace), the field gains an optional type, set to this name, and the
+	// member holding the ref struct. Both forms name the same in-cluster object
+	// and resolve the same way. It lets a field that replaced a by-id/by-name
+	// reference object keep its released shape, while also being written like
+	// the fields extended with a unionMember reference. The field holds the
+	// generated <RefType>With<Member> type. Requires a single kind and a field
+	// holding one reference object.
+	TypedMember string `yaml:"typedMember,omitempty"`
 	// Description is the doc comment of the field added for an InjectInto
 	// reference. Ignored otherwise: other references reuse the OAS field's
 	// description.
@@ -149,6 +160,15 @@ type ReferenceConfig struct {
 	// the InjectInto target to the referenced object's Konnect name on the
 	// same gateway. Requires a single kind.
 	ReverseWatch bool `yaml:"reverseWatch,omitempty"`
+}
+
+// TypedTypeName returns the Go type name of the field type a TypedMember
+// reference generates, or "" for other references.
+func (rc ReferenceConfig) TypedTypeName() string {
+	if rc.TypedMember == "" || rc.TypeName() == "" {
+		return ""
+	}
+	return rc.TypeName() + "With" + strings.ToUpper(rc.TypedMember[:1]) + rc.TypedMember[1:]
 }
 
 // TypeName returns the Go type name of the generated ref struct.
@@ -1105,6 +1125,20 @@ func (tc *TypeConfig) validate() error {
 			}
 			if !unionMemberNameRegex.MatchString(ref.UnionMember) {
 				return fmt.Errorf("reference %q: unionMember must be a lowerCamelCase JSON field name, got %q", ref.Path, ref.UnionMember)
+			}
+		}
+		if ref.TypedMember != "" {
+			if ref.UnionMember != "" || ref.InjectInto != "" {
+				return fmt.Errorf("reference %q: typedMember is mutually exclusive with unionMember and injectInto", ref.Path)
+			}
+			if len(ref.Kinds) != 1 {
+				return fmt.Errorf("reference %q: typedMember requires exactly one kind", ref.Path)
+			}
+			if !unionMemberNameRegex.MatchString(ref.TypedMember) {
+				return fmt.Errorf("reference %q: typedMember must be a lowerCamelCase JSON field name, got %q", ref.Path, ref.TypedMember)
+			}
+			if ref.TypedMember == "type" || ref.TypedMember == "kind" || ref.TypedMember == "name" || ref.TypedMember == "namespace" {
+				return fmt.Errorf("reference %q: typedMember %q collides with a field of the ref struct", ref.Path, ref.TypedMember)
 			}
 		}
 		if ref.ReverseWatch && len(ref.Kinds) != 1 {

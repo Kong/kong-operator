@@ -14,6 +14,8 @@ type generateValidatingPolicyParam struct {
 	validatingPoliciesSubPath     string
 	chartValidatingPolicyFileName string
 	helmValueName                 string
+	// policyOverrides gate single policies behind their own Helm value instead of helmValueName.
+	policyOverrides []policyOverride
 }
 
 // Generates CRDs for Helm Chart charts/kong-operator/templates/validating-policy-dataplane.yaml.
@@ -26,6 +28,22 @@ func main() {
 			validatingPoliciesSubPath:     "dataplane",
 			chartValidatingPolicyFileName: "validation-policy-dataplane.yaml",
 			helmValueName:                 "dataplanePorts",
+			policyOverrides: []policyOverride{
+				{
+					policyName:    "pdb-replicas.dataplane.gateway-operator.konghq.com",
+					helmValueName: "podDisruptionBudgetReplicas",
+				},
+			},
+		},
+		{
+			validatingPoliciesSubPath:     "gatewayconfiguration",
+			chartValidatingPolicyFileName: "validation-policy-gatewayconfiguration.yaml",
+			policyOverrides: []policyOverride{
+				{
+					policyName:    "pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com",
+					helmValueName: "podDisruptionBudgetReplicas",
+				},
+			},
 		},
 		{
 			validatingPoliciesSubPath:     "service",
@@ -48,8 +66,11 @@ func main() {
 				kustomizePath, err)
 		}
 
-		validatingPolicyContent := string(validatingPolicyKustomize)
-		validatingPolicyContent = wrapInIfEnabled(param.helmValueName, validatingPolicyContent)
+		validatingPolicyContent, err := renderChartTemplate(string(validatingPolicyKustomize), param.helmValueName, param.policyOverrides)
+		if err != nil {
+			fmt.Printf("Failed to render chart template for %s: %v\n", kustomizePath, err)
+			os.Exit(1)
+		}
 		validatingPolicyContent = wrapInIfCapabilitiesExist(validatingPolicyContent)
 
 		var fileCRDs *os.File

@@ -1405,6 +1405,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
 		}
 {{- end}}
+{{- if index .AncestorSkipsKonnectReconciliation .DefaultKind}}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
 {{- if .SameParentRefField}}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
@@ -1526,6 +1533,8 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 		refs = append(refs, *{{$path}}[i].{{.UnionMemberGoName}})
 	}
 	return refs
+{{- else if and .SingleValueObjectRef .TypedMember}}
+	return []{{.TypeName}}{ {{- $path}}.Ref()}
 {{- else if .SingleValueObjectRef}}
 	return []{{.TypeName}}{*{{$path}}}
 {{- else}}
@@ -1598,6 +1607,14 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				continue
 			}
 {{- end}}
+{{- if index $ref.AncestorSkipsKonnectReconciliation .}}
+			// Nor does an object under an ancestor it does not manage, e.g. a
+			// virtual cluster of a backend cluster attached to an on-prem gateway.
+			if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.}}", Namespace: ns, Name: ref.Name})
+				continue
+			}
+{{- end}}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
@@ -1655,6 +1672,14 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- if index .SkipsKonnectReconciliation .DefaultKind}}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
 		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- end}}
+{{- if index .AncestorSkipsKonnectReconciliation .DefaultKind}}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1806,6 +1831,23 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	{{- end}}
 	return checks
 }
+{{- $hasObjectRefs := false}}
+{{- range $.References}}{{if or .UnionMember .TypedMember}}{{$hasObjectRefs = true}}{{end}}{{end}}
+{{- if $hasObjectRefs}}
+
+// ObjectReferencePaths returns the paths of the references of the
+// {{$.EntityName}} that name another object either by object, with namespacedRef, or
+// otherwise, e.g. by its Konnect ID or name.
+func (obj *{{$.EntityName}}) ObjectReferencePaths() []ObjectReferencePath {
+	return []ObjectReferencePath{
+	{{- range $.References}}
+	{{- if or .UnionMember .TypedMember}}
+		{Path: "{{.Path}}", Kind: "{{.DefaultKind}}", NameIsObject: {{if .TypedMember}}true{{else}}false{{end}}},
+	{{- end}}
+	{{- end}}
+	}
+}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- define "sdkOpsRefInjections"}}
@@ -4602,6 +4644,11 @@ const (
 // before calling ResolveKonnectReferences.
 type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
 
+// ObjectReferencePath is the path of a reference that names another object
+// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
+// or name.
+type ObjectReferencePath = commonv1alpha1.ObjectReferencePath
+
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 
@@ -4674,4 +4721,54 @@ type {{.TypeName}} struct {
 	// +optional
 {{end}}	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
 }
-{{end}}`
+{{end}}
+{{- range .TypedRefTypes}}
+// {{.TypeName}} references {{.KindsSentence}} in the cluster, in either
+// of two forms naming the same object: its name, with kind and namespace, set
+// directly, or type {{.Member}} with the {{.Member}} member, as written in the
+// references that also accept a Konnect ID or name.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.name) != has(self.{{.Member}})",message="exactly one of name and {{.Member}} must be set"
+// +kubebuilder:validation:XValidation:rule="has(self.type) == has(self.{{.Member}})",message="type {{.Member}} must be set with {{.Member}}, and only with it"
+// +kubebuilder:validation:XValidation:rule="!has(self.{{.Member}}) || (!has(self.kind) && !has(self.__namespace__))",message="kind and namespace must not be set next to {{.Member}}: remove kind, and set the namespace in {{.Member}}"
+type {{.TypeName}} struct {
+	// Type selects the {{.Member}} form. It is left unset when name is set
+	// directly.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum={{.Member}}
+	Type string ` + "`" + `json:"type,omitempty"` + "`" + `
+
+	// {{.MemberGoName}} references the object, with type {{.Member}}.
+	//
+	// +optional
+	{{.MemberGoName}} *{{.RefTypeName}} ` + "`" + `json:"{{.Member}},omitempty"` + "`" + `
+
+	// Kind is the kind of the referenced object, when its name is set
+	// directly.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum={{.KindsEnum}}
+	Kind string ` + "`" + `json:"kind,omitempty"` + "`" + `
+
+	// Name is the name of the referenced object, set directly.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	Name string ` + "`" + `json:"name,omitempty"` + "`" + `
+
+	// Namespace defaults to the referrer's namespace, when the name is set
+	// directly. If set, it must be the same as the referrer's namespace.
+	//
+	// +optional
+	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
+}
+
+// Ref returns the reference to the object, whichever form names it.
+func (r {{.TypeName}}) Ref() {{.RefTypeName}} {
+	if r.{{.MemberGoName}} != nil {
+		return *r.{{.MemberGoName}}
+	}
+	return {{.RefTypeName}}{Kind: r.Kind, Name: r.Name, Namespace: r.Namespace}
+}
+{{- end}}`

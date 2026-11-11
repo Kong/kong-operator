@@ -48,6 +48,7 @@ import (
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/internal/telemetry"
 	"github.com/kong/kong-operator/v2/internal/webhook/conversion"
 	"github.com/kong/kong-operator/v2/modules/diagnostics"
@@ -180,6 +181,9 @@ type Config struct {
 	// Webhook options.
 	ConversionWebhookEnabled bool
 	ValidatingWebhookEnabled bool
+	// ValidatingWebhookCertDir is the directory that holds the validating
+	// webhook's TLS certificate (tls.crt) and key (tls.key).
+	ValidatingWebhookCertDir string
 
 	// CertTTL is the time-to-live for certificates issued by the operator.
 	CertTTL time.Duration
@@ -225,6 +229,7 @@ func DefaultConfig() Config {
 		DataPlaneControllerEnabled:          true,
 		ConversionWebhookEnabled:            true,
 		ValidatingWebhookEnabled:            true,
+		ValidatingWebhookCertDir:            validationconsts.DefaultAdmissionWebhookCertDir,
 		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
@@ -435,7 +440,7 @@ func Run(
 	}
 
 	if cfg.ValidatingWebhookEnabled {
-		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr)
+		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr, cfg.ValidatingWebhookCertDir)
 		if err != nil {
 			return fmt.Errorf("unable to set up admission server: %w", err)
 		}

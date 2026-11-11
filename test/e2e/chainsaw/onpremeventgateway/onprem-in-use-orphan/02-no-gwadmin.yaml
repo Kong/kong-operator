@@ -1,0 +1,85 @@
+# An OnPremEventGateway whose GWAdmin doesn't exist, so its entities aren't
+# Programmed, which lets them move to another gateway, and a schema registry its
+# policy uses.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: no-gwadmin
+spec:
+  gwAdminRef:
+    name: missing-gwadmin
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: no-gwadmin-backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: no-gwadmin
+  apiSpec:
+    name: no-gwadmin-backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: no-gwadmin-vc
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: no-gwadmin-backend
+  apiSpec:
+    name: no-gwadmin-vc
+    dnsLabel: no-gwadmin-vc
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewaySchemaRegistry
+metadata:
+  name: moved
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: no-gwadmin
+  apiSpec:
+    type: confluent
+    confluent:
+      name: moved
+      config:
+        endpoint: https://registry.example.com
+        schemaType: avro
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: uses-moved
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: no-gwadmin-vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: uses-moved
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: namespacedRef
+            namespacedRef:
+              name: moved
+          valueValidationAction: reject

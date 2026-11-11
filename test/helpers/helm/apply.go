@@ -3,6 +3,7 @@ package helm
 import (
 	"context"
 	"path"
+	"sync"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -13,8 +14,11 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/apply"
 )
 
+var discardTerratestLogsOnce sync.Once
+
 // ApplyTemplate applies templated resources to the cluster using the given rest.Config.
-func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPath string, templates []string) {
+// extraHelmArgs are passed to helm template, e.g. "--set", "key=value".
+func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPath string, templates []string, extraHelmArgs ...string) {
 	t.Helper()
 
 	helmArgs := []string{
@@ -23,6 +27,7 @@ func ApplyTemplate(ctx context.Context, t *testing.T, cfg *rest.Config, chartPat
 		"--api-versions",
 		"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding",
 	}
+	helmArgs = append(helmArgs, extraHelmArgs...)
 
 	data := renderTemplate(ctx, t, chartPath, templates, helmArgs...)
 	res, err := apply.Apply(ctx, cfg, []byte(data))
@@ -39,7 +44,8 @@ func renderTemplate(ctx context.Context, t *testing.T, chartPath string, templat
 	valuesFile := path.Join(chartPath, "values.yaml")
 
 	// Discard terratest stdout logging
-	terratestlog.Default = terratestlog.Discard
+	// Set once: the logger is a package global and tests render templates in parallel.
+	discardTerratestLogsOnce.Do(func() { terratestlog.Default = terratestlog.Discard })
 
 	res := helm.RenderTemplateContext(t, ctx, &helm.Options{
 		ValuesFiles: []string{valuesFile},

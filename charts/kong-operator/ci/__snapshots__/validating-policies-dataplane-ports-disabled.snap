@@ -37448,6 +37448,21 @@ spec:
                                     type: string
                                   name:
                                     type: string
+                                  namespacedRef:
+                                    properties:
+                                      kind:
+                                        default: EventGatewayVirtualCluster
+                                        enum:
+                                        - EventGatewayVirtualCluster
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
                                 type: object
                               minBrokerID:
                                 type: integer
@@ -39534,7 +39549,6 @@ spec:
                               schemaRegistry:
                                 properties:
                                   kind:
-                                    default: EventGatewaySchemaRegistry
                                     enum:
                                     - EventGatewaySchemaRegistry
                                     type: string
@@ -39543,9 +39557,33 @@ spec:
                                     type: string
                                   namespace:
                                     type: string
-                                required:
-                                - name
+                                  namespacedRef:
+                                    properties:
+                                      kind:
+                                        default: EventGatewaySchemaRegistry
+                                        enum:
+                                        - EventGatewaySchemaRegistry
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    enum:
+                                    - namespacedRef
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: exactly one of name and namespacedRef must be set
+                                  rule: has(self.name) != has(self.namespacedRef)
+                                - message: type namespacedRef must be set with namespacedRef, and only with it
+                                  rule: has(self.type) == has(self.namespacedRef)
+                                - message: 'kind and namespace must not be set next to namespacedRef: remove kind, and set the namespace in namespacedRef'
+                                  rule: '!has(self.namespacedRef) || (!has(self.kind) && !has(self.__namespace__))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -39673,7 +39711,6 @@ spec:
                               schemaRegistry:
                                 properties:
                                   kind:
-                                    default: EventGatewaySchemaRegistry
                                     enum:
                                     - EventGatewaySchemaRegistry
                                     type: string
@@ -39682,9 +39719,33 @@ spec:
                                     type: string
                                   namespace:
                                     type: string
-                                required:
-                                - name
+                                  namespacedRef:
+                                    properties:
+                                      kind:
+                                        default: EventGatewaySchemaRegistry
+                                        enum:
+                                        - EventGatewaySchemaRegistry
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    enum:
+                                    - namespacedRef
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: exactly one of name and namespacedRef must be set
+                                  rule: has(self.name) != has(self.namespacedRef)
+                                - message: type namespacedRef must be set with namespacedRef, and only with it
+                                  rule: has(self.type) == has(self.namespacedRef)
+                                - message: 'kind and namespace must not be set next to namespacedRef: remove kind, and set the namespace in namespacedRef'
+                                  rule: '!has(self.namespacedRef) || (!has(self.kind) && !has(self.__namespace__))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -39712,6 +39773,10 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: 'json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry'
+                          optionalOldSelf: true
+                          rule: '!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)'
                       description:
                         maxLength: 512
                         type: string
@@ -39822,6 +39887,11 @@ spec:
                                       schemaRegistry:
                                         properties:
                                           id:
+                                            properties:
+                                              id:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
                                             type: object
                                           name:
                                             properties:
@@ -39832,15 +39902,41 @@ spec:
                                             required:
                                             - name
                                             type: object
+                                          namespacedRef:
+                                            properties:
+                                              kind:
+                                                default: EventGatewaySchemaRegistry
+                                                enum:
+                                                - EventGatewaySchemaRegistry
+                                                type: string
+                                              name:
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
                                           type:
                                             enum:
                                             - id
                                             - name
+                                            - namespacedRef
                                             minLength: 1
                                             type: string
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: id must be set only when type is id
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
+                                        - message: name must be set only when type is name
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
+                                        - message: namespacedRef must be set only when type is namespacedRef
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -39924,6 +40020,11 @@ spec:
                                       schemaRegistry:
                                         properties:
                                           id:
+                                            properties:
+                                              id:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
                                             type: object
                                           name:
                                             properties:
@@ -39934,15 +40035,41 @@ spec:
                                             required:
                                             - name
                                             type: object
+                                          namespacedRef:
+                                            properties:
+                                              kind:
+                                                default: EventGatewaySchemaRegistry
+                                                enum:
+                                                - EventGatewaySchemaRegistry
+                                                type: string
+                                              name:
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
                                           type:
                                             enum:
                                             - id
                                             - name
+                                            - namespacedRef
                                             minLength: 1
                                             type: string
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: id must be set only when type is id
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
+                                        - message: name must be set only when type is name
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
+                                        - message: namespacedRef must be set only when type is namespacedRef
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -40129,12 +40256,12 @@ spec:
           message: parentPolicyRef is immutable once the policy has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is required for decryptFields
+          message: parentPolicyRef is required for decryptFields, maskFields and transcode
           optionalOldSelf: true
-          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type in [''decryptFields'', ''maskFields'', ''transcode'']) || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is only supported for decryptFields, modifyHeaders and skipRecord
-          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'', ''modifyHeaders'', ''skipRecord''])'
+          message: parentPolicyRef is only supported for decryptFields, modifyHeaders, skipRecord, maskFields and transcode
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'', ''modifyHeaders'', ''skipRecord'', ''maskFields'', ''transcode''])'
         - message: parentPolicyRef must not reference the EventGatewayVirtualClusterConsumePolicy itself
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name'
     served: true
@@ -41632,6 +41759,11 @@ spec:
                               schemaRegistry:
                                 properties:
                                   id:
+                                    properties:
+                                      id:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
                                     type: object
                                   name:
                                     properties:
@@ -41642,15 +41774,41 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  namespacedRef:
+                                    properties:
+                                      kind:
+                                        default: EventGatewaySchemaRegistry
+                                        enum:
+                                        - EventGatewaySchemaRegistry
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
                                   type:
                                     enum:
                                     - id
                                     - name
+                                    - namespacedRef
                                     minLength: 1
                                     type: string
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: id must be set only when type is id
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
+                                - message: name must be set only when type is name
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
+                                - message: namespacedRef must be set only when type is namespacedRef
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -41776,6 +41934,11 @@ spec:
                               schemaRegistry:
                                 properties:
                                   id:
+                                    properties:
+                                      id:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
                                     type: object
                                   name:
                                     properties:
@@ -41786,15 +41949,41 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  namespacedRef:
+                                    properties:
+                                      kind:
+                                        default: EventGatewaySchemaRegistry
+                                        enum:
+                                        - EventGatewaySchemaRegistry
+                                        type: string
+                                      name:
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
                                   type:
                                     enum:
                                     - id
                                     - name
+                                    - namespacedRef
                                     minLength: 1
                                     type: string
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: id must be set only when type is id
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
+                                - message: name must be set only when type is name
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
+                                - message: namespacedRef must be set only when type is namespacedRef
+                                  optionalOldSelf: true
+                                  rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -41822,6 +42011,10 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: 'json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry'
+                          optionalOldSelf: true
+                          rule: '!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)'
                       description:
                         maxLength: 512
                         type: string
@@ -41906,6 +42099,11 @@ spec:
                                       schemaRegistry:
                                         properties:
                                           id:
+                                            properties:
+                                              id:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
                                             type: object
                                           name:
                                             properties:
@@ -41916,15 +42114,41 @@ spec:
                                             required:
                                             - name
                                             type: object
+                                          namespacedRef:
+                                            properties:
+                                              kind:
+                                                default: EventGatewaySchemaRegistry
+                                                enum:
+                                                - EventGatewaySchemaRegistry
+                                                type: string
+                                              name:
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
                                           type:
                                             enum:
                                             - id
                                             - name
+                                            - namespacedRef
                                             minLength: 1
                                             type: string
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: id must be set only when type is id
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''id'' ? has(self.id) && has(self.id.id) : !has(self.id))'
+                                        - message: name must be set only when type is name
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''name'' ? has(self.name) : !has(self.name))'
+                                        - message: namespacedRef must be set only when type is namespacedRef
+                                          optionalOldSelf: true
+                                          rule: '(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -42110,12 +42334,12 @@ spec:
           message: parentPolicyRef is immutable once the policy has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is required for encryptFields
+          message: parentPolicyRef is required for encryptFields, maskFields and transcode
           optionalOldSelf: true
-          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''encryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type in [''encryptFields'', ''maskFields'', ''transcode'']) || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is only supported for encryptFields and modifyHeaders
-          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders''])'
+          message: parentPolicyRef is only supported for encryptFields, modifyHeaders, maskFields and transcode
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders'', ''maskFields'', ''transcode''])'
         - message: parentPolicyRef must not reference the EventGatewayVirtualClusterProducePolicy itself
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name'
     served: true
@@ -87640,6 +87864,90 @@ webhooks:
   sideEffects: None
   timeoutSeconds: 10
 ---
+# Source: kong-operator/templates/validation-policy-dataplane.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: pdb-replicas.dataplane.gateway-operator.konghq.com
+spec:
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - gateway-operator.konghq.com
+      apiVersions:
+      - v1beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - dataplanes
+  validations:
+  - expression: |
+      !variables.specChanged || !variables.hasPDB || variables.replicaFloor > 1
+    messageExpression: |
+      'spec.resources.podDisruptionBudget is set but the replica floor is ' + string(variables.replicaFloor) +
+      ': set spec.deployment.replicas or spec.deployment.scaling.horizontal.minReplicas to at least 2'
+    reason: Invalid
+  variables:
+  - expression: |
+      has(object.spec.resources) && has(object.spec.resources.podDisruptionBudget)
+    name: hasPDB
+  - expression: |
+      !has(object.spec.deployment) ? 1 :
+      has(object.spec.deployment.replicas) ? object.spec.deployment.replicas :
+      (has(object.spec.deployment.scaling) &&
+        has(object.spec.deployment.scaling.horizontal) &&
+        has(object.spec.deployment.scaling.horizontal.minReplicas)) ?
+        object.spec.deployment.scaling.horizontal.minReplicas : 1
+    name: replicaFloor
+  - expression: |
+      request.operation == 'CREATE' || object.spec != oldObject.spec
+    name: specChanged
+---
+# Source: kong-operator/templates/validation-policy-gatewayconfiguration.yaml
+# This file is auto-generated by KO's hack/generators/validating-policy/main.go generator.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com
+spec:
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - gateway-operator.konghq.com
+      apiVersions:
+      - v1beta1
+      - v2beta1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - gatewayconfigurations
+  validations:
+  - expression: |
+      !variables.specChanged || !variables.hasPDB || variables.replicaFloor > 1
+    messageExpression: |
+      'spec.dataPlaneOptions.resources.podDisruptionBudget is set but the replica floor is ' + string(variables.replicaFloor) +
+      ': set spec.dataPlaneOptions.deployment.replicas or spec.dataPlaneOptions.deployment.scaling.horizontal.minReplicas to at least 2'
+    reason: Invalid
+  variables:
+  - expression: |
+      has(object.spec.dataPlaneOptions) &&
+      has(object.spec.dataPlaneOptions.resources) &&
+      has(object.spec.dataPlaneOptions.resources.podDisruptionBudget)
+    name: hasPDB
+  - expression: |
+      !has(object.spec.dataPlaneOptions.deployment) ? 1 :
+      has(object.spec.dataPlaneOptions.deployment.replicas) ? object.spec.dataPlaneOptions.deployment.replicas :
+      (has(object.spec.dataPlaneOptions.deployment.scaling) &&
+        has(object.spec.dataPlaneOptions.deployment.scaling.horizontal) &&
+        has(object.spec.dataPlaneOptions.deployment.scaling.horizontal.minReplicas)) ?
+        object.spec.dataPlaneOptions.deployment.scaling.horizontal.minReplicas : 1
+    name: replicaFloor
+  - expression: |
+      request.operation == 'CREATE' || object.spec != oldObject.spec
+    name: specChanged
+---
 # Source: kong-operator/templates/validation-policy-konnect.yaml
 # This file is auto-generated by KO's hack/generators/validating-policy/main.go generator.
 apiVersion: admissionregistration.k8s.io/v1
@@ -87707,6 +88015,28 @@ spec:
   validations:
   - expression: '!has(object.metadata.annotations) || !(''konghq.com/override'' in object.metadata.annotations)'
     message: '''Annotation "konghq.com/override" is deprecated and will be removed in a future release. Use Service annotations for the "proxy" section and "konghq.com/upstream-policy" with a KongUpstreamPolicy resource instead.'''
+---
+# Source: kong-operator/templates/validation-policy-dataplane.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: binding-pdb-replicas.dataplane.gateway-operator.konghq.com
+spec:
+  policyName: pdb-replicas.dataplane.gateway-operator.konghq.com
+  validationActions:
+  - Warn
+  - Audit
+---
+# Source: kong-operator/templates/validation-policy-gatewayconfiguration.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: binding-pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com
+spec:
+  policyName: pdb-replicas.gatewayconfiguration.gateway-operator.konghq.com
+  validationActions:
+  - Warn
+  - Audit
 ---
 # Source: kong-operator/templates/validation-policy-konnect.yaml
 apiVersion: admissionregistration.k8s.io/v1

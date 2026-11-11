@@ -26,9 +26,9 @@ import (
 	"github.com/stretchr/testify/require"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -54,36 +54,6 @@ func TestOnPremEventGatewaysIn(t *testing.T) {
 	walkErr := &walkError{err: errors.New("unavailable"), namespaces: []string{ns}}
 	assert.Equal(t, "unavailable", walkErr.Error())
 	assert.ErrorIs(t, walkErr, walkErr.err)
-}
-
-func TestProgrammedChanged(t *testing.T) {
-	listener := func(conds ...metav1.Condition) *configurationv1alpha1.EventGatewayListener {
-		l := &configurationv1alpha1.EventGatewayListener{}
-		l.SetConditions(conds)
-		return l
-	}
-	programmed := func(status metav1.ConditionStatus, reason, message string) metav1.Condition {
-		return metav1.Condition{Type: string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType), Status: status, Reason: reason, Message: message}
-	}
-	update := func(oldObj, newObj client.Object) bool {
-		return programmedChanged().Update(event.UpdateEvent{ObjectOld: oldObj, ObjectNew: newObj})
-	}
-	deleting := programmed(metav1.ConditionFalse, string(eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason), "being deleted")
-	notFound := programmed(metav1.ConditionFalse, string(eventgatewayv1alpha1.OnPremEntityGatewayNotFoundReason), "does not exist")
-
-	assert.True(t, update(listener(notFound), listener(deleting)), "the reason changed")
-	assert.True(t, update(listener(deleting), listener(programmed(metav1.ConditionFalse, deleting.Reason, "other"))), "the message changed")
-	assert.True(t, update(listener(), listener(deleting)), "set")
-	assert.True(t, update(listener(deleting), listener()), "removed")
-	assert.False(t, update(listener(), listener()), "none")
-	other := metav1.Condition{Type: "Other", Status: metav1.ConditionTrue, Reason: "Other"}
-	assert.False(t, update(listener(deleting), listener(deleting, other)), "another condition changed")
-	assert.False(t, update(&metav1.PartialObjectMetadata{}, listener(deleting)), "no conditions")
-
-	l := listener(deleting)
-	assert.False(t, programmedChanged().Create(event.CreateEvent{Object: l}))
-	assert.False(t, programmedChanged().Delete(event.DeleteEvent{Object: l}))
-	assert.False(t, programmedChanged().Generic(event.GenericEvent{Object: l}))
 }
 
 func TestAncestorEntities(t *testing.T) {
@@ -209,6 +179,20 @@ func TestEveryEntityKindReachesItsGateway(t *testing.T) {
 	}
 }
 
+// setByController applies the conditions of the entity as the controller
+// does, so that it alone owns them: they are removed first, as the fake client
+// makes the objects it is built with owned by another field manager. The
+// entity is read again.
+func setByController(t *testing.T, r *Reconciler, obj entityObject) {
+	t.Helper()
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(obj), obj))
+	conditions := obj.GetConditions()
+	require.NoError(t, r.Status().Patch(t.Context(), obj, client.RawPatch(types.MergePatchType, []byte(`{"status":{"conditions":null}}`))))
+	require.NoError(t, r.applyEntityConditions(t.Context(), obj, entityConditionOwnership(obj), true, conditions))
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(obj), obj))
+	require.True(t, ownsEntityCondition(obj, "Programmed"))
+}
+
 func TestReportUnreachable(t *testing.T) {
 	pushed := metav1.Condition{
 		Type: "Programmed", Status: metav1.ConditionTrue, Reason: "Programmed", Message: "In the configuration of the OnPremEventGateway default/gateway, pushed to its gw-admin pods",
@@ -238,13 +222,17 @@ func TestReportUnreachable(t *testing.T) {
 		wantReason, wantMessage string
 		// wantRemoved tells the Programmed condition is removed.
 		wantRemoved bool
+		// setByController tells the controller set the conditions of the
+		// policy, rather than someone else, e.g. the Konnect controllers.
+		setByController bool
 	}{
 		{
 			name: "the backend cluster of the virtual cluster of a policy set for an OnPremEventGateway doesn't exist",
 			objects: []client.Object{
 				virtualCluster("vc", "bc"), withStatus(clusterPolicy("policy", "vc"), pushed),
 			},
-			key: "policy", wantReason: "Detached",
+			setByController: true,
+			key:             "policy", wantReason: "Detached",
 			wantMessage: "Not in the configuration of its OnPremEventGateway: the EventGatewayBackendCluster default/bc it descends from does not exist",
 		},
 		{
@@ -252,7 +240,8 @@ func TestReportUnreachable(t *testing.T) {
 			objects: []client.Object{
 				withStatus(clusterPolicy("policy", "vc"), pushed),
 			},
-			key: "policy", wantReason: "Detached",
+			setByController: true,
+			key:             "policy", wantReason: "Detached",
 			wantMessage: "Not in the configuration of its OnPremEventGateway: its EventGatewayVirtualCluster default/vc does not exist",
 		},
 		{
@@ -260,7 +249,8 @@ func TestReportUnreachable(t *testing.T) {
 			objects: []client.Object{
 				virtualCluster("vc", "bc"), withStatus(clusterPolicy("policy", "vc"), detached),
 			},
-			key: "policy", wantReason: "Detached",
+			setByController: true,
+			key:             "policy", wantReason: "Detached",
 			wantMessage: "Not in the configuration of its OnPremEventGateway: the EventGatewayBackendCluster default/bc it descends from does not exist",
 		},
 		{
@@ -272,7 +262,8 @@ func TestReportUnreachable(t *testing.T) {
 					ObservedGeneration: 1, LastTransitionTime: metav1.Now(),
 				}),
 			},
-			key: "policy", wantReason: "Detached",
+			setByController: true,
+			key:             "policy", wantReason: "Detached",
 			wantMessage: "Not in the configuration of its OnPremEventGateway: its EventGatewayVirtualCluster default/vc does not exist",
 		},
 		{
@@ -306,7 +297,8 @@ func TestReportUnreachable(t *testing.T) {
 				newTestGateway("gateway"), backendCluster(ns, "bc", onPremGatewayRef("gateway")), virtualCluster("vc", "bc"),
 				withStatus(clusterPolicy("policy", "vc"), pushed),
 			},
-			key: "policy", wantReason: "Programmed",
+			setByController: true,
+			key:             "policy", wantReason: "Programmed",
 		},
 		{
 			name: "of a KonnectEventGateway",
@@ -331,7 +323,8 @@ func TestReportUnreachable(t *testing.T) {
 					ObservedGeneration: 1, LastTransitionTime: metav1.Now(),
 				}),
 			},
-			key: "policy", wantRemoved: true,
+			setByController: true,
+			key:             "policy", wantRemoved: true,
 		},
 		{name: "the entity doesn't exist", key: "policy"},
 	}
@@ -340,6 +333,9 @@ func TestReportUnreachable(t *testing.T) {
 			cl := newFakeClient(t, tc.objects...)
 			r := &Reconciler{Client: cl}
 			key := client.ObjectKey{Namespace: ns, Name: tc.key}
+			if tc.setByController {
+				setByController(t, r, &configurationv1alpha1.EventGatewayVirtualClusterPolicy{Name: key.Name, Namespace: key.Namespace})
+			}
 			require.NoError(t, r.reportUnreachable(t.Context(), key, &configurationv1alpha1.EventGatewayVirtualClusterPolicy{}))
 			var got configurationv1alpha1.EventGatewayVirtualClusterPolicy
 			if err := cl.Get(t.Context(), key, &got); err != nil {
@@ -374,6 +370,7 @@ func TestReportUnreachable(t *testing.T) {
 		p.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name = "other-vc"
 		cl := newFakeClient(t, p)
 		r := &Reconciler{Client: cl}
+		setByController(t, r, p.DeepCopy())
 		require.NoError(t, r.reportUnreachable(t.Context(), client.ObjectKeyFromObject(p), &configurationv1alpha1.EventGatewayVirtualClusterPolicy{}))
 		cond := apimeta.FindStatusCondition(read(t, cl, p).Status.Conditions, "Programmed")
 		require.NotNil(t, cond)

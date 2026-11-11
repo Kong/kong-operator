@@ -100,5 +100,25 @@ func eventGatewayVirtualClusterConsumePolicyOnEventGatewaySchemaRegistryRef(obje
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterConsumePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterConsumePolicyTranscodeConfigJSONSchemaSourceReferenceSchemaRegistry(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
 	return out
 }

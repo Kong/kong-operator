@@ -44,6 +44,26 @@ type CrossNamespaceReferenceCheck struct {
 	FromNamespace, ToNamespace, ToName string
 }
 
+// ObjectReferencePath is the path of a reference that names another object
+// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
+// or name. Entities that declare such references expose them via
+// ObjectReferencePaths, e.g. for a controller only accepting references by
+// object.
+//
+// +kubebuilder:object:generate=false
+type ObjectReferencePath struct {
+	// Path is the path of the reference in the object, e.g.
+	// spec.apiSpec.encrypt.config.encryptionKey.static.key. A field on the way
+	// holding an array holds a reference in each of its items.
+	Path string
+	// Kind is the kind of the object referenced.
+	Kind string
+	// NameIsObject tells that a name set directly, without a type, names the
+	// object, as in a reference written as {name: ...} with a namespacedRef
+	// alternative (a typedMember reference): it is a reference by object too.
+	NameIsObject bool //nolint:kubeapilinter // not part of a CRD: generated reference metadata
+}
+
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 //
 // +kubebuilder:object:generate=false

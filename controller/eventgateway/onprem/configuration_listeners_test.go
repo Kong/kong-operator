@@ -91,17 +91,18 @@ spec:
 	l := listener("listener", "listener", 2)
 	// Left out as a duplicate: its policy is left out with it.
 	lDuplicate := listener("listener-duplicate", "listener", 3)
-	forward := forwardPolicy("forward", "listener", "{name: vc}", 4)
-	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{name: unknown}", 5)
+	forward := forwardPolicy("forward", "listener", "{namespacedRef: {name: vc}}", 4)
+	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{namespacedRef: {name: unknown}}", 5)
+	forwardByName := forwardPolicy("forward-by-name", "listener", "{name: vc}", 9)
 	forwardByID := forwardPolicy("forward-by-id", "listener", "{id: 9524ec7d-36d9-465d-a8c5-83a3c9390458}", 6)
-	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{name: vc}", 7)
+	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{namespacedRef: {name: vc}}", 7)
 	// Of another namespace, attached to a listener of the gateway: left out,
 	// whatever its parent reference says.
-	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{name: vc}", 8)
+	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{namespacedRef: {name: vc}}", 8)
 	forwardOtherNamespace.SetNamespace("other")
 	forwardOtherNamespace.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(ns)
 
-	cl := newFakeClient(t, bc, vc, l, lDuplicate, forward, forwardUnknown, forwardByID, forwardOfDuplicate, forwardOtherNamespace)
+	cl := newFakeClient(t, bc, vc, l, lDuplicate, forward, forwardUnknown, forwardByName, forwardByID, forwardOfDuplicate, forwardOtherNamespace)
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
 
@@ -110,9 +111,11 @@ spec:
 		excluded[reflect.TypeOf(e.obj).Elem().Name()+" "+e.obj.GetName()] = e.message
 	}
 	assert.Equal(t, map[string]string{
-		"EventGatewayListener listener-duplicate":            `another listener of the gateway is named "listener"`,
-		"EventGatewayListenerPolicy forward-unknown":         `it forwards to the virtual cluster "unknown", which isn't in the configuration of the gateway`,
-		"EventGatewayListenerPolicy forward-by-id":           "it forwards to a virtual cluster by id: name a virtual cluster of the gateway instead",
+		"EventGatewayListener listener-duplicate": `another listener of the gateway is named "listener"`,
+		"EventGatewayListenerPolicy forward-unknown": "resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: EventGatewayVirtualCluster " + ns +
+			`/unknown: eventgatewayvirtualclusters.configuration.konghq.com "unknown" not found`,
+		"EventGatewayListenerPolicy forward-by-name":         "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references an EventGatewayVirtualCluster by name: with an OnPremEventGateway, only namespacedRef is allowed",
+		"EventGatewayListenerPolicy forward-by-id":           "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references an EventGatewayVirtualCluster by id: with an OnPremEventGateway, only namespacedRef is allowed",
 		"EventGatewayListenerPolicy forward-of-duplicate":    "its EventGatewayListener " + ns + "/listener-duplicate isn't in the configuration",
 		"EventGatewayListenerPolicy forward-other-namespace": "it must be in the namespace of the OnPremEventGateway, " + ns,
 	}, excluded)
@@ -133,7 +136,7 @@ spec:
 	require.Len(t, gotListener.Policies, 1)
 	assert.Equal(t, string(forward.UID), gotListener.Policies[0]["id"])
 	config, _ := gotListener.Policies[0]["config"].(map[string]any)
-	assert.Equal(t, map[string]any{"id": string(vc.UID)}, config["destination"], "a virtual cluster named in the policy is forwarded to by its UID")
+	assert.Equal(t, map[string]any{"id": string(vc.UID)}, config["destination"], "a virtual cluster referenced by object is forwarded to by its UID")
 
 	assert.Equal(t, "EventGatewayListenerPolicy "+client.ObjectKeyFromObject(forward).String()+" (listeners.0.policies.0)",
 		cfg.describeField("listeners.0.policies.0"))

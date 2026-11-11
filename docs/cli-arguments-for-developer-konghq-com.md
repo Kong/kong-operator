@@ -296,6 +296,10 @@ rows:
     type: '`bool`'
     description: "Validate the images set in ControlPlane and DataPlane specifications."
     default: '`true`'
+  - flag: '`--validating-webhook-cert-dir`'
+    type: '`string`'
+    description: "Directory that holds the validating webhook's TLS certificate (tls.crt) and key (tls.key)."
+    default: '`/tmp/k8s-webhook-server/serving-certs/validating-admission-webhook`'
   - flag: '`--version`'
     type: '`bool`'
     description: "Print version information."

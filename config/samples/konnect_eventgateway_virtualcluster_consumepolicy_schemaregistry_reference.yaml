@@ -215,9 +215,7 @@ spec:
       config:
         type: json
         json:
-          schemaRegistry:
-            kind: EventGatewaySchemaRegistry # optional
-            name: cp-event-1-schema-registry
+          valueValidationAction: skip
 ---
 kind: EventGatewayVirtualClusterConsumePolicy
 apiVersion: configuration.konghq.com/v1alpha1
@@ -240,6 +238,12 @@ spec:
       config:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
+          # The EventGatewaySchemaRegistry object, named directly. It can also be
+          # written as in the other policies:
+          #   schemaRegistry:
+          #     type: namespacedRef
+          #     namespacedRef:
+          #       name: cp-event-1-schema-registry
           schemaRegistry:
             kind: EventGatewaySchemaRegistry # optional
             name: cp-event-1-schema-registry

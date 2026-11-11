@@ -6,6 +6,7 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -29,6 +30,19 @@ func EventGatewayVirtualClusterReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(cl),
 				),
+			)
+		},
+		// EventGatewayListenerPolicy objects reference EventGatewayVirtualCluster (reverseWatch):
+		// re-reconcile the ones EventGatewayListenerPolicy objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.EventGatewayListenerPolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewayVirtualClusterForEventGatewayListenerPolicy(cl),
+				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
@@ -57,5 +71,24 @@ func enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+// enqueueEventGatewayVirtualClusterForEventGatewayListenerPolicy enqueues the EventGatewayVirtualCluster objects
+// EventGatewayListenerPolicy objects use.
+func enqueueEventGatewayVirtualClusterForEventGatewayListenerPolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*configurationv1alpha1.EventGatewayListenerPolicy)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
 	}
 }

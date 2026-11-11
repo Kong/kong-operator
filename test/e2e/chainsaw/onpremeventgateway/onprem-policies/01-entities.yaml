@@ -191,4 +191,5 @@ spec:
           bootstrapPort: at_start
           advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
           destination:
-            name: vcluster
+            namespacedRef:
+              name: vcluster
