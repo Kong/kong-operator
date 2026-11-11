@@ -283,7 +283,9 @@ data:
                 config:
                   access:
                     - |
-                      return kong.response.exit(200, { data = {} },
+                      -- A JSON string: Lua encodes an empty table as an object,
+                      -- and the SDK decodes "data" into a slice.
+                      return kong.response.exit(200, '{"data":[]}',
                         { ["Content-Type"] = "application/json" })
 
           - name: ai-gateway-data-plane-certificates-delete
