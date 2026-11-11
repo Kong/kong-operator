@@ -4,6 +4,8 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -138,6 +140,7 @@ func TestEventGatewayVirtualClusterConsumePolicyChainSample(t *testing.T) {
 		if errors.Is(err, io.EOF) {
 			break
 		}
+
 		require.NoError(t, err)
 		obj.SetNamespace(ns.Name)
 		require.NoError(t, cl.Create(t.Context(), obj), "%s %s", obj.GetKind(), obj.GetName())
@@ -174,6 +177,75 @@ func TestEventGatewayVirtualClusterConsumePolicyChainSample(t *testing.T) {
 		var child configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns.Name, Name: name}, &child))
 		require.Equal(t, parent, child.Spec.APISpec.ParentPolicyRef.Name)
+		require.Equal(t, "EventGatewayVirtualClusterConsumePolicy", child.Spec.APISpec.ParentPolicyRef.Kind)
+		require.Equal(t, chain.GetParentRef(), child.GetParentRef())
+	}
+}
+
+func TestEventGatewayVirtualClusterConsumePolicyChainShellFixturesAdmission(t *testing.T) {
+	t.Parallel()
+	cfg, ns := envtest.Setup(t, t.Context(), scheme.Get())
+	cl, err := client.New(cfg, client.Options{Scheme: scheme.Get()})
+	require.NoError(t, err)
+	dir := t.TempDir()
+	shim := filepath.Join(dir, "kubectl")
+	require.NoError(t, os.WriteFile(shim, []byte(`#!/bin/bash
+set -euo pipefail
+test "$1" == apply
+cat >> "$APPLIED_FILE"
+printf '\n---\n' >> "$APPLIED_FILE"
+`), 0o600))
+	require.NoError(t, os.Chmod(shim, 0o700))
+	fixtures := filepath.Join(dir, "fixtures.yaml")
+	cmd := exec.CommandContext(t.Context(), "bash", "-c", `
+set -euo pipefail
+source ../../e2e/chainsaw/eventgateway/consumepolicychain-lifecycle/scripts/helpers.sh
+create_policy root modifyHeaders
+create_policy parse-b schemaValidation
+create_policy skip skipRecord parse-b
+create_policy parse-a schemaValidation
+create_policy first modifyHeaders parse-a
+create_policy second modifyHeaders parse-a
+create_policy decrypted decryptFields parse-a
+create_chain chain '["parse-a","decrypted","second","first","root","parse-b","skip"]'
+create_chain produce-chain '[]' EventGatewayVirtualClusterProducePolicyChain
+create_chain cluster-chain '[]' EventGatewayVirtualClusterPolicyChain
+VIRTUAL_CLUSTER_NAME=empty-vc create_chain empty-chain '[]'
+`)
+	cmd.Env = append(os.Environ(), "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"),
+		"APPLIED_FILE="+fixtures, "NAMESPACE="+ns.Name, "VIRTUAL_CLUSTER_NAME=chain-vc", "TEST_NAME=consume-fixtures")
+	output, err := cmd.CombinedOutput()
+	require.NoError(t, err, "%s", output)
+	file, err := os.Open(fixtures)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
+	decoder := yaml.NewYAMLOrJSONDecoder(file, 4096)
+	var count int
+	for {
+		obj := &unstructured.Unstructured{}
+		err := decoder.Decode(obj)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+		if len(obj.Object) == 0 {
+			continue
+		}
+		require.NoError(t, cl.Create(t.Context(), obj), "actual shell fixture: %s/%s", obj.GetKind(), obj.GetName())
+		count++
+	}
+	require.Equal(t, 11, count)
+	var chain configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns.Name, Name: "chain"}, &chain))
+	require.Len(t, chain.Spec.APISpec.Policies, 7)
+	for _, name := range []string{"first", "second", "decrypted", "skip"} {
+		var child configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns.Name, Name: name}, &child))
+		wantParent := "parse-a"
+		if name == "skip" {
+			wantParent = "parse-b"
+		}
+		require.Equal(t, wantParent, child.Spec.APISpec.ParentPolicyRef.Name)
 		require.Equal(t, "EventGatewayVirtualClusterConsumePolicy", child.Spec.APISpec.ParentPolicyRef.Kind)
 		require.Equal(t, chain.GetParentRef(), child.GetParentRef())
 	}
