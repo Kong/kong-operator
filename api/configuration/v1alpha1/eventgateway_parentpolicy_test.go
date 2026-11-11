@@ -151,7 +151,7 @@ func TestEventGatewayParentPolicyResolution(t *testing.T) {
 				{name: "missing", missing: true, wantError: "not found"},
 				{name: "different cluster", parentType: "schemaValidation", cluster: "other", id: "parent-id", wantError: "different EventGatewayVirtualCluster"},
 				{name: "wrong type", parentType: "modifyHeaders", cluster: "vc", id: "parent-id", wantError: "must have apiSpec.type schemaValidation"},
-				{name: "different namespace", namespace: "other", wantError: "cross-namespace"},
+				{name: "missing from the named namespace", namespace: "other", wantError: "not found"},
 				{name: "deleting parent", parentType: "schemaValidation", cluster: "vc", id: "parent-id", deleting: true, wantError: "being deleted"},
 				{name: "existing child may sync", parentType: "schemaValidation", cluster: "vc", id: "parent-id", deleting: true, existing: true},
 				{name: "different cluster with mixed reference types", parentType: "schemaValidation", cluster: "vc", id: "parent-id", mixedRefs: true, parentVCID: "other-vc-id", childVCID: "vc-id", wantError: "different EventGatewayVirtualCluster"},

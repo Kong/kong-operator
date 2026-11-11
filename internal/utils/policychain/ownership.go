@@ -88,3 +88,12 @@ func Claim(ctx context.Context, cl client.Client, chain Chain) (string, error) {
 	}
 	return "", nil
 }
+
+// NameIn returns how a message about an object of namespace names the object
+// of key: its name, or namespace/name for an object of another namespace.
+func NameIn(key client.ObjectKey, namespace string) string {
+	if key.Namespace == namespace {
+		return key.Name
+	}
+	return key.String()
+}

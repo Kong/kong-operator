@@ -681,9 +681,10 @@ spec:
                     type: object
                   parentPolicyRef:
                     description: |-
-                      ParentPolicyRef references a schemaValidation consume policy in the same
-                      namespace and virtual cluster. Required for decryptFields, maskFields and
-                      transcode, and optional for modifyHeaders and skipRecord.
+                      ParentPolicyRef references a schemaValidation consume policy of the same
+                      virtual cluster. One in another namespace needs a KongReferenceGrant in
+                      its namespace. Required for decryptFields, maskFields and transcode, and
+                      optional for modifyHeaders and skipRecord.
                       It is immutable once this policy exists
                       in Konnect.
                       Deleting a parent is blocked while child policy objects reference it.
@@ -700,9 +701,8 @@ spec:
                         type: string
                       namespace:
                         description: |-
-                          Namespace defaults to the referrer's namespace. If set, it must be
-                          the same as the referrer's namespace; cross-namespace references are
-                          not supported.
+                          Namespace, if set to a namespace other than the referrer's, must be
+                          permitted by a KongReferenceGrant in that namespace.
                         type: string
                     required:
                     - name
@@ -773,9 +773,8 @@ spec:
                                     type: string
                                   namespace:
                                     description: |-
-                                      Namespace defaults to the referrer's namespace. If set, it must be
-                                      the same as the referrer's namespace; cross-namespace references are
-                                      not supported.
+                                      Namespace, if set to a namespace other than the referrer's, must be
+                                      permitted by a KongReferenceGrant in that namespace.
                                     type: string
                                 required:
                                 - name
@@ -1247,9 +1246,8 @@ spec:
                                             type: string
                                           namespace:
                                             description: |-
-                                              Namespace defaults to the referrer's namespace. If set, it must be
-                                              the same as the referrer's namespace; cross-namespace references are
-                                              not supported.
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
                                             type: string
                                         required:
                                         - name
@@ -1401,9 +1399,8 @@ spec:
                                             type: string
                                           namespace:
                                             description: |-
-                                              Namespace defaults to the referrer's namespace. If set, it must be
-                                              the same as the referrer's namespace; cross-namespace references are
-                                              not supported.
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
                                             type: string
                                         required:
                                         - name

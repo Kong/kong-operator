@@ -68,9 +68,10 @@ type EventGatewayVirtualClusterProducePolicyAPISpec struct {
 	// +optional
 	*EventGatewayVirtualClusterProducePolicyConfig `json:",inline"`
 
-	// ParentPolicyRef references a schemaValidation produce policy in the same
-	// namespace and virtual cluster. Required for encryptFields, maskFields and
-	// transcode, and optional for modifyHeaders.
+	// ParentPolicyRef references a schemaValidation produce policy of the same
+	// virtual cluster. One in another namespace needs a KongReferenceGrant in
+	// its namespace. Required for encryptFields, maskFields and transcode, and
+	// optional for modifyHeaders.
 	// It is immutable once this policy exists in Konnect.
 	// Deleting a parent is blocked while child policy objects reference it.
 	//

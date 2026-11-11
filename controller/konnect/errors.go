@@ -170,6 +170,20 @@ func (e ReferencedObjectNotKonnectManagedError) Error() string {
 		e.Reference, e.TypeName)
 }
 
+// ReferencedObjectNotGrantedOnDeletionError is returned for an entity being
+// deleted, not in Konnect, whose parent no KongReferenceGrant lets it
+// reference: there is nothing to remove from Konnect, and the parent is not
+// read. Its reconciliation stops without error.
+type ReferencedObjectNotGrantedOnDeletionError struct {
+	Reference types.NamespacedName
+	TypeName  string
+}
+
+// Error implements the error interface.
+func (e ReferencedObjectNotGrantedOnDeletionError) Error() string {
+	return fmt.Sprintf("referenced %s %s is not granted, and this entity being deleted is not in Konnect", e.TypeName, e.Reference)
+}
+
 // ReferencedSecretDoesNotExistError is an error type that is returned when
 // a Konnect entity references a Secret which does not exist.
 type ReferencedSecretDoesNotExistError struct {

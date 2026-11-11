@@ -65,7 +65,7 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 	vc.SetGatewayID("gateway-id")
 	vc.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(vc.Generation)}
 	require.NoError(t, cl.Status().Update(ctx, vc))
-	// The static key the produce child encrypts with, by object.
+	// The encryption key of the produce child policy, programmed.
 	staticKey := &configurationv1alpha1.EventGatewayStaticKey{
 		Name: "test-key", Namespace: ns.Name,
 		Spec: configurationv1alpha1.EventGatewayStaticKeySpec{
@@ -74,11 +74,8 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gateway.Name},
 			},
 			APISpec: configurationv1alpha1.EventGatewayStaticKeyAPISpec{
-				Name: "test-key",
-				Value: configurationv1alpha1.SensitiveDataSource{
-					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "key-secret", Key: "key"},
-				},
+				Name:  "test-key",
+				Value: configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("dGVzdC1rZXk=")},
 			},
 		},
 	}

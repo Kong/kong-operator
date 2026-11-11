@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -447,10 +448,6 @@ func resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx context.C
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayVirtualClusterProducePolicy
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -551,10 +548,6 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeySta
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayStaticKey
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -641,10 +634,6 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFie
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayStaticKey
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -728,10 +717,6 @@ func resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConflue
 		}
 		if ref.Name == "" {
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
 		var referenced EventGatewaySchemaRegistry
@@ -824,10 +809,6 @@ func resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSour
 		}
 		if ref.Name == "" {
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
 		var referenced EventGatewaySchemaRegistry
@@ -967,6 +948,106 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx
 // calling ResolveKonnectReferences.
 func (obj *EventGatewayVirtualClusterProducePolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualClusterProducePolicy"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayStaticKey"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayStaticKey"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 

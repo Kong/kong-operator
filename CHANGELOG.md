@@ -185,6 +185,35 @@
   description and enabled flag to avoid repeatedly pushing an unchanged
   configuration.
   [#6395](https://github.com/Kong/kong-operator/pull/6395)
+- Event Gateway entities can reference their parent, the entities they use
+  (schema registries, static keys, TLS trust bundles, parent policies) and the
+  Secrets they read in another namespace, with a `KongReferenceGrant` in its
+  namespace, on both `KonnectEventGateway`s and `OnPremEventGateway`s. The
+  virtual cluster a listener policy forwards to, and the virtual cluster and
+  policies of an `EventGatewayVirtualClusterPolicyChain`, stay in the
+  namespace of the referrer, whatever the `KongReferenceGrant`s. A
+  `KongReferenceGrant` names these kinds under their own group,
+  `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
+  never matched, and is still accepted only so that existing grants stay
+  valid.
+  Without a `KongReferenceGrant`:
+  - an entity that can't reference its parent reports `RefNotPermitted`; on
+    an `OnPremEventGateway` it is left out and the configuration is still
+    pushed, as the entity doesn't belong to the gateway;
+  - an entity that can't reference another entity reports
+    `ReferenceNotPermitted`, against Konnect in `KonnectReferencesResolved`
+    and on an `OnPremEventGateway` in `Programmed`, and one that can't read a
+    Secret `RefNotPermitted`; on an `OnPremEventGateway`, both stop the
+    configuration from being pushed, except for an
+    `EventGatewayDataPlaneCertificate`, which is only left out, no longer
+    trusted;
+  - a child policy of another namespace that isn't in Konnect doesn't block
+    the deletion of its parent policy;
+  - an entity being deleted isn't held back: against Konnect it is still
+    deleted, and on an `OnPremEventGateway` one kept for the policies using
+    it is sent as it was last, so that deleting a namespace with its
+    `KongReferenceGrant`s doesn't stop the push that releases it.
+  [#6580](https://github.com/Kong/kong-operator/pull/6580)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`

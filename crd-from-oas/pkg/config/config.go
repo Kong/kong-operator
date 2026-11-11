@@ -1080,9 +1080,6 @@ func (tc *TypeConfig) validate() error {
 			if strings.Contains(ref.InjectInto, ".") {
 				return fmt.Errorf("reference %q: injectInto must name a top-level apiSpec field, got %q", ref.Path, ref.InjectInto)
 			}
-			if ref.SupportCrossNamespaceReference {
-				return fmt.Errorf("reference %q: supportCrossNamespaceReference is not supported with injectInto", ref.Path)
-			}
 		}
 		if ref.ReverseWatch && len(ref.Kinds) != 1 {
 			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)

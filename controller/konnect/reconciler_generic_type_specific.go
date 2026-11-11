@@ -170,21 +170,6 @@ type konnectReferenceResolver interface {
 	ResolveKonnectReferences(ctx context.Context, cl client.Client) error
 }
 
-// crossNamespaceSiblingReferences returns every cross-namespace sibling
-// reference declared on ent's spec (references with
-// SupportCrossNamespaceReference: true whose target namespace differs from
-// the entity's own) that must be authorized by a KongReferenceGrant before
-// ResolveKonnectReferences is called.
-func crossNamespaceSiblingReferences(ent any) []commonv1alpha1.CrossNamespaceReferenceCheck {
-	r, ok := ent.(interface {
-		CrossNamespaceSiblingReferences() []commonv1alpha1.CrossNamespaceReferenceCheck
-	})
-	if !ok {
-		return nil
-	}
-	return r.CrossNamespaceSiblingReferences()
-}
-
 // handleKonnectReferences authorizes any cross-namespace sibling references
 // declared on ent's spec against KongReferenceGrant, then resolves the CR
 // references declared on ent's spec (if any), and reflects the outcome in the
@@ -204,7 +189,7 @@ func handleKonnectReferences(
 	old := ent.DeepCopyObject().(client.Object)
 
 	var refErr error
-	if grantErr := checkCrossNamespaceSiblingReferences(ctx, cl, crossNamespaceSiblingReferences(ent)); grantErr != nil {
+	if grantErr := crossnamespace.CheckSiblingReferences(ctx, cl, ent); grantErr != nil {
 		refErr = grantErr
 	} else {
 		refErr = resolver.ResolveKonnectReferences(ctx, cl)
@@ -234,23 +219,8 @@ func handleKonnectReferences(
 	return updated, isProblem, ctrl.Result{}, err
 }
 
-// checkCrossNamespaceSiblingReferences authorizes every check against
-// KongReferenceGrant, reusing the same authorization mechanism the parent-ref
-// handler uses (see ensureKongReferenceGrantForParentRef). Returns nil when
-// checks is empty (the common case today, since no ReferenceConfig entry sets
-// SupportCrossNamespaceReference yet) without listing any KongReferenceGrant.
-func checkCrossNamespaceSiblingReferences(ctx context.Context, cl client.Client, checks []commonv1alpha1.CrossNamespaceReferenceCheck) error {
-	var errs []error
-	for _, c := range checks {
-		if err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, c.FromNamespace, c.ToNamespace, c.ToName, c.FromGVK, c.ToGVK); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return errors.Join(errs...)
-}
-
 // setKonnectReferencesResolvedCondition reflects a reference-resolution
-// outcome (from either checkCrossNamespaceSiblingReferences or
+// outcome (from either crossnamespace.CheckSiblingReferences or
 // ResolveKonnectReferences) in the KonnectReferencesResolved condition.
 func setKonnectReferencesResolvedCondition(ent k8sutils.ConditionsAwareObject, err error) (updated bool, isProblem bool, retErr error) {
 	if err == nil {
