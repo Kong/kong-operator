@@ -65,6 +65,13 @@ jobs:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+    - name: Calculate GWAdmin license expiration
+      id: gwadmin-license-expiration
+      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
+      run: |
+        expiration_date="$(jq -nr 'now + (7 * 24 * 60 * 60) | strftime("%Y-%m-%d")')"
+        printf 'date=%s\n' "$expiration_date" >> "$GITHUB_OUTPUT"
+
     - name: Issue the required GWAdmin license
       id: gwadmin-license
       if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
@@ -74,7 +81,7 @@ jobs:
         password: ${{ secrets.GW_ADMIN_LICENSE_SIGNING_PASSWORD }}
         customer: ${{ secrets.GW_ADMIN_LICENSE_CUSTOMER }}
         license-key: ${{ secrets.GW_ADMIN_LICENSE_KEY }}
-        expiration-date: ${{ vars.GW_ADMIN_LICENSE_EXPIRATION_DATE }}
+        expiration-date: ${{ steps.gwadmin-license-expiration.outputs.date }}
 
     - name: download e2e image artifact
       uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

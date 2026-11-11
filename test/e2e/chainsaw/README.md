@@ -69,14 +69,14 @@ Configure the authorized signing inputs in the repository:
 | `GW_ADMIN_LICENSE_SIGNING_PASSWORD` | Secret | `password` |
 | `GW_ADMIN_LICENSE_CUSTOMER` | Secret | `customer` |
 | `GW_ADMIN_LICENSE_KEY` | Secret | `license-key` |
-| `GW_ADMIN_LICENSE_EXPIRATION_DATE` | Variable | `expiration-date` |
 
-The customer/key must be approved for this use. The expiration input is a future
-UTC `YYYY-MM-DD` date: no customer, key, date or lifetime is guessed, and no old
-example date is reused. Authorized signing credentials, customer/key and the
-expiration policy are still required before live validation. This explicit date
-contract does not choose a rolling license lifetime; a desired per-run lifetime
-still needs an authorized policy.
+The customer/key must be approved for this use. Each CI run calculates the
+current **UTC date plus 7 days**, formatted as `YYYY-MM-DD`, and passes it to the
+action's explicit `expiration-date` input as `license_expiration_date`. This is
+the fixed, approved policy, not a configurable TTL or fallback. No repository
+`GW_ADMIN_LICENSE_EXPIRATION_DATE` variable or manual date update is required.
+Actual authorized signing credentials and customer/key configuration are still
+required before live validation.
 
 CI sets `GW_ADMIN_LICENSE_REQUIRED=true` and passes only the issued file path to
 both suite preflight and per-namespace fixtures. Missing configuration, failed

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"sigs.k8s.io/yaml"
 )
@@ -328,14 +329,49 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 		!strings.Contains(required, "&& 'true' || 'false'") {
 		t.Fatal("CI must require the license only for GWAdmin-producing suites")
 	}
-	issuer, prerequisites, tests, cleanup, download := -1, -1, -1, -1, -1
+	expiration, issuer, prerequisites, tests, cleanup, download := -1, -1, -1, -1, -1, -1
+	var expirationDate string
 	for i, step := range job.Steps {
 		switch {
+		case step.ID == "gwadmin-license-expiration":
+			expiration = i
+			if !strings.Contains(step.If, "matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway'") || step.ContinueOnError {
+				t.Fatal("calculate the required expiration only for GWAdmin-producing suites")
+			}
+			for _, timezone := range []string{"Pacific/Kiritimati", "Etc/GMT+12"} {
+				t.Run("UTC-date-in-"+timezone, func(t *testing.T) {
+					outputFile := filepath.Join(t.TempDir(), "date-output")
+					if err := os.WriteFile(outputFile, nil, 0o600); err != nil {
+						t.Fatal(err)
+					}
+					before := time.Now().UTC().AddDate(0, 0, 7).Format(time.DateOnly)
+					cmd := exec.Command("bash", "-s")
+					cmd.Stdin = strings.NewReader(step.Run)
+					cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "TZ=" + timezone, "GITHUB_OUTPUT=" + outputFile}
+					output, err := cmd.CombinedOutput()
+					if err != nil {
+						t.Fatalf("CI date computation failed: %v %s", err, output)
+					}
+					after := time.Now().UTC().AddDate(0, 0, 7).Format(time.DateOnly)
+					data, err := os.ReadFile(outputFile)
+					if err != nil {
+						t.Fatal(err)
+					}
+					date := strings.TrimSuffix(strings.TrimPrefix(string(data), "date="), "\n")
+					if string(data) != "date="+date+"\n" || (date != before && date != after) {
+						t.Fatal("CI expiration must be exactly seven days after the UTC date, independent of runner timezone")
+					}
+					expirationDate = date
+				})
+			}
 		case step.ID == "gwadmin-license":
 			issuer = i
 			if step.Uses != "./.github/actions/gwadmin-license" || !strings.Contains(step.If, "matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway'") ||
 				strings.Contains(step.If, "fork") || step.ContinueOnError || len(step.With) != 5 {
 				t.Fatal("issuer must run for both GWAdmin suites, with all explicit inputs and no fork-specific skip")
+			}
+			if step.With["expiration-date"] != "${{ steps.gwadmin-license-expiration.outputs.date }}" {
+				t.Fatal("signing must receive the automatically computed date, not a repository variable")
 			}
 		case step.Name == "Apply chainsaw suite prerequisites":
 			prerequisites = i
@@ -356,7 +392,29 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 			download = i
 		}
 	}
-	if issuer < 0 || download <= issuer || prerequisites <= issuer || tests <= prerequisites || cleanup <= tests {
+	if expiration < 0 || issuer <= expiration || download <= issuer || prerequisites <= issuer || tests <= prerequisites || cleanup <= tests {
 		t.Fatal("license signing must fail before expensive setup, reach both test paths, and always be cleaned up afterward")
+	}
+	if expirationDate == "" {
+		t.Fatal("CI must produce an expiration date")
+	}
+	cmd, dir := signingCommand(t, "GW_ADMIN_LICENSE_EXPIRATION_DATE="+expirationDate)
+	output, err := cmd.CombinedOutput()
+	assertSigningOutputSafe(t, output)
+	if err != nil {
+		t.Fatalf("signing with CI date failed: %v %s", err, output)
+	}
+	request, err := os.ReadFile(filepath.Join(dir, "request"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var body struct {
+		ExpirationDate string `json:"license_expiration_date"`
+	}
+	if err := json.Unmarshal(request, &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ExpirationDate != expirationDate {
+		t.Fatal("license_expiration_date must preserve the CI-calculated seven-day date")
 	}
 }
