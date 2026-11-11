@@ -1,0 +1,220 @@
+# API-only declaration: Consume-chain reconciliation is not registered yet.
+# Replace the placeholder token and Kafka bootstrap address before use.
+# Anonymous authentication and disabled TLS are for demonstration only.
+# List every root and child once; preserve contiguous parent groups.
+# Ordering never reparents policies or clears a nonempty remote chain.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: consume-chain-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: eu.api.konghq.com
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: consume-chain-gateway
+  namespace: default
+spec:
+  apiSpec:
+    name: consume-chain-gateway
+  konnect:
+    authRef:
+      name: consume-chain-auth
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: consume-chain-backend
+  namespace: default
+spec:
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: consume-chain-gateway
+  apiSpec:
+    name: consume-chain-backend
+    bootstrapServers:
+      - kafka:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: consume-chain-virtual-cluster
+  namespace: default
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-backend
+  apiSpec:
+    name: consume-chain-virtual-cluster
+    dnsLabel: consume-chain-example
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: consume-chain-parse-first
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: consume-chain-parse-first
+      enabled: Enabled
+      config:
+        type: json
+        json:
+          valueValidationAction: skip
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: consume-chain-headers
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    type: modifyHeaders
+    parentPolicyRef:
+      name: consume-chain-parse-first
+    modifyHeaders:
+      name: consume-chain-headers
+      enabled: Enabled
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-consume-stage
+              value: parsed
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: consume-chain-decrypt
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    type: decryptFields
+    parentPolicyRef:
+      name: consume-chain-parse-first
+    decryptFields:
+      name: consume-chain-decrypt
+      enabled: Enabled
+      config:
+        failureMode: error
+        decryptFields:
+          paths:
+            type: array
+            array:
+              - match: secret
+        keySources:
+          - type: static
+            static: {}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: consume-chain-parse-second
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: consume-chain-parse-second
+      enabled: Enabled
+      config:
+        type: json
+        json:
+          valueValidationAction: skip
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: consume-chain-skip
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    type: skipRecord
+    parentPolicyRef:
+      name: consume-chain-parse-second
+    skipRecord:
+      name: consume-chain-skip
+      enabled: Enabled
+      condition: record.value.skip == true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: consume-chain-root
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: consume-chain-root
+      enabled: Enabled
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-consume-root
+              value: example
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicyChain
+metadata:
+  name: consume-chain-example
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: consume-chain-virtual-cluster
+  apiSpec:
+    # Sibling order differs from YAML creation order; whole groups can move.
+    # Keep both parents immediately before their own contiguous children.
+    # [] is valid only for an already-empty remote scope, not as a clear.
+    policies:
+      - name: consume-chain-parse-second
+      - name: consume-chain-skip
+      - name: consume-chain-parse-first
+      - name: consume-chain-decrypt
+      - name: consume-chain-headers
+      - name: consume-chain-root
