@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	corev1 "k8s.io/api/core/v1"
@@ -316,15 +317,15 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 			}
 			value = v
 		}
-		if len(value) > configstoresync.MaxValueBytes {
+		if characters := utf8.RuneCount(value); characters > configstoresync.MaxValueCharacters {
 			r.setConditionSynced(sync, metav1.ConditionFalse,
 				konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonValueTooLarge,
-				fmt.Sprintf("value for store key %q is %d bytes, exceeding the %d-byte Config Store cap",
-					e.StoreKey, len(value), configstoresync.MaxValueBytes))
+				fmt.Sprintf("value for store key %q is %d characters, exceeding the %d-character Config Store cap",
+					e.StoreKey, characters, configstoresync.MaxValueCharacters))
 			r.emitEventOnTransition(old, sync, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 				"ValueTooLarge",
-				fmt.Sprintf("value for store key %q exceeds the %d-byte cap; nothing was written",
-					e.StoreKey, configstoresync.MaxValueBytes))
+				fmt.Sprintf("value for store key %q exceeds the %d-character cap; nothing was written",
+					e.StoreKey, configstoresync.MaxValueCharacters))
 			return ctrl.Result{}, nil
 		}
 		values = append(values, entryValue{resolved: e, value: value, hash: configstoresync.ValueHash(value)})

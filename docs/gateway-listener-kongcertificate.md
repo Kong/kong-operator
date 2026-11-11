@@ -64,7 +64,8 @@ Label the cert-manager output Secret through
 `spec.secretTemplate.labels.konghq.com/secret: "true"` so the default Operator
 Secret cache can observe issuance and renewal. `Combined` mode validates the pair
 before replacing a single Config Store entry; the serialized entry must fit the
-Config Store size limit of 5120 bytes. Use a Gateway version supporting the
+Config Store limit of 8192 Unicode characters (8 KiB for ASCII PEM/JSON values).
+Use a Gateway version supporting the
 Konnect Vault backend and its refresh behavior.
 
 ## Reference validation and ownership

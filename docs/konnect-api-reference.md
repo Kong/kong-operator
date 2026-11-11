@@ -1074,7 +1074,7 @@ entry written by the sync.
 | `storeKey` _string_ | StoreKey is the resolved key of the Config Store entry. |
 | `sourceFields` _[]string_ | SourceFields are the Secret data keys whose values produced this entry. |
 | `hash` _string_ | Hash is the SHA-256 hash ("sha256:<hex>") of the value written to the store. The value itself is never exposed: status, logs and events must never contain Secret plaintext. |
-| `valueBytes` _int64_ | ValueBytes is the size in bytes of the decoded value last written, measured against the 5120-byte entry value cap. |
+| `valueBytes` _int64_ | ValueBytes is the size in bytes of the decoded value last written. The value cap is 8192 Unicode characters, so this may exceed 8192 bytes. |
 | `keyBytes` _int64_ | KeyBytes is the size in bytes of the resolved store key, measured against the 512-byte key cap. |
 | `notAfter` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | NotAfter is the expiry time of the certificate last written. It is only set when the entry holds a certificate. |
 | `lastPushTime` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | LastPushTime is the time the entry was last pushed to the Config Store. |

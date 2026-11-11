@@ -422,8 +422,8 @@ spec:
                       type: string
                     valueBytes:
                       description: |-
-                        ValueBytes is the size in bytes of the decoded value last written,
-                        measured against the 5120-byte entry value cap.
+                        ValueBytes is the size in bytes of the decoded value last written.
+                        The value cap is 8192 Unicode characters, so this may exceed 8192 bytes.
                       format: int64
                       type: integer
                   required:

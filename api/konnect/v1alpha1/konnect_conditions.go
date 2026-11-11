@@ -387,7 +387,7 @@ const (
 	// nothing was pushed.
 	KonnectConfigStoreSyncSyncedReasonPairMismatch = "PairMismatch"
 	// KonnectConfigStoreSyncSyncedReasonValueTooLarge is the reason used with the
-	// Synced condition type indicating that the entry value exceeds the 5120-byte
+	// Synced condition type indicating that the entry value exceeds the 8192-character
 	// Config Store cap.
 	KonnectConfigStoreSyncSyncedReasonValueTooLarge = "ValueTooLarge"
 	// KonnectConfigStoreSyncSyncedReasonKeyTooLong is the reason used with the
