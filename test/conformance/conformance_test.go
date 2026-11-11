@@ -139,7 +139,7 @@ func runConformance(
 	if gwType == hybridGateway {
 		timeoutConfig.MaxTimeToConsistency = conformanceLooserTimeout
 		// Allow stale Konnect configuration to drain from the data plane between tests.
-		timeoutConfig.TestIsolation = 15 * time.Second
+		timeoutConfig.TestIsolation = 30 * time.Second
 	}
 
 	opts := conformance.DefaultOptions(t)
