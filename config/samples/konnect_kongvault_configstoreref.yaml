@@ -29,8 +29,8 @@ metadata:
   namespace: default
 spec:
   controlPlaneRef:
-    type: namespacedRef
-    namespacedRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
       name: test1
       namespace: default
   apiSpec:

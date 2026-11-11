@@ -15,8 +15,8 @@ func validKonnectConfigStore(ns string) *konnectv1alpha1.KonnectConfigStore {
 	return &konnectv1alpha1.KonnectConfigStore{
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
-			ControlPlaneRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			ControlPlaneRef: konnectv1alpha1.ConfigStoreControlPlaneRef{
+				Type: "namespacedRef",
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "test-control-plane",
 				},
@@ -40,23 +40,94 @@ func TestKonnectConfigStore(t *testing.T) {
 			{
 				Name:       "namespacedRef is accepted",
 				TestObject: validKonnectConfigStore(ns.Name),
+				Update: func(obj *konnectv1alpha1.KonnectConfigStore) {
+					obj.Spec.APISpec.Name = "updated-config-store"
+				},
+			},
+			{
+				Name: "konnectNamespacedRef is accepted",
+				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
+					obj := validKonnectConfigStore(ns.Name)
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-control-plane",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *konnectv1alpha1.KonnectConfigStore) {
+					obj.Spec.APISpec.Name = "updated-config-store"
+				},
+			},
+			{
+				Name: "konnectNamespacedRef requires its reference",
+				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
+					obj := validKonnectConfigStore(ns.Name)
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("konnectNamespacedRef must be set only when type is konnectNamespacedRef"),
+			},
+			{
+				Name: "konnectNamespacedRef rejects legacy members",
+				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
+					obj := validKonnectConfigStore(ns.Name)
+					obj.Spec.ControlPlaneRef.Type = commonv1alpha1.ControlPlaneRefKonnectNamespacedRef
+					obj.Spec.ControlPlaneRef.KonnectNamespacedRef = &commonv1alpha1.KonnectNamespacedRef{
+						Name: "test-control-plane",
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("when type is konnectNamespacedRef, namespacedRef and konnectID must not be set"),
+			},
+			{
+				Name: "konnectNamespacedRef rejects konnectID",
+				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
+					obj := validKonnectConfigStore(ns.Name)
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-control-plane",
+						},
+						KonnectID: new("12345678-1234-1234-1234-123456789abc"),
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("when type is konnectNamespacedRef, namespacedRef and konnectID must not be set"),
+			},
+			{
+				Name: "legacy type rejects konnectNamespacedRef",
+				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
+					obj := validKonnectConfigStore(ns.Name)
+					obj.Spec.ControlPlaneRef.KonnectNamespacedRef = &commonv1alpha1.KonnectNamespacedRef{
+						Name: "test-control-plane",
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("konnectNamespacedRef must be set only when type is konnectNamespacedRef"),
 			},
 			{
 				Name: "konnectID is accepted",
 				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
 					obj := validKonnectConfigStore(ns.Name)
-					obj.Spec.ControlPlaneRef = commonv1alpha1.ObjectRef{
-						Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+						Type:      "konnectID",
 						KonnectID: new("12345678-1234-1234-1234-123456789abc"),
 					}
 					return obj
 				}(),
+				Update: func(obj *konnectv1alpha1.KonnectConfigStore) {
+					obj.Spec.APISpec.Name = "updated-config-store"
+				},
 			},
 			{
 				Name: "controlPlaneRef is required",
 				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
 					obj := validKonnectConfigStore(ns.Name)
-					obj.Spec.ControlPlaneRef = commonv1alpha1.ObjectRef{}
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{}
 					return obj
 				}(),
 				ExpectedErrorMessage: new("spec.controlPlaneRef: Required value"),
@@ -83,8 +154,8 @@ func TestKonnectConfigStore(t *testing.T) {
 				Name: "konnectID type requires konnectID",
 				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
 					obj := validKonnectConfigStore(ns.Name)
-					obj.Spec.ControlPlaneRef = commonv1alpha1.ObjectRef{
-						Type: commonv1alpha1.ObjectRefTypeKonnectID,
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+						Type: "konnectID",
 					}
 					return obj
 				}(),
@@ -94,8 +165,8 @@ func TestKonnectConfigStore(t *testing.T) {
 				Name: "konnectID type rejects namespacedRef",
 				TestObject: func() *konnectv1alpha1.KonnectConfigStore {
 					obj := validKonnectConfigStore(ns.Name)
-					obj.Spec.ControlPlaneRef = commonv1alpha1.ObjectRef{
-						Type: commonv1alpha1.ObjectRefTypeKonnectID,
+					obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+						Type: "konnectID",
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-control-plane",
 						},
@@ -109,6 +180,14 @@ func TestKonnectConfigStore(t *testing.T) {
 
 	t.Run("controlPlaneRef immutability", func(t *testing.T) {
 		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validKonnectConfigStore(ns.Name)).RunWithConfig(t, cfg, scheme)
+		obj := validKonnectConfigStore(ns.Name)
+		obj.Spec.ControlPlaneRef = konnectv1alpha1.ConfigStoreControlPlaneRef{
+			Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+				Name: "test-control-plane",
+			},
+		}
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, obj).RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("apiSpec.name validation", func(t *testing.T) {

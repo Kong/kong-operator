@@ -1,4 +1,4 @@
-# This sample follows the current CRD-from-OAS-generated API shape.
+# The legacy namespacedRef format remains supported.
 apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectConfigStore
 metadata:
@@ -6,8 +6,8 @@ metadata:
   namespace: default
 spec:
   controlPlaneRef:
-    type: namespacedRef
-    namespacedRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
       name: my-cp
       namespace: default
   apiSpec:

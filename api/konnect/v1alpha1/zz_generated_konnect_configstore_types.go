@@ -3,7 +3,6 @@
 package v1alpha1
 
 import (
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,10 +41,10 @@ type KonnectConfigStoreList struct {
 
 // KonnectConfigStoreSpec defines the desired state of KonnectConfigStore.
 type KonnectConfigStoreSpec struct {
-	// ControlPlaneRef is the reference to the parent ControlPlane object.
+	// ControlPlaneRef is the reference to the parent KonnectGatewayControlPlane object.
 	//
 	// +required
-	ControlPlaneRef commonv1alpha1.ObjectRef `json:"controlPlaneRef,omitzero"`
+	ControlPlaneRef ConfigStoreControlPlaneRef `json:"controlPlaneRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//

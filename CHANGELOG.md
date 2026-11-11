@@ -280,6 +280,13 @@
   [#6534](https://github.com/Kong/kong-operator/pull/6534)
   [#6537](https://github.com/Kong/kong-operator/pull/6537)
   [#6538](https://github.com/Kong/kong-operator/pull/6538)
+- `KonnectConfigStore.spec.controlPlaneRef` now accepts `konnectNamespacedRef`,
+  matching `KongVault` and `KongCertificate`. The existing `namespacedRef` and
+  `konnectID` formats remain supported. Programmed resources must retain their
+  existing reference format because the reference remains immutable. Go API users
+  must use
+  `konnectv1alpha1.ConfigStoreControlPlaneRef` instead of `commonv1alpha1.ObjectRef`
+  for this field.
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.

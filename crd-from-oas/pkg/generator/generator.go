@@ -3438,6 +3438,9 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 			if rootRefDependency == nil {
 				return ""
 			}
+			if prefix := refConditionEntityName(rootRefDependency); prefix == "ControlPlane" {
+				return prefix
+			}
 			if funcsParentRef != nil && rc != nil && rc.ParentEntityKind() != "" {
 				return rc.ParentEntityKind()
 			}
@@ -9121,7 +9124,7 @@ func (g *Generator) kindsSkippingKonnectReconciliation(kinds []string) map[strin
 	for _, kind := range kinds {
 		rc := g.config.ReconcilerConfig[kind]
 		result[kind] = rc != nil &&
-			((rc.ParentRef != nil && rc.ParentRef.TypeName != "") ||
+			((rc.ParentRef != nil && rc.ParentRef.TypeName == "AIGatewayRef") ||
 				(rc.GatewayRef != nil && len(rc.GatewayRef.AdditionalKinds) > 0))
 	}
 	return result

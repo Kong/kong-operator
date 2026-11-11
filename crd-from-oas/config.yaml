@@ -2337,3 +2337,6 @@ apiGroupVersions:
             kind: KonnectGatewayControlPlane
             group: konnect.konghq.com
             version: v1alpha2
+          parentRef:
+            fieldName: controlPlaneRef
+            typeName: ConfigStoreControlPlaneRef
