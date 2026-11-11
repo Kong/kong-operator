@@ -34,6 +34,7 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 	policies := make(map[string]*EventGatewayVirtualClusterConsumePolicy, len(obj.Spec.APISpec.Policies))
 	seenNames := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
 	seenIDs := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
+	organizationID := obj.GetKonnectStatus().GetOrgID()
 	for i, ref := range obj.Spec.APISpec.Policies {
 		const kind = "EventGatewayVirtualClusterConsumePolicy"
 		if ref.Name == "" || (ref.Kind != "" && ref.Kind != kind) {
@@ -66,6 +67,14 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 			"EventGatewayVirtualCluster", obj.GetVirtualClusterID(), policy.GetVirtualClusterID(), obj.GetGatewayID()); err != nil {
 			errs = append(errs, err)
 			continue
+		}
+		policyOrganizationID := policy.GetKonnectStatus().GetOrgID()
+		if organizationID != "" && policyOrganizationID != "" && policyOrganizationID != organizationID {
+			errs = append(errs, PolicyChainInvalidError{Message: fmt.Sprintf("policy %s/%s belongs to Konnect organization %s, expected organization %s", ns, ref.Name, policyOrganizationID, organizationID)})
+			continue
+		}
+		if organizationID == "" {
+			organizationID = policyOrganizationID
 		}
 		if _, duplicate := seenIDs[policy.GetKonnectID()]; duplicate {
 			errs = append(errs, PolicyChainInvalidError{Message: fmt.Sprintf("policy %s/%s duplicates Konnect policy ID %s", ns, ref.Name, policy.GetKonnectID())})

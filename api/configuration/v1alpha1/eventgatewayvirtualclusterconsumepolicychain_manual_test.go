@@ -158,6 +158,25 @@ func TestEventGatewayVirtualClusterConsumePolicyChainReferences(t *testing.T) {
 		{name: "foreign gateway", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			p["mask"].SetGatewayID("foreign")
 		}, err: "not referrer Gateway"},
+		{name: "foreign organization", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			c.GetKonnectStatus().SetOrgID("chain-org")
+			for _, policy := range p {
+				policy.GetKonnectStatus().SetOrgID("chain-org")
+			}
+			p["mask"].GetKonnectStatus().SetOrgID("foreign-org")
+		}, err: "organization"},
+		{name: "consistent organization without chain status", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			for _, policy := range p {
+				policy.GetKonnectStatus().SetOrgID("chain-org")
+			}
+		}},
+		{name: "inconsistent organizations without chain status", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			p["parent"].GetKonnectStatus().SetOrgID("chain-org")
+			p["mask"].GetKonnectStatus().SetOrgID("foreign-org")
+		}, err: "organization"},
+		{name: "unknown policy organization", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			c.GetKonnectStatus().SetOrgID("chain-org")
+		}},
 		{name: "stale child", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			p["mask"].Generation++
 		}, err: "not programmed"},

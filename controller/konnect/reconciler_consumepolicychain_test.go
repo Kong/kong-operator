@@ -96,6 +96,7 @@ func TestConsumePolicyChainReconcileSnapshotsAndContender(t *testing.T) {
 		p.SetKonnectID(name + "-id")
 		p.SetGatewayID("gateway-id")
 		p.SetVirtualClusterID("vc-id")
+		p.GetKonnectStatus().SetOrgID("foreign-org")
 		ops.SetKonnectEntityProgrammedConditionTrue(p)
 		policies = append(policies, p)
 	}
@@ -119,6 +120,8 @@ func TestConsumePolicyChainReconcileSnapshotsAndContender(t *testing.T) {
 	}).Build()
 	nsClient := client.NewNamespacedClient(cl, chain.Namespace)
 	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, nsClient)
+	auth.Status.OrganizationID = "chain-org"
+	require.NoError(t, cl.Status().Update(ctx, auth))
 	gateway := deploy.KonnectEventGateway(t, ctx, nsClient, auth)
 	backend := deploy.EventGatewayBackendCluster(t, ctx, nsClient, gateway)
 	parent := deploy.EventGatewayVirtualCluster(t, ctx, nsClient, backend, deploy.WithName("vc"))
@@ -129,9 +132,11 @@ func TestConsumePolicyChainReconcileSnapshotsAndContender(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 	remote := []string{"root-id", "parent-id", "first-id", "second-id"}
 	var applied [][]string
+	remoteReads := 0
 	sdk := factory.SDK.EventGatewayVirtualClusterConsumePoliciesSDK
 	sdk.EXPECT().GetEventGatewayVirtualClusterConsumePolicyChain(mock.Anything, "gateway-id", "vc-id").
 		RunAndReturn(func(context.Context, string, string, ...sdkkonnectops.Option) (*sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyChainResponse, error) {
+			remoteReads++
 			return &sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyChainResponse{
 				EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: slices.Clone(remote)},
 			}, nil
@@ -176,8 +181,38 @@ func TestConsumePolicyChainReconcileSnapshotsAndContender(t *testing.T) {
 		t.Fatalf("chain not applied: %+v", chain.Status.Conditions)
 	}
 	want := []string{"parent-id", "second-id", "first-id", "root-id"}
+	for range 12 {
+		require.NoError(t, run(chain))
+	}
+	require.Zero(t, remoteReads, "foreign organization references must stop before any SDK operation, even without chain status")
+	require.Empty(t, applied)
+	require.Empty(t, chain.GetKonnectStatus().GetOrgID(), "validation must not mutate organization status")
+	refs := apimeta.FindStatusCondition(chain.GetConditions(), commonv1alpha1.KonnectReferencesResolvedConditionType)
+	require.NotNil(t, refs)
+	require.Equal(t, metav1.ConditionFalse, refs.Status)
+	require.Equal(t, commonv1alpha1.KonnectReferencesResolvedReasonInvalid, refs.Reason)
+	require.Contains(t, refs.Message, "organization")
+	require.True(t, apimeta.IsStatusConditionFalse(chain.GetConditions(), "Programmed"))
+	for _, obj := range policies {
+		policy := obj.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(policy), policy))
+		policy.GetKonnectStatus().SetOrgID("chain-org")
+		require.NoError(t, cl.Status().Update(ctx, policy))
+	}
 	untilApplied(want)
+	require.Equal(t, "chain-org", chain.GetKonnectStatus().GetOrgID())
 	before := len(applied)
+	chain.GetKonnectStatus().SetOrgID("foreign-org")
+	require.NoError(t, cl.Status().Update(ctx, chain))
+	beforeReads := remoteReads
+	require.NoError(t, run(chain))
+	require.Equal(t, beforeReads, remoteReads)
+	require.Len(t, applied, before)
+	require.Contains(t, apimeta.FindStatusCondition(chain.GetConditions(), commonv1alpha1.KonnectReferencesResolvedConditionType).Message, "not authenticated organization")
+	require.Equal(t, "foreign-org", chain.GetKonnectStatus().GetOrgID(), "a mismatch must not be hidden by overwriting status")
+	chain.GetKonnectStatus().SetOrgID("chain-org")
+	require.NoError(t, cl.Status().Update(ctx, chain))
+	require.NoError(t, run(chain))
 	condition := *apimeta.FindStatusCondition(chain.GetConditions(), "Programmed")
 	require.NoError(t, run(chain))
 	require.Len(t, applied, before)
@@ -194,6 +229,16 @@ func TestConsumePolicyChainReconcileSnapshotsAndContender(t *testing.T) {
 	untilApplied(want)
 	child := policies[2].(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(child), child))
+	child.GetKonnectStatus().SetOrgID("foreign-org")
+	require.NoError(t, cl.Status().Update(ctx, child))
+	before = len(applied)
+	beforeReads = remoteReads
+	require.NoError(t, run(chain))
+	require.Len(t, applied, before)
+	require.Equal(t, beforeReads, remoteReads, "the validated-ID context must not bypass organization checks on later reconciliations")
+	require.True(t, apimeta.IsStatusConditionFalse(chain.GetConditions(), commonv1alpha1.KonnectReferencesResolvedConditionType))
+	child.GetKonnectStatus().SetOrgID("chain-org")
+	require.NoError(t, cl.Status().Update(ctx, child))
 	child.Generation++
 	require.NoError(t, cl.Update(ctx, child))
 	before = len(applied)
