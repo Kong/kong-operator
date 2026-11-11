@@ -174,3 +174,31 @@ spec:
     - name: missing
       kind: Service
       port: 80
+---
+# An Ingress requesting the Gateway listener's certificate for the same hostname (merged into one Kong
+# certificate and SNI, which must keep the Gateway's tags) and for a hostname of its own (no Gateway tags).
+# The entities translated from the Ingress itself must not inherit the Gateway's tags.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: kong
+  name: ingress-tags
+  namespace: default
+spec:
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: httpbin
+            port:
+              number: 80
+        path: /ingress
+        pathType: Exact
+  tls:
+  - hosts:
+    - example.com
+    - ingress-only.example.com
+    secretName: tls-secret

@@ -38,6 +38,9 @@ certificates:
     - gateway-tag
     - shared-tag
     - gatewayclass-tag
+  - certificate:
+      id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+    name: ingress-only.example.com
   tags:
   - k8s-name:tls-secret
   - k8s-namespace:default
@@ -184,6 +187,42 @@ services:
   - shared-tag
   - gatewayclass-tag
   write_timeout: 60000
+- connect_timeout: 60000
+  host: httpbin.default.80.svc
+  id: 764d9f4d-c24c-5709-991c-19a96a581f6e
+  name: default.httpbin.80
+  path: /
+  port: 80
+  protocol: http
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - hosts:
+    - example.com
+    https_redirect_status_code: 426
+    id: 3ee65ccd-2a01-52d3-9aad-43ce37d3d432
+    name: default.ingress-tags.httpbin.example.com.80
+    path_handling: v0
+    paths:
+    - ~/ingress$
+    preserve_host: true
+    regex_priority: 0
+    request_buffering: true
+    response_buffering: true
+    strip_path: false
+    tags:
+    - k8s-name:ingress-tags
+    - k8s-namespace:default
+    - k8s-kind:Ingress
+    - k8s-group:networking.k8s.io
+    - k8s-version:v1
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  - service-tag
+  write_timeout: 60000
 upstreams:
 - algorithm: round-robin
   name: httproute.default.httproute-tags.1.invalid
@@ -214,3 +253,13 @@ upstreams:
     - shared-tag
     - gatewayclass-tag
     target: 10.244.0.5:80
+- algorithm: round-robin
+  name: httpbin.default.80.svc
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  - service-tag
+  targets:
+  - target: 10.244.0.5:80
