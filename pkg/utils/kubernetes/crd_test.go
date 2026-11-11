@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -22,13 +24,32 @@ func (erroringRESTMapper) KindFor(schema.GroupVersionResource) (schema.GroupVers
 	return schema.GroupVersionKind{}, errDiscoveryUnavailable
 }
 
+// errGroupDiscoveryFailedRESTMapper always fails the lookup with a
+// discovery.ErrGroupDiscoveryFailed for the given groups.
+type errGroupDiscoveryFailedRESTMapper struct {
+	meta.RESTMapper
+
+	failedGroups map[schema.GroupVersion]error
+}
+
+func (m errGroupDiscoveryFailedRESTMapper) KindFor(
+	schema.GroupVersionResource,
+) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{}, &discovery.ErrGroupDiscoveryFailed{Groups: m.failedGroups}
+}
+
+func notFoundStatus(gvr schema.GroupVersionResource) *apierrors.StatusError {
+	return apierrors.NewNotFound(schema.GroupResource{Group: gvr.Group, Resource: gvr.Resource}, "thing")
+}
+
 func TestCRDExists(t *testing.T) {
 	testcases := []struct {
-		name        string
-		restMapper  func() meta.RESTMapper
-		CRD         schema.GroupVersionResource
-		expected    bool
-		expectedErr error
+		name                string
+		restMapper          func() meta.RESTMapper
+		CRD                 schema.GroupVersionResource
+		expected            bool
+		expectedErr         error
+		expectedErrContains string
 	}{
 		{
 			name: "DataPlane CRD is found when installed",
@@ -95,6 +116,23 @@ func TestCRDExists(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name: "returns false without error when the requested group gets a 404 during discovery, and an unrelated group fails",
+			restMapper: func() meta.RESTMapper {
+				gvr := operatorv1beta1.DataPlaneGVR()
+				broken := schema.GroupVersionResource{Group: "broken.example.com", Version: "v1", Resource: "things"}
+				return errGroupDiscoveryFailedRESTMapper{
+					RESTMapper: meta.NewDefaultRESTMapper(nil),
+					failedGroups: map[schema.GroupVersion]error{
+						gvr.GroupVersion():    notFoundStatus(gvr),
+						broken.GroupVersion(): errors.New("some unrelated failure"),
+					},
+				}
+			},
+			CRD:         operatorv1beta1.DataPlaneGVR(),
+			expected:    false,
+			expectedErr: nil,
+		},
+		{
 			name: "returns an error when the lookup itself fails",
 			restMapper: func() meta.RESTMapper {
 				return erroringRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)}
@@ -109,10 +147,14 @@ func TestCRDExists(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ok, err := CRDExists(tc.restMapper(), tc.CRD)
 
-			if tc.expectedErr != nil {
+			switch {
+			case tc.expectedErrContains != "":
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.expectedErrContains)
+			case tc.expectedErr != nil:
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.expectedErr)
-			} else {
+			default:
 				require.NoError(t, err)
 			}
 

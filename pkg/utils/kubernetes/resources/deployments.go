@@ -161,8 +161,13 @@ const (
 )
 
 // userIDAssignedByPlatform is true when the platform assigns the container user and group,
-// as OpenShift does through SecurityContextConstraints. It is set once at startup,
-// because the resource generators have no client to discover it.
+// as OpenShift does through SecurityContextConstraints. It is process state, not
+// configuration: every code path that starts controllers MUST set it once before
+// they generate resources (manager.Run does, via SetUserIDAssignedByPlatform),
+// because the resource generators have no client to discover it. A path that
+// skips the setter silently keeps the pinned user, which OpenShift admission
+// rejects. If a second entry point appears, thread the value instead of
+// extending this pattern.
 var userIDAssignedByPlatform atomic.Bool
 
 // SetUserIDAssignedByPlatform sets whether the platform assigns the container user and group.

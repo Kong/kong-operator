@@ -239,8 +239,12 @@
 - DataPlane: make the hardened security context OpenShift compatible.
   Operand containers built with the hardened security context now set
   `seccompProfile: RuntimeDefault` and, on OpenShift, no longer pin
-  `runAsUser`/`runAsGroup` to a fixed UID. The affected workloads are DataPlanes
-  with `hardened: enabled`.
+  `runAsUser`/`runAsGroup` to a fixed UID, because the `restricted-v2` SCC
+  rejects a UID outside the namespace range and assigns one instead. The
+  affected workloads are DataPlanes with `hardened: enabled`, and the AI
+  Gateway, Event Gateway, GWAdmin and MCP Server containers, which harden
+  unconditionally. The platform is detected by default and can be overridden
+  with the new `--platform` flag (`auto`, `openshift`, `kubernetes`).
   [#6562](https://github.com/Kong/kong-operator/pull/6562)
 - `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
