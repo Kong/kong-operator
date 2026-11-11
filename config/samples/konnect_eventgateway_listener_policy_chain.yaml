@@ -3,8 +3,10 @@
 # plane, exposing ports 9092-9102. Increase the range for larger broker ID ranges.
 # Plaintext connections and anonymous authentication are for demonstration only.
 # This file declares all resources needed for the listener's policy chain;
-# it does not depend on another sample. Listener-chain controller support is
-# introduced by the next PR in the stack.
+# it does not depend on another sample.
+# The Konnect controller reorders the complete listener policy set. Only one chain
+# can own this listener. On-prem Event Gateways are not supported.
+# Deleting this chain stops management and retains remote order and policies.
 apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectAPIAuthConfiguration
 metadata:

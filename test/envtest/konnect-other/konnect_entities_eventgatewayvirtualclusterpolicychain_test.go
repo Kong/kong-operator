@@ -204,8 +204,7 @@ spec:
     namespacedRef: {name: vc, namespace: `+parentNS.Name+`}
   apiSpec: {policies: []}
 `)
-	// KongReferenceGrant admission currently excludes this kind. Seed the cleanup
-	// finalizer here; the grant-authorized runtime path is covered by a fake-client test.
+	// Rejected cross-namespace parents must not strand an existing cleanup finalizer.
 	chain.Finalizers = []string{konnect.KonnectCleanupFinalizer}
 	require.NoError(t, cl.Create(ctx, chain), "cross-namespace parents are admitted")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -213,11 +212,15 @@ spec:
 			return
 		}
 		assert.Contains(ct, chain.Finalizers, konnect.KonnectCleanupFinalizer)
-		grant := meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs")
-		if assert.NotNil(ct, grant) {
-			assert.Equal(ct, metav1.ConditionFalse, grant.Status)
-			assert.Equal(ct, string(configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted), grant.Reason)
+		assert.Nil(ct, meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs"))
+		parent := meta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid())
+		if assert.NotNil(ct, parent) {
+			assert.Equal(ct, metav1.ConditionFalse, parent.Status)
+			assert.Equal(ct, chain.GetStatusConditionReasonParentRefInvalid(), parent.Reason)
+			assert.Contains(ct, parent.Message, "same namespace")
 		}
+		assert.Empty(ct, chain.GetVirtualClusterID())
+		assert.Empty(ct, chain.GetGatewayID())
 		programmed := meta.FindStatusCondition(chain.Status.Conditions, "Programmed")
 		if assert.NotNil(ct, programmed) {
 			assert.Equal(ct, metav1.ConditionFalse, programmed.Status)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -64,6 +65,7 @@ func ensureKongReferenceGrantForParentRef[
 	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
 		ref.NamespacedRef == nil ||
 		ref.NamespacedRef.Namespace == nil ||
+		*ref.NamespacedRef.Namespace == "" ||
 		*ref.NamespacedRef.Namespace == ent.GetNamespace() {
 		// The parent ref doesn't require a grant. Only remove the shared
 		// ResolvedRefs condition if no other cross-namespace reference of this
@@ -169,6 +171,37 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 	parentType := constraints.EntityTypeName[p]()
 
 	parentRef := obj.GetParentRef()
+
+	if _, isChain := obj.(policyChain); isChain && parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
+		parentRef.NamespacedRef != nil && parentRef.NamespacedRef.Namespace != nil &&
+		*parentRef.NamespacedRef.Namespace != "" && *parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
+		err := ReferencedObjectIsInvalidError{
+			Reference: *parentRef.NamespacedRef.Namespace + "/" + parentRef.NamespacedRef.Name,
+			Msg:       fmt.Sprintf("policy chains require a %s in the same namespace as the chain (%s); cross-namespace parents are not supported", parentType, obj.GetNamespace()),
+		}
+		old := obj.DeepCopyObject().(client.Object)
+		// Older reconciliations could adopt parent IDs and grant conditions
+		// before rejecting the chain's unsupported cross-namespace parent.
+		if status := konnectEntityStatusOf(obj); status != nil {
+			*status = konnectv1alpha2.KonnectEntityStatus{}
+		}
+		k8sutils.RemoveCondition(consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs), obj)
+		patch.SetStatusWithConditionIfDifferent(obj,
+			consts.ConditionType(obj.GetStatusConditionTypeParentRefValid()),
+			metav1.ConditionFalse,
+			consts.ConditionReason(obj.GetStatusConditionReasonParentRefInvalid()),
+			err.Error(),
+		)
+		if !equality.Semantic.DeepEqual(old, obj) {
+			if patchErr := cl.Status().Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); patchErr != nil {
+				if apierrors.IsConflict(patchErr) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("rejecting cross-namespace policy chain parent: %w", patchErr)
+			}
+		}
+		return ctrl.Result{}, err
+	}
 
 	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
 	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not

@@ -53,13 +53,17 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 			{name: "stale policy ID", desired: []string{"first"}, remote: []string{"previous-id"}, wantErr: "complete remote cluster policy chain"},
 			{name: "duplicate remote IDs", desired: []string{"first"}, remote: []string{"first", "first"}, wantErr: "unique, non-empty"},
 			{name: "duplicate resolved IDs", desired: []string{"first", "first"}, remote: []string{"first"}, wantErr: "unique, non-empty"},
+			{name: "null remote list is not empty", desired: []string{}, wantErr: "explicit policy list"},
 			{name: "invalid reference", desired: []string{"first"}, invalidRef: true, wantErr: "not programmed"},
 			{name: "GET error", desired: []string{}, getErr: errors.New("GET unavailable"), wantErr: "GET unavailable"},
 			{name: "GET typed 404", desired: []string{}, getErr: &sdkkonnecterrs.NotFoundError{Status: http.StatusNotFound, Title: "Not Found"}, wantErr: "Not Found"},
 			{name: "GET generic 404", desired: []string{}, getErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusNotFound, Message: "virtual cluster not found"}, wantErr: "virtual cluster not found"},
+			{name: "GET forbidden", desired: []string{}, getErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusForbidden, Message: "access denied"}, wantErr: "access denied"},
 			{name: "GET nil response", desired: []string{}, nilGet: true, wantErr: ErrNilResponse.Error()},
-			{name: "PUT error", desired: []string{}, putErr: errors.New("PUT unavailable"), wantPUT: true, wantErr: "PUT unavailable"},
-			{name: "PUT nil response", desired: []string{}, nilPut: true, wantPUT: true, wantErr: ErrNilResponse.Error()},
+			{name: "PUT error", desired: []string{}, remote: []string{}, putErr: errors.New("PUT unavailable"), wantPUT: true, wantErr: "PUT unavailable"},
+			{name: "PUT conflict does not list for UID", desired: []string{}, remote: []string{}, wantPUT: true, putErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusConflict, Message: "concurrent update"}, wantErr: "concurrent update"},
+			{name: "PUT nil response", desired: []string{}, remote: []string{}, nilPut: true, wantPUT: true, wantErr: ErrNilResponse.Error()},
+			{name: "PUT null list is not empty", desired: []string{}, remote: []string{}, wantPUT: true, wantErr: "does not match"},
 			{name: "PUT ignored order", desired: []string{"second", "first"}, remote: []string{"first", "second"}, response: []string{"first", "second"}, wantPUT: true, wantErr: "does not match"},
 		} {
 			t.Run(string(op)+"/"+tt.name, func(t *testing.T) {
@@ -143,6 +147,9 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 				}
 				if tt.getErr != nil {
 					require.ErrorIs(t, err, tt.getErr)
+				}
+				if tt.putErr != nil {
+					require.ErrorIs(t, err, tt.putErr)
 				}
 				if !tt.wantPUT {
 					policySDK.AssertNotCalled(t, "UpdateEventGatewayVirtualClusterClusterLevelPolicyChain", mock.Anything, mock.Anything)
