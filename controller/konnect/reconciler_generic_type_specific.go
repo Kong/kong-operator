@@ -40,6 +40,7 @@ func handleTypeSpecific[
 	cl client.Client,
 	chainClient client.Client,
 	ent TEnt,
+	organizationID string,
 ) (context.Context, bool, ctrl.Result, error) {
 	var (
 		updated   bool
@@ -51,7 +52,7 @@ func handleTypeSpecific[
 	resolver, hasReferences := any(ent).(konnectReferenceResolver)
 	var chainResolver *policyChainReferenceResolver
 	if chain, ok := any(ent).(policyChain); ok {
-		chainResolver = &policyChainReferenceResolver{chain: chain}
+		chainResolver = &policyChainReferenceResolver{chain: chain, organizationID: organizationID}
 		resolver, hasReferences = chainResolver, true
 	}
 	if hasReferences {

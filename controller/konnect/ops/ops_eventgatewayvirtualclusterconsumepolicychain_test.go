@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -201,4 +202,56 @@ func TestConsumePolicyChainAncestryAndRetention(t *testing.T) {
 	_, err = applyEventGatewayVirtualClusterConsumePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), chain, UpdateOp)
 	require.ErrorContains(t, err, "EventGatewayVirtualCluster")
 	require.NoError(t, Delete(ctx, sdk, cl, &metricsmocks.MockRecorder{}, chain))
+}
+
+func TestConsumePolicyChainRejectsForeignOrganizationBeforeSDK(t *testing.T) {
+	t.Parallel()
+	for _, op := range []Op{CreateOp, UpdateOp} {
+		t.Run(string(op), func(t *testing.T) {
+			chain := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{Name: "chain", Namespace: "default", Generation: 1,
+				Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainSpec{
+					EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
+						Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "vc"},
+					},
+					APISpec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainAPISpec{
+						Policies: []configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{{Name: "policy"}},
+					},
+				},
+			}
+			chain.SetGatewayID("gateway-id")
+			chain.SetVirtualClusterID("vc-id")
+			chain.GetKonnectStatus().SetOrgID("chain-org")
+			policy := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{Name: "policy", Namespace: chain.Namespace, Generation: 1,
+				Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+					EventGatewayVirtualClusterRef: chain.GetParentRef(),
+					APISpec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyAPISpec{
+						EventGatewayVirtualClusterConsumePolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyConfig{
+							Type:                   configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate,
+							SkipRecordPolicyCreate: &configurationv1alpha1.EventGatewaySkipRecordPolicyCreate{Name: "policy"},
+						},
+					},
+				},
+			}
+			policy.SetKonnectID("policy-id")
+			policy.SetGatewayID("gateway-id")
+			policy.SetVirtualClusterID("vc-id")
+			policy.GetKonnectStatus().SetOrgID("foreign-org")
+			SetKonnectEntityProgrammedConditionTrue(policy)
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(policy).Build()
+			sdk := sdkmocks.NewMockSDKWrapperWithT(t)
+			var err error
+			if op == CreateOp {
+				_, err = Create(t.Context(), sdk, cl, &metricsmocks.MockRecorder{}, chain)
+			} else {
+				_, err = Update(t.Context(), sdk, time.Hour, cl, &metricsmocks.MockRecorder{}, chain)
+			}
+			require.ErrorContains(t, err, "policy default/policy belongs to Konnect organization foreign-org, expected organization chain-org")
+			_, invalid := errors.AsType[configurationv1alpha1.PolicyChainInvalidError](err)
+			require.True(t, invalid)
+			require.True(t, apimeta.IsStatusConditionFalse(chain.GetConditions(), "Programmed"))
+			sdk.EventGatewayVirtualClusterConsumePoliciesSDK.AssertNotCalled(t, "GetEventGatewayVirtualClusterConsumePolicyChain", mock.Anything, mock.Anything, mock.Anything)
+			sdk.EventGatewayVirtualClusterConsumePoliciesSDK.AssertNotCalled(t, "UpdateEventGatewayVirtualClusterConsumePolicyChain", mock.Anything, mock.Anything)
+		})
+	}
 }
