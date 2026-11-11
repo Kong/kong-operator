@@ -44,6 +44,9 @@ spec:
     - name: gw_admin_image
       value: (env('GW_ADMIN_IMAGE'))
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Create-gwadmin
       try:
         - apply:

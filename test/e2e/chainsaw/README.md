@@ -9,6 +9,74 @@ make test.e2e.chainsaw                                                        # 
 make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/konnect          # Run specific test suite
 ```
 
+### GWAdmin license prerequisites
+
+`gwadmin` and `onpremeventgateway` use a separate **original compact JWS
+enveloped license**, with the `event_gateway` entitlement. A legacy Kong Enterprise
+JSON license (`KONG_LICENSE_DATA`, used by other suites) cannot replace it.
+Obtain an issued license from the authorized licensing owner and keep its file
+outside the checkout and artifact directories, readable only by you:
+
+```bash
+export GW_ADMIN_LICENSE_FILE=/absolute/private/path/gw-admin-license.jws
+chmod 600 "$GW_ADMIN_LICENSE_FILE"
+export GW_ADMIN_LICENSE_REQUIRED=true
+make test.e2e.chainsaw.gwadmin-license
+make test.e2e.chainsaw.prereq DIRNAME=gwadmin
+make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/gwadmin
+
+make test.e2e.chainsaw.prereq DIRNAME=onpremeventgateway
+make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/onpremeventgateway
+```
+
+The preflight checks readable, non-empty input and the JWS envelope shape before
+cluster writes; it does **not** verify the signature, expiry, or entitlement.
+gw-admin performs those checks. Each GWAdmin-producing scenario provisions
+`gw-admin-license`, key `license`, in the GWAdmin namespace. Both
+`onprem-cross-namespace` and `onprem-grant-revoked` use their admin namespace,
+not the data-plane namespace. Chainsaw deletes test namespaces and their Secrets
+at cleanup; it does not remove your input file.
+
+Secret creation uses file input and server-side apply (no last-applied license
+annotation), without rendering a license-bearing resource in Chainsaw.
+Do not enable shell tracing around license handling, print/decode the license,
+or put it in assertion files, command arguments, debug output, or artifacts.
+The helper suppresses potentially payload-bearing kubectl diagnostics but returns
+an explicit error. Existing debug snapshots redact Secret payloads.
+
+**Intermediate layer:** controller license mounting and licensed runtime checks
+are not implemented here, and the pinned dev image is unchanged. Without an input
+file, existing suites retain their previous behavior unless
+`GW_ADMIN_LICENSE_REQUIRED=true`; supplied invalid input always fails. Provisioning
+the Secret alone does not demonstrate licensed operation or complete #6568.
+Long-term CI acquisition (pre-issued JWS versus authorized signing credentials)
+and fork skip/fail policy remain undecided. No signing request is made, and the
+legacy `.github/actions/kong-license` action is not used for GWAdmin licenses.
+
+### Real gw-admin contract tests
+
+Without `GW_ADMIN_CONTRACT_URL`, `TestGWAdminContract` uses the fake gw-admin and
+needs no commercial license:
+
+```bash
+go test ./test/envtest/eventgateway -run '^TestGWAdminContract$' -count=1
+```
+
+For a dedicated real server, first run the license preflight above. Supply the
+original file to the server as `GW_ADMIN_ONPREM_LICENSE_FILE`, with
+`GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS=event_gateway`; for a container, these refer
+to its read-only mounted file, not the host path. A licensing-capable image is
+`kong/kong-gw-admin-cp:1.0.0-rc.1`. Do not replace the existing suites' dev image
+until controller mounting is implemented. The preflight is input preparation,
+not a check that a remote server actually mounted or accepted that license.
+
+Set `GW_ADMIN_CONTRACT_URL` (including `/v1`),
+`GW_ADMIN_CONTRACT_SERVER_NAME`, and the certificate file paths
+`GW_ADMIN_CONTRACT_CA`, `GW_ADMIN_CONTRACT_CERT`, `GW_ADMIN_CONTRACT_KEY`, then run
+the same command. The server must be dedicated to these tests: they replace its
+served gateways and configuration. Live licensed contract validation still
+requires a valid issued license and a configured server.
+
 ## Global Configuration
 
 The [.chainsaw.yaml](.chainsaw.yaml) file centralizes default timeouts and settings for all tests. Individual tests inherit these defaults unless they override them.

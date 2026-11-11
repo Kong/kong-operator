@@ -13,6 +13,8 @@
 #   KONG_LICENSE_DATA   Raw Kong Enterprise license JSON. Treated as a secret: only ever
 #                        read via env var, never echoed, logged, or passed as an argument.
 #                        Skips KongLicense creation if unset.
+#   GW_ADMIN_LICENSE_FILE / GW_ADMIN_LICENSE_REQUIRED: See gwadmin-license.sh.
+#                        Checked before any cluster writes in GWAdmin suites.
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -35,6 +37,17 @@ case "${1:-}" in
     exit 1
     ;;
 esac
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [[ "$1" == install ]]; then
+  case "$DIRNAME" in
+    gwadmin|onpremeventgateway)
+      if [[ -n "${GW_ADMIN_LICENSE_FILE:-}" || "${GW_ADMIN_LICENSE_REQUIRED:-false}" == true ]]; then
+        bash "$SCRIPT_DIR/gwadmin-license.sh" check
+      fi
+      ;;
+  esac
+fi
 
 KONG_LICENSE_NAME="e2e-chainsaw-license"
 
@@ -59,7 +72,6 @@ case "$1" in
     ;;
 esac
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SUITE_SCRIPT="${SCRIPT_DIR}/${DIRNAME}/prereq.sh"
 
 if [ -f "${SUITE_SCRIPT}" ]; then

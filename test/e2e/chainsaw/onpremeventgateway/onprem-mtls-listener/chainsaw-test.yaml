@@ -24,6 +24,9 @@ spec:
       value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Mtls-listener-pushed
       try:
         - script:
