@@ -1,0 +1,25 @@
+# Template for asserting the status of a condition of an object, with another
+# reason than one, e.g. not programmed for another reason than a missing
+# KongReferenceGrant.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - condition_type, condition_status: The condition.
+#   - condition_not_reason: The reason it must not have.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-condition-not-reason
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (conditions[?type == $condition_type]):
+              - status: ($condition_status)
+                (reason != $condition_not_reason): true

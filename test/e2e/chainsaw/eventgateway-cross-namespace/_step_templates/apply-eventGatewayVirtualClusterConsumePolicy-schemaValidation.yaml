@@ -1,0 +1,38 @@
+# Template for creating a schemaValidation EventGatewayVirtualClusterConsumePolicy validating with
+# a Confluent schema registry.
+#
+# Required bindings:
+#   - policy_name, policy_namespace: The policy.
+#   - virtual_cluster_name, virtual_cluster_namespace: Its virtual cluster.
+#   - schema_registry_name, schema_registry_namespace: The schema registry.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster-consume-policy-schema-validation
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualClusterConsumePolicy
+          metadata:
+            name: ($policy_name)
+            namespace: ($policy_namespace)
+          spec:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($virtual_cluster_name)
+                namespace: ($virtual_cluster_namespace)
+            apiSpec:
+              type: schemaValidation
+              schemaValidation:
+                name: ($policy_name)
+                config:
+                  type: confluentSchemaRegistry
+                  confluentSchemaRegistry:
+                    schemaRegistry:
+                      kind: EventGatewaySchemaRegistry
+                      name: ($schema_registry_name)
+                      namespace: ($schema_registry_namespace)
+                    valueValidationAction: mark

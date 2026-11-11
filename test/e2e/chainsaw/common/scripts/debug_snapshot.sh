@@ -40,6 +40,10 @@ kc() {
   fi
 }
 
+# Every Event Gateway resource, whatever its API group, for the YAML dump and
+# the descriptions.
+EVENT_GATEWAY_RESOURCES="kegdataplanes.eventgateway.konghq.com,onpremeventgateways.eventgateway.konghq.com,konnecteventgateways.konnect.konghq.com,gwadmins.gateway-operator.konghq.com,eventgatewaydataplanecertificates.configuration.konghq.com,eventgatewaybackendclusters.configuration.konghq.com,eventgatewayvirtualclusters.configuration.konghq.com,eventgatewaylisteners.configuration.konghq.com,eventgatewaylistenerpolicies.configuration.konghq.com,eventgatewaylistenerpolicychains.configuration.konghq.com,eventgatewayvirtualclusterpolicies.configuration.konghq.com,eventgatewayvirtualclusterpolicychains.configuration.konghq.com,eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com,eventgatewayvirtualclusterproducepolicies.configuration.konghq.com,eventgatewayschemaregistries.configuration.konghq.com,eventgatewaystatickeys.configuration.konghq.com,eventgatewaytlstrustbundles.configuration.konghq.com"
+
 # Build list of all namespaces to capture
 ALL_NAMESPACES="${NAMESPACE}"
 if [ -n "${ADDITIONAL_NAMESPACES}" ]; then
@@ -239,7 +243,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # Event Gateway resources (all related resources regardless of API group)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Event Gateway Resources" \
-    "kegdataplanes.eventgateway.konghq.com,konnecteventgateways.konnect.konghq.com,eventgatewaydataplanecertificates.configuration.konghq.com,eventgatewaybackendclusters.configuration.konghq.com,eventgatewayvirtualclusters.configuration.konghq.com,eventgatewaylisteners.configuration.konghq.com,eventgatewaylistenerpolicies.configuration.konghq.com,eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com"
+    "${EVENT_GATEWAY_RESOURCES}"
 
   # AI Gateway resources (all related resources regardless of API group)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "AI Gateway Resources" \
@@ -343,7 +347,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe kegdataplanes.eventgateway.konghq.com,konnecteventgateways,eventgatewaydataplanecertificates,eventgatewaybackendclusters,eventgatewayvirtualclusters,eventgatewaylisteners,eventgatewaylistenerpolicies,eventgatewayvirtualclusterconsumepolicies -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe "${EVENT_GATEWAY_RESOURCES}" -n "${ns}"
 
   {
     echo ""

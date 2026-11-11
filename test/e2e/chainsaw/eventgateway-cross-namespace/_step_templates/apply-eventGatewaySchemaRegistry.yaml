@@ -1,0 +1,64 @@
+# Template for creating a Confluent EventGatewaySchemaRegistry attached to the
+# gateway, with basic authentication, and the Secret, named after it, holding
+# its password.
+#
+# Required bindings:
+#   - schema_registry_name, schema_registry_namespace: The schema registry.
+#   - api_name: Its name in the API of the gateway, which keeps it unique.
+#   - schema_type: The type of its schemas, json or avro: a transcode policy
+#     needs one of its output format.
+#   - secret_namespace: Namespace of the Secret holding its value.
+#   - secret_ref_namespace: The same, or null to leave it to default to the
+#     namespace of the object.
+#   - gateway_group, gateway_kind, gateway_name: The gateway.
+#   - gateway_ref_namespace: The namespace of the gateway, or null to leave
+#     it to default to the namespace of the object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-schema-registry
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: ($schema_registry_name)
+            namespace: ($secret_namespace)
+            labels:
+              konghq.com/secret: "true"
+          type: Opaque
+          stringData:
+            password: password123
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewaySchemaRegistry
+          metadata:
+            name: ($schema_registry_name)
+            namespace: ($schema_registry_namespace)
+          spec:
+            parentRef:
+              group: ($gateway_group)
+              kind: ($gateway_kind)
+              name: ($gateway_name)
+              namespace: ($gateway_ref_namespace)
+            apiSpec:
+              type: confluent
+              confluent:
+                name: ($api_name)
+                config:
+                  authentication:
+                    type: basic
+                    basic:
+                      username: user
+                      password:
+                        type: secretRef
+                        secretRef:
+                          name: ($schema_registry_name)
+                          namespace: ($secret_ref_namespace)
+                          key: password
+                  endpoint: https://schema-registry.example.com
+                  schemaType: ($schema_type)
+                  timeoutSeconds: 10

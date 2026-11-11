@@ -1,0 +1,22 @@
+# Template for asserting an object has a finalizer, and whether it is being
+# deleted: e.g. an entity FinalizerInUse holds while policies use it.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - finalizer: The finalizer.
+#   - being_deleted: true if it must be being deleted, false if it must not.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-finalizer
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+            (contains(finalizers || `[]`, $finalizer)): true
+            (deletionTimestamp != null): ($being_deleted)

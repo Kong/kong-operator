@@ -329,7 +329,8 @@ verify: verify.go-fix verify.manifests verify.generators verify.crd-breaking-cha
 
 .PHONY: verify.diff
 verify.diff:
-	@$(PROJECT_DIR)/scripts/verify-diff.sh $(PROJECT_DIR)
+	@$(PROJECT_DIR)/scripts/verify-diff.sh $(PROJECT_DIR) \
+		$(PROJECT_DIR)/test/e2e/chainsaw/eventgateway-cross-namespace
 
 .PHONY: verify.repo
 verify.repo:
@@ -360,7 +361,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.controllers-aigw manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.controllers-aigw generate.chainsaw-eventgateway-cross-namespace manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -428,6 +429,10 @@ generate.cli-arguments-docs:
 	$(PROJECT_DIR)/scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
 		$(PROJECT_DIR)/docs/cli-arguments-for-developer-konghq-com.md \
 		$(PROJECT_DIR)/docs/cli-arguments.md
+
+.PHONY: generate.chainsaw-eventgateway-cross-namespace
+generate.chainsaw-eventgateway-cross-namespace: ## Generate the chainsaw tests of test/e2e/chainsaw/eventgateway-cross-namespace.
+	go run ./hack/generators/chainsaw-eventgateway-cross-namespace
 
 .PHONY: generate.controllers-aigw
 generate.controllers-aigw:
@@ -878,6 +883,9 @@ test.e2e:
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw
 CHAINSAW_CONFIG ?= ./test/e2e/chainsaw/.chainsaw.yaml
 CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
+# CHAINSAW_SELECTOR, when set, runs only the tests whose labels match it, e.g.
+# gateway=onprem.
+CHAINSAW_SELECTOR ?=
 
 # DIRNAME is passed to the dispatcher via the environment (never substituted into the
 # recipe), so its value can never be parsed as a shell command.
@@ -898,7 +906,8 @@ test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	KEG_DP_IMAGE=$(shell $(YQ) -r '.chainsaw.keg-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
 	GW_ADMIN_IMAGE=$(or $(GW_ADMIN_IMAGE),$(shell $(YQ) -r '.chainsaw.gw-admin | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE))) \
 	GRPCURL_BIN=$(GRPCURL) \
-		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
+		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR) \
+		$(if $(CHAINSAW_SELECTOR),--selector '$(CHAINSAW_SELECTOR)')
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))

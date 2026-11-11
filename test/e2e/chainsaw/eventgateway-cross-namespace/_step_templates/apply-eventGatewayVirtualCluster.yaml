@@ -1,0 +1,31 @@
+# Template for creating an anonymous-auth EventGatewayVirtualCluster, its DNS
+# label its name.
+#
+# Required bindings:
+#   - virtual_cluster_name, virtual_cluster_namespace: The virtual cluster.
+#   - backend_cluster_name, backend_cluster_namespace: Its backend cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualCluster
+          metadata:
+            name: ($virtual_cluster_name)
+            namespace: ($virtual_cluster_namespace)
+          spec:
+            eventGatewayBackendClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($backend_cluster_name)
+                namespace: ($backend_cluster_namespace)
+            apiSpec:
+              name: ($virtual_cluster_name)
+              dnsLabel: ($virtual_cluster_name)
+              aclMode: enforce_on_gateway
+              authentication:
+                - type: anonymous

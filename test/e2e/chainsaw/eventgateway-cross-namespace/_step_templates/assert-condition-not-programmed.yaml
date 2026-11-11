@@ -1,0 +1,27 @@
+# Template for asserting an object reports a condition, with its reason, and
+# isn't programmed: no Programmed condition with the status True, absent or
+# False telling the same. The condition is the outcome of the reconcile that
+# decided not to program the object, e.g. as what it references isn't
+# programmed, so both hold once it is reported.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - condition_type, condition_status, condition_reason: The condition.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-condition-not-programmed
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (conditions[?type == $condition_type]):
+              - status: ($condition_status)
+                reason: ($condition_reason)
+            (length(conditions[?type == 'Programmed' && status == 'True'])): 0

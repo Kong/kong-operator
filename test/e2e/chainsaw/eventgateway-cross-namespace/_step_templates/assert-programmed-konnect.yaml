@@ -1,0 +1,22 @@
+# Template for asserting an entity of a KonnectEventGateway is Programmed and
+# has its Konnect ID.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-programmed-konnect
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: "True"
+            (id != null): true
