@@ -526,19 +526,15 @@ _Appears in:_
 
 
 ConfigStoreControlPlaneRef references the Konnect Control Plane that owns a
-KonnectConfigStore. Use konnectNamespacedRef, matching KongVault and
-KongCertificate. The namespacedRef and konnectID formats remain supported.
-Programmed resources must retain their reference format because the reference
-remains immutable.
+KonnectConfigStore, using the same konnectNamespacedRef format as KongVault
+and KongCertificate.
 
 
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | Type selects the reference format. Prefer konnectNamespacedRef. |
+| `type` _string_ | Type must be konnectNamespacedRef. |
 | `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectGatewayControlPlane by name. An omitted namespace defaults to the KonnectConfigStore's namespace. |
-| `namespacedRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | NamespacedRef references a KonnectGatewayControlPlane by name using the legacy format. Prefer KonnectNamespacedRef for new resources. |
-| `konnectID` _*string_ | KonnectID references a Control Plane by its Konnect ID. |
 
 _Appears in:_
 
