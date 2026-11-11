@@ -49,6 +49,10 @@ kind: GWAdmin
 metadata:
   name: gwadmin-client-ca
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   tls:
     clientCA:
       provisioning: Manual

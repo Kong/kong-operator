@@ -3,6 +3,10 @@ kind: GWAdmin
 metadata:
   name: ($gwadmin_name)
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   deployment:
     podTemplateSpec:
       metadata:
