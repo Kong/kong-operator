@@ -20,7 +20,8 @@ spec:
     route paths, and three consumers drive the policy precedence: A has its
     own policy and is in group G, B is only in group G, C has neither. Kong
     runs only the most specific matching instance of a plugin: consumer >
-    consumer group > global. plain-model drives those assertions.
+    consumer group > model > global. Both models drive those assertions;
+    only scoped-model has a model policy.
 
     An alias shared across routes is not a conflict: the converter renders
     one ai_models entity for the alias, and each model keeps its own route
