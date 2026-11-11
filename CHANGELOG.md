@@ -116,14 +116,20 @@
 
 ### Fixed
 
+- AI Gateway: an `AIGatewayDataPlane` now renders the control plane and
+  telemetry endpoints of a control plane reached over PrivateLink, whose values
+  carry a path. The port no longer lands inside the path, so the data plane
+  connects instead of retrying forever. The `serverURL`-with-a-path mismatch is
+  still reported as `KonnectAIGatewayResolved=False` with reason
+  `EndpointMismatch`.
+  [#6105](https://github.com/Kong/kong-operator/issues/6105)
 - A `KonnectExtension` whose Konnect endpoints cannot be used now reports
   `Ready=False` and holds its data plane, instead of letting it reach Konnect
   through the public endpoint: reason `InvalidEndpoint` for a
   `K8SIngressController` endpoint carrying a path, `EndpointMismatch` for a
   `serverURL` carrying a path paired with an endpoint that does not. A
   Konnect-backed `AIGatewayDataPlane` reports `KonnectAIGatewayResolved=False`
-  with reason `EndpointMismatch` on the same mismatch, and on any endpoint
-  carrying a path until its private rendering lands.
+  with reason `EndpointMismatch` on the same mismatch.
   [#6265](https://github.com/Kong/kong-operator/pull/6265)
 - Generated certificate Secrets now carry the full CA chain in `ca.crt`. The
   value holds the certificate that signs the leaf. It then holds each
