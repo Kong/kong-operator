@@ -68,9 +68,9 @@ type KegDataPlaneList struct {
 type KegDataPlaneSpec struct {
 	// ControlPlaneRef references the control plane this KegDataPlane connects to.
 	// The type field identifies which kind of control plane is being referenced:
-	// konnectNamespacedRef references a KonnectEventGateway resource in the
-	// same namespace, onpremNamespacedRef an OnPremEventGateway resource in
-	// the same namespace.
+	// konnectNamespacedRef references a KonnectEventGateway resource,
+	// onpremNamespacedRef an OnPremEventGateway resource. A gateway in another
+	// namespace needs a KongReferenceGrant in its namespace.
 	//
 	// +required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`

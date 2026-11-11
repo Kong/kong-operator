@@ -51,6 +51,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -212,6 +213,12 @@ type DeploymentConfig[T Object] struct {
 	// Deployment exists: implementations must be idempotent and tolerate a
 	// missing Deployment.
 	ControlPlaneGone func(ctx context.Context, cl client.Client, dp T) error
+	// ControlPlaneNotPermitted, when non-nil, is called, on every reconcile,
+	// while no KongReferenceGrant lets the data plane reference its control
+	// plane of another namespace: the owner of the control plane revoked its
+	// trust, e.g. to disconnect the data plane. Implementations must be
+	// idempotent and tolerate a missing Deployment.
+	ControlPlaneNotPermitted func(ctx context.Context, cl client.Client, dp T) error
 	// Customize, when non-nil, adjusts the operator base Deployment for the
 	// resolved control plane, after the user Deployment labels and
 	// annotations are applied and before the user PodTemplateSpec overlay is
@@ -403,6 +410,9 @@ type Config[T Object, Cert CertificateObject] struct {
 	// Kind is the human-readable DataPlane kind used in logs, errors and
 	// events (e.g. "AIGatewayDataPlane", "KegDataPlane").
 	Kind string
+	// GVK identifies the DataPlane kind in a KongReferenceGrant. Only used by
+	// a kind whose control plane references can name a namespace.
+	GVK metav1.GroupVersionKind
 
 	// NewObject returns a new empty DataPlane object.
 	NewObject func() T
@@ -662,6 +672,11 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		if errors.Is(err, errControlPlaneGone) && r.Config.Deployment.ControlPlaneGone != nil {
 			if goneErr := r.Config.Deployment.ControlPlaneGone(ctx, r.Client, dp); goneErr != nil {
 				return ctrl.Result{}, goneErr
+			}
+		}
+		if crossnamespace.IsReferenceNotGranted(err) && r.Config.Deployment.ControlPlaneNotPermitted != nil {
+			if notPermittedErr := r.Config.Deployment.ControlPlaneNotPermitted(ctx, r.Client, dp); notPermittedErr != nil {
+				return ctrl.Result{}, notPermittedErr
 			}
 		}
 		if err != nil {

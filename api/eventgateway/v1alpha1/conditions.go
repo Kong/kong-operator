@@ -106,6 +106,10 @@ const (
 	// KonnectEventGatewayNotFoundReason indicates the referenced
 	// KonnectEventGateway was not found.
 	KonnectEventGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// KonnectEventGatewayRefNotPermittedReason indicates the referenced
+	// KonnectEventGateway is in another namespace, and no KongReferenceGrant
+	// allows the reference.
+	KonnectEventGatewayRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
 	// KonnectEventGatewayNotProgrammedReason indicates the referenced
 	// KonnectEventGateway exists but is not yet Programmed on Konnect.
 	KonnectEventGatewayNotProgrammedReason consts.ConditionReason = "NotProgrammed"
@@ -134,6 +138,10 @@ const (
 	// OnPremEventGatewayNotFoundReason indicates the referenced
 	// OnPremEventGateway was not found.
 	OnPremEventGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// OnPremEventGatewayRefNotPermittedReason indicates the referenced
+	// OnPremEventGateway is in another namespace, and no KongReferenceGrant
+	// allows the reference.
+	OnPremEventGatewayRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
 	// KegDataPlaneGWAdminNotReadyReason indicates the GWAdmin of the
 	// referenced OnPremEventGateway doesn't provide what the data plane needs
 	// yet.

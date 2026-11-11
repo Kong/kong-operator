@@ -34,14 +34,14 @@ type ControlPlaneRef struct {
 	// +required
 	Type ControlPlaneRefType `json:"type,omitempty"`
 
-	// KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace.
+	// KonnectNamespacedRef references a KonnectEventGateway resource.
 	// Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
 	//
 	// +optional
 	KonnectNamespacedRef *KonnectNamespacedRef `json:"konnectNamespacedRef,omitempty"`
 
-	// OnPremNamespacedRef references an OnPremEventGateway resource in the
-	// same namespace. The data plane pulls its configuration from the gw-admin
+	// OnPremNamespacedRef references an OnPremEventGateway resource. The data
+	// plane pulls its configuration from the gw-admin
 	// pods of the GWAdmin of that gateway, and authenticates with a client
 	// certificate trusted by the cp client CA of the GWAdmin.
 	// Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct.
@@ -57,15 +57,15 @@ type ControlPlaneRefType string
 
 const (
 	// ControlPlaneRefTypeKonnectNamespacedRef references a KonnectEventGateway
-	// resource in the same namespace as the DataPlane.
+	// resource.
 	ControlPlaneRefTypeKonnectNamespacedRef ControlPlaneRefType = "konnectNamespacedRef"
 
 	// ControlPlaneRefTypeOnPremNamespacedRef references an OnPremEventGateway
-	// resource in the same namespace as the DataPlane.
+	// resource.
 	ControlPlaneRefTypeOnPremNamespacedRef ControlPlaneRefType = "onpremNamespacedRef"
 )
 
-// KonnectNamespacedRef is a reference to a KonnectEventGateway resource in the same namespace.
+// KonnectNamespacedRef is a reference to a KonnectEventGateway resource.
 //
 // +kubebuilder:object:generate=true
 type KonnectNamespacedRef struct {
@@ -75,9 +75,19 @@ type KonnectNamespacedRef struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitempty"`
+
+	// Namespace is the namespace of the KonnectEventGateway resource, by
+	// default the namespace of the DataPlane. Another namespace needs a
+	// KongReferenceGrant in that namespace allowing the KegDataPlane, and one
+	// allowing its EventGatewayDataPlaneCertificate, to reference it.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	Namespace *string `json:"namespace,omitempty"`
 }
 
-// OnPremNamespacedRef is a reference to an OnPremEventGateway resource in the same namespace.
+// OnPremNamespacedRef is a reference to an OnPremEventGateway resource.
 //
 // +kubebuilder:object:generate=true
 type OnPremNamespacedRef struct {
@@ -87,4 +97,14 @@ type OnPremNamespacedRef struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitempty"`
+
+	// Namespace is the namespace of the OnPremEventGateway resource, by
+	// default the namespace of the DataPlane. Another namespace needs a
+	// KongReferenceGrant in that namespace allowing the KegDataPlane, and one
+	// allowing its EventGatewayDataPlaneCertificate, to reference it.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	Namespace *string `json:"namespace,omitempty"`
 }
