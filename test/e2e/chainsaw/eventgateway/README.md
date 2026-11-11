@@ -129,3 +129,65 @@ and authentication restoration handler using disposable command stubs:
 ```bash
 go test ./test/e2e/chainsaw/eventgateway/producepolicychain-lifecycle
 ```
+
+## Consume policy chain lifecycle
+
+The `consumepolicychain-lifecycle` scenario creates a dedicated test-labeled
+gateway and two virtual clusters. Its nonempty scope contains two
+`schemaValidation` groups, sibling `modifyHeaders` policies, a `decryptFields`
+child, a `skipRecord` child, and independent roots. It uses Consume's explicit
+JSON `valueValidationAction: skip` and static decryption key sources; no Produce
+static-key fixture is required.
+
+The scenario verifies the exact complete flat ID sequence and every remote
+`parent_policy_id`, whole-group and sibling reordering, out-of-band drift repair,
+child-first/split/interleaved rejection, missing/unready references and recovery,
+actual child deletion and same-name recreation with new UID and ID, extra/omitted
+complete-set blocking and recovery, an empty scope, independent cluster/Produce/
+Consume claims on the **same virtual cluster**, contender handover, and declaration
+deletion with both invalid refs and unavailable authentication. Retained identity
+checks do not require policies to remain programmed while authentication is
+unavailable. The shared Produce authentication handler restores the test Secret
+on exit, including failure or handled termination, and waits for recovery.
+
+```bash
+make test.e2e.chainsaw \
+  CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/consumepolicychain-lifecycle
+```
+
+Use an isolated disposable cluster with this stack's CRDs and operator; do not
+modify a shared kubecontext or operator deployment. Inject `KONNECT_TOKEN` through
+the process environment using your secure credential mechanism, not a checked-in
+file, shell command containing the token, or test output. Set
+`KONNECT_SERVER_URL` to the authorized region.
+
+The default actual sync period is 60 seconds and only three phases observe
+65-second windows: repaired drift, unready references and omitted complete sets
+(at least 195 seconds total). Each observation is strict: order/identity failures
+are not retried away. Convergence checks between phases are bounded separately.
+The lifecycle exec limit is 15 minutes and cleanup has its own five-minute limit,
+within the existing 45-minute Event Gateway job and parallelism of four; other
+suites and scenarios retain their existing budgets. A different isolated operator
+sync period requires `KONNECT_SYNC_PERIOD_SECONDS` to match its actual value and
+`WINDOW_SECONDS` to exceed it; changing environment variables alone does not
+reconfigure the operator.
+
+Cleanup is registered before provisioning, restores test authentication, targets
+only named CRs and the exact-name/test-labeled remote gateway, deletes children
+before parents, and verifies remote absence before releasing stranded local
+finalizers. Malformed inventory and failed commands/HTTP requests fail cleanup;
+they do not become an empty successful result.
+
+```bash
+go test -race ./test/e2e/chainsaw/eventgateway/consumepolicychain-lifecycle
+```
+
+These regressions invoke the actual shell functions, HTTP helper, waiter and
+restoration handler with disposable command stubs, including error and termination
+paths. API-server tests additionally admit the actual shell-generated fixtures
+and exercise competing claims, live-reader safety, ancestry recovery, periodic
+drift and real UID recreation. They are not real-Konnect acceptance.
+The nested Consume Operator scenario still requires an authorized live run;
+historical backend-only probes or a Produce lifecycle run do not establish it.
+No Kafka execution, on-prem Consume ordering, deeper nesting, live
+`maskFields`/`transcode` contract, or atomic GET/PUT guarantee is claimed.
