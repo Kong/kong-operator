@@ -53,6 +53,7 @@ jobs:
       TAG: e2e-${{ github.sha }}
       CLUSTER_NAME: e2e-chainsaw
       TEST_ID: ${{ github.run_id }}
+      GW_ADMIN_LICENSE_REQUIRED: ${{ (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway') && 'true' || 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -63,6 +64,17 @@ jobs:
       with:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Issue the required GWAdmin license
+      id: gwadmin-license
+      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
+      uses: ./.github/actions/gwadmin-license
+      with:
+        username: ${{ secrets.GW_ADMIN_LICENSE_SIGNING_USERNAME }}
+        password: ${{ secrets.GW_ADMIN_LICENSE_SIGNING_PASSWORD }}
+        customer: ${{ secrets.GW_ADMIN_LICENSE_CUSTOMER }}
+        license-key: ${{ secrets.GW_ADMIN_LICENSE_KEY }}
+        expiration-date: ${{ vars.GW_ADMIN_LICENSE_EXPIRATION_DATE }}
 
     - name: download e2e image artifact
       uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -156,6 +168,7 @@ jobs:
       env:
         DIRNAME: ${{ matrix.dir || matrix.suite }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        GW_ADMIN_LICENSE_FILE: ${{ steps.gwadmin-license.outputs.license-file }}
       run: make test.e2e.chainsaw.prereq DIRNAME="$DIRNAME"
 
     - name: run chainsaw e2e tests
@@ -169,9 +182,14 @@ jobs:
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
         CHAINSAW_SELECTOR: ${{ matrix.selector }}
         EXPECTED_DEFAULT_STREAM_LISTEN: ${{ matrix.ip_family == 'ipv6' && '[::]:8899 ssl reuseport' || '0.0.0.0:8899 ssl reuseport' }}
+        GW_ADMIN_LICENSE_FILE: ${{ steps.gwadmin-license.outputs.license-file }}
       run: |
         # Use CHAINSAW_TEST_DIR to target the specific test directory
         make test.e2e.chainsaw
+
+    - name: Remove GWAdmin license and signing files
+      if: ${{ always() && (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway') }}
+      run: bash .github/actions/gwadmin-license/issue-license.sh cleanup
 
     - name: Dump cluster diagnostics on failure or cancellation
       # Keyed on the job, not on the chainsaw step alone: a failure that comes

@@ -6,7 +6,7 @@
 #   NAMESPACE: GWAdmin namespace (install only); it must already exist.
 #   GW_ADMIN_LICENSE_REQUIRED: Require input during install (default: false).
 # check always requires input and never contacts Kubernetes. install permits
-# absent input only while this prerequisite-only layer is not enabled in CI.
+# absent input for the optional local dev-image path; GWAdmin CI requires input.
 set +x
 set -euo pipefail
 
@@ -29,7 +29,7 @@ if [[ -z "${GW_ADMIN_LICENSE_FILE:-}" ]]; then
   if [[ "$1" == check || "${GW_ADMIN_LICENSE_REQUIRED:-false}" == true ]]; then
     fail "GW_ADMIN_LICENSE_FILE is required: supply a readable file containing an enveloped JWS license with event_gateway entitlement (not KONG_LICENSE_DATA JSON)"
   fi
-  echo "[gwadmin-license] input not configured; licensed prerequisites are not enabled in this intermediate layer" >&2
+  echo "[gwadmin-license] input not configured; using the optional local dev-image path, not licensed CI" >&2
   echo '{"license_input":"not-configured"}'
   exit 0
 fi
@@ -58,6 +58,7 @@ fi
 # apply/assert renderer, JSON output wrapper, or uploaded debug files.
 if ! kubectl create secret generic gw-admin-license --namespace="$NAMESPACE" \
     --from-file="license=$GW_ADMIN_LICENSE_FILE" --dry-run=client -o json 2>/dev/null |
+    jq '.metadata.labels["konghq.com/secret"] = "true"' 2>/dev/null |
     kubectl apply --server-side --field-manager=gwadmin-license-prereq -f - >/dev/null 2>&1; then
   fail "could not provision gw-admin-license Secret; check namespace, Kubernetes access and server-side apply permissions/field ownership (payload-bearing kubectl output suppressed)"
 fi

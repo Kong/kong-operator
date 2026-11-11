@@ -1,0 +1,42 @@
+name: GWAdmin enveloped license
+description: >
+  Request a new event_gateway enveloped JWS license from the authorized signing
+  service. All signing inputs are mandatory; failure never falls back to a legacy
+  license or an unlicensed run. Only a private file path is exposed as an output.
+
+inputs:
+  username:
+    description: Basic authentication username for the signing service.
+    required: true
+  password:
+    description: Basic authentication password for the signing service.
+    required: true
+  customer:
+    description: Authorized customer value for the license request.
+    required: true
+  license-key:
+    description: Authorized license_key value for the license request.
+    required: true
+  expiration-date:
+    description: Explicit future UTC license_expiration_date (YYYY-MM-DD), with no default date or lifetime.
+    required: true
+
+outputs:
+  license-file:
+    description: Private runner-local file containing the issued compact JWS, not the license itself.
+    value: ${{ steps.issue.outputs.license-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Issue a GWAdmin license
+      id: issue
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        GW_ADMIN_LICENSE_SIGNING_USERNAME: ${{ inputs.username }}
+        GW_ADMIN_LICENSE_SIGNING_PASSWORD: ${{ inputs.password }}
+        GW_ADMIN_LICENSE_CUSTOMER: ${{ inputs.customer }}
+        GW_ADMIN_LICENSE_KEY: ${{ inputs.license-key }}
+        GW_ADMIN_LICENSE_EXPIRATION_DATE: ${{ inputs.expiration-date }}
+      run: bash "$ACTION_PATH/issue-license.sh" issue

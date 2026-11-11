@@ -113,7 +113,7 @@ func TestGWAdminLicenseInput(t *testing.T) {
 			t.Fatal("preflight contacted Kubernetes")
 		}
 	})
-	t.Run("intermediate layer does not require credentials", func(t *testing.T) {
+	t.Run("optional local dev-image path does not require credentials", func(t *testing.T) {
 		cmd, dir := licenseCommand(t, "gwadmin-license.sh", "install", "")
 		output, err := cmd.CombinedOutput()
 		if err != nil || !strings.Contains(string(output), `{"license_input":"not-configured"}`) {
@@ -150,6 +150,7 @@ func TestGWAdminLicenseSecret(t *testing.T) {
 				Metadata struct {
 					Name, Namespace string
 					Annotations     map[string]string
+					Labels          map[string]string
 				}
 				Data map[string]string
 			}
@@ -158,6 +159,7 @@ func TestGWAdminLicenseSecret(t *testing.T) {
 			}
 			if secret.Metadata.Name != "gw-admin-license" || secret.Metadata.Namespace != "test-admin" ||
 				len(secret.Data) != 1 || secret.Data["license"] != base64.StdEncoding.EncodeToString([]byte(testLicense+"\n")) ||
+				secret.Metadata.Labels["konghq.com/secret"] != "true" ||
 				len(secret.Metadata.Annotations) != 0 {
 				t.Fatal("Secret must preserve original bytes under the fixture's name/key, in the GWAdmin namespace, without payload-bearing annotations")
 			}

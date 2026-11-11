@@ -32,7 +32,8 @@ make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/onpremeventgateway
 The preflight checks readable, non-empty input and the JWS envelope shape before
 cluster writes; it does **not** verify the signature, expiry, or entitlement.
 gw-admin performs those checks. Each GWAdmin-producing scenario provisions
-`gw-admin-license`, key `license`, in the GWAdmin namespace. Both
+`gw-admin-license`, key `license`, with `konghq.com/secret: "true"` in the
+GWAdmin namespace. Both
 `onprem-cross-namespace` and `onprem-grant-revoked` use their admin namespace,
 not the data-plane namespace. Chainsaw deletes test namespaces and their Secrets
 at cleanup; it does not remove your input file.
@@ -44,14 +45,59 @@ or put it in assertion files, command arguments, debug output, or artifacts.
 The helper suppresses potentially payload-bearing kubectl diagnostics but returns
 an explicit error. Existing debug snapshots redact Secret payloads.
 
-**Intermediate layer:** controller license mounting and licensed runtime checks
-are not implemented here, and the pinned dev image is unchanged. Without an input
-file, existing suites retain their previous behavior unless
-`GW_ADMIN_LICENSE_REQUIRED=true`; supplied invalid input always fails. Provisioning
-the Secret alone does not demonstrate licensed operation or complete #6568.
-Long-term CI acquisition (pre-issued JWS versus authorized signing credentials)
-and fork skip/fail policy remain undecided. No signing request is made, and the
-legacy `.github/actions/kong-license` action is not used for GWAdmin licenses.
+**Local development:** without an input file, the existing dev-image path retains
+its previous behavior unless `GW_ADMIN_LICENSE_REQUIRED=true`; supplied invalid
+input always fails. This optional local path is **not** the CI policy.
+
+### GWAdmin license signing in CI
+
+The `gwadmin` and `onpremeventgateway` Chainsaw jobs (including cross-namespace
+scenarios) use `.github/actions/gwadmin-license` immediately after checkout,
+before image downloads or cluster creation. The action requests an enveloped JWS
+at runtime from `POST https://license.api.konghq.tech/v1/license/enveloped`,
+using Basic authentication and the explicit `customer`, `license_key`,
+`license_expiration_date` fields with `entitlements: ["event_gateway"]`.
+It expects the original compact JWS response body, not legacy JSON.
+
+Configure the authorized signing inputs in the repository:
+
+| Setting | Kind | Action input |
+| --- | --- | --- |
+| `GW_ADMIN_LICENSE_SIGNING_USERNAME` | Secret | `username` |
+| `GW_ADMIN_LICENSE_SIGNING_PASSWORD` | Secret | `password` |
+| `GW_ADMIN_LICENSE_CUSTOMER` | Secret | `customer` |
+| `GW_ADMIN_LICENSE_KEY` | Secret | `license-key` |
+| `GW_ADMIN_LICENSE_EXPIRATION_DATE` | Variable | `expiration-date` |
+
+The customer/key must be approved for this use. The expiration input is a future
+UTC `YYYY-MM-DD` date: no customer, key, date or lifetime is guessed, and no old
+example date is reused. The authorized customer/key, expiration policy and actual
+service response contract must be confirmed before live validation. In
+particular, this explicit date contract does not choose a rolling license
+lifetime; a desired per-run lifetime still needs an authorized policy.
+
+CI sets `GW_ADMIN_LICENSE_REQUIRED=true` and passes only the issued file path to
+both suite preflight and per-namespace fixtures. Missing configuration, failed
+transport, non-success HTTP responses or a non-JWS response fail the job clearly,
+without printing the request/response body or credentials. There is **no**
+fork-specific skip or empty-license success: forks without repository signing
+secrets fail, consistent with the existing required Kong license E2E path.
+Unrelated suites and fake gw-admin contract tests do not invoke this action.
+The legacy `.github/actions/kong-license` action remains unchanged and separate.
+
+Basic auth, request and response files are owner-only in a dedicated directory
+under `RUNNER_TEMP`, never in the checkout or debug artifact directory. curl's
+default config, redirects and insecure TLS are disabled; requests are bounded
+and are not automatically retried. Temporary signing material is removed on
+success/failure; an `always()` workflow step removes the issued file and any
+remaining signing files on failure/cancellation too. The action output contains
+only `license-file`, never the license or authentication data.
+
+**Intermediate layer:** controller mounting and licensed runtime checks are not
+implemented here; the pinned dev image is unchanged. Acquiring a JWS and
+provisioning its Secret alone do not demonstrate licensed operation or complete
+#6568. Live validation needs authorized credentials/input and, for licensed
+workload behavior, the next controller layer and a licensing-capable image.
 
 ### Real gw-admin contract tests
 
