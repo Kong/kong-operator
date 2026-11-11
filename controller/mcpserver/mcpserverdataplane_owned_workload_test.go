@@ -483,6 +483,7 @@ func Test_generateDeployment_SecurityContext(t *testing.T) {
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{"ALL"},
 		},
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 	}
 
 	require.Len(t, deploy.Spec.Template.Spec.InitContainers, 1)

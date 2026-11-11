@@ -71,6 +71,7 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 						Drop: []corev1.Capability{"ALL"},
 						Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 					},
+					SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 				}, container.SecurityContext)
 			},
 		},
@@ -431,6 +432,7 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{"ALL"},
 		},
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 	}
 
 	tests := []struct {
@@ -521,6 +523,24 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 			)
 			require.Equal(t, expectedEnv, container.Env)
 		})
+	}
+}
+
+func TestHardenContainerWithSecurityContext_UserIDAssignedByPlatform(t *testing.T) {
+	SetUserIDAssignedByPlatform(true)
+	t.Cleanup(func() { SetUserIDAssignedByPlatform(false) })
+
+	for _, dpType := range []DataPlaneType{
+		DataPlaneTypeGateway, DataPlaneTypeAIGateway, DataPlaneTypeKeg, DataPlaneTypeMcpServer, DataPlaneTypeGWAdmin,
+	} {
+		container, _ := HardenContainerWithSecurityContext(corev1.Container{Name: "test-container"}, dpType)
+
+		sc := container.SecurityContext
+		require.NotNil(t, sc)
+		require.Nil(t, sc.RunAsUser, "the SCC assigns the user (type %d)", dpType)
+		require.Nil(t, sc.RunAsGroup, "the SCC assigns the group (type %d)", dpType)
+		require.Equal(t, new(true), sc.RunAsNonRoot)
+		require.Equal(t, &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}, sc.SeccompProfile)
 	}
 }
 

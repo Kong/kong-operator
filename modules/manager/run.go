@@ -29,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -57,6 +58,8 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -421,6 +424,21 @@ func Run(
 		return fmt.Errorf("unable to resolve the cluster IP family: %w", err)
 	}
 	cfg.IPFamily = ipFamily
+
+	// securitycontextconstraints is served only by OpenShift clusters, whose
+	// admission assigns container users and groups through SCCs.
+	onOpenShift, err := k8sutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    "security.openshift.io",
+		Version:  "v1",
+		Resource: "securitycontextconstraints",
+	})
+	if err != nil {
+		return fmt.Errorf("unable to detect OpenShift: %w", err)
+	}
+	if onOpenShift {
+		setupLog.Info("OpenShift detected: operands get their user and group from the SecurityContextConstraints")
+	}
+	k8sresources.SetUserIDAssignedByPlatform(onOpenShift)
 
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"sync/atomic"
 
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -159,6 +160,18 @@ const (
 	DataPlaneTypeGWAdmin
 )
 
+// userIDAssignedByPlatform is true when the platform assigns the container user and group,
+// as OpenShift does through SecurityContextConstraints. It is set once at startup,
+// because the resource generators have no client to discover it.
+var userIDAssignedByPlatform atomic.Bool
+
+// SetUserIDAssignedByPlatform sets whether the platform assigns the container user and group.
+// When true, HardenContainerWithSecurityContext does not set runAsUser and runAsGroup,
+// because the OpenShift restricted-v2 SCC rejects a fixed UID outside the namespace range.
+func SetUserIDAssignedByPlatform(assigned bool) {
+	userIDAssignedByPlatform.Store(assigned)
+}
+
 // HardenContainerWithSecurityContext hardens a container with a security context and returns
 // necessary volumes that has to be added to the Pod spec (nil slice if not needed).
 // It modifies the container in place and returns it with necessary adjustments of
@@ -176,6 +189,13 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 			Drop: []corev1.Capability{"ALL"},
 			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 		},
+		SeccompProfile: &corev1.SeccompProfile{
+			Type: corev1.SeccompProfileTypeRuntimeDefault,
+		},
+	}
+	if userIDAssignedByPlatform.Load() {
+		container.SecurityContext.RunAsUser = nil
+		container.SecurityContext.RunAsGroup = nil
 	}
 
 	// MCP Server containers do not run Kong Gateway, so they need

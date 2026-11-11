@@ -236,6 +236,12 @@
   the reported hash differs from the hash recorded after the last successful
   push, the sync pushes the configuration again.
   [#6518](https://github.com/Kong/kong-operator/pull/6518)
+- DataPlane: make the hardened security context OpenShift compatible.
+  Operand containers built with the hardened security context now set
+  `seccompProfile: RuntimeDefault` and, on OpenShift, no longer pin
+  `runAsUser`/`runAsGroup` to a fixed UID. The affected workloads are DataPlanes
+  with `hardened: enabled`.
+  [#6562](https://github.com/Kong/kong-operator/pull/6562)
 - `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
   from being issued.
