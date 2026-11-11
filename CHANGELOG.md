@@ -107,6 +107,18 @@
   than deleting and creating its Secret again. gw-admin, not Kong Operator,
   validates the license.
   [#6567](https://github.com/Kong/kong-operator/issues/6567)
+- `KonnectConfigStore.spec.controlPlaneRef` now requires
+  `type: konnectNamespacedRef` and `konnectNamespacedRef.name`, matching
+  `KongVault` and `KongCertificate`. The `namespacedRef` and `konnectID` formats
+  are no longer accepted. Update manifests before upgrading. Programmed
+  references remain immutable, so existing resources cannot be migrated by
+  renaming fields in place: remove legacy ConfigStores using the previous
+  operator, then recreate them with the new format after upgrading. Back up
+  and remove stored secret entries before deleting a ConfigStore, and restore
+  them after recreation; stores containing secret entries cannot be deleted.
+  Go API users must use `konnectv1alpha1.ConfigStoreControlPlaneRef` instead of
+  `commonv1alpha1.ObjectRef` for this field.
+  [#6566](https://github.com/Kong/kong-operator/issues/6566)
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
   it keeps serving, but no spec, image or certificate change is applied until
@@ -270,13 +282,6 @@
   Kubernetes references to the complete set of root and nested policies.
   This API-only layer does not yet reconcile ordering; on-prem support is not included.
   [#6534](https://github.com/Kong/kong-operator/pull/6534)
-- `KonnectConfigStore.spec.controlPlaneRef` now accepts `konnectNamespacedRef`,
-  matching `KongVault` and `KongCertificate`. The existing `namespacedRef` and
-  `konnectID` formats remain supported. Programmed resources must retain their
-  existing reference format because the reference remains immutable. Go API users
-  must use
-  `konnectv1alpha1.ConfigStoreControlPlaneRef` instead of `commonv1alpha1.ObjectRef`
-  for this field.
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.

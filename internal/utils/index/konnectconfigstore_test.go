@@ -27,20 +27,6 @@ func TestKonnectConfigStoreOnControlPlaneRef(t *testing.T) {
 			ref:  `{"type":"konnectNamespacedRef","konnectNamespacedRef":{"name":"cp","namespace":"other"}}`,
 			want: []string{"other/cp"},
 		},
-		{
-			name: "legacy namespacedRef defaults to the store namespace",
-			ref:  `{"type":"namespacedRef","namespacedRef":{"name":"cp"}}`,
-			want: []string{"default/cp"},
-		},
-		{
-			name: "legacy namespacedRef uses the explicit namespace",
-			ref:  `{"type":"namespacedRef","namespacedRef":{"name":"cp","namespace":"other"}}`,
-			want: []string{"other/cp"},
-		},
-		{
-			name: "konnectID has no Kubernetes object to watch",
-			ref:  `{"type":"konnectID","konnectID":"12345678-1234-1234-1234-123456789abc"}`,
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

@@ -94,8 +94,8 @@ func TestReconcileDeleteDoesNotDoubleDeleteOnConflict(t *testing.T) {
 		Finalizers: []string{KonnectCleanupFinalizer},
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
 			ControlPlaneRef: konnectv1alpha1.ConfigStoreControlPlaneRef{
-				Type:          "namespacedRef",
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: cp.Name},
+				Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
 			},
 		},
 		Status: konnectv1alpha1.KonnectConfigStoreStatus{
@@ -226,8 +226,8 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 		Finalizers: []string{KonnectCleanupFinalizer},
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
 			ControlPlaneRef: konnectv1alpha1.ConfigStoreControlPlaneRef{
-				Type:          "namespacedRef",
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: cp.Name},
+				Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
 			},
 		},
 		Status: konnectv1alpha1.KonnectConfigStoreStatus{

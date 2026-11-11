@@ -1,4 +1,3 @@
-# The legacy namespacedRef format remains supported.
 apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectConfigStore
 metadata:

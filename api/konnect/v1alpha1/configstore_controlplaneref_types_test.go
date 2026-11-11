@@ -33,30 +33,6 @@ func TestConfigStoreControlPlaneRefFormats(t *testing.T) {
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "cp", Namespace: new("other")},
 			},
 		},
-		{
-			name: "legacy namespacedRef in the same namespace",
-			json: `{"type":"namespacedRef","namespacedRef":{"name":"cp"}}`,
-			want: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "cp"},
-			},
-		},
-		{
-			name: "legacy namespacedRef with an explicit namespace",
-			json: `{"type":"namespacedRef","namespacedRef":{"name":"cp","namespace":"other"}}`,
-			want: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "cp", Namespace: new("other")},
-			},
-		},
-		{
-			name: "legacy konnectID",
-			json: `{"type":"konnectID","konnectID":"12345678-1234-1234-1234-123456789abc"}`,
-			want: commonv1alpha1.ObjectRef{
-				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-				KonnectID: new("12345678-1234-1234-1234-123456789abc"),
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
@@ -68,6 +44,9 @@ func TestConfigStoreControlPlaneRefFormats(t *testing.T) {
 
 			store.SetParentRef(tt.want)
 			require.Equal(t, tt.want, store.GetParentRef())
+			encoded, err := json.Marshal(store.Spec.ControlPlaneRef)
+			require.NoError(t, err)
+			require.JSONEq(t, tt.json, string(encoded))
 		})
 	}
 }
