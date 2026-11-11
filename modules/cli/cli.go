@@ -12,6 +12,7 @@ import (
 
 	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -120,6 +121,7 @@ func New(m metadata.Info) *CLI {
 	// webhook and validation options
 	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
 	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
+	flagSet.StringVar(&cfg.ValidatingWebhookCertDir, "validating-webhook-cert-dir", validationconsts.DefaultAdmissionWebhookCertDir, "Directory that holds the validating webhook's TLS certificate (tls.crt) and key (tls.key).")
 
 	// Deprecated flags retained for printing warning messages.
 	flagSet.Var(&DiscardFlagValue{}, "cluster-ca-key-type", deprecationPrefix+"Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
@@ -311,6 +313,12 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.LeaderElection = leaderElection
 	c.cfg.ControllerNamespace = controllerNamespace
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
+	// An explicitly empty value (e.g. an empty environment variable) means
+	// "unset": fall back to the default instead of failing at startup with an
+	// error that would not name the flag.
+	if c.cfg.ValidatingWebhookCertDir == "" {
+		c.cfg.ValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookCertDir
+	}
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 

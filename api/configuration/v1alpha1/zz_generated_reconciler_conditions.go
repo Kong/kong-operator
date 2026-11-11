@@ -51,6 +51,22 @@ const (
 	// yet programmed in Konnect.
 	EventGatewayListenerRefReasonNotProgrammed = "NotProgrammed"
 
+	// EventGatewayListenerPolicyRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewayListenerPolicy reference is valid and points to an existing
+	// EventGatewayListenerPolicy.
+	EventGatewayListenerPolicyRefValidConditionType = "EventGatewayListenerPolicyRefValid"
+
+	// EventGatewayListenerPolicyRefReasonValid is the reason used with the EventGatewayListenerPolicyRefValid
+	// condition type indicating that the EventGatewayListenerPolicy reference is valid.
+	EventGatewayListenerPolicyRefReasonValid = "Valid"
+	// EventGatewayListenerPolicyRefReasonInvalid is the reason used with the EventGatewayListenerPolicyRefValid
+	// condition type indicating that the EventGatewayListenerPolicy reference is invalid.
+	EventGatewayListenerPolicyRefReasonInvalid = "Invalid"
+	// EventGatewayListenerPolicyRefReasonNotProgrammed is the reason used with the EventGatewayListenerPolicyRefValid
+	// condition type indicating that the referenced EventGatewayListenerPolicy exists but is not
+	// yet programmed in Konnect.
+	EventGatewayListenerPolicyRefReasonNotProgrammed = "NotProgrammed"
+
 	// EventGatewaySchemaRegistryRefValidConditionType is the type of the condition that indicates
 	// whether the EventGatewaySchemaRegistry reference is valid and points to an existing
 	// EventGatewaySchemaRegistry.

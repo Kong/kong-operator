@@ -24,8 +24,8 @@ import (
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef", message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect",fieldPath=".spec.eventGatewayVirtualClusterRef"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != 'decryptFields' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == 'decryptFields' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for decryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in ['decryptFields', 'modifyHeaders', 'skipRecord'])",message="parentPolicyRef is only supported for decryptFields, modifyHeaders and skipRecord",fieldPath=".spec.apiSpec.parentPolicyRef"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type in ['decryptFields', 'maskFields', 'transcode']) || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for decryptFields, maskFields and transcode",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in ['decryptFields', 'modifyHeaders', 'skipRecord', 'maskFields', 'transcode'])",message="parentPolicyRef is only supported for decryptFields, modifyHeaders, skipRecord, maskFields and transcode",fieldPath=".spec.apiSpec.parentPolicyRef"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name", message="parentPolicyRef must not reference the EventGatewayVirtualClusterConsumePolicy itself"
 type EventGatewayVirtualClusterConsumePolicy struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -68,8 +68,9 @@ type EventGatewayVirtualClusterConsumePolicyAPISpec struct {
 	*EventGatewayVirtualClusterConsumePolicyConfig `json:",inline"`
 
 	// ParentPolicyRef references a schemaValidation consume policy in the same
-	// namespace and virtual cluster. Required for decryptFields and optional
-	// for modifyHeaders and skipRecord. It is immutable once this policy exists
+	// namespace and virtual cluster. Required for decryptFields, maskFields and
+	// transcode, and optional for modifyHeaders and skipRecord.
+	// It is immutable once this policy exists
 	// in Konnect.
 	// Deleting a parent is blocked while child policy objects reference it.
 	//

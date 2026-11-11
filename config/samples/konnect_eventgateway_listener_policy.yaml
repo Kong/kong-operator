@@ -119,3 +119,32 @@ spec:
     type: namespacedRef
     namespacedRef:
       name: cp-event-1-listener-1
+---
+# Forwards the connections of the listener to the EventGatewayVirtualCluster
+# cp-event-1-virtual-cluster-1 (see konnect_eventgateway_virtualcluster.yaml),
+# referenced by object: Konnect refuses to delete the virtual cluster, or its
+# backend cluster, while the policy forwards to it. A Konnect virtual cluster
+# can also be named with destination.id or destination.name; an
+# OnPremEventGateway only accepts destination.namespacedRef.
+kind: EventGatewayListenerPolicy
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-listener-1-forward
+  namespace: default
+spec:
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: cp-event-1-listener-1-forward
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: localhost
+          destination:
+            namespacedRef:
+              name: cp-event-1-virtual-cluster-1
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-listener-1

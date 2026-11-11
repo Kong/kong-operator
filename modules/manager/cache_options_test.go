@@ -3,6 +3,7 @@ package manager
 import (
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -153,4 +154,21 @@ func TestCRDCacheByObjectTransform(t *testing.T) {
 		require.NoError(t, err)
 		require.Same(t, secret, out)
 	})
+}
+
+// TestCacheKeepsManagedFields guards the managed fields of the objects in the
+// cache: the OnPremEventGateway controller reads from them which conditions it
+// set on its entities, and would own none without them.
+func TestCacheKeepsManagedFields(t *testing.T) {
+	opts, err := createCacheOptions(logr.Discard(), Config{SecretLabelSelector: "app", ConfigMapLabelSelector: "app"})
+	require.NoError(t, err)
+	require.Nil(t, opts.DefaultTransform, "a transform of every object could strip their managed fields")
+	for obj, byObject := range opts.ByObject {
+		_, isCRD := obj.(*apiextensionsv1.CustomResourceDefinition)
+		_, isSecret := obj.(*corev1.Secret)
+		_, isConfigMap := obj.(*corev1.ConfigMap)
+		if !isCRD && !isSecret && !isConfigMap {
+			require.Nil(t, byObject.Transform, "%T: its managed fields may be stripped", obj)
+		}
+	}
 }

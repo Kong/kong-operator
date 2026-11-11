@@ -133,6 +133,23 @@ spec:
 		}, waitTime, tickTime)
 	}
 
+	// expectBlocked waits for the push of the gateway to be stopped by an
+	// entity that can't be sent, naming it, the gw-admin pods keeping the
+	// backend clusters they have.
+	expectBlocked := func(t *testing.T, entity string, names ...string) {
+		t.Helper()
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := pushedCondition(ct); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status, cond.Message)
+				assert.Equal(ct, "InvalidEntities", cond.Reason, cond.Message)
+				assert.Contains(ct, cond.Message, "EventGatewayBackendCluster "+ns.Name+"/"+entity+": ")
+			}
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				assert.ElementsMatch(ct, names, backendClusterNames(ct, pod, gateway))
+			}
+		}, waitTime, tickTime)
+	}
+
 	// expectCondition waits for the condition of the backend cluster to have
 	// that status and reason.
 	expectCondition := func(t *testing.T, name, conditionType string, status metav1.ConditionStatus, reason string) {
@@ -207,16 +224,21 @@ spec:
 		}, waitTime, tickTime)
 	})
 
-	t.Run("a backend cluster that can't be sent is left out", func(t *testing.T) {
+	t.Run("a backend cluster that can't be sent stops the push until it is deleted", func(t *testing.T) {
 		duplicate := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 			backendClusterYAML("duplicate", "backend-cluster", gateway.Name))
 		require.NoError(t, cl.Create(ctx, duplicate))
 		other := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 			backendClusterYAML("other", "other", gateway.Name))
 		require.NoError(t, cl.Create(ctx, other))
-		// The duplicate name is left out, the other backend cluster is sent.
-		expectBackendClusters(t, "backend-cluster", "other")
+		// The duplicate name can't be sent: nothing is, gw-admin keeps what it
+		// has.
+		expectBlocked(t, "duplicate", "backend-cluster")
 		expectProgrammed(t, "duplicate", metav1.ConditionFalse, "Invalid")
+		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotProgrammed")
+
+		require.NoError(t, cl.Delete(ctx, duplicate))
+		expectBackendClusters(t, "backend-cluster", "other")
 		expectProgrammed(t, "other", metav1.ConditionTrue, "Programmed")
 	})
 
@@ -243,7 +265,7 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 `)
 		require.NoError(t, cl.Create(ctx, crossNamespace))
 		expectProgrammed(t, "cross-namespace", metav1.ConditionFalse, "RefNotPermitted")
-		expectBackendClusters(t, "backend-cluster", "other")
+		expectBlocked(t, "cross-namespace", "backend-cluster", "other")
 
 		require.NoError(t, cl.Create(ctx, &configurationv1alpha1.KongReferenceGrant{
 			Name: "backend-cluster-secrets", Namespace: secretsNS.Name,
@@ -282,7 +304,7 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 `)
 		require.NoError(t, cl.Create(ctx, withSecret))
 		expectProgrammed(t, "with-secret", metav1.ConditionFalse, "Invalid")
-		expectBackendClusters(t, "backend-cluster", "other")
+		expectBlocked(t, "with-secret", "backend-cluster", "other")
 
 		secret := &corev1.Secret{
 			Name: "with-secret-tls", Namespace: ns.Name,
@@ -448,7 +470,7 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: parent
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: registry}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: registry}}, valueValidationAction: mark}}
 `)
 		child := consumePolicy("child", `
     type: modifyHeaders
@@ -527,7 +549,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
+        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: virtual-cluster}}}
 `)
 		var virtualCluster configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "virtual-cluster"}, &virtualCluster))
@@ -888,7 +910,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
+        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: virtual-cluster}}}
 `)
 		for _, obj := range []client.Object{virtualCluster, listener, forward} {
 			require.NoError(t, cl.Create(ctx, obj))
@@ -917,7 +939,7 @@ spec:
 		}, waitTime, tickTime)
 	})
 
-	t.Run("an entity that can't be sent is left out and reported", func(t *testing.T) {
+	t.Run("an entity that can't be sent stops the push and is reported", func(t *testing.T) {
 		duplicate := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name, `
 metadata: {name: duplicate-name}
 spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
@@ -930,10 +952,13 @@ spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
 		require.NoError(t, cl.Create(ctx, duplicate))
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
-				// The entity left out reports it on its own status.
-				assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+				// The gateway names it, and so does the entity on its own status.
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Equal(ct, "InvalidEntities", cond.Reason)
+				assert.Contains(ct, cond.Message, "EventGatewayBackendCluster "+ns.Name+"/duplicate-name: ")
 			}
 		}, waitTime, tickTime)
+		// gw-admin keeps what it has.
 		g, _, _ := pod0.state(gatewayID(t, gatewayA))
 		require.Len(t, g.entities.BackendClusters, 1)
 		// Each entity reports it too.
@@ -949,10 +974,19 @@ spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
 			}
 			kept := &configurationv1alpha1.EventGatewayBackendCluster{}
 			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(backendCluster), kept)) {
-				assert.True(ct, apimeta.IsStatusConditionTrue(kept.Status.Conditions, "Programmed"))
+				cond := apimeta.FindStatusCondition(kept.Status.Conditions, "Programmed")
+				if assert.NotNil(ct, cond) {
+					assert.Equal(ct, metav1.ConditionFalse, cond.Status, "the configuration isn't pushed")
+					assert.Equal(ct, "GatewayNotProgrammed", cond.Reason)
+				}
 			}
 		}, waitTime, tickTime)
 		require.NoError(t, cl.Delete(ctx, duplicate))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
+			}
+		}, waitTime, tickTime)
 	})
 
 	t.Run("a configuration a gw-admin pod rejects is reported with the pod and the object at fault, then recovered", func(t *testing.T) {
@@ -1066,11 +1100,11 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {name: missing}}
+        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: missing}}}
 `)
 		require.NoError(t, cl.Create(ctx, other))
 		require.NoError(t, cl.Create(ctx, policy))
-		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `it forwards to the virtual cluster "missing"`)
+		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `EventGatewayVirtualCluster `+ns.Name+`/missing`)
 		require.NoError(t, cl.Delete(ctx, other))
 		expectStatusOf(t, policy, metav1.ConditionFalse, "Detached", "its EventGatewayListener "+ns.Name+"/other-listener does not exist")
 	})

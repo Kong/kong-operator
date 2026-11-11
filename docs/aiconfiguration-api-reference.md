@@ -8698,6 +8698,8 @@ _Appears in:_
 
 - [ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)
 
+
+
 #### PublicLabels
 
 _Underlying type:_ `[map[string]PublicLabelsValue](#map[string]publiclabelsvalue)`

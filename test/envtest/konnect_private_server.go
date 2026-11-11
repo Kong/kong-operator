@@ -30,10 +30,12 @@ const (
 	KonnectPrivateOrgID                   = "5f9fd312-a987-4628-b4c5-bb4f4fddd5f7"
 	KonnectPrivateControlPlaneID          = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
 	KonnectPrivateNetworkID               = "0d6a9a44-6d3c-4e0e-9a3b-2a3f9c1b7e10"
+	KonnectPrivateConfigurationID         = "7c2b8e91-3f4a-4c2d-9e1b-5a6d0f8c2b71"
 	KonnectPrivateControlPlaneEndpoint    = "https://" + KonnectPrivateRegionalHost + "/cp/abc123"
 	KonnectPrivateTelemetryEndpoint       = "https://" + KonnectPrivateRegionalHost + "/tp/abc123"
 	konnectPrivateControlPlaneSubresource = "/api/v2/control-planes/"
 	konnectPrivateNetworksPath            = "/api/v2/cloud-gateways/networks"
+	konnectPrivateConfigurationsPath      = "/api/v2/cloud-gateways/configurations"
 )
 
 // KonnectRequest is one request the fake received. ServerName is the SNI the
@@ -131,7 +133,15 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 		},
 	}
 	page := map[string]any{"page": map[string]any{"number": 1, "size": 10, "total": 1}}
-	network := map[string]any{"id": KonnectPrivateNetworkID, "state": "initializing"}
+	network := map[string]any{"id": KonnectPrivateNetworkID, "state": "ready"}
+	// The configuration create and its update are the same PUT, and the delete is
+	// a PUT with no data plane groups: one body serves all three.
+	configuration := map[string]any{
+		"id":                     KonnectPrivateConfigurationID,
+		"control_plane_id":       KonnectPrivateControlPlaneID,
+		"dataplane_group_config": []any{},
+		"dataplane_groups":       []any{},
+	}
 
 	regional := func(method, path string, status int, body any) {
 		mux.HandleFunc(method+" "+KonnectPrivateRegionalHost+path, jsonHandler(status, body))
@@ -153,6 +163,7 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 	global("POST", konnectPrivateNetworksPath, http.StatusCreated, network)
 	global("GET", konnectPrivateNetworksPath+"/{id}", http.StatusOK, network)
 	global("DELETE", konnectPrivateNetworksPath+"/{id}", http.StatusNoContent, nil)
+	global("PUT", konnectPrivateConfigurationsPath, http.StatusOK, configuration)
 
 	// Anything else is a call the test does not know about: record it and fail,
 	// so an operator change that adds a call surfaces here instead of silently.

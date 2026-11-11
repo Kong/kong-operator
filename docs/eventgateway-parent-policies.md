@@ -13,7 +13,7 @@ the child's namespace). Cross-namespace parent references are rejected during
 reference resolution (`KonnectReferencesResolved=False`).
 
 | Child policy type | `parentPolicyRef` |
-|-------------------|-------------------|
+| ----------------- | ----------------- |
 | Produce `encryptFields` | Required |
 | Consume `decryptFields` | Required |
 | Produce or consume `modifyHeaders` | Optional |
@@ -233,6 +233,156 @@ Deleting the chain CR releases ownership and stops management. It preserves the
 remote chain and all policy objects, even if authentication or referenced policies
 are no longer available; it does not PUT an empty list or delete policies.
 
-This controller supports Konnect only. Policy chains are not registered with
-the on-prem Event Gateway controller; on-prem ordering and gw-admin application
-are outside this layer's scope.
+### On-prem reconciliation
+
+The same chain API also applies to an `EventGatewayVirtualCluster` whose backend
+cluster references an `OnPremEventGateway`. The chain is configuration on that
+virtual cluster, not a gw-admin entity. Its policy references resolve to the
+policies' Kubernetes UIDs in the complete gw-admin document; neither Konnect
+authentication, Konnect IDs nor a policy's previous `Programmed` condition is
+required. `status.id` remains unset.
+
+For example, after creating cluster-level policy CRs named `validate-requests`
+and `authorize` for the on-prem virtual cluster `vc`, declare their order with:
+
+```yaml
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicyChain
+metadata:
+  name: cluster-order
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    policies:
+      - name: validate-requests
+      - name: authorize
+```
+
+List **every live cluster-level policy CR** for that virtual cluster, in its
+namespace, exactly once. An empty list is valid only when there are no such
+policies. A policy rejected during configuration assembly does not disappear
+from this complete-set requirement and cannot satisfy a reference. Missing,
+terminating, duplicate, wrong-kind, wrong-parent or cross-namespace policy
+references are invalid; references are never silently skipped.
+
+Ownership uses the same UID-bound parent annotation as Konnect, without claiming
+that a local ownership claim means the chain is programmed remotely. An existing
+owner is retained across updates and operator restarts. When there is no owner,
+the earliest-created eligible chain claims the parent (ties use resource names).
+Competing chains report `PolicyChainOwnerValid=False` with reason
+`ConflictingChain` and `Programmed=False`; they do not prevent a valid owner from
+being applied. Stale claims, including an owner deleted and recreated with another
+UID, can be replaced. A terminating owner releases its on-prem claim without
+waiting for its finalizers.
+
+An invalid owning declaration reports `Programmed=False` on the chain and
+`Programmed=False` / `ConfigurationPushed=False` with reason `InvalidPolicyChain`
+on the gateway. **No new document or configuration revision is applied for that
+gateway until the declaration is repaired or removed.** This also pauses
+unrelated changes and certificate updates on that gateway: gw-admin replaces
+the entire document, so neither omitting the virtual cluster nor silently using
+default policy ordering would preserve the declared configuration. Already
+running pods retain their last document; new or restarted pods cannot be
+provisioned from the invalid declaration. GWAdmin access revocation and gateway
+deletion still perform their normal cleanup.
+
+If a live virtual cluster is excluded during configuration assembly, its chain
+still reports `Programmed=False`, but only its existing UID-bound owner blocks
+the gateway. Unclaimed or conflicting declarations do not acquire ownership of
+an excluded virtual cluster. Stale and terminating claims are released before
+checking whether to block. Deleting the virtual cluster removes its scope from
+the document, so its surviving chain does not block updates to the gateway.
+
+Chain changes and policy creation, updates, termination, deletion and same-name
+recreation trigger a rebuild. A pure order change changes the configuration hash
+and revision and is pushed to gw-admin. Reconciliation also detects and corrects
+ordering drift within explicitly managed cluster-policy scopes. Listener,
+consume and produce ordering, and comparison behavior for virtual clusters
+without a chain, remain unchanged.
+
+Deleting the chain releases its ownership and rebuilds the complete document
+using the existing default order: policy creation timestamp, then resource name.
+It deletes neither policy CRs nor their entities. Unlike Konnect's retain-on-delete
+behavior, on-prem does not preserve the last remote order or cache a historical
+ordering. After adding or deleting policy CRs, update the declaration to match;
+until then, an incomplete declaration or a reference to a deleted policy pauses
+the gateway's configuration updates.
+
+#### Verifying the gw-admin ordering contract
+
+The cluster-level round-trip contract test submits both orders of the same
+policies, then repeats the reads to check that gw-admin preserves their order
+and payload with its known defaults for omitted optional fields (`condition: ""`,
+`description: ""`, `enabled: true`). Comparison accounts for these defaults so
+they do not cause repeated pushes. It does not test listener,
+consume or produce ordering.
+
+To run it against a **dedicated real gw-admin**, set `GW_ADMIN_CONTRACT_URL`
+(including `/v1`), `GW_ADMIN_CONTRACT_SERVER_NAME`, and the certificate file paths
+`GW_ADMIN_CONTRACT_CA`, `GW_ADMIN_CONTRACT_CERT` and `GW_ADMIN_CONTRACT_KEY`, then run:
+
+```bash
+go test ./test/envtest/eventgateway -run '^TestGWAdminContract$/^cluster-level_policy_order_survives_an_entities_round_trip$' -count=1 -v
+```
+
+The tests replace the gateways served by that gw-admin and clean up their
+temporary gateway afterward. Without `GW_ADMIN_CONTRACT_URL`, the test uses the
+fake backend; passing against the fake does not establish the real backend's
+ordering contract.
+
+On 2026-11-04, this test passed against the pinned
+`kong/kong-gw-admin-cp-dev:pr-1502` image
+(`sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b`).
+That backend preserved both submitted orders across repeated reads and supplied
+the three defaults listed above. This observation applies to the tested image,
+not every gw-admin version.
+
+## Listener policy-chain API
+
+`configuration.konghq.com/v1alpha1` `EventGatewayListenerPolicyChain` declares the
+execution order of all `EventGatewayListenerPolicy` resources attached to one
+`EventGatewayListener`. This is a Konnect-only API foundation: listener-chain
+controller support is not implemented yet, and the resource is not registered
+with the on-prem Event Gateway controller.
+
+`spec.eventGatewayListenerRef` must use `namespacedRef` to reference a listener
+in the same namespace. The parent reference is immutable from creation, even
+before programming; create a new chain CR to manage a different listener.
+The chain configures its parent rather than creating an independent Konnect
+entity, so `status.id` must remain unset. The shared status structure provides
+conditions, organization/server information, and parent IDs instead.
+
+Supply `spec`, `spec.apiSpec`, and `spec.apiSpec.policies` explicitly. `policies`
+is an atomic ordered list of Kubernetes references, not Konnect IDs. Each entry
+has a required `name`, an optional `kind` defaulting to
+`EventGatewayListenerPolicy`, and an optional `namespace` defaulting to the
+chain's namespace. An explicit namespace must be the same as the chain's;
+cross-namespace references are not supported. Every policy must belong to the
+referenced listener. List order, not resource names or YAML document order,
+declares execution order. See the
+[listener-chain example](../config/samples/konnect_eventgateway_listener_policy_chain.yaml).
+It includes API authentication, the gateway, listener, backend, virtual cluster,
+forwarding policy, and chain in one file. Replace the token and Kafka/data-plane
+addresses before applying it. Its plaintext, anonymous port-mapping setup is
+for demonstration only.
+
+The declaration models complete-set reordering: list every existing listener
+policy exactly once. An explicit `policies: []` is valid only when the listener
+has no policies; it does not clear an existing chain. Omitted and null lists
+are invalid. New policies append to the remote chain, deletion preserves the
+remaining order, and recreation gives the policy a new Konnect ID. Update the
+declared list when policies are created or deleted.
+
+Independent validation against the development backend `eu.api.konghq.tech`
+on 2026-11-07 confirmed that a fresh listener's chain GET returns
+`200 {"policies":[]}`, and PUT accepts an empty list only for an empty scope.
+Complete permutations are accepted and returned in the requested order.
+Partial, duplicate, unknown, wrong-parent, missing, and null policy lists are
+rejected with `400` without changing the remote order. These are observations
+from the tested development backend, not a guarantee for every production
+version. The pinned SDK already provides listener-chain GET and PUT operations;
+no SDK upgrade is required for this API.

@@ -31,7 +31,7 @@ jobs:
             gateway-type: hybrid
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -45,7 +45,7 @@ jobs:
       # NOTE: other places use .github/actions/setup-mise but this workflow
       # can be run to generate reports for refs which do not have that action yet.
       # This will be able to be updated when we stop producing reports for older versions.
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           # renovate: datasource=github-tags depName=jdx/mise-action extractVersion=^v(?<version>.+)$
           version: 2026.11.1

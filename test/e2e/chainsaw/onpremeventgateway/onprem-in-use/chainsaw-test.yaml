@@ -1,0 +1,534 @@
+# What the policies of an OnPremEventGateway use is held while they use it: a
+# schema registry, a static key, a TLS trust bundle and a virtual cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-in-use
+spec:
+  description: |
+    An OnPremEventGateway whose policies use a schema registry, a static key, a
+    TLS trust bundle and a virtual cluster, by object, and a policy a child
+    policy names as its parent:
+    1. gw-admin accepts them, each held by the in-use finalizer.
+    2. Policies referencing them by id or by name can't be sent, reporting
+       namespacedRef is the only reference allowed: they stop the push, the
+       gateway reporting InvalidEntities, and gw-admin keeps what it has, until
+       they are deleted. A consume schema validation naming its registry object
+       directly isn't refused.
+    3. Deleted, each stays in gw-admin, Programmed with the reason
+       DeletionBlocked naming the policy using it, which stays Programmed. So
+       does the parent policy, naming its child.
+    4. A policy created since can't be sent, stops the push, and doesn't hold
+       them.
+    5. Once the policies using them are deleted, they go, from gw-admin too.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: in_use_finalizer
+      value: gateway-operator.konghq.com/onprem-eventgateway-in-use
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Held-while-in-use
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: |
+              set -e
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca server-ca "$WORK_DIR/server-ca"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh put-server-cert server-tls "$WORK_DIR/server-ca" "placeholder.invalid" "$WORK_DIR/server"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca client-ca "$WORK_DIR/client-ca"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret client-ca "$WORK_DIR/client-ca"
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: encrypt
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: mtls
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: forward
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: held-registry
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: held-key
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: held-bundle
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\")) and ([.virtual_clusters[].name] | index(\"held-vc\"))"
+
+    - name: 2-Only-by-object
+      try:
+        - apply:
+            file: 02-not-by-object.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: by-name-registry
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: by-id-registry
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        # Accepted, so in the configuration, unlike the policies rejected as
+        # Invalid: but these stop the push, so it isn't programmed.
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: direct-registry
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: GatewayNotProgrammed
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: by-name-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: by-id-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: by-name-bundle
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: by-name-destination
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: by-id-destination
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'only namespacedRef is allowed')): true
+        # The policies that can't be sent stop the push: gw-admin keeps the
+        # configuration it has.
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidEntities
+                    "(contains(message, 'EventGatewayVirtualClusterProducePolicy'))": true
+                    "(contains(message, 'EventGatewayListenerPolicy'))": true
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\")) and ([.virtual_clusters[].name] | index(\"held-vc\"))"
+        - delete:
+            file: 02-not-by-object.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+
+    - name: 3-Deleted-while-in-use
+      try:
+        # Not waited for: they stay while the policies use them.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -e
+              kubectl delete -n "$NAMESPACE" eventgatewayschemaregistry held-registry --wait=false
+              kubectl delete -n "$NAMESPACE" eventgatewaystatickey held-key --wait=false
+              kubectl delete -n "$NAMESPACE" eventgatewaytlstrustbundle held-bundle --wait=false
+              kubectl delete -n "$NAMESPACE" eventgatewayvirtualcluster held-vc --wait=false
+              kubectl delete -n "$NAMESPACE" eventgatewayvirtualclusterproducepolicy validate --wait=false
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: held-registry
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayVirtualClusterProducePolicy validate'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayVirtualClusterProducePolicy validate-child'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: held-key
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayVirtualClusterProducePolicy encrypt'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: held-bundle
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayListenerPolicy mtls'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayListenerPolicy forward'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: validate
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: encrypt
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: mtls
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: forward
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | ([.schema_registries[].name] | index(\"held-registry\")) and ([.static_keys[].name] | index(\"held-key\")) and ([.tls_trust_bundles[].name] | index(\"held-bundle\")) and ([.virtual_clusters[].name] | index(\"held-vc\"))"
+
+    - name: 4-No-new-policy-while-being-deleted
+      try:
+        # Timestamps have a precision of a second, and a policy created in the
+        # same second as the deletion counts as existing.
+        - sleep:
+            duration: 2s
+        - apply:
+            file: 03-late-policies.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: late-registry
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'which is being deleted')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: late-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'which is being deleted')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: late-bundle
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'which is being deleted')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: late-destination
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'which is being deleted')): true
+        # The policies that can't be sent stop the push: gw-admin keeps the
+        # configuration it has.
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidEntities
+                    "(contains(message, 'EventGatewayVirtualClusterProducePolicy'))": true
+                    "(contains(message, 'EventGatewayListenerPolicy'))": true
+        - delete:
+            file: 03-late-policies.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: held-registry
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayVirtualClusterProducePolicy validate'))": true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                    reason: DeletionBlocked
+                    "(contains(message, 'it is kept while these policies reference it: EventGatewayListenerPolicy forward'))": true
+
+    - name: 5-Gone-with-their-policies
+      try:
+        # The child first: its parent goes with it.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: validate-child
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: validate
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: encrypt
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              name: mtls
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              name: forward
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              metadata:
+                name: held-registry
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: held-key
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: held-bundle
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: held-vc
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 ".entities | (([.schema_registries[].name] | index(\"held-registry\")) or ([.static_keys[].name] | index(\"held-key\")) or ([.tls_trust_bundles[].name] | index(\"held-bundle\")) or ([.virtual_clusters[].name] | index(\"held-vc\"))) | not"
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -10,16 +10,19 @@ import (
 )
 
 // SetupAdmissionServer sets up the admission webhook server.
+// certDir is the directory that holds the server's TLS certificate (tls.crt)
+// and key (tls.key).
 func SetupAdmissionServer(
 	ctx context.Context,
 	m ctrl.Manager,
+	certDir string,
 ) (*admission.RequestHandler, error) {
 	admissionLogger := ctrl.LoggerFrom(ctx).WithName("admission-server")
 
 	admissionReqHandler := &admission.RequestHandler{
 		Logger: admissionLogger,
 	}
-	srv, err := admission.MakeTLSServer(consts.WebhookPort, admissionReqHandler)
+	srv, err := admission.MakeTLSServer(consts.WebhookPort, admissionReqHandler, certDir)
 	if err != nil {
 		return nil, err
 	}

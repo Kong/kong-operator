@@ -1,0 +1,252 @@
+# The entities of the OnPremEventGateway gateway_name, each kind FinalizerInUse
+# can hold used by a policy, all by object.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: policies-vc
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend
+  apiSpec:
+    name: policies-vc
+    dnsLabel: policies-vc
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: held-vc
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend
+  apiSpec:
+    name: held-vc
+    dnsLabel: held-vc
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewaySchemaRegistry
+metadata:
+  name: held-registry
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    type: confluent
+    confluent:
+      name: held-registry
+      config:
+        endpoint: https://registry.example.com
+        schemaType: avro
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: validate
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: validate
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: namespacedRef
+            namespacedRef:
+              name: held-registry
+          valueValidationAction: reject
+---
+# A child of validate: it holds its parent.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: validate-child
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    parentPolicyRef:
+      name: validate
+    type: modifyHeaders
+    modifyHeaders:
+      name: validate-child
+      config:
+        actions:
+          - op: remove
+            remove:
+              key: x-validated
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: held-key
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayStaticKey
+metadata:
+  name: held-key
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: held-key
+    value:
+      type: secretRef
+      secretRef:
+        name: held-key
+        key: key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: encrypt
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policies-vc
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: encrypt
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              namespacedRef:
+                name: held-key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayTLSTrustBundle
+metadata:
+  name: held-bundle
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: held-bundle
+    config:
+      trustedCa:
+        type: secretRef
+        secretRef:
+          name: client-ca
+          key: tls.crt
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: listener
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092-19095"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: mtls
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: mtls
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.crt
+            key:
+              type: secretRef
+              secretRef:
+                name: server-tls
+                key: tls.key
+        clientAuthentication:
+          mode: required
+          tlsTrustBundles:
+            - namespacedRef:
+                name: held-bundle
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: forward
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: listener
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          advertisedHost: placeholder.invalid
+          destination:
+            namespacedRef:
+              name: held-vc

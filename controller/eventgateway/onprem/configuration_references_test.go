@@ -17,13 +17,129 @@ limitations under the License.
 package onprem
 
 import (
+	"os"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
+
+// TestReferencesByObjectCoversConfiguredReferences checks referencesByObject
+// against the references the CRD generator declares in crd-from-oas/config.yaml:
+// each reference of a policy to an entity FinalizerInUse holds must be refused
+// when not by object, and accepted by object. A reference added there that the
+// ObjectReferencePaths of the policy don't return fails here, rather than
+// letting a reference by id or by name through on prem.
+func TestReferencesByObjectCoversConfiguredReferences(t *testing.T) {
+	data, err := os.ReadFile("../../../crd-from-oas/config.yaml")
+	require.NoError(t, err)
+	var config any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	policies := []string{"EventGatewayListenerPolicy", "EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualClusterConsumePolicy"}
+	// A parent policy reference, the other kind FinalizerInUse holds, is by
+	// object only: it has no other form to refuse.
+	heldKindNames := []string{
+		schemaRegistryType.Elem().Name(), staticKeyType.Elem().Name(), tlsTrustBundleType.Elem().Name(), virtualClusterType.Elem().Name(),
+	}
+	type reference struct{ entity, kind, path string }
+	var references []reference
+	var walk func(any)
+	walk = func(v any) {
+		switch v := v.(type) {
+		case map[string]any:
+			if name, _ := v["name"].(string); slices.Contains(policies, name) {
+				refs, _ := v["references"].([]any)
+				for _, r := range refs {
+					ref, _ := r.(map[string]any)
+					kinds, _ := ref["kinds"].([]any)
+					path, _ := ref["path"].(string)
+					if len(kinds) == 1 && slices.Contains(heldKindNames, kinds[0].(string)) {
+						references = append(references, reference{entity: name, kind: kinds[0].(string), path: path})
+					}
+				}
+			}
+			for _, child := range v {
+				walk(child)
+			}
+		case []any:
+			for _, child := range v {
+				walk(child)
+			}
+		}
+	}
+	walk(config)
+	require.NotEmpty(t, references, "no reference found in the configuration of the generator")
+
+	newPolicy := map[string]func() objectReferrer{
+		"EventGatewayListenerPolicy":              func() objectReferrer { return &configurationv1alpha1.EventGatewayListenerPolicy{} },
+		"EventGatewayVirtualClusterProducePolicy": func() objectReferrer { return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{} },
+		"EventGatewayVirtualClusterConsumePolicy": func() objectReferrer { return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{} },
+	}
+	// valueAt returns the JSON value of a policy holding the reference at the
+	// path.
+	valueAt := func(path string, ref any) map[string]any {
+		fields := strings.Split(path, ".")
+		value := map[string]any{}
+		current := value
+		for _, field := range fields[:len(fields)-1] {
+			next := map[string]any{}
+			current[field] = next
+			current = next
+		}
+		current[fields[len(fields)-1]] = ref
+		return value
+	}
+	for _, r := range references {
+		t.Run(r.entity+" "+r.path, func(t *testing.T) {
+			var ref configurationv1alpha1.ObjectReferencePath
+			for _, p := range newPolicy[r.entity]().ObjectReferencePaths() {
+				if p.Path == r.path {
+					ref = p
+				}
+			}
+			require.Equal(t, r.path, ref.Path, "not a path of the references of the policy")
+			require.Equal(t, r.kind, ref.Kind)
+
+			byID := any(map[string]any{"type": "id", "id": map[string]any{"id": uuid.NewString()}})
+			byObject := any(map[string]any{"type": namespacedRefMember, namespacedRefMember: map[string]any{"name": "entity"}})
+			if strings.HasSuffix(r.path, ".tlsTrustBundles") {
+				byID = []any{map[string]any{"id": uuid.NewString()}}
+				byObject = []any{map[string]any{namespacedRefMember: map[string]any{"name": "entity"}}}
+			}
+			segments := strings.Split(r.path, ".")
+			err := referencesByObjectAt(valueAt(r.path, byID), segments, "", ref)
+			require.Error(t, err)
+			// The path of the reference, or of an item of a list of them.
+			assert.Regexp(t, `^`+regexp.QuoteMeta(r.path)+`(\.\d+)? references `, err.Error())
+			require.NoError(t, referencesByObjectAt(valueAt(r.path, byObject), segments, "", ref))
+		})
+	}
+}
+
+// TestReferencesByObjectIgnoresLabels checks that a label whose key is the
+// name of a reference field isn't read as a reference.
+func TestReferencesByObjectIgnoresLabels(t *testing.T) {
+	var policy configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy
+	require.NoError(t, yaml.UnmarshalStrict([]byte(`
+spec:
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: validate
+      labels: {schemaRegistry: orders, tlsTrustBundles: bundle, key: static}
+      config: {type: json, json: {valueValidationAction: mark}}
+`), &policy))
+	require.NoError(t, referencesByObject(&policy))
+}
 
 func TestResolveReferences(t *testing.T) {
 	registry, key, elsewhere := uuid.New(), uuid.New(), uuid.New()
@@ -96,11 +212,11 @@ func TestResolveReferences(t *testing.T) {
 }
 
 func TestResolveListenerPolicyReferences(t *testing.T) {
-	bundle, vc := uuid.New(), uuid.New()
+	bundle, vc, elsewhere := uuid.New(), uuid.New(), uuid.New()
 	targets := referenceTargets{
 		tlsTrustBundles: entityIDs{kind: "EventGatewayTLSTrustBundle", names: map[uuid.UUID]string{bundle: "bundle"}},
-		virtualClusters: map[string]uuid.UUID{"vc": vc},
-		read:            map[uuid.UUID]client.ObjectKey{},
+		virtualClusters: entityIDs{kind: "EventGatewayVirtualCluster", names: map[uuid.UUID]string{vc: "vc"}},
+		read:            map[uuid.UUID]client.ObjectKey{elsewhere: {Namespace: "default", Name: "elsewhere"}},
 	}
 
 	t.Run("the TLS trust bundles verifying the clients", func(t *testing.T) {
@@ -118,26 +234,20 @@ func TestResolveListenerPolicyReferences(t *testing.T) {
 			"it references an EventGatewayTLSTrustBundle that isn't in the configuration of the gateway")
 	})
 
-	t.Run("a virtual cluster forwarded to by name is sent by its id", func(t *testing.T) {
-		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"name": "vc"}}}
-		require.NoError(t, targets.resolveReferences(listenerPolicyReferences)(payload))
-		assert.Equal(t, map[string]any{"id": vc.String()}, payload["config"].(map[string]any)["destination"])
-	})
-
-	t.Run("a virtual cluster that isn't in the configuration", func(t *testing.T) {
-		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"name": "unknown"}}}
+	t.Run("a virtual cluster of another gateway is named", func(t *testing.T) {
+		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"id": elsewhere.String()}}}
 		require.EqualError(t, targets.resolveReferences(listenerPolicyReferences)(payload),
-			`it forwards to the virtual cluster "unknown", which isn't in the configuration of the gateway`)
+			"it references the EventGatewayVirtualCluster default/elsewhere, which isn't in the configuration of the gateway")
 	})
 
-	t.Run("a virtual cluster forwarded to by id", func(t *testing.T) {
+	t.Run("an id of no virtual cluster of the configuration", func(t *testing.T) {
 		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"id": uuid.NewString()}}}
 		require.EqualError(t, targets.resolveReferences(listenerPolicyReferences)(payload),
-			"it forwards to a virtual cluster by id: name a virtual cluster of the gateway instead")
+			"it references an EventGatewayVirtualCluster that isn't in the configuration of the gateway")
 	})
 
 	t.Run("a destination already resolved is left as it is", func(t *testing.T) {
-		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"name": "vc"}}}
+		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"id": vc.String()}}}
 		resolve := targets.resolveReferences(listenerPolicyReferences)
 		require.NoError(t, resolve(payload))
 		require.NoError(t, resolve(payload))

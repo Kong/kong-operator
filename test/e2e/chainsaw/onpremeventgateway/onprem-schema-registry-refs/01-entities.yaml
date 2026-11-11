@@ -1,0 +1,203 @@
+# The entities of the OnPremEventGateway gateway_name: a virtual cluster, the
+# schema registry orders-registry, and policies naming it by object: a produce
+# schema validation, the transcode child of a produce schema validation of type
+# json, which parses without a schema and so names no registry, and the transcode
+# child of a consume schema validation.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: vc
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend
+  apiSpec:
+    name: vc
+    dnsLabel: vc
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewaySchemaRegistry
+metadata:
+  name: orders-registry
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    type: confluent
+    confluent:
+      name: orders-registry
+      config:
+        endpoint: https://registry.example.com
+        schemaType: avro
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: validate-json
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: validate-json
+      config:
+        type: json
+        json:
+          valueValidationAction: reject
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: validate-confluent
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: validate-confluent
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: namespacedRef
+            namespacedRef:
+              name: orders-registry
+          valueValidationAction: reject
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: transcode-avro
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    type: transcode
+    parentPolicyRef:
+      name: validate-json
+    transcode:
+      name: transcode-avro
+      config:
+        outputFormat: avro
+        avro:
+          failureMode: reject
+          schemaSource:
+            type: reference
+            reference:
+              subject: orders-value
+              version: latest
+              schemaRefDestination:
+                type: none
+                none: {}
+              schemaRegistry:
+                type: namespacedRef
+                namespacedRef:
+                  name: orders-registry
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: validate-consume
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: validate-consume
+      config:
+        type: json
+        json:
+          valueValidationAction: mark
+---
+# A consume schema validation naming its registry with type namespacedRef, as
+# an OnPremEventGateway requires.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: validate-consume-confluent
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: validate-consume-confluent
+      config:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
+          schemaRegistry:
+            type: namespacedRef
+            namespacedRef:
+              name: orders-registry
+          valueValidationAction: skip
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: transcode-json
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    type: transcode
+    parentPolicyRef:
+      name: validate-consume
+    transcode:
+      name: transcode-json
+      config:
+        outputFormat: json
+        json:
+          failureMode: error
+          schemaSource:
+            type: reference
+            reference:
+              subject: orders-value
+              version: latest
+              schemaRefDestination:
+                type: none
+                none: {}
+              schemaRegistry:
+                type: namespacedRef
+                namespacedRef:
+                  name: orders-registry

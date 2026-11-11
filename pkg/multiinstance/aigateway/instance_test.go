@@ -9,6 +9,7 @@ import (
 
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -528,6 +529,10 @@ type blockingPushClient struct{}
 func (blockingPushClient) ReloadDeclarativeRawConfig(ctx context.Context, _ io.Reader, _, _ bool) error {
 	<-ctx.Done()
 	return ctx.Err()
+}
+
+func (blockingPushClient) Status(context.Context) (*kong.Status, error) {
+	return &kong.Status{ConfigurationHash: "configured"}, nil
 }
 
 // ctxCheckingClient fails every Get and status apply on an already-cancelled

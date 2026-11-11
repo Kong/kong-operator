@@ -29,8 +29,8 @@ import (
 )
 
 // The listeners of a gateway are attached to the gateway itself, and their
-// policies are their children. A forwarding policy names a virtual cluster of
-// the gateway, and is sent with the id of the virtual cluster.
+// policies are their children. A forwarding policy references a virtual cluster
+// of the gateway, and is sent with the id of the virtual cluster.
 
 // addListeners adds the listeners of the gateway, with their policies, which
 // reference the TLS trust bundles and the virtual clusters among the targets.
@@ -60,9 +60,13 @@ func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gatewa
 		},
 		nil,
 		entityKind[*configurationv1alpha1.EventGatewayListenerPolicy, gwadminapi.EventGatewayListenerPolicyOnPrem]{
-			kind: "EventGatewayListenerPolicy",
+			kind:   "EventGatewayListenerPolicy",
+			unique: policyName[gwadminapi.EventGatewayListenerPolicyOnPrem],
 			request: func(ctx context.Context, cl client.Client, p *configurationv1alpha1.EventGatewayListenerPolicy) (any, error) {
-				req, err := p.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
+				if err := checkPolicyReferences(ctx, cl, p); err != nil {
+					return nil, err
+				}
+				req, err := withUIDAsKonnectID(p).ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
 				if err != nil {
 					return nil, err
 				}

@@ -238,6 +238,82 @@ func TestParsePaths_MultiplePaths(t *testing.T) {
 	assert.True(t, hasTeam)
 }
 
+func TestParsePaths_SharedRequestBody(t *testing.T) {
+	const (
+		listenerPath = "/v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policy-chain"
+		clusterPath  = "/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policy-chain"
+	)
+	requestBody := &openapi3.RequestBodyRef{
+		Ref: "#/components/requestBodies/UpdateEventGatewayPolicyChainRequest",
+		Value: &openapi3.RequestBody{
+			Required: true,
+			Content: openapi3.Content{
+				"application/json": {
+					Schema: &openapi3.SchemaRef{Value: &openapi3.Schema{
+						Type: &openapi3.Types{"object"},
+						Properties: openapi3.Schemas{
+							"policies": {Value: &openapi3.Schema{
+								Type:  &openapi3.Types{"array"},
+								Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+							}},
+						},
+						Required: []string{"policies"},
+					}},
+				},
+			},
+		},
+	}
+	doc := &openapi3.T{
+		Paths: openapi3.NewPaths(
+			openapi3.WithPath(listenerPath, &openapi3.PathItem{
+				Put: &openapi3.Operation{
+					OperationID: "update-event-gateway-listener-policy-chain",
+					RequestBody: requestBody,
+				},
+			}),
+			openapi3.WithPath(clusterPath, &openapi3.PathItem{
+				Put: &openapi3.Operation{
+					OperationID: "update-event-gateway-virtual-cluster-cluster-level-policy-chain",
+					RequestBody: requestBody,
+				},
+			}),
+		),
+		Components: &openapi3.Components{Schemas: openapi3.Schemas{}},
+	}
+	for _, paths := range [][]string{
+		{listenerPath, clusterPath},
+		{clusterPath, listenerPath},
+	} {
+		t.Run(paths[0], func(t *testing.T) {
+			result, err := NewParser(doc).ParsePaths(paths)
+			require.NoError(t, err)
+			require.Len(t, result.RequestBodies, 2)
+
+			byPath := make(map[string]*Schema)
+			for name, schema := range result.RequestBodies {
+				assert.Equal(t, name, schema.Name)
+				require.Len(t, schema.Properties, 1)
+				assert.Equal(t, "policies", schema.Properties[0].Name)
+				assert.True(t, schema.Properties[0].Required)
+				byPath[schema.SourcePath] = schema
+			}
+			require.Contains(t, byPath, listenerPath)
+			require.Contains(t, byPath, clusterPath)
+			require.Len(t, byPath[listenerPath].Dependencies, 2)
+			require.Len(t, byPath[clusterPath].Dependencies, 2)
+			assert.Equal(t, "EventGatewayListener", byPath[listenerPath].Dependencies[1].EntityName)
+			assert.Equal(t, "VirtualCluster", byPath[clusterPath].Dependencies[1].EntityName)
+			assert.Equal(t, "update-event-gateway-listener-policy-chain", byPath[listenerPath].UpdateOperationID)
+		})
+	}
+
+	t.Run("unresolvable name collision", func(t *testing.T) {
+		_, err := NewParser(doc).ParsePaths([]string{listenerPath, listenerPath, listenerPath})
+		require.ErrorContains(t, err, "request body name")
+		require.ErrorContains(t, err, "collides for paths")
+	})
+}
+
 func TestParsePaths_CollectsTransitiveReferencedSchemas(t *testing.T) {
 	doc := &openapi3.T{
 		Paths: openapi3.NewPaths(

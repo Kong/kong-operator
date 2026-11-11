@@ -23,7 +23,8 @@ spec:
        new UID: the data plane runs keg with the new UID, its certificate and
        the entities are pushed to the new gateway, and keg proxies again.
     7. Once the gateway is deleted, the data plane reports it not found, and
-       isn't Ready (DependenciesNotReady).
+       isn't Ready (DependenciesNotReady). The virtual cluster its listener
+       policy used, held by the in-use finalizer, is released.
   bindings:
     - name: gwadmin_name
       value: gw-admin
@@ -35,6 +36,8 @@ spec:
       value: backend
     - name: virtual_cluster_name
       value: vcluster
+    - name: in_use_finalizer
+      value: gateway-operator.konghq.com/onprem-eventgateway-in-use
     - name: listener_name
       value: listener
     - name: listener_policy_name
@@ -241,11 +244,25 @@ spec:
 
     - name: 7-Gateway-deleted
       try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: ($virtual_cluster_name)
+                (contains(finalizers || `[]`, $in_use_finalizer)): true
         - delete:
             ref:
               apiVersion: eventgateway.konghq.com/v1alpha1
               kind: OnPremEventGateway
               name: ($gateway_name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: ($virtual_cluster_name)
+                (contains(finalizers || `[]`, $in_use_finalizer)): false
         - assert:
             resource:
               apiVersion: eventgateway.konghq.com/v1alpha1

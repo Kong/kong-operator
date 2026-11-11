@@ -276,6 +276,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
 - [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
 - [EventGatewayStaticKey](#configuration-konghq-com-v1alpha1-eventgatewaystatickey)
 - [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
@@ -365,6 +366,21 @@ EventGatewayListenerPolicy is the Schema for the eventgatewaylistenerpolicys API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)_ |  |
 | `status` _[EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)_ |  |
+
+### EventGatewayListenerPolicyChain
+
+
+EventGatewayListenerPolicyChain is the Schema for the eventgatewaylistenerpolicychains API.
+
+<!-- event_gateway_listener_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListenerPolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)_ |  |
+| `status` _[EventGatewayListenerPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainstatus)_ |  |
 
 ### EventGatewaySchemaRegistry
 
@@ -1213,7 +1229,7 @@ EncryptionKeyStaticReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _*string_ |  |
-| `namespacedRef` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | NamespacedRef references an in-cluster EventGatewayStaticKey object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | NamespacedRef references an in-cluster EventGatewayStaticKey object: with a Konnect gateway, it is resolved to the Konnect id of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -1799,7 +1815,7 @@ consume schema validation policy when using JSON parsing without schema.
 | --- | --- |
 | `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
-| `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
+| `schemaRegistry` _[EventGatewaySchemaRegistryRefWithNamespacedRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryrefwithnamespacedref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
@@ -1821,7 +1837,7 @@ registry.
 | --- | --- |
 | `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
-| `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
+| `schemaRegistry` _[EventGatewaySchemaRegistryRefWithNamespacedRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryrefwithnamespacedref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
@@ -2265,6 +2281,55 @@ _Appears in:_
 
 - [EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
 
+#### EventGatewayListenerPolicyChainAPISpec
+
+
+EventGatewayListenerPolicyChainAPISpec defines the API spec fields for EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)
+
+#### EventGatewayListenerPolicyChainSpec
+
+
+EventGatewayListenerPolicyChainSpec defines the desired state of EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayListenerRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
+| `apiSpec` _[EventGatewayListenerPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
+
+#### EventGatewayListenerPolicyChainStatus
+
+
+EventGatewayListenerPolicyChainStatus defines the observed state of EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventGatewayListenerID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
+
 #### EventGatewayListenerPolicyConfig
 
 
@@ -2302,6 +2367,24 @@ Allowed values:
 | --- | --- |
 | `forwardToVirtualCluster` |  |
 | `tlsServer` |  |
+
+#### EventGatewayListenerPolicyRef
+
+
+EventGatewayListenerPolicyRef references an EventGatewayListenerPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainapispec)
 
 
 
@@ -3737,6 +3820,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object: with a Konnect gateway, it is resolved to the Konnect name of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -3761,6 +3845,7 @@ Allowed values:
 | --- | --- |
 | `id` |  |
 | `name` |  |
+| `namespacedRef` |  |
 
 #### EventGatewayParsedRecordTranscodeSchemaSourceType
 
@@ -4010,6 +4095,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object: with a Konnect gateway, it is resolved to the Konnect name of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -4034,6 +4120,7 @@ Allowed values:
 | --- | --- |
 | `id` |  |
 | `name` |  |
+| `namespacedRef` |  |
 
 #### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
 
@@ -4070,6 +4157,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistrytype)_ | Type designates the type of configuration. |
 | `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
 | `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references an in-cluster EventGatewaySchemaRegistry object: with a Konnect gateway, it is resolved to the Konnect name of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -4094,6 +4182,7 @@ Allowed values:
 | --- | --- |
 | `id` |  |
 | `name` |  |
+| `namespacedRef` |  |
 
 #### EventGatewayRequestRuleAction
 
@@ -4287,6 +4376,31 @@ object's Konnect name is used where the Konnect API accepts it.
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
 | `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
+- [EventGatewaySchemaRegistryRefWithNamespacedRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryrefwithnamespacedref)
+
+#### EventGatewaySchemaRegistryRefWithNamespacedRef
+
+
+EventGatewaySchemaRegistryRefWithNamespacedRef references an EventGatewaySchemaRegistry in the cluster, in either
+of two forms naming the same object: its name, with kind and namespace, set
+directly, or type namespacedRef with the namespacedRef member, as written in the
+references that also accept a Konnect ID or name.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type selects the namespacedRef form. It is left unset when name is set directly. |
+| `namespacedRef` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | NamespacedRef references the object, with type namespacedRef. |
+| `kind` _string_ | Kind is the kind of the referenced object, when its name is set directly. |
+| `name` _string_ | Name is the name of the referenced object, set directly. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace, when the name is set directly. If set, it must be the same as the referrer's namespace. |
 
 _Appears in:_
 
@@ -4625,7 +4739,7 @@ EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for E
 
 | Field | Description |
 | --- | --- |
-| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
+| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields, maskFields and transcode, and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -4895,7 +5009,7 @@ EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for E
 
 | Field | Description |
 | --- | --- |
-| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
+| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields, maskFields and transcode, and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -5000,6 +5114,24 @@ EventGatewayVirtualClusterProducePolicyStatus defines the observed state of Even
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+
+#### EventGatewayVirtualClusterRef
+
+
+EventGatewayVirtualClusterRef references an EventGatewayVirtualCluster in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)
 
 #### EventGatewayVirtualClusterSpec
 
@@ -6530,6 +6662,7 @@ _Appears in:_
 
 - [EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
 - [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
+- [EventGatewayListenerPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainstatus)
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)
@@ -6643,6 +6776,8 @@ ObjectReference defines reference of a kubernetes object.
 _Appears in:_
 
 - [KongCustomEntitySpec](#configuration-konghq-com-v1alpha1-types-kongcustomentityspec)
+
+
 
 #### PEMKeyPair
 
@@ -6894,6 +7029,9 @@ SchemaRegistryReferenceByID is a type alias.
 
 
 
+| Field | Description |
+| --- | --- |
+| `id` _string_ | The unique identifier of the schema registry. |
 
 _Appears in:_
 
@@ -7118,7 +7256,7 @@ TLSTrustBundleReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _[TLSTrustBundleName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlename)_ |  |
-| `namespacedRef` _[EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
+| `namespacedRef` _[EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object: with a Konnect gateway, it is resolved to the Konnect id of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -7606,6 +7744,7 @@ VirtualClusterReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ |  |
+| `namespacedRef` _[EventGatewayVirtualClusterRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterref)_ | NamespacedRef references an in-cluster EventGatewayVirtualCluster object: with a Konnect gateway, it is resolved to the Konnect id of the object, and with an on-prem gateway, to its UID. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 

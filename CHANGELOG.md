@@ -92,6 +92,27 @@
   objects still decode, because a bare string reads as an inline value, but any
   update must use the object shape.**
   [#6433](https://github.com/Kong/kong-operator/pull/6433)
+- `EventGatewayVirtualClusterProducePolicy` and
+  `EventGatewayVirtualClusterConsumePolicy`: the CRDs reject specs Konnect
+  refuses: a schema registry reference whose `type` doesn't match the member
+  set, or of `type: id` without its id, `schemaRegistry` in a `json` schema
+  validation, and a `transcode` or `maskFields` policy without
+  `parentPolicyRef`. A stored object that doesn't follow them can still be
+  updated, e.g. its finalizer removed, as long as it keeps or drops the
+  schema registry reference it has.
+  [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- `EventGatewayVirtualClusterConsumePolicy` Go API: the `schemaRegistry` field
+  of a `schemaValidation` policy's `json` and `confluentSchemaRegistry` configs
+  is now an `EventGatewaySchemaRegistryRefWithNamespacedRef`, instead of an
+  `EventGatewaySchemaRegistryRef`. Its `kind`, `name` and `namespace` fields
+  are kept; `Ref()` returns the reference in either form. The CRD still
+  accepts the released shape.
+  [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- `OnPremEventGateway`: the policies reference schema registries, static keys
+  and TLS trust bundles by object only, with `namespacedRef`, or, in a consume
+  `schemaValidation` policy, the name of the object set directly. A policy that
+  references one by id or by name is refused.
+  [#6491](https://github.com/Kong/kong-operator/pull/6491)
 
 ### Fixed
 
@@ -104,9 +125,34 @@
   with reason `EndpointMismatch` on the same mismatch, and on any endpoint
   carrying a path until its private rendering lands.
   [#6265](https://github.com/Kong/kong-operator/pull/6265)
+- Generated certificate Secrets now carry the full CA chain in `ca.crt`. The
+  value holds the certificate that signs the leaf. It then holds each
+  certificate in the `ca.crt` key of the CA Secret that the chain does not
+  already hold. An existing certificate Secret with a different bundle is
+  re-issued in place, so the Secret keeps its name. On upgrade, the operator
+  re-issues every affected certificate Secret once.
+  [#6500](https://github.com/Kong/kong-operator/issues/6500)
+- A missing CA Secret now reports an error that names the Secret and the
+  secret label selector, instead of a bare `not found` message.
+  [#6500](https://github.com/Kong/kong-operator/issues/6500)
 
 ### Added
 
+- Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
+  installation artifacts, to declare the execution order of all policies on one
+  Konnect Event Gateway listener using Kubernetes references.
+  [#6501](https://github.com/Kong/kong-operator/pull/6501)
+- `EventGatewayVirtualClusterPolicyChain` now applies declared cluster-level
+  policy ordering to `OnPremEventGateway` configuration, using Kubernetes policy
+  references without Konnect IDs. Invalid owning declarations pause the
+  gateway's complete configuration updates; unclaimed chains on excluded
+  virtual clusters do not block updates. Deleting a virtual cluster removes
+  its scope without its surviving chain blocking updates, and deleting a chain
+  restores the default policy order without deleting policies. Configuration
+  comparison accounts for gw-admin's default cluster-policy condition,
+  description and enabled flag to avoid repeatedly pushing an unchanged
+  configuration.
+  [#6395](https://github.com/Kong/kong-operator/pull/6395)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
@@ -124,9 +170,72 @@
 - On-prem AI Gateway: an entity with a cross-namespace reference now reports a
   `ResolvedRefs` condition for cross-namespace `aiGatewayRef` and `secretRef`.
   [#6457](https://github.com/Kong/kong-operator/pull/6457)
+- Add the CLI argument `--validating-webhook-cert-dir`, which sets the
+  directory that holds the validating webhook's TLS certificate (`tls.crt`)
+  and key (`tls.key`). It defaults to the current path, so Helm installs are
+  unaffected. Deployments through the Operator Lifecycle Manager (OLM), which
+  is how operators are certified on OpenShift, can point it at
+  `/tmp/k8s-webhook-server/serving-certs`, where OLM mounts the webhook
+  certificate without a subfolder.
+  [#6515](https://github.com/Kong/kong-operator/pull/6515)
+- `EventGatewayVirtualClusterProducePolicy` and
+  `EventGatewayVirtualClusterConsumePolicy`: schema registry references.
+  - A schema registry can be referenced by object, with `type: namespacedRef`,
+    next to `id` and `name`. For a consume `schemaValidation` policy, a
+    reference moved to `namespacedRef` must drop `kind`.
+  - A `type: id` reference now keeps its id (`id: {id: <uuid>}`).
+  - `transcode` and `maskFields` policies accept `parentPolicyRef`.
+  [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- `EventGatewaySchemaRegistry`: a schema registry policies use in Konnect
+  isn't deleted until they stop using it: it reports `DeletionBlocked`, naming
+  the policies, created in Konnect, that use it.
+  [#6529](https://github.com/Kong/kong-operator/pull/6529)
+- `OnPremEventGateway`: the schema registries, static keys, TLS trust bundles
+  and parent policies its policies use are held by the finalizer
+  `gateway-operator.konghq.com/onprem-eventgateway-in-use`: deleted, one stays
+  in the configuration, reporting `DeletionBlocked` naming the policies, as
+  with Konnect, until they stop using it. A Warning event
+  `HoldEntitiesInUseFailed` on the gateway tells when it can't be held. The
+  `OnPremEventGateway` controller owns the status of its entities, and clears
+  what the Konnect controllers set on them.
+  [#6530](https://github.com/Kong/kong-operator/pull/6530)
+- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy can
+  reference its virtual cluster by object, with `destination.namespacedRef`. A
+  virtual cluster, or its backend cluster, that listener policies forward to
+  isn't deleted until they stop: it reports `DeletionBlocked`, naming the
+  policies, created in Konnect, that forward to it.
+  - `OnPremEventGateway`: only `destination.namespacedRef` is allowed, and the
+    virtual cluster and its backend cluster are held by the finalizer
+    `gateway-operator.konghq.com/onprem-eventgateway-in-use` while in use.
+  [#6492](https://github.com/Kong/kong-operator/pull/6492)
+- `OnPremEventGateway`: an entity that can't be sent stops the push of its
+  gateway instead of being left out, e.g. a policy whose reference, parent
+  policy or Secret doesn't exist, an empty Secret value, a duplicate policy
+  name, or a parent policy of another virtual cluster. The gateway reports
+  `InvalidEntities`, naming them, and gw-admin keeps the last configuration
+  that could be sent until they are fixed or deleted. Every other change of the gateway, deletions included, waits too:
+  only a data plane certificate deleted or replaced stops being trusted right
+  away. A gw-admin pod that restarts meanwhile gets the last configuration
+  again, also after a restart of the operator, read back from a pod that holds
+  it. Entities of other namespaces are still only left out, and so are a
+  virtual cluster whose name or DNS label an older one has, which keeps
+  running, and a cluster policy chain competing for a virtual cluster another
+  chain owns.
+  [#6495](https://github.com/Kong/kong-operator/pull/6495)
 
 ### Changed
 
+- On-prem AI Gateway: the operator detects a configuration change made
+  directly on a data plane. It records the configuration hash reported by each
+  data plane after a successful push. At the next sync, it compares the
+  reported hash with the recorded hash. If the hashes differ, it pushes the
+  desired configuration again.
+  [#6518](https://github.com/Kong/kong-operator/pull/6518)
+- Embedded ingress controller: the default DB-less sync detects an out-of-band
+  configuration change while the Kubernetes configuration stays the same. If
+  the reported hash differs from the hash recorded after the last successful
+  push, the sync pushes the configuration again.
+  [#6518](https://github.com/Kong/kong-operator/pull/6518)
 - `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
   from being issued.
@@ -139,6 +248,17 @@
   `ai_models` entity keeps the values of the earliest-created model, so a new
   model cannot change it.
   [#6510](https://github.com/Kong/kong-operator/pull/6510)
+
+### Fixes
+
+- Embedded ingress controller: when several `KongConsumer`s share a `username`
+  or a `custom_id`, only one of them is translated: the one created earliest,
+  ties broken by namespace and then name. The others get a translation failure.
+  Before, all of them were translated and Kong rejected the whole
+  configuration. This could happen when the consumers were created before the
+  admission webhook could see the first one in Kong, or when the webhook was
+  not in use.
+  [#6458](https://github.com/Kong/kong-operator/pull/6458)
 
 ## [v2.4.0-rapid.3.1]
 

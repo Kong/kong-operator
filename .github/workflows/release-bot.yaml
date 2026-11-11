@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       # Mint the token in the same job that uses it: app tokens do not survive
@@ -101,7 +101,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -175,14 +175,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate source SBOM
         # Blocking: the SBOMs are deliverables.
-        uses: Kong/public-shared-actions/security-actions/sca@98b3fa71ae25e87d9b07e7022ea13b5bf70fc17d # sca@6.0.3
+        uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
         with:
           dir: '.'
           asset_prefix: source
@@ -289,7 +289,7 @@ jobs:
       RELEASE_BRANCH: ${{ needs.semver.outputs.release_branch }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       # Mint the token in the same job that uses it: app tokens do not survive
@@ -330,7 +330,7 @@ jobs:
           # e.g. release/2.4.x -> chore/charts-sync-2.4.x
           echo "CHARTS_SYNC_PR_BRANCH=chore/charts-sync-${RELEASE_BRANCH#release/}" >> "$GITHUB_ENV"
 
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      - uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           # NOTE: use a dedicated head branch, not RELEASE_BRANCH itself - with
           # delete-branch: true, merging this PR would otherwise delete the
@@ -365,7 +365,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       # Mint the token in the same job that uses it: app tokens do not survive
@@ -398,7 +398,7 @@ jobs:
           # Amend the commit message to avoid infinite loop of this workflow (it's triggered by the commit message).
           git commit --amend -m "chore: cherry-pick $VERSION commit ($SHA) onto main"
 
-      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      - uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           # NOTE: use the App token, not GITHUB_TOKEN - a GITHUB_TOKEN-authored PR
           # doesn't trigger pull_request-triggered required checks, so it could

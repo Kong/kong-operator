@@ -112,6 +112,34 @@ spec:
                                     description: VirtualClusterName The name of the
                                       virtual cluster.
                                     type: string
+                                  namespacedRef:
+                                    description: |-
+                                      NamespacedRef references an in-cluster EventGatewayVirtualCluster object:
+                                      with a Konnect gateway, it is resolved to the Konnect id of the object, and
+                                      with an on-prem gateway, to its UID.
+                                      It is mutually exclusive with the other fields.
+                                    properties:
+                                      kind:
+                                        default: EventGatewayVirtualCluster
+                                        description: Kind is the kind of the referenced
+                                          object.
+                                        enum:
+                                        - EventGatewayVirtualCluster
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referenced
+                                          object.
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace defaults to the referrer's namespace. If set, it must be
+                                          the same as the referrer's namespace; cross-namespace references are
+                                          not supported.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
                                 type: object
                               minBrokerID:
                                 description: The lowest broker node ID in the cluster.
@@ -431,8 +459,9 @@ spec:
                                       type: string
                                     namespacedRef:
                                       description: |-
-                                        NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object,
-                                        resolved to its Konnect id.
+                                        NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object:
+                                        with a Konnect gateway, it is resolved to the Konnect id of the object, and
+                                        with an on-prem gateway, to its UID.
                                         It is mutually exclusive with the other fields.
                                       properties:
                                         kind:

@@ -125,6 +125,12 @@ const itemExpected = "expected"
 // gw-admin rejects is trusted by no pod, and only reported on it (see
 // certificateOutcome): it doesn't fail the push, which the rest of the
 // configuration doesn't depend on.
+//
+// Without withEntities, the entities the pod holds are left as they are, e.g.
+// while the push is stopped with no configuration to push: the gateway, its
+// data plane certificates and the expected gateways are still pushed, so that
+// a certificate deleted stops being trusted, and a restarted pod serves the
+// gateway, with no entities, and turns ready.
 func (r *Reconciler) push(
 	ctx context.Context,
 	target *gwadminsync.Target,
@@ -135,6 +141,7 @@ func (r *Reconciler) push(
 	gatewayID uuid.UUID,
 	expected []uuid.UUID,
 	outcome *certificateOutcome,
+	withEntities bool,
 ) error {
 	held, found, err := getEntities(ctx, gwAdmin, gatewayID)
 	if err != nil {
@@ -159,11 +166,11 @@ func (r *Reconciler) push(
 	if err := pushCertificates(ctx, pod, gwAdmin, gatewayID, cfg, certificates, outcome); err != nil {
 		return err
 	}
-	same, err := sameEntities(held.Entities, cfg.pushedKey)
+	same, err := sameEntities(held.Entities, cfg.pushedKey, cfg.orderedClusterPolicies...)
 	if err != nil {
 		return err
 	}
-	if !found || !same || held.ConfigVersion != config.Version {
+	if withEntities && (!found || !same || held.ConfigVersion != config.Version) {
 		if err := gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
 			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, gwadminapi.GatewayEntities{ConfigVersion: config.Version, Entities: config.Entities})
 		}); err != nil {
