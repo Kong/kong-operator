@@ -38,6 +38,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[configurationv1alpha1.EventGatewayTLSTrustBundle](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualCluster](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterPolicy](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),

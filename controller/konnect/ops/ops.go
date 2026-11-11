@@ -132,6 +132,8 @@ func Create[
 		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, CreateOp)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
 		_, err = applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent, CreateOp, true)
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		_, err = applyEventGatewayVirtualClusterConsumePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent, CreateOp)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
@@ -149,7 +151,8 @@ func Create[
 	switch any(e).(type) {
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
 		*configurationv1alpha1.EventGatewayListenerPolicyChain,
-		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
 		isPolicyChain = true
 	}
 
@@ -479,7 +482,8 @@ func Delete[
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), e)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
 		*configurationv1alpha1.EventGatewayListenerPolicyChain,
-		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
 		// Deleting the declaration relinquishes management, not remote configuration.
 		break
 	case *konnectv1alpha1.MCPServer:
@@ -580,7 +584,10 @@ func Update[
 
 	update, res := shouldUpdate(ctx, e, syncPeriod, now)
 	if !update {
-		if _, isProduceChain := any(e).(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain); !isProduceChain {
+		switch any(e).(type) {
+		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+			*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		default:
 			return res, nil
 		}
 	}
@@ -664,6 +671,22 @@ func Update[
 		if err == nil && !applied {
 			return res, nil
 		}
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		var applied bool
+		applied, err = applyEventGatewayVirtualClusterConsumePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent, UpdateOp)
+		if err == nil && !applied {
+			// A GET-only check must not refresh Programmed and trigger a watch loop.
+			condition, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+			if !ok || condition.Status != metav1.ConditionTrue ||
+				condition.Reason != konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed ||
+				condition.ObservedGeneration != ent.GetGeneration() {
+				SetKonnectEntityProgrammedConditionTrue(ent)
+			}
+			if res.IsZero() {
+				res.RequeueAfter = syncPeriod
+			}
+			return res, nil
+		}
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -726,7 +749,8 @@ func Update[
 	switch any(e).(type) {
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
 		*configurationv1alpha1.EventGatewayListenerPolicyChain,
-		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
 		return ctrl.Result{}, policyChainOperationError(err)
 	}
 	logger := loggerForEntity(ctx, e, UpdateOp)

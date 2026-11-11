@@ -87259,6 +87259,7 @@ rules:
   - eventgatewaystatickeys
   - eventgatewaytlstrustbundles
   - eventgatewayvirtualclusterconsumepolicies
+  - eventgatewayvirtualclusterconsumepolicychains
   - eventgatewayvirtualclusterpolicies
   - eventgatewayvirtualclusterpolicychains
   - eventgatewayvirtualclusterproducepolicies
@@ -87298,6 +87299,8 @@ rules:
   - eventgatewaytlstrustbundles/status
   - eventgatewayvirtualclusterconsumepolicies/finalizers
   - eventgatewayvirtualclusterconsumepolicies/status
+  - eventgatewayvirtualclusterconsumepolicychains/finalizers
+  - eventgatewayvirtualclusterconsumepolicychains/status
   - eventgatewayvirtualclusterpolicies/finalizers
   - eventgatewayvirtualclusterpolicies/status
   - eventgatewayvirtualclusterpolicychains/finalizers
