@@ -133,6 +133,19 @@ func TestCRDExists(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name: "returns an error when the requested group is not among the discovery failures",
+			restMapper: func() meta.RESTMapper {
+				broken := schema.GroupVersionResource{Group: "broken.example.com", Version: "v1", Resource: "things"}
+				return errGroupDiscoveryFailedRESTMapper{
+					RESTMapper:   meta.NewDefaultRESTMapper(nil),
+					failedGroups: map[schema.GroupVersion]error{broken.GroupVersion(): notFoundStatus(broken)},
+				}
+			},
+			CRD:                 operatorv1beta1.DataPlaneGVR(),
+			expected:            false,
+			expectedErrContains: "unable to retrieve the complete list of server APIs",
+		},
+		{
 			name: "returns an error when the lookup itself fails",
 			restMapper: func() meta.RESTMapper {
 				return erroringRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)}

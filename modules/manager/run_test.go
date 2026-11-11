@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -169,6 +170,16 @@ func TestSetByObjectFor(t *testing.T) {
 	})
 }
 
+// erroringRESTMapper makes every lookup fail with an error that is neither a
+// no-match nor a 404, like a discovery failure does.
+type erroringRESTMapper struct {
+	apimeta.RESTMapper
+}
+
+func (erroringRESTMapper) KindFor(schema.GroupVersionResource) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{}, errors.New("discovery unavailable")
+}
+
 func TestResolveUserIDAssignedByPlatform(t *testing.T) {
 	openShiftSCCGVR := schema.GroupVersionResource{
 		Group:    "security.openshift.io",
@@ -180,10 +191,6 @@ func TestResolveUserIDAssignedByPlatform(t *testing.T) {
 		mapper := apimeta.NewDefaultRESTMapper(nil)
 		mapper.Add(openShiftSCCGVR.GroupVersion().WithKind("SecurityContextConstraints"), apimeta.RESTScopeRoot)
 		return mapper
-	}
-
-	type erroringMapper struct {
-		apimeta.RESTMapper
 	}
 
 	testCases := []struct {
@@ -218,10 +225,10 @@ func TestResolveUserIDAssignedByPlatform(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "auto falls back to Kubernetes when the probe fails",
-			platform: platform.Auto,
-			mapper:   erroringMapper{apimeta.NewDefaultRESTMapper(nil)},
-			expected: false,
+			name:        "auto fails startup when the probe fails",
+			platform:    platform.Auto,
+			mapper:      erroringRESTMapper{apimeta.NewDefaultRESTMapper(nil)},
+			expectedErr: true,
 		},
 	}
 
