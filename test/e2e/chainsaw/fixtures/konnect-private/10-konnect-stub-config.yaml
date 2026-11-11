@@ -169,6 +169,136 @@ data:
                   access:
                     - return kong.response.exit(204)
 
+          # AI Gateway: the control plane of an AI Gateway data plane, and the
+          # data plane client certificate it registers. Same private host and
+          # /api prefix, same shape of the endpoints.
+          - name: ai-gateways-create
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways$"
+            methods:
+              - POST
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(201,
+                        { id = "3d1f0a52-6b7c-4e18-9a4d-2c5e8f1b0a73",
+                          name = "private-aigw",
+                          display_name = "Private AI Gateway",
+                          endpoints = { configuration = "https://us.svc.konghq.tech/cp/aigw123",
+                                        telemetry = "https://us.svc.konghq.tech/tp/aigw123" },
+                          created_at = "2026-01-01T00:00:00Z",
+                          updated_at = "2026-01-01T00:00:00Z" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: ai-gateways-get
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways/[^/]+$"
+            methods:
+              - GET
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200,
+                        { id = "3d1f0a52-6b7c-4e18-9a4d-2c5e8f1b0a73",
+                          name = "private-aigw",
+                          display_name = "Private AI Gateway",
+                          endpoints = { configuration = "https://us.svc.konghq.tech/cp/aigw123",
+                                        telemetry = "https://us.svc.konghq.tech/tp/aigw123" },
+                          created_at = "2026-01-01T00:00:00Z",
+                          updated_at = "2026-01-01T00:00:00Z" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: ai-gateways-update
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways/[^/]+$"
+            methods:
+              - PATCH
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200,
+                        { id = "3d1f0a52-6b7c-4e18-9a4d-2c5e8f1b0a73",
+                          name = "private-aigw",
+                          display_name = "Private AI Gateway",
+                          endpoints = { configuration = "https://us.svc.konghq.tech/cp/aigw123",
+                                        telemetry = "https://us.svc.konghq.tech/tp/aigw123" },
+                          created_at = "2026-01-01T00:00:00Z",
+                          updated_at = "2026-01-01T00:00:00Z" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: ai-gateways-delete
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways/[^/]+$"
+            methods:
+              - DELETE
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - return kong.response.exit(204)
+
+          - name: ai-gateway-data-plane-certificates-create
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways/[^/]+/data-plane-certificates$"
+            methods:
+              - POST
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(201,
+                        { id = "9e4c1b70-2a3d-4f56-8b9c-1d2e3f4a5b6c",
+                          cert = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+                          title = "aigwdp",
+                          created_at = "2026-01-01T00:00:00Z",
+                          updated_at = "2026-01-01T00:00:00Z" },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: ai-gateway-data-plane-certificates-list
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways/[^/]+/data-plane-certificates$"
+            methods:
+              - GET
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      return kong.response.exit(200, { data = {} },
+                        { ["Content-Type"] = "application/json" })
+
+          - name: ai-gateway-data-plane-certificates-delete
+            hosts:
+              - us.svc.konghq.tech
+            paths:
+              - "~/api/v1/ai-gateways/[^/]+/data-plane-certificates/[^/]+$"
+            methods:
+              - DELETE
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - return kong.response.exit(204)
+
           # Unused until the Dedicated Cloud Gateway calls stop leaving for the
           # public global API: see Kong/kong-operator#6110.
           - name: cloud-gateways-networks-create
