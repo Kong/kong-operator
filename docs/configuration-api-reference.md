@@ -282,6 +282,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+- [EventGatewayVirtualClusterConsumePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicychain)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
 - [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
@@ -457,6 +458,21 @@ EventGatewayVirtualClusterConsumePolicy is the Schema for the eventgatewayvirtua
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)_ |  |
+
+### EventGatewayVirtualClusterConsumePolicyChain
+
+
+EventGatewayVirtualClusterConsumePolicyChain is the Schema for the eventgatewayvirtualclusterconsumepolicychains API.
+
+<!-- event_gateway_virtual_cluster_consume_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterConsumePolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterConsumePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterConsumePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainstatus)_ |  |
 
 ### EventGatewayVirtualClusterPolicy
 
@@ -4586,6 +4602,55 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
 
+#### EventGatewayVirtualClusterConsumePolicyChainAPISpec
+
+
+EventGatewayVirtualClusterConsumePolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterConsumePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order. This API declares Konnect-only ordering. The parent virtual cluster and every policy must be in the same namespace as this chain. An omitted or empty namespace defaults to this chain's namespace; an explicit namespace must be the same, regardless of KongReferenceGrant permissions. Each policy must belong to the referenced EventGatewayVirtualCluster. List every consume policy exactly once, including roots and nested children. A root schemaValidation parent must precede its immediately contiguous children. Root groups may move and sibling children may reorder within their group. Deeper nesting is not supported. Ordering never changes parentPolicyRef. Existing parent requirements remain: decryptFields, maskFields and transcode require a schemaValidation parent; modifyHeaders and skipRecord may reference one. No other consume policy type accepts parentPolicyRef. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainspec)
+
+#### EventGatewayVirtualClusterConsumePolicyChainSpec
+
+
+EventGatewayVirtualClusterConsumePolicyChainSpec defines the desired state of EventGatewayVirtualClusterConsumePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent VirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterConsumePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicychain)
+
+#### EventGatewayVirtualClusterConsumePolicyChainStatus
+
+
+EventGatewayVirtualClusterConsumePolicyChainStatus defines the observed state of EventGatewayVirtualClusterConsumePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicychain)
+
 #### EventGatewayVirtualClusterConsumePolicyConfig
 
 
@@ -4651,6 +4716,7 @@ object's Konnect id is used where the Konnect API accepts it.
 _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)
+- [EventGatewayVirtualClusterConsumePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainapispec)
 
 
 
@@ -6559,6 +6625,7 @@ _Appears in:_
 - [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)
 - [EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)
 - [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
+- [EventGatewayVirtualClusterConsumePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainstatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
 - [EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)

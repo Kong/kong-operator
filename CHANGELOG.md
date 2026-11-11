@@ -265,6 +265,11 @@
 
 ### Added
 
+- Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect-only
+  Consume policy-chain ordering using Kubernetes references to the complete set
+  of root and nested policies on one virtual cluster. Parent groups remain
+  contiguous without changing `parentPolicyRef`; on-prem ordering and Kafka
+  data-path guarantees are not included.
 - Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
   Helm installation artifacts, to declare Konnect produce-policy ordering with
   Kubernetes references to the complete set of root and nested policies.
