@@ -187,6 +187,8 @@ type identicalCertIDSet struct {
 }
 
 func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Certificate, certIDToMergedCertID) {
+	// snisSeen maps every SNI to the identifier (cert+key) of the certificate serving it. The identifier, unlike
+	// the ID, does not change when certificates with identical content are merged.
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
 	certIDSets := make(map[string]identicalCertIDSet)
@@ -221,25 +223,30 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 			// have already been vetted by some previous iteration and /are/ in the seen list, but they're in the seen
 			// list because the current we retrieved from certsSeen added them
 			for _, sni := range cw.snis {
-				if seen, ok := snisSeen[sni]; !ok {
-					snisSeen[sni] = *current.cert.ID
+				seen, ok := snisSeen[sni]
+				switch {
+				case !ok:
+					snisSeen[sni] = current.identifier
 					current.cert.SNIs = append(current.cert.SNIs, new(sni))
-					// An SNI inherits the tags of the requester (e.g. Gateway listener) it was assigned from.
-					if len(cw.inheritedTags) > 0 {
-						if sniTags[current.identifier] == nil {
-							sniTags[current.identifier] = make(map[string][]string)
-						}
-						sniTags[current.identifier][sni] = cw.inheritedTags
-					}
-				} else if seen != *current.cert.ID {
+				case seen != current.identifier:
 					// TODO this should really log information about the requesting Listener or Ingress-like, which is
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
 					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/2605
 					logger.Error(nil, "Same SNI requested for multiple certs, can only serve one cert",
-						"served_secret_cert", seen,
+						"served_secret_cert", *certsSeen[seen].cert.ID,
 						"requested_secret_cert", *current.cert.ID,
 						"sni", sni)
+					continue
+				}
+				// The SNI is served by this certificate, either newly assigned above or already requested by
+				// another requester of the same certificate (e.g. an Ingress and a Gateway listener sharing a
+				// hostname). It inherits the tags of every requester (e.g. Gateway listener) asking for it.
+				if len(cw.inheritedTags) > 0 {
+					if sniTags[current.identifier] == nil {
+						sniTags[current.identifier] = make(map[string][]string)
+					}
+					sniTags[current.identifier][sni] = slices.Concat(sniTags[current.identifier][sni], cw.inheritedTags)
 				}
 			}
 			certsSeen[current.identifier] = current
