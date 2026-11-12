@@ -137,6 +137,8 @@ spec:
           value: vc-bc-a
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-bc-a
         - name: backend_cluster_name
           value: backend-bc-a
         - name: backend_cluster_namespace
@@ -215,6 +217,8 @@ spec:
           value: vc-bc-ax
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-bc-ax
         - name: backend_cluster_name
           value: backend-bc-ax
         - name: backend_cluster_namespace
@@ -402,6 +406,8 @@ spec:
           value: vc-bc-b
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-bc-b
         - name: backend_cluster_name
           value: backend-bc-b
         - name: backend_cluster_namespace
@@ -706,6 +712,8 @@ spec:
           value: vc-bc-b
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-bc-b
         - name: backend_cluster_name
           value: backend-bc-b
         - name: backend_cluster_namespace
@@ -769,6 +777,8 @@ spec:
           value: vc-bc-c
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-bc-c
         - name: backend_cluster_name
           value: backend-bc-c
         - name: backend_cluster_namespace
@@ -1055,6 +1065,8 @@ spec:
           value: vc-bc-n
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-bc-n
         - name: backend_cluster_name
           value: backend-bc-n
         - name: backend_cluster_namespace
@@ -1099,6 +1111,8 @@ spec:
           value: vc-bc-n
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-bc-n
         - name: backend_cluster_name
           value: backend-bc-n
         - name: backend_cluster_namespace

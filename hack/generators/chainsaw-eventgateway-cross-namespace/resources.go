@@ -199,6 +199,13 @@ func resources() []resource {
 				l, tb, o := listenerPolicyObjects(tag, p.rns, p.rns, p.tns, sns, p.rns, pt)
 				return built{objs: []*object{l, tb, o}, referrer: o, target: tb, hop2: hop2Of(tb, 1, p)}
 			}},
+			{name: "dst", what: "the virtual cluster it forwards to", switchable: true, build: func(tag string, p placement, pt *ports) built {
+				l := listener("listener-"+tag, p.rns, pt)
+				b := backendCluster("backend-"+tag, nsGateway)
+				v := virtualCluster("vc-"+tag, p.tns, b)
+				o := forwardPolicy("forward-"+tag, p.rns, l, v)
+				return built{objs: []*object{l, b, v, o}, referrer: o, target: v, hop2: hop2Of(v, 0, p)}
+			}},
 		}},
 		{dir: "virtualclusterpolicy", kind: "EventGatewayVirtualClusterPolicy", axes: []axis{
 			vcParentAxis(func(tag, ns string, v *object) *object { return acls("acls-"+tag, ns, v) }),

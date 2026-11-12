@@ -1247,6 +1247,8 @@ spec:
           value: vc-h
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-h
         - name: backend_cluster_name
           value: backend-h
         - name: backend_cluster_namespace
