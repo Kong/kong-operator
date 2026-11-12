@@ -53,7 +53,7 @@ jobs:
       TAG: e2e-${{ github.sha }}
       CLUSTER_NAME: e2e-chainsaw
       TEST_ID: ${{ github.run_id }}
-      GW_ADMIN_LICENSE_REQUIRED: ${{ (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway') && 'true' || 'false' }}
+      GW_ADMIN_LICENSE_REQUIRED: ${{ (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem') && 'true' || 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -67,14 +67,14 @@ jobs:
 
     - name: Calculate GWAdmin license expiration
       id: gwadmin-license-expiration
-      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
+      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem' }}
       run: |
         expiration_date="$(jq -nr 'now + (7 * 24 * 60 * 60) | strftime("%Y-%m-%d")')"
         printf 'date=%s\n' "$expiration_date" >> "$GITHUB_OUTPUT"
 
     - name: Issue the required GWAdmin license
       id: gwadmin-license
-      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
+      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem' }}
       uses: ./.github/actions/gwadmin-license
       with:
         username: ${{ secrets.GW_ADMIN_LICENSE_SIGNING_USERNAME }}
@@ -195,7 +195,7 @@ jobs:
         make test.e2e.chainsaw
 
     - name: Remove GWAdmin license and signing files
-      if: ${{ always() && (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway') }}
+      if: ${{ always() && (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem') }}
       run: bash .github/actions/gwadmin-license/issue-license.sh cleanup
 
     - name: Dump cluster diagnostics on failure or cancellation

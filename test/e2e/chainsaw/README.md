@@ -11,7 +11,8 @@ make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/konnect          # 
 
 ### GWAdmin license prerequisites
 
-`gwadmin` and `onpremeventgateway` use a separate **original compact JWS
+`gwadmin`, `onpremeventgateway`, and the onprem tests of
+`eventgateway-cross-namespace` use a separate **original compact JWS
 enveloped license**, with the `event_gateway` entitlement. A legacy Kong Enterprise
 JSON license (`KONG_LICENSE_DATA`, used by other suites) cannot replace it.
 Obtain an issued license from the authorized licensing owner and keep its file
@@ -27,6 +28,11 @@ make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/gwadmin
 
 make test.e2e.chainsaw.prereq DIRNAME=onpremeventgateway
 make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/onpremeventgateway
+
+make test.e2e.chainsaw.prereq DIRNAME=eventgateway-cross-namespace
+make test.e2e.chainsaw \
+  CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway-cross-namespace \
+  CHAINSAW_SELECTOR=gateway=onprem
 ```
 
 The preflight checks readable, non-empty input and the JWS envelope shape before
@@ -37,6 +43,10 @@ GWAdmin namespace. Both
 `onprem-cross-namespace` and `onprem-grant-revoked` use their admin namespace,
 not the data-plane namespace. Chainsaw deletes test namespaces and their Secrets
 at cleanup; it does not remove your input file.
+The separate `eventgateway-cross-namespace` suite uses a shared onprem gateway
+template: its GWAdmin and license Secret stay in the test/gateway namespace,
+not the referrer, target or third namespaces. The `gateway=konnect` tests do not
+call the GWAdmin/license template or need a GWAdmin license.
 
 Secret creation uses file input and server-side apply (no last-applied license
 annotation), without rendering a license-bearing resource in Chainsaw.
@@ -51,8 +61,9 @@ input always fails. This optional local path is **not** the CI policy.
 
 ### GWAdmin license signing in CI
 
-The `gwadmin` and `onpremeventgateway` Chainsaw jobs (including cross-namespace
-scenarios) use `.github/actions/gwadmin-license` immediately after checkout,
+The `gwadmin`, `onpremeventgateway`, and
+`eventgateway-cross-namespace-onprem` Chainsaw jobs use
+`.github/actions/gwadmin-license` immediately after checkout,
 before image downloads or cluster creation. The action requests an enveloped JWS
 at runtime from `POST https://license.api.konghq.tech/v1/license/enveloped`,
 using Basic authentication and the explicit `customer`, `license_key`,
@@ -84,6 +95,8 @@ transport, non-success HTTP responses or a non-JWS response fail the job clearly
 without printing the request/response body or credentials. There is **no**
 fork-specific skip or empty-license success: forks without repository signing
 secrets fail, consistent with the existing required Kong license E2E path.
+The separate `eventgateway-cross-namespace-konnect` matrix entry preserves its
+directory and `gateway=konnect` selector without requiring a GWAdmin license.
 Unrelated suites and fake gw-admin contract tests do not invoke this action.
 The legacy `.github/actions/kong-license` action remains unchanged and separate.
 

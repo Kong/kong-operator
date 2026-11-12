@@ -41,7 +41,7 @@ esac
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [[ "$1" == install ]]; then
   case "$DIRNAME" in
-    gwadmin|onpremeventgateway)
+    gwadmin|onpremeventgateway|eventgateway-cross-namespace)
       if [[ -n "${GW_ADMIN_LICENSE_FILE:-}" || "${GW_ADMIN_LICENSE_REQUIRED:-false}" == true ]]; then
         bash "$SCRIPT_DIR/gwadmin-license.sh" check
       fi

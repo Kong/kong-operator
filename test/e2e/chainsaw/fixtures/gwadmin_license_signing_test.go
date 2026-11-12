@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"sigs.k8s.io/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 const signingScript = "../../../../.github/actions/gwadmin-license/issue-license.sh"
@@ -311,12 +311,17 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 	var workflow struct {
+		On struct {
+			WorkflowCall struct {
+				Inputs map[string]struct{ Default string }
+			} `yaml:"workflow_call"`
+		}
 		Jobs map[string]struct {
 			Env   map[string]string
 			Steps []struct {
 				ID, Name, Uses, If, Run string
 				Env, With               map[string]string
-				ContinueOnError         bool `json:"continue-on-error"`
+				ContinueOnError         bool `yaml:"continue-on-error"`
 			}
 		}
 	}
@@ -324,10 +329,26 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 	job := workflow.Jobs["e2e-tests-chainsaw"]
+	const licensedSuites = "matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem'"
 	required := job.Env["GW_ADMIN_LICENSE_REQUIRED"]
-	if !strings.Contains(required, "matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway'") ||
-		!strings.Contains(required, "&& 'true' || 'false'") {
+	if required != "${{ ("+licensedSuites+") && 'true' || 'false' }}" {
 		t.Fatal("CI must require the license only for GWAdmin-producing suites")
+	}
+	var matrix []struct{ Suite, Dir, Selector string }
+	if err := json.Unmarshal([]byte(workflow.On.WorkflowCall.Inputs["suites"].Default), &matrix); err != nil {
+		t.Fatal(err)
+	}
+	onprem, konnect := false, false
+	for _, entry := range matrix {
+		switch entry.Suite {
+		case "eventgateway-cross-namespace-onprem":
+			onprem = entry.Dir == "eventgateway-cross-namespace" && entry.Selector == "gateway=onprem"
+		case "eventgateway-cross-namespace-konnect":
+			konnect = entry.Dir == "eventgateway-cross-namespace" && entry.Selector == "gateway=konnect"
+		}
+	}
+	if !onprem || !konnect {
+		t.Fatal("shared cross-namespace directory must retain separate onprem and Konnect matrix selectors")
 	}
 	expiration, issuer, prerequisites, tests, cleanup, download := -1, -1, -1, -1, -1, -1
 	var expirationDate string
@@ -335,7 +356,7 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 		switch {
 		case step.ID == "gwadmin-license-expiration":
 			expiration = i
-			if !strings.Contains(step.If, "matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway'") || step.ContinueOnError {
+			if step.If != "${{ "+licensedSuites+" }}" || step.ContinueOnError {
 				t.Fatal("calculate the required expiration only for GWAdmin-producing suites")
 			}
 			for _, timezone := range []string{"Pacific/Kiritimati", "Etc/GMT+12"} {
@@ -366,9 +387,9 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 			}
 		case step.ID == "gwadmin-license":
 			issuer = i
-			if step.Uses != "./.github/actions/gwadmin-license" || !strings.Contains(step.If, "matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway'") ||
+			if step.Uses != "./.github/actions/gwadmin-license" || step.If != "${{ "+licensedSuites+" }}" ||
 				strings.Contains(step.If, "fork") || step.ContinueOnError || len(step.With) != 5 {
-				t.Fatal("issuer must run for both GWAdmin suites, with all explicit inputs and no fork-specific skip")
+				t.Fatal("issuer must run for all GWAdmin suites, with all explicit inputs and no fork-specific skip")
 			}
 			if step.With["expiration-date"] != "${{ steps.gwadmin-license-expiration.outputs.date }}" {
 				t.Fatal("signing must receive the automatically computed date, not a repository variable")
@@ -378,14 +399,22 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 			if step.Env["GW_ADMIN_LICENSE_FILE"] != "${{ steps.gwadmin-license.outputs.license-file }}" {
 				t.Fatal("suite preflight must receive the issued file")
 			}
+			if step.Env["DIRNAME"] != "${{ matrix.dir || matrix.suite }}" ||
+				step.Run != "make test.e2e.chainsaw.prereq DIRNAME=\"$DIRNAME\"" {
+				t.Fatal("prerequisites must preserve the shared suite directory, not use the matrix display name")
+			}
 		case step.ID == "chainsaw-tests":
 			tests = i
 			if step.Env["GW_ADMIN_LICENSE_FILE"] != "${{ steps.gwadmin-license.outputs.license-file }}" {
 				t.Fatal("per-namespace fixtures must receive the issued file")
 			}
+			if step.Env["CHAINSAW_TEST_DIR"] != "test/e2e/chainsaw/${{ matrix.dir || matrix.suite }}" ||
+				step.Env["CHAINSAW_SELECTOR"] != "${{ matrix.selector }}" {
+				t.Fatal("test invocation must preserve the matrix directory and gateway selector")
+			}
 		case step.Name == "Remove GWAdmin license and signing files":
 			cleanup = i
-			if !strings.Contains(step.If, "always()") || step.Run != "bash .github/actions/gwadmin-license/issue-license.sh cleanup" {
+			if step.If != "${{ always() && ("+licensedSuites+") }}" || step.Run != "bash .github/actions/gwadmin-license/issue-license.sh cleanup" {
 				t.Fatal("license/signing material must be cleaned up on failure and cancellation too")
 			}
 		case strings.HasPrefix(step.Uses, "actions/download-artifact@"):

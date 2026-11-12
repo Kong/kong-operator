@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -175,11 +176,20 @@ func TestGWAdminLicenseSecret(t *testing.T) {
 }
 
 func TestGWAdminLicenseDispatcher(t *testing.T) {
-	for _, suite := range []string{"gwadmin", "onpremeventgateway", "gateway"} {
-		t.Run(suite, func(t *testing.T) {
-			cmd, dir := licenseCommand(t, "run-prereq.sh", "install", "", "DIRNAME="+suite, "GW_ADMIN_LICENSE_REQUIRED=true")
+	for _, tc := range []struct {
+		suite    string
+		required bool
+	}{
+		{suite: "gwadmin", required: true},
+		{suite: "onpremeventgateway", required: true},
+		{suite: "eventgateway-cross-namespace", required: true},
+		{suite: "eventgateway-cross-namespace"},
+		{suite: "gateway", required: true},
+	} {
+		t.Run(tc.suite+"-required-"+strconv.FormatBool(tc.required), func(t *testing.T) {
+			cmd, dir := licenseCommand(t, "run-prereq.sh", "install", "", "DIRNAME="+tc.suite, "GW_ADMIN_LICENSE_REQUIRED="+strconv.FormatBool(tc.required))
 			output, err := cmd.CombinedOutput()
-			if suite == "gateway" {
+			if tc.suite == "gateway" || !tc.required {
 				if err != nil || !strings.Contains(string(output), "no suite-specific prerequisites") {
 					t.Fatalf("unrelated suite must not require GWAdmin license: %v %s", err, output)
 				}
@@ -190,6 +200,109 @@ func TestGWAdminLicenseDispatcher(t *testing.T) {
 				t.Fatal("dispatcher must preflight before cluster writes")
 			}
 		})
+	}
+}
+
+func TestGWAdminLicenseCrossNamespaceTemplate(t *testing.T) {
+	const root = "../eventgateway-cross-namespace"
+	data, err := os.ReadFile(filepath.Join(root, "_step_templates", "apply-onpremEventGateway.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var template struct {
+		Spec struct {
+			Try []struct {
+				Script struct {
+					Content string
+					Env     []struct{ Name, Value string }
+				}
+				Apply struct {
+					Resource struct {
+						Kind     string
+						Metadata struct{ Namespace string }
+						Spec     struct {
+							License struct {
+								SecretRef struct{ Name, Key string }
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if err := yaml.Unmarshal(data, &template); err != nil {
+		t.Fatal(err)
+	}
+	if len(template.Spec.Try) < 2 {
+		t.Fatal("shared onprem template must install the license before creating the GWAdmin")
+	}
+	script := template.Spec.Try[0].Script
+	resource := template.Spec.Try[1].Apply.Resource
+	if script.Content != "bash ../../../fixtures/gwadmin-license.sh install" ||
+		len(script.Env) != 1 || script.Env[0].Name != "NAMESPACE" || script.Env[0].Value != "($namespace)" ||
+		resource.Kind != "GWAdmin" || resource.Metadata.Namespace != "($namespace)" ||
+		resource.Spec.License.SecretRef.Name != "gw-admin-license" || resource.Spec.License.SecretRef.Key != "license" {
+		t.Fatal("shared template must provision the referenced Secret in the GWAdmin namespace, not a referenced object's namespace")
+	}
+	for _, gateway := range []string{"onprem", "konnect"} {
+		files, err := filepath.Glob(filepath.Join(root, "*", gateway, "chainsaw-test.yaml"))
+		if err != nil || len(files) == 0 {
+			t.Fatalf("find nested cross-namespace scenarios: %v", err)
+		}
+		for _, file := range files {
+			t.Run(file, func(t *testing.T) {
+				data, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var test struct {
+					Metadata struct{ Labels map[string]string }
+					Spec     struct {
+						Steps []struct {
+							Use struct{ Template string }
+						}
+					}
+				}
+				if err := yaml.Unmarshal(data, &test); err != nil {
+					t.Fatal(err)
+				}
+				if test.Metadata.Labels["gateway"] != gateway {
+					t.Fatal("scenario must preserve its CI gateway selector")
+				}
+				usesOnprem := false
+				for _, step := range test.Spec.Steps {
+					usesOnprem = usesOnprem || step.Use.Template == "../../_step_templates/apply-onpremEventGateway.yaml"
+				}
+				if usesOnprem != (gateway == "onprem") {
+					t.Fatal("only onprem scenarios must reach the shared GWAdmin/license template")
+				}
+				if gateway != "onprem" {
+					return
+				}
+				cmd, dir := licenseCommand(t, "", "", testLicense, "GW_ADMIN_LICENSE_REQUIRED=true")
+				cmd.Args = []string{"bash", "-s"}
+				cmd.Stdin = strings.NewReader(script.Content)
+				cmd.Dir = filepath.Dir(file)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					t.Fatalf("license hook failed from the nested test directory: %v %s", err, output)
+				}
+				if strings.Contains(string(output), testLicense) {
+					t.Fatal("nested template must not render the license")
+				}
+				data, err = os.ReadFile(filepath.Join(dir, "secret.json"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var secret struct{ Metadata struct{ Namespace string } }
+				if err := json.Unmarshal(data, &secret); err != nil {
+					t.Fatal(err)
+				}
+				if secret.Metadata.Namespace != "test-admin" {
+					t.Fatal("nested script must preserve the GWAdmin namespace")
+				}
+			})
+		}
 	}
 }
 
