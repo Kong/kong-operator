@@ -353,11 +353,9 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
-									},
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
 								},
 							},
 						},
@@ -371,17 +369,15 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-									{
-										Name:  "FallbackConfiguration",
-										State: operatorv2beta1.FeatureGateStateEnabled,
-									},
+							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+								{
+									Name:  "FallbackConfiguration",
+									State: operatorv2beta1.FeatureGateStateEnabled,
 								},
-								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
-									},
+							},
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
 								},
 							},
 						},
