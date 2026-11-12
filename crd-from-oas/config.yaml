@@ -361,6 +361,29 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
+        cel:
+          spec:
+            apiSpec:
+              config:
+                # The OAS describes plain certificate names on the same AI
+                # Gateway; the CR takes in-cluster object references.
+                caCertificates:
+                  _description: |-
+                    The CA certificates used to verify the TLS certificate of the
+                    upstream agent endpoint.
+                    Each entry references an AIGatewayCACertificate in the cluster.
+                    When `namespace` differs from the AIGatewayAgent's namespace, a
+                    KongReferenceGrant in the target namespace must permit the
+                    reference.
+                certificates:
+                  _description: |-
+                    Client certificates used for mutual TLS (mTLS) authentication with
+                    the upstream agent endpoint.
+                    Each entry references an AIGatewayCertificate in the cluster.
+                    When `namespace` differs from the AIGatewayAgent's namespace, a
+                    KongReferenceGrant in the target namespace must permit the
+                    reference.
+                    At most one certificate may be configured.
         dataSources:
           # The proxy's basic-auth password. Same shared type as AIGatewayModel
           # and AIGatewayMCPServer.
