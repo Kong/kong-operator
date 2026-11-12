@@ -194,13 +194,13 @@ func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
 	}`), &entities))
 	ordered := []uuid.UUID{entities.VirtualClusters[0].Id}
 	last := &lastGoodConfig{
-		revision:               3,
-		config:                 gatewayConfig{Entities: entities},
-		orderedClusterPolicies: ordered,
+		revision:        3,
+		config:          gatewayConfig{Entities: entities},
+		orderedPolicies: ordered,
 	}
 
 	for name, current := range map[string]configuration{
-		"the current configuration orders them too":       {namespace: ns, orderedClusterPolicies: ordered},
+		"the current configuration orders them too":       {namespace: ns, orderedPolicies: ordered},
 		"the current configuration no longer orders them": {namespace: ns},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -208,14 +208,14 @@ func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
 			require.NoError(t, err)
 
 			held := withGWAdminDefaults(entities)
-			same, err := sameEntities(held, pushing.pushedKey, pushing.orderedClusterPolicies...)
+			same, err := sameEntities(held, pushing.pushedKey, pushing.orderedPolicies...)
 			require.NoError(t, err)
 			assert.True(t, same, "a pod holding the last entities isn't pushed them again")
 
 			held.VirtualClusters = slices.Clone(held.VirtualClusters)
 			held.VirtualClusters[0].ClusterPolicies = slices.Clone(held.VirtualClusters[0].ClusterPolicies)
 			slices.Reverse(held.VirtualClusters[0].ClusterPolicies)
-			same, err = sameEntities(held, pushing.pushedKey, pushing.orderedClusterPolicies...)
+			same, err = sameEntities(held, pushing.pushedKey, pushing.orderedPolicies...)
 			require.NoError(t, err)
 			assert.False(t, same, "a pod holding them in another order is")
 		})

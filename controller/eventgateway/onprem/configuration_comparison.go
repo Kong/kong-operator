@@ -31,8 +31,8 @@ import (
 // sameEntities reports whether gw-admin holds the entities pushed, pushedKey
 // being their comparisonKey once withGWAdminDefaults applied: a field left
 // out and the default gw-admin sets on it are the same.
-func sameEntities(held gwadminapi.GatewayEntitySet, pushedKey []byte, orderedClusterPolicies ...uuid.UUID) (bool, error) {
-	heldKey, err := comparisonKey(held, orderedClusterPolicies...)
+func sameEntities(held gwadminapi.GatewayEntitySet, pushedKey []byte, orderedPolicies ...uuid.UUID) (bool, error) {
+	heldKey, err := comparisonKey(held, orderedPolicies...)
 	if err != nil {
 		return false, fmt.Errorf("failed to encode the entities gw-admin holds: %w", err)
 	}
@@ -42,15 +42,15 @@ func sameEntities(held gwadminapi.GatewayEntitySet, pushedKey []byte, orderedClu
 // comparisonKey returns the entities as sameEntities compares them: their
 // JSON encoding, as gw-admin receives them, as the entities hold times, on
 // whose unexported fields equality.Semantic.DeepEqual panics. Each list is
-// sorted by id, except cluster policies with an explicit chain, and a missing
-// list is empty.
+// sorted by id, except the policies a chain orders, and a missing list is
+// empty.
 // The encoding goes through a generic value, which sorts the keys of every
 // object: an entity holding a [json.RawMessage], like a schema registry or a
 // union such as the destination of a virtual cluster or a policy, keeps its
 // nested fields in the order gw-admin sends them, while editedJSON sorts
 // those it edits.
-func comparisonKey(e gwadminapi.GatewayEntitySet, orderedClusterPolicies ...uuid.UUID) ([]byte, error) {
-	v, err := jsonValue(withEmptyLists(sortedByID(withoutDestinationNames(e), orderedClusterPolicies...)))
+func comparisonKey(e gwadminapi.GatewayEntitySet, orderedPolicies ...uuid.UUID) ([]byte, error) {
+	v, err := jsonValue(withEmptyLists(sortedByID(withoutDestinationNames(e), orderedPolicies...)))
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +93,9 @@ func withoutDestinationNames(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEn
 }
 
 // sortedByID returns the entities with each list sorted by id, the policies
-// of a virtual cluster and of a listener included, except explicitly ordered
-// cluster-policy scopes: gw-admin returns a child policy right after its parent.
-func sortedByID(e gwadminapi.GatewayEntitySet, orderedClusterPolicies ...uuid.UUID) gwadminapi.GatewayEntitySet {
+// of a virtual cluster and of a listener included, except those a chain
+// orders: gw-admin returns a child policy right after its parent.
+func sortedByID(e gwadminapi.GatewayEntitySet, orderedPolicies ...uuid.UUID) gwadminapi.GatewayEntitySet {
 	e.BackendClusters = byID(e.BackendClusters, func(bc gwadminapi.EventGatewayBackendClusterOnPrem) gwadminapi.UUIDv4 { return bc.Id })
 	e.TlsTrustBundles = byID(e.TlsTrustBundles, func(b gwadminapi.EventGatewayTLSTrustBundleOnPrem) gwadminapi.UUIDv4 { return b.Id })
 	e.SchemaRegistries = byID(e.SchemaRegistries, func(r gwadminapi.EventGatewaySchemaRegistryOnPrem) gwadminapi.UUIDv4 { return r.Id })
@@ -103,7 +103,7 @@ func sortedByID(e gwadminapi.GatewayEntitySet, orderedClusterPolicies ...uuid.UU
 	e.VirtualClusters = byID(e.VirtualClusters, func(vc gwadminapi.EventGatewayVirtualClusterOnPrem) gwadminapi.UUIDv4 { return vc.Id })
 	for i := range e.VirtualClusters {
 		vc := &e.VirtualClusters[i]
-		if !slices.Contains(orderedClusterPolicies, vc.Id) {
+		if !slices.Contains(orderedPolicies, vc.Id) {
 			vc.ClusterPolicies = byID(vc.ClusterPolicies, func(p gwadminapi.EventGatewayClusterPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
 		}
 		vc.ConsumePolicies = byID(vc.ConsumePolicies, func(p gwadminapi.EventGatewayConsumePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
@@ -112,7 +112,9 @@ func sortedByID(e gwadminapi.GatewayEntitySet, orderedClusterPolicies ...uuid.UU
 	e.Listeners = byID(e.Listeners, func(l gwadminapi.EventGatewayListenerOnPrem) gwadminapi.UUIDv4 { return l.Id })
 	for i := range e.Listeners {
 		l := &e.Listeners[i]
-		l.Policies = byID(l.Policies, func(p gwadminapi.EventGatewayListenerPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
+		if !slices.Contains(orderedPolicies, l.Id) {
+			l.Policies = byID(l.Policies, func(p gwadminapi.EventGatewayListenerPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
+		}
 	}
 	return e
 }

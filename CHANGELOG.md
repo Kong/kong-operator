@@ -211,6 +211,11 @@
   description and enabled flag to avoid repeatedly pushing an unchanged
   configuration.
   [#6395](https://github.com/Kong/kong-operator/pull/6395)
+- `EventGatewayListenerPolicyChain` now orders the policies of the listeners of
+  an `OnPremEventGateway` too, as `EventGatewayVirtualClusterPolicyChain` does
+  those of its virtual clusters: an invalid owning chain pauses the gateway's
+  configuration updates, and deleting it restores the default policy order.
+  [#6630](https://github.com/Kong/kong-operator/pull/6630)
 - Event Gateway entities can reference their parent, the entities they use
   (schema registries, static keys, TLS trust bundles, parent policies) and the
   Secrets they read in another namespace, with a `KongReferenceGrant` in its

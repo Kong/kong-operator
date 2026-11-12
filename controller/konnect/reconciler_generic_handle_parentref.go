@@ -186,9 +186,42 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 
 	parentRef := obj.GetParentRef()
 
+	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
+	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not
+	// Konnect-managed either: clear the conditions the Konnect reconciler set on
+	// it and stop before any Konnect interaction. Returning the sentinel error
+	// (instead of a zero result) is what makes handleRefResult stop the
+	// reconciliation.
+	// The check covers the parent's ancestors too: an EventGatewayVirtualClusterPolicy
+	// is out of scope when its virtual cluster's backend cluster targets an
+	// OnPremEventGateway. It runs before the KongReferenceGrant check, which
+	// only applies to Konnect-managed entities.
+	parent, nn, err := getParentForRef[p, pPTr](ctx, cl, parentRef, obj.GetNamespace())
+	if err == nil {
+		if skipping := skippingAncestor(ctx, cl, parent); skipping != nil {
+			// The OnPremEventGateway controller owns the status of the entities
+			// of its gateways, and clears what the Konnect reconciler set on one
+			// before, e.g. while its on-prem ancestor did not exist yet: nothing
+			// is written here. For other on-prem gateways, the Konnect reconciler
+			// clears it itself.
+			if !targetsOnPremEventGateway(skipping) {
+				if res, errStatus := removeKonnectConditions(ctx, cl, obj); errStatus != nil || !res.IsZero() {
+					return res, errStatus
+				}
+			}
+			return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
+				Reference: nn,
+				TypeName:  parentType,
+			}
+		}
+	}
+
 	// A listener policy chain must be in the namespace of its listener. A
 	// cluster policy chain may reference a virtual cluster of another
 	// namespace, with a KongReferenceGrant, checked below as for any parent.
+	// Checked once the parent is known to be Konnect-managed: the
+	// OnPremEventGateway controller owns the status of a chain of an on-prem
+	// listener, and would clear what is written here.
 	if chain, isChain := obj.(policyChain); isChain && !policychain.CrossNamespaceAllowed(chain) &&
 		parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
 		parentRef.NamespacedRef != nil && parentRef.NamespacedRef.Namespace != nil &&
@@ -219,36 +252,6 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 			}
 		}
 		return ctrl.Result{}, err
-	}
-
-	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
-	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not
-	// Konnect-managed either: clear the conditions the Konnect reconciler set on
-	// it and stop before any Konnect interaction. Returning the sentinel error
-	// (instead of a zero result) is what makes handleRefResult stop the
-	// reconciliation.
-	// The check covers the parent's ancestors too: an EventGatewayVirtualClusterPolicy
-	// is out of scope when its virtual cluster's backend cluster targets an
-	// OnPremEventGateway. It runs before the KongReferenceGrant check, which
-	// only applies to Konnect-managed entities.
-	parent, nn, err := getParentForRef[p, pPTr](ctx, cl, parentRef, obj.GetNamespace())
-	if err == nil {
-		if skipping := skippingAncestor(ctx, cl, parent); skipping != nil {
-			// The OnPremEventGateway controller owns the status of the entities
-			// of its gateways, and clears what the Konnect reconciler set on one
-			// before, e.g. while its on-prem ancestor did not exist yet: nothing
-			// is written here. For other on-prem gateways, the Konnect reconciler
-			// clears it itself.
-			if !targetsOnPremEventGateway(skipping) {
-				if res, errStatus := removeKonnectConditions(ctx, cl, obj); errStatus != nil || !res.IsZero() {
-					return res, errStatus
-				}
-			}
-			return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
-				Reference: nn,
-				TypeName:  parentType,
-			}
-		}
 	}
 
 	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, obj, parentRef, obj.GetParentGVK()); err != nil || !res.IsZero() {
