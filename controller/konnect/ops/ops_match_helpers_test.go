@@ -50,7 +50,7 @@ func TestMatchStringField(t *testing.T) {
 func TestMatchOptionalStringField(t *testing.T) {
 	t.Run("skips comparison when want is empty", func(t *testing.T) {
 		assert.True(t, matchOptionalStringField("", "server-populated"))
-		assert.True(t, matchOptionalStringField[string, *string]("", new("server-populated")))
+		assert.True(t, matchOptionalStringField("", new("server-populated")))
 
 		var nilPtr *string
 		assert.True(t, matchOptionalStringField(nilPtr, "server-populated"))
@@ -58,7 +58,7 @@ func TestMatchOptionalStringField(t *testing.T) {
 
 	t.Run("compares when want is set", func(t *testing.T) {
 		assert.True(t, matchOptionalStringField("value", "value"))
-		assert.True(t, matchOptionalStringField[string, *string]("value", new("value")))
+		assert.True(t, matchOptionalStringField("value", new("value")))
 		assert.False(t, matchOptionalStringField("value", "other"))
 		assert.False(t, matchOptionalStringField[string, *string]("value", nil))
 	})
