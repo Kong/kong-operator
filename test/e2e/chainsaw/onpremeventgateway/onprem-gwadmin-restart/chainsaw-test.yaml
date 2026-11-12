@@ -42,6 +42,9 @@ spec:
       value: header_value
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Data-plane-ready
       try:
         - apply:

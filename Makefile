@@ -629,7 +629,7 @@ tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in 
 test: test.unit
 
 UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
-	./test/mocks/sdkmocks ./scripts/apitypes-funcs ./hack/generators/validating-policy \
+	./test/mocks/sdkmocks ./test/e2e/chainsaw/fixtures ./scripts/apitypes-funcs ./hack/generators/validating-policy \
 	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
@@ -886,6 +886,10 @@ CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
 # CHAINSAW_SELECTOR, when set, runs only the tests whose labels match it, e.g.
 # gateway=onprem.
 CHAINSAW_SELECTOR ?=
+
+.PHONY: test.e2e.chainsaw.gwadmin-license
+test.e2e.chainsaw.gwadmin-license: ## Check GW_ADMIN_LICENSE_FILE without contacting Kubernetes.
+	bash $(CHAINSAW_FIXTURES_DIR)/gwadmin-license.sh check
 
 # DIRNAME is passed to the dispatcher via the environment (never substituted into the
 # recipe), so its value can never be parsed as a shell command.

@@ -29,6 +29,9 @@ spec:
     - name: work_dir
       value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Create-cert-manager-certificates-and-gwadmin
       try:
         # public-ca settles before it issues cp-cert.

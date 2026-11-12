@@ -26,6 +26,9 @@ spec:
       value: gateway-operator.konghq.com/onprem-eventgateway-in-use
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Policies-name-their-registry
       try:
         - apply:

@@ -36,6 +36,9 @@ spec:
       value: listener-tls
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Event-gateway
       try:
         - apply:
