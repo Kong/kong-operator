@@ -20,6 +20,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
@@ -136,6 +137,7 @@ func TestReconcileInvalidClientCertificateCleansOldBindings(t *testing.T) {
 					break
 				}
 				require.NoError(t, err)
+				require.Equal(t, ctrlconsts.RequeueWithoutBackoff, result.RequeueAfter)
 				if apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(oldService), &configurationv1alpha1.KongService{})) {
 					break
 				}
