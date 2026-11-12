@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
@@ -361,4 +362,74 @@ func TestSetStatusAddresses(t *testing.T) {
 			assert.Equal(t, tc.want, egdp.Status.Addresses)
 		})
 	}
+}
+
+func TestCheckKonnectEventGatewayEndpoints(t *testing.T) {
+	const (
+		publicServerURL  = "https://us.api.konghq.com"
+		privateServerURL = "https://us.svc.konghq.tech/api"
+	)
+
+	tests := []struct {
+		name            string
+		serverURL       string
+		domain          *string
+		wantErr         bool
+		wantErrContains string
+	}{
+		{name: "public", serverURL: publicServerURL},
+		{name: "public with a port", serverURL: "https://us.api.konghq.tech:443"},
+		{name: "trailing slash only", serverURL: "https://us.api.konghq.tech/"},
+		{name: "empty server URL in status", serverURL: ""},
+		{name: "private", serverURL: privateServerURL, wantErr: true, wantErrContains: privateServerURL},
+		{name: "private with a port", serverURL: "https://us.svc.konghq.tech:443/api", wantErr: true, wantErrContains: "us.svc.konghq.tech:443/api"},
+		{name: "explicit domain", serverURL: privateServerURL, domain: new("us.svc.konghq.tech")},
+		{name: "explicit empty domain", serverURL: privateServerURL, domain: new(""), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain that carries a path", serverURL: privateServerURL, domain: new("us.svc.konghq.tech/api"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain with a scheme", serverURL: privateServerURL, domain: new("https://konghq.tech"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain with a port", serverURL: privateServerURL, domain: new("proxy.corp:8443")},
+		{name: "explicit domain with a port and a path", serverURL: privateServerURL, domain: new("proxy.corp:8443/api"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain with a non-numeric port", serverURL: privateServerURL, domain: new("proxy.corp:http"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain that is not a host", serverURL: privateServerURL, domain: new("not a host"), wantErr: true, wantErrContains: privateServerURL},
+		{name: "explicit domain that is an IP", serverURL: privateServerURL, domain: new("10.0.0.1"), wantErr: true, wantErrContains: privateServerURL},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			keg := &konnectv1alpha1.KonnectEventGateway{}
+			keg.Status.ServerURL = tc.serverURL
+
+			egdp := &eventgatewayv1alpha1.KegDataPlane{}
+			if tc.domain != nil {
+				egdp.Spec.Config = &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Konnect: &eventgatewayv1alpha1.KonnectConfig{Domain: tc.domain},
+				}
+			}
+
+			err := checkKonnectEventGatewayEndpoints(egdp, keg)
+			if !tc.wantErr {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.ErrorContains(t, err, tc.wantErrContains)
+			assert.Contains(t, err.Error(), "spec.config.konnect.domain")
+		})
+	}
+}
+
+// TestCheckKonnectEventGatewayEndpointsUnexpectedObject asserts the verdict fails
+// closed on an object of another kind instead of calling the address usable.
+func TestCheckKonnectEventGatewayEndpointsUnexpectedObject(t *testing.T) {
+	err := checkKonnectEventGatewayEndpoints(
+		&eventgatewayv1alpha1.KegDataPlane{},
+		&eventgatewayv1alpha1.OnPremEventGateway{},
+	)
+	require.ErrorContains(t, err, "unexpected control plane object")
+
+	err = checkKonnectEventGatewayEndpoints(
+		&aigatewayv1alpha1.AIGatewayDataPlane{},
+		&konnectv1alpha1.KonnectEventGateway{},
+	)
+	require.ErrorContains(t, err, "unexpected DataPlane object")
 }
