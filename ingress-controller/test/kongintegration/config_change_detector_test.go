@@ -61,13 +61,18 @@ func TestKongGatewayConfigurationChangeDetector_DetectsDrift(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, changed, "out-of-band configuration drift must force a push")
 
-	// Kong re-stamps created_at on every push, so the hash never reverts to
-	// lastPushedHash even when the same content is pushed again. Recording the
-	// newly reported hash (as the operator does after its own push) stops the
-	// detector from reporting drift.
+	driftStatus, err := kongClient.Status(ctx)
+	require.NoError(t, err)
+
+	// Kong re-stamps created_at on every push, so the hash of the restored
+	// content differs from the drift hash. Recording the newly reported hash (as
+	// the operator does after its own push) stops the detector from reporting
+	// drift.
+	pushConfig(t, config)
 	status, err = kongClient.Status(ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, status.ConfigurationHash)
+	require.NotEqual(t, driftStatus.ConfigurationHash, status.ConfigurationHash, "a push must change the reported hash")
 	changed, err = detector.HasConfigurationChanged(ctx, sameSHA, sameSHA, false, status.ConfigurationHash, true, kongClient)
 	require.NoError(t, err)
 	require.False(t, changed, "a recorded hash that matches the reported hash must not force a push")
