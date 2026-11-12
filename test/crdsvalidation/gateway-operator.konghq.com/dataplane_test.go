@@ -536,6 +536,24 @@ func TestDataplane(t *testing.T) {
 				},
 			},
 			{
+				Name: "service ingress type defaults to LoadBalancer when services is empty",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{},
+							},
+						},
+					},
+				},
+				Assert: func(t *testing.T, dp *operatorv1beta1.DataPlane) {
+					require.NotNil(t, dp.Spec.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, dp.Spec.Network.Services.Ingress.Type)
+				},
+			},
+			{
 				Name: "service ingress type LoadBalancer",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),

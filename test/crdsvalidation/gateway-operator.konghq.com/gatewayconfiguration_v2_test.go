@@ -158,6 +158,23 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 			},
 			{
+				Name: "services ingress type defaults to LoadBalancer when services is empty",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{},
+							},
+						},
+					},
+				},
+				Assert: func(t *testing.T, gc *operatorv2beta1.GatewayConfiguration) {
+					require.NotNil(t, gc.Spec.DataPlaneOptions.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, gc.Spec.DataPlaneOptions.Network.Services.Ingress.Type)
+				},
+			},
+			{
 				Name: "specifying resources.PodDisruptionBudget",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
