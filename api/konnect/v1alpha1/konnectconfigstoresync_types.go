@@ -338,8 +338,8 @@ type KonnectConfigStoreSyncEntryStatus struct {
 	// +kubebuilder:validation:Pattern=`^sha256:[0-9a-f]{64}$`
 	Hash string `json:"hash,omitempty"`
 
-	// ValueBytes is the size in bytes of the decoded value last written,
-	// measured against the 5120-byte entry value cap.
+	// ValueBytes is the size in bytes of the decoded value last written.
+	// The value cap is 8192 Unicode characters, so this may exceed 8192 bytes.
 	//
 	// +optional
 	ValueBytes int64 `json:"valueBytes,omitempty"`
