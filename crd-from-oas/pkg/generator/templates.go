@@ -1822,24 +1822,26 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- else if .ArrayKey}}
 	// {{.Path}} carries a CR reference: inject the resolved Konnect values into
 	// each element of the "{{.ArrayKey}}" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.{{if .OptionalAncestor}} A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.{{end}}
 {{- else if .ObjectWrap}}
 	// {{.Path}} carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors.{{if .OptionalAncestor}} A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.{{end}}
 {{- else if .ItemObjectKey}}
 	// {{.Path}} carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "{{.ItemObjectKey}}". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "{{.ItemObjectKey}}".{{if .OptionalAncestor}} A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.{{end}}
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.{{if .OptionalAncestor}} A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.{{end}}
 {{- end}}
 {{- if .Cond}}
 	if {{.Cond}} {

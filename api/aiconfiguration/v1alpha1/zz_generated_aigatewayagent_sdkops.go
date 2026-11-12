@@ -756,9 +756,7 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 		payload["access"] = access
 	}
 	// spec.apiSpec.access.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	access, _ := payload["access"].(map[string]any)
 	if access == nil {
 		access = map[string]any{}
@@ -770,9 +768,7 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 	access["auth_strategies"] = resolvedAccessAuthStrategies
 	payload["access"] = access
 	// spec.apiSpec.config.caCertificates carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	config, _ := payload["config"].(map[string]any)
 	if config == nil {
 		config = map[string]any{}
@@ -784,9 +780,7 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 	config["ca_certificates"] = resolvedConfigCaCertificates
 	payload["config"] = config
 	// spec.apiSpec.config.certificates carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	config2, _ := payload["config"].(map[string]any)
 	if config2 == nil {
 		config2 = map[string]any{}
@@ -859,9 +853,7 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 		payload["access"] = access
 	}
 	// spec.apiSpec.access.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	access, _ := payload["access"].(map[string]any)
 	if access == nil {
 		access = map[string]any{}
@@ -873,9 +865,7 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 	access["auth_strategies"] = resolvedAccessAuthStrategies
 	payload["access"] = access
 	// spec.apiSpec.config.caCertificates carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	config, _ := payload["config"].(map[string]any)
 	if config == nil {
 		config = map[string]any{}
@@ -887,9 +877,7 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 	config["ca_certificates"] = resolvedConfigCaCertificates
 	payload["config"] = config
 	// spec.apiSpec.config.certificates carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	config2, _ := payload["config"].(map[string]any)
 	if config2 == nil {
 		config2 = map[string]any{}

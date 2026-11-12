@@ -1313,9 +1313,7 @@ func (obj *AIGatewayAuthStrategy) ToCreateAIGatewayAuthStrategyRequest(ctx conte
 	}
 	// spec.apiSpec.key-auth.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.KeyAuth != nil {
 		keyAuth, _ := payload["key-auth"].(map[string]any)
 		if keyAuth == nil {
@@ -1334,9 +1332,7 @@ func (obj *AIGatewayAuthStrategy) ToCreateAIGatewayAuthStrategyRequest(ctx conte
 	}
 	// spec.apiSpec.openid-connect.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
 		openidConnect, _ := payload["openid-connect"].(map[string]any)
 		if openidConnect == nil {
@@ -1369,9 +1365,7 @@ func (obj *AIGatewayAuthStrategy) ToUpdateAIGatewayAuthStrategyRequest(ctx conte
 	}
 	// spec.apiSpec.key-auth.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.KeyAuth != nil {
 		keyAuth, _ := payload["key-auth"].(map[string]any)
 		if keyAuth == nil {
@@ -1390,9 +1384,7 @@ func (obj *AIGatewayAuthStrategy) ToUpdateAIGatewayAuthStrategyRequest(ctx conte
 	}
 	// spec.apiSpec.openid-connect.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
 		openidConnect, _ := payload["openid-connect"].(map[string]any)
 		if openidConnect == nil {

@@ -977,8 +977,9 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
 		schemaValidation, _ := payload["schema_validation"].(map[string]any)
 		if schemaValidation != nil {
@@ -1002,8 +1003,9 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.Avro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.Avro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.Avro.SchemaSource.Referenc != nil {
 		transcode, _ := payload["transcode"].(map[string]any)
 		if transcode != nil {
@@ -1035,8 +1037,9 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.transcode.config.json.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.JSON != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.JSON.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.JSON.SchemaSource.Referenc != nil {
 		transcode2, _ := payload["transcode"].(map[string]any)
 		if transcode2 != nil {
@@ -1087,8 +1090,9 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ConsumeSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
 		schemaValidation, _ := payload["schema_validation"].(map[string]any)
 		if schemaValidation != nil {
@@ -1112,8 +1116,9 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.Avro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.Avro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.Avro.SchemaSource.Referenc != nil {
 		transcode, _ := payload["transcode"].(map[string]any)
 		if transcode != nil {
@@ -1145,8 +1150,9 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.transcode.config.json.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.JSON != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.JSON.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Config.JSON.SchemaSource.Referenc != nil {
 		transcode2, _ := payload["transcode"].(map[string]any)
 		if transcode2 != nil {
