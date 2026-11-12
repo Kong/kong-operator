@@ -278,6 +278,18 @@ func TestKongReferenceGrant(t *testing.T) {
 				}.RunWithConfig(t, cfg, scheme)
 			})
 		}
+
+		// These kinds are in configuration.konghq.com: a grant naming them in
+		// konnect.konghq.com never matched any reference.
+		for _, kind := range []string{"EventGatewayBackendCluster", "EventGatewayListener", "EventGatewayVirtualCluster"} {
+			t.Run(kind+" in the konnect.konghq.com group is rejected", func(t *testing.T) {
+				c := kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", configurationGroup, "EventGatewayListenerPolicy",
+					configurationv1alpha1.ReferenceGrantTo{Group: "konnect.konghq.com", Kind: configurationv1alpha1.Kind(kind)})
+				c.Name = "is rejected"
+				c.ExpectedErrorMessage = new("Event Gateway entities are in the 'configuration.konghq.com' group")
+				common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{c}.RunWithConfig(t, cfg, scheme)
+			})
+		}
 	})
 
 	toKonnectCP := configurationv1alpha1.ReferenceGrantTo{
