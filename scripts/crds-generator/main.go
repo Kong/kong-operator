@@ -154,9 +154,6 @@ func main() {
 			if err := simplifyAllOf(crdRaw.Spec.Versions[i].Schema.OpenAPIV3Schema); err != nil {
 				log.Fatalf("failed to simplify schema of %s %s: %s", groupKind.Group, crdRaw.Spec.Versions[i].Name, err)
 			}
-			for _, fieldPath := range keepOptionalFields[crdRaw.Name] {
-				dropRequiredField(crdRaw.Spec.Versions[i].Schema.OpenAPIV3Schema, fieldPath...)
-			}
 		}
 
 		channels := channelsFromAnnotations(crdRaw)
@@ -212,40 +209,6 @@ resources:
 			log.Fatalf("failed to write kustomization file: %s", err)
 		}
 	}
-}
-
-// keepOptionalFields lists fields of SDK types embedded in our API that
-// controller-gen generates as required because the SDK tags them without
-// `omitempty`, but that must stay optional in the CRD. The SDK marks these
-// fields with a `default:` tag and always serializes them, so a nil value is a
-// valid request. Requiring them in the CRD would reject existing objects on
-// update. The key is the CRD name, the value is the path to each field from the
-// root of the schema.
-var keepOptionalFields = map[string][][]string{
-	"konnectgatewaycontrolplanes.konnect.konghq.com": {
-		// cloud_gateway is optional in the Konnect API and defaults to false.
-		{"spec", "createControlPlaneRequest", "cloud_gateway"},
-	},
-}
-
-// dropRequiredField removes the last element of path from the required list of
-// the object schema that holds it. It does nothing when the path is absent.
-func dropRequiredField(schema *apiext.JSONSchemaProps, path ...string) {
-	if schema == nil || len(path) == 0 {
-		return
-	}
-	if len(path) == 1 {
-		schema.Required = lo.Filter(schema.Required, func(required string, _ int) bool {
-			return required != path[0]
-		})
-		return
-	}
-	child, ok := schema.Properties[path[0]]
-	if !ok {
-		return
-	}
-	dropRequiredField(&child, path[1:]...)
-	schema.Properties[path[0]] = child
 }
 
 // ChannelsMarkerDef creates a marker definition for the channels marker that can be passed to the markers registry.

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"slices"
 	"testing"
 
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -144,32 +143,4 @@ func TestSimplifyAllOf(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestDropRequiredField(t *testing.T) {
-	schema := &apiext.JSONSchemaProps{
-		Properties: map[string]apiext.JSONSchemaProps{
-			"spec": {
-				Required: []string{"cloud_gateway", "name"},
-				Properties: map[string]apiext.JSONSchemaProps{
-					"createControlPlaneRequest": {
-						Required: []string{"cloud_gateway", "name"},
-					},
-				},
-			},
-		},
-	}
-
-	dropRequiredField(schema, "spec", "createControlPlaneRequest", "cloud_gateway")
-
-	got := schema.Properties["spec"].Properties["createControlPlaneRequest"].Required
-	if want := []string{"name"}; !slices.Equal(got, want) {
-		t.Fatalf("required = %v, want %v", got, want)
-	}
-	if got, want := schema.Properties["spec"].Required, []string{"cloud_gateway", "name"}; !slices.Equal(got, want) {
-		t.Fatalf("unrelated required list changed: %v, want %v", got, want)
-	}
-
-	// A missing path leaves the schema untouched.
-	dropRequiredField(schema, "spec", "doesNotExist", "cloud_gateway")
 }
