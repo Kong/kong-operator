@@ -93,10 +93,73 @@ jobs:
 
         echo "ACK_CRD_BREAKING_CHANGE=${ack}" >> "${GITHUB_ENV}"
 
+    # Minted before the check runs: a failing check must still post its comment. Mint the
+    # token in the job that uses it, because app tokens do not survive being passed between
+    # jobs or through reusable-workflow boundaries.
+    - name: Mint token to comment on the pull request
+      if: ${{ matrix.name == 'crd-breaking-changes' && github.event_name == 'pull_request' }}
+      id: app-token
+      # Fork pull requests get no secrets, and a missing App permission must not block the
+      # check itself.
+      continue-on-error: true
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: |
+          kong-operator
+        permission-pull-requests: write
+
     # The CRD breaking-change check compares against a PR base and is acknowledged via a PR
     # label, so it can only run in a pull_request context. There is no way to acknowledge a
     # breaking change on a bare commit (push/merge_group), so skip it outside of PRs.
     - if: ${{ matrix.name != 'crd-breaking-changes' || github.event_name == 'pull_request' }}
+      id: verify
       env:
         MAKE_TARGET: ${{ matrix.make-target }}
+        CRD_BREAKING_CHANGES_REPORT: ${{ runner.temp }}/crd-breaking-changes.md
       run: make "$MAKE_TARGET"
+
+    # Keeps at most one comment: the existing one is edited when it is already there, so a
+    # fixed breaking change does not leave a stale comment behind. The body comes from a
+    # script, so it can be reviewed locally before the workflow runs.
+    - name: Comment CRD breaking changes
+      if: ${{ always() && matrix.name == 'crd-breaking-changes' && github.event_name == 'pull_request' && steps.app-token.outputs.token != '' }}
+      # The comment is a convenience, so it must never change the result of the check.
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        REPORT_FILE: ${{ runner.temp }}/crd-breaking-changes.md
+        CRD_BREAKING_CHANGES_BASE_REF: ${{ github.base_ref }}
+        CRD_BREAKING_CHANGES_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        set -euo pipefail
+
+        # Without a report, a failed check comes from something other than a breaking change
+        # (a missing tool, a bad base revision), and the old comment must stay as it is.
+        if [[ ! -s "${REPORT_FILE}" && "${VERIFY_OUTCOME}" != "success" ]]; then
+          echo "The CRD check did not complete. Leaving any existing comment as it is."
+          exit 0
+        fi
+
+        body_file="${RUNNER_TEMP}/crd-breaking-changes-comment.md"
+        ./scripts/crd-breaking-changes-comment.sh "${REPORT_FILE}" > "${body_file}"
+
+        # The first line of the body is a marker, used to find the comment that this job owns.
+        marker="$(head -n 1 "${body_file}")"
+        comment_id="$(gh api --paginate \
+          "repos/${GITHUB_REPOSITORY}/issues/${PULL_REQUEST_NUMBER}/comments?per_page=100" \
+          | jq -s --arg marker "${marker}" '[.[][] | select(.body | contains($marker))][0].id // empty')"
+
+        if [[ -n "${comment_id}" ]]; then
+          gh api --method PATCH \
+            "repos/${GITHUB_REPOSITORY}/issues/comments/${comment_id}" \
+            -f body="$(cat "${body_file}")"
+        elif [[ -s "${REPORT_FILE}" ]]; then
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/issues/${PULL_REQUEST_NUMBER}/comments" \
+            -f body="$(cat "${body_file}")"
+        fi
