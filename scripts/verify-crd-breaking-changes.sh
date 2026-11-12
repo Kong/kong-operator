@@ -13,6 +13,37 @@ readonly RELATIVE_CRD_DIR
 CURRENT_CRD_DIR="${SCRIPT_ROOT}/${RELATIVE_CRD_DIR}"
 readonly CURRENT_CRD_DIR
 
+# Optional markdown report with only the breaking changes, used to build the pull-request comment.
+CRD_BREAKING_CHANGES_REPORT="${CRD_BREAKING_CHANGES_REPORT:-}"
+readonly CRD_BREAKING_CHANGES_REPORT
+
+# Keeps only the breaking changes of crdify output: the ERROR-level findings, one per line. It
+# drops WARNING findings, and the struct diff that crdify prints for changes it cannot classify,
+# because they are not breaking changes or too long for a pull-request comment. The console
+# keeps the full output. A finding line looks like:
+#   - v1alpha1 - ^.spec.foo - type - ERROR - type changed : "string" -> "integer"
+breaking_changes_only() {
+	grep -E '^- [^[:space:]]+ - .* - ERROR - ' || true
+}
+
+report_breaking_change() {
+	local basename="${1}"
+	local details="${2}"
+
+	if [[ -z "${CRD_BREAKING_CHANGES_REPORT}" ]]; then
+		return 0
+	fi
+
+	if [[ -z "${details}" ]]; then
+		details="The check failed without details."
+	fi
+
+	{
+		printf '### `%s`\n\n' "${basename}"
+		printf '```\n%s\n```\n\n' "${details}"
+	} >> "${CRD_BREAKING_CHANGES_REPORT}"
+}
+
 CONFIG_FILE="${SCRIPT_ROOT}/.crdify.yaml"
 readonly CONFIG_FILE
 
@@ -125,6 +156,12 @@ if [[ ! -s "${union_basenames}" ]]; then
 	exit 1
 fi
 
+# The path can hold a report from an earlier run, so empty it here: report_breaking_change only
+# appends, and a second run with the same path would add to the first run's findings.
+if [[ -n "${CRD_BREAKING_CHANGES_REPORT}" ]]; then
+	: > "${CRD_BREAKING_CHANGES_REPORT}"
+fi
+
 status=0
 while IFS= read -r basename; do
 	[[ -n "${basename}" ]] || continue
@@ -139,6 +176,7 @@ while IFS= read -r basename; do
 
 	if [[ ! -f "${current_file}" ]]; then
 		echo "Breaking change detected: ${basename} was removed from ${RELATIVE_CRD_DIR}."
+		report_breaking_change "${basename}" "CRD was removed from ${RELATIVE_CRD_DIR}."
 		status=1
 		continue
 	fi
@@ -147,8 +185,13 @@ while IFS= read -r basename; do
 	git show "${base_revision}:${base_file}" > "${old_file}"
 
 	echo "Checking ${basename}"
-	if ! "${CRDIFY_BIN}" --config "${CONFIG_FILE}" "file://${old_file}" "file://${current_file}"; then
+	crdify_output=""
+	if ! crdify_output="$("${CRDIFY_BIN}" --config "${CONFIG_FILE}" "file://${old_file}" "file://${current_file}")"; then
 		status=1
+		report_breaking_change "${basename}" "$(printf '%s\n' "${crdify_output}" | breaking_changes_only)"
+	fi
+	if [[ -n "${crdify_output}" ]]; then
+		printf '%s\n' "${crdify_output}"
 	fi
 done < "${union_basenames}"
 
