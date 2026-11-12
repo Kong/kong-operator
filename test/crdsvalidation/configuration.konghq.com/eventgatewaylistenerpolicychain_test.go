@@ -218,6 +218,8 @@ func TestEventGatewayListenerPolicyChainSample(t *testing.T) {
 	require.NotNil(t, forward.Config)
 	require.Equal(t, configurationv1alpha1.ForwardToVirtualClusterPolicyConfigTypePortMapping, forward.Config.Type)
 	require.NotNil(t, forward.Config.PortMapping)
-	require.NotNil(t, forward.Config.PortMapping.Destination)
-	require.Equal(t, new(configurationv1alpha1.VirtualClusterName("listener-chain-virtual-cluster")), forward.Config.PortMapping.Destination.Name)
+	require.Equal(t, configurationv1alpha1.EventGatewayVirtualClusterRef{
+		Kind: "EventGatewayVirtualCluster",
+		Name: "listener-chain-virtual-cluster",
+	}, forward.Config.PortMapping.Destination)
 }
