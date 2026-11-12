@@ -32,6 +32,8 @@ fail() {
     --arg secret "${secret_name:-}" \
     --arg extension_status "${extension_status:-}" \
     --arg certificates "${certificates:-}" \
+    --arg uid "${extension_uid:-}" \
+    --arg last_error "${last_error:-}" \
     '{
       success: false,
       error: $error,
@@ -39,9 +41,10 @@ fail() {
       extension: $extension,
       control_plane: $control_plane,
       published_secret: $secret,
+      last_error: (if $last_error == "" then null else $last_error end),
       extension_status: (if $extension_status == "" then null else ($extension_status | fromjson) end),
       owned_certificates: (if $certificates == "" then [] else [$certificates | fromjson | .items[]
-        | select(any(.metadata.ownerReferences[]?; .uid == ($extension_status | fromjson | .metadata.uid)))] end),
+        | select(any(.metadata.ownerReferences[]?; .uid == $uid))] end),
       kubectl_commands: [
         "kubectl get konnectextension \($extension) -n \($namespace) -o json",
         "kubectl get kongdataplaneclientcertificates -n \($namespace) -o json"
@@ -52,43 +55,51 @@ fail() {
 
 secret_name=""
 extension_status=""
+extension_uid=""
 certificates=""
+last_error=""
 
 for attempt in $(seq 1 "$RETRY_COUNT"); do
-  if ! extension_status=$(kubectl get konnectextension "$EXTENSION_NAME" -n "$NAMESPACE" -o json 2>&1); then
-    extension_status=""
+  if ! output=$(kubectl get konnectextension "$EXTENSION_NAME" -n "$NAMESPACE" -o json 2>&1); then
+    last_error="$output"
     sleep "$RETRY_DELAY"
     continue
   fi
 
+  extension_status="$output"
   extension_uid=$(jq -r '.metadata.uid' <<<"$extension_status")
   secret_name=$(jq -r '.status.dataPlaneClientAuth.certificateSecretRef.name // ""' <<<"$extension_status")
   if [[ -z "$secret_name" ]]; then
+    last_error="extension has no published certificate Secret yet"
     sleep "$RETRY_DELAY"
     continue
   fi
 
   if ! secret=$(kubectl get secret "$secret_name" -n "$NAMESPACE" -o json 2>&1); then
+    last_error="$secret"
     sleep "$RETRY_DELAY"
     continue
   fi
   if [[ -n "$EXPECTED_SECRET_PROVISIONING" ]]; then
     provisioning=$(jq -r '.metadata.labels["gateway.konghq.com/secret-provisioning"] // ""' <<<"$secret")
     if [[ "$provisioning" != "$EXPECTED_SECRET_PROVISIONING" ]]; then
+      last_error="Secret ${secret_name} provisioning label is '${provisioning}'"
       sleep "$RETRY_DELAY"
       continue
     fi
   fi
-  if ! certificates=$(kubectl get kongdataplaneclientcertificates -n "$NAMESPACE" -o json 2>&1); then
-    certificates=""
+  if ! output=$(kubectl get kongdataplaneclientcertificates -n "$NAMESPACE" -o json 2>&1); then
+    last_error="$output"
     sleep "$RETRY_DELAY"
     continue
   fi
 
+  certificates="$output"
   owned=$(jq -c --arg uid "$extension_uid" \
     '[.items[] | select(any(.metadata.ownerReferences[]?; .uid == $uid))]' <<<"$certificates")
   count=$(jq 'length' <<<"$owned")
   if [[ "$count" != "$EXPECTED_DPCC_COUNT" ]]; then
+    last_error="extension owns ${count} certificates, expected ${EXPECTED_DPCC_COUNT}"
     sleep "$RETRY_DELAY"
     continue
   fi
@@ -111,6 +122,7 @@ for attempt in $(seq 1 "$RETRY_COUNT"); do
     programmed and valid_cp_ref and
     (.status.konnect.id // "") != ""
   ' <<<"$certificate" >/dev/null 2>&1; then
+    last_error="certificate $(jq -r '.metadata.name' <<<"$certificate") does not match the published Secret or is not Programmed"
     sleep "$RETRY_DELAY"
     continue
   fi
