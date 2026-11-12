@@ -226,32 +226,12 @@ func addPolicyChains[C chainObject, E any](ctx context.Context, c *configuration
 	notPermitted := map[client.ObjectKey][]string{}
 	for _, chain := range chains {
 		status := entityStatus{obj: chain}
-		// The parent the chain may claim: a listener policy chain must be in
-		// the namespace of its listener.
+		// The parent the chain may claim; whether a KongReferenceGrant lets
+		// a chain of another namespace claim it was checked when listing it.
 		parent, err := policychain.ClaimParentKey(chain)
 		if err != nil {
 			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, err.Error())
 			continue
-		}
-		// A chain that can't cross namespaces can't order a policy of another namespace a KongReferenceGrant
-		// lets in the configuration of its parent either: it can't list it. Left
-		// out without claiming the parent, which keeps the default order of
-		// its policies, rather than holding back the configuration until the
-		// policy is removed.
-		if !policychain.CrossNamespaceAllowed(chain) {
-			message, err := policyOfAnotherNamespace(ctx, c, cl, chain, parent, s)
-			if err != nil {
-				return err
-			}
-			if message != "" {
-				c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
-				// One already owning the parent keeps its claim: it holds back
-				// the configuration rather than letting the default order apply.
-				if claim, ok := activeClaims[parent]; ok && claim == policychain.ClaimValue(chain) {
-					c.invalidChains = append(c.invalidChains, client.ObjectKeyFromObject(chain).String()+": "+message)
-				}
-				continue
-			}
 		}
 		// Policies of another namespace no KongReferenceGrant lets it
 		// reference: reported as such, like for any other entity. As against
@@ -317,34 +297,6 @@ func addPolicyChains[C chainObject, E any](ctx context.Context, c *configuration
 		}
 	}
 	return nil
-}
-
-// policyOfAnotherNamespace returns why the chain can't order the policies of
-// its parent, of the key parent, when one of them, in the configuration, is
-// of another namespace than the chain, or "".
-func policyOfAnotherNamespace[C chainObject, E any](
-	ctx context.Context, c *configuration, cl client.Client, chain C, parent client.ObjectKey, s policyChainScope[C, E],
-) (string, error) {
-	policies, err := s.listPolicies(ctx, cl, parent)
-	if err != nil {
-		return "", fmt.Errorf("listing the %ss of %s: %w", s.policyWhat, parent, err)
-	}
-	for _, policy := range policies {
-		if policy.GetNamespace() == chain.GetNamespace() || !policy.GetDeletionTimestamp().IsZero() {
-			continue
-		}
-		// One no KongReferenceGrant lets reference the parent is left out of
-		// the configuration.
-		message, err := c.parentNotGranted(ctx, cl, policy, s.policyKind)
-		if err != nil {
-			return "", err
-		}
-		if message == "" {
-			return fmt.Sprintf("the %s %s has the %s %s of another namespace, which a chain can't order; cross-namespace references are not supported",
-				chain.GetParentGVK().Kind, policychain.NameIn(parent, chain.GetNamespace()), s.policyKind, client.ObjectKeyFromObject(policy)), nil
-		}
-	}
-	return "", nil
 }
 
 func compareKeys(a, b client.ObjectKey) int {
@@ -416,12 +368,6 @@ func policyOrder[C chainObject, E any](
 		key := client.ObjectKey{Namespace: chain.GetNamespace(), Name: ref.name}
 		if ref.namespace != "" {
 			key.Namespace = ref.namespace
-		}
-		// The policies of a listener policy chain must be in its namespace.
-		if !policychain.CrossNamespaceAllowed(chain) && key.Namespace != chain.GetNamespace() {
-			return nil, commonv1alpha1.ReferenceCrossNamespaceError{
-				Kind: s.policyKind, Namespace: key.Namespace, Name: key.Name, ReferrerNamespace: chain.GetNamespace(),
-			}.Error(), nil
 		}
 		if _, duplicate := seen[key]; duplicate {
 			return nil, path + " duplicates policy " + key.String(), nil

@@ -2260,7 +2260,7 @@ EventGatewayListenerPolicyChainAPISpec defines the API spec fields for EventGate
 
 | Field | Description |
 | --- | --- |
-| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener. Namespace defaults to this chain's namespace; a policy in another namespace needs a KongReferenceGrant in its namespace. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
 
 _Appears in:_
 
@@ -2350,7 +2350,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 

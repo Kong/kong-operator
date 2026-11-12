@@ -24,6 +24,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -286,9 +287,6 @@ func TestListenerPolicyChainInvalidReferencesBlockProgramming(t *testing.T) {
 		{name: "wrong kind", change: func(c *configurationv1alpha1.EventGatewayListenerPolicyChain, _ *configurationv1alpha1.EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterPolicy"
 		}, wantErr: "must name"},
-		{name: "cross namespace", change: func(c *configurationv1alpha1.EventGatewayListenerPolicyChain, _ *configurationv1alpha1.EventGatewayListenerPolicy) {
-			c.Spec.APISpec.Policies[0].Namespace = "other"
-		}, wantErr: "cross-namespace"},
 		{name: "duplicate", change: func(c *configurationv1alpha1.EventGatewayListenerPolicyChain, _ *configurationv1alpha1.EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies = append(c.Spec.APISpec.Policies, c.Spec.APISpec.Policies[0])
 		}, wantErr: "duplicates"},
@@ -391,4 +389,190 @@ func TestListenerPolicyChainStaleSelfCannotClaim(t *testing.T) {
 			require.NotContains(t, parent.Annotations, listenerPolicyChainOwnerAnnotation)
 		})
 	}
+}
+
+// TestListenerPolicyChainCrossNamespaceGrantedLifecycle covers a listener
+// policy chain ordering, on a listener of another namespace, a policy of a
+// third one: each needs a KongReferenceGrant in its namespace.
+func TestListenerPolicyChainCrossNamespaceGrantedLifecycle(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	chain := testListenerPolicyChain("chain")
+	chain.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new("parent")
+	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "policy", Namespace: "policies"}}
+	chain.Finalizers = []string{KonnectCleanupFinalizer}
+	// As left by the rejection of a chain of another namespace than its
+	// listener before such a chain was supported.
+	chain.Status.Conditions = []metav1.Condition{{
+		Type: chain.GetStatusConditionTypeParentRefValid(), Status: metav1.ConditionFalse, Reason: chain.GetStatusConditionReasonParentRefInvalid(),
+		Message: "listener policy chains require a EventGatewayListener in the same namespace as the chain (default); cross-namespace parents are not supported",
+	}}
+	policy := &configurationv1alpha1.EventGatewayListenerPolicy{
+		Name: "policy", Namespace: "policies", Generation: 1,
+		Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
+			EventGatewayListenerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "listener", Namespace: new("parent")},
+			},
+		},
+	}
+	policy.SetKonnectID("policy-id")
+	policy.SetGatewayID("gateway-id")
+	policy.SetEventGatewayListenerID("listener-id")
+	ops.SetKonnectEntityProgrammedConditionTrue(policy)
+	mapper := apimeta.NewDefaultRESTMapper([]schema.GroupVersion{configurationv1alpha1.GroupVersion, konnectv1alpha1.GroupVersion})
+	for _, kind := range []string{"EventGatewayListenerPolicyChain", "EventGatewayListenerPolicy", "EventGatewayListener", "KongReferenceGrant"} {
+		mapper.Add(configurationv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
+	}
+	for _, kind := range []string{"KonnectAPIAuthConfiguration", "KonnectEventGateway"} {
+		mapper.Add(konnectv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
+	}
+	cl := newFakeClientBuilder(scheme.Get()).WithRESTMapper(mapper).
+		WithStatusSubresource(chain, &configurationv1alpha1.EventGatewayListener{}, &configurationv1alpha1.EventGatewayListenerPolicy{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).
+		WithObjects(chain, policy).Build()
+	parentClient := client.NewNamespacedClient(cl, "parent")
+	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, parentClient)
+	gateway := deploy.KonnectEventGateway(t, ctx, parentClient, auth)
+	parent := &configurationv1alpha1.EventGatewayListener{
+		Name: "listener", Namespace: "parent",
+		Spec: configurationv1alpha1.EventGatewayListenerSpec{GatewayRef: testNamespacedObjectRef(gateway.Name)},
+	}
+	require.NoError(t, cl.Create(ctx, parent))
+	parent.SetKonnectID("listener-id")
+	parent.SetGatewayID("gateway-id")
+	ops.SetKonnectEntityProgrammedConditionTrue(parent)
+	require.NoError(t, cl.Status().Update(ctx, parent))
+	grant := func(namespace, toKind string) *configurationv1alpha1.KongReferenceGrant {
+		return deploy.KongReferenceGrant(t, ctx, client.NewNamespacedClient(cl, namespace),
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:  "EventGatewayListenerPolicyChain", Namespace: "default",
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group), Kind: configurationv1alpha1.Kind(toKind),
+			}),
+		)
+	}
+
+	factory := sdkmocks.NewMockSDKFactory(t)
+	var applied [][]string
+	policySDK := factory.SDK.EventGatewayListenerPoliciesSDK
+	policySDK.EXPECT().GetEventGatewayListenerPolicyChain(mock.Anything, "gateway-id", "listener-id").
+		Return(&sdkkonnectops.GetEventGatewayListenerPolicyChainResponse{
+			EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: []string{"policy-id"}},
+		}, nil).Maybe()
+	policySDK.EXPECT().UpdateEventGatewayListenerPolicyChain(mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, req sdkkonnectops.UpdateEventGatewayListenerPolicyChainRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.UpdateEventGatewayListenerPolicyChainResponse, error) {
+			applied = append(applied, slices.Clone(req.UpdateEventGatewayPolicyChainRequest.Policies))
+			return &sdkkonnectops.UpdateEventGatewayListenerPolicyChainResponse{
+				EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: req.UpdateEventGatewayPolicyChainRequest.Policies},
+			}, nil
+		}).Maybe()
+	r := NewKonnectEntityReconciler(factory, logging.DevelopmentMode, cl,
+		WithMetricRecorder[configurationv1alpha1.EventGatewayListenerPolicyChain](&metricsmocks.MockRecorder{}),
+	)
+	reconcileUntil := func(done func() bool) {
+		t.Helper()
+		for range 20 {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+			chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayListenerPolicyChain"))
+			_, err := r.Reconcile(ctx, chain)
+			require.NoError(t, err)
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+			if done() {
+				return
+			}
+		}
+		require.FailNow(t, "the chain didn't reach the expected state", "conditions: %v", chain.Status.Conditions)
+	}
+
+	// Without a KongReferenceGrant in the namespace of the listener, the
+	// chain neither claims it nor is applied, and the condition of its former
+	// rejection is gone.
+	reconcileUntil(func() bool {
+		return apimeta.IsStatusConditionFalse(chain.Status.Conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+	})
+	notGranted := apimeta.FindStatusCondition(chain.Status.Conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+	require.Equal(t, string(configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted), notGranted.Reason)
+	require.Nil(t, apimeta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid()))
+	require.False(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed"))
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+	require.NotContains(t, parent.Annotations, listenerPolicyChainOwnerAnnotation)
+	require.Empty(t, applied)
+
+	// Without one in the namespace of the policy, the chain isn't applied.
+	listenerGrant := grant("parent", "EventGatewayListener")
+	reconcileUntil(func() bool {
+		return apimeta.IsStatusConditionFalse(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType)
+	})
+	resolved := apimeta.FindStatusCondition(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType)
+	require.Equal(t, commonv1alpha1.KonnectReferencesResolvedReasonNotPermitted, resolved.Reason)
+	require.Contains(t, resolved.Message, "EventGatewayListenerPolicy policy in namespace policies")
+	require.Contains(t, resolved.Message, "not granted by any KongReferenceGrant")
+	require.False(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed"))
+	require.Empty(t, applied)
+
+	grant("policies", "EventGatewayListenerPolicy")
+	reconcileUntil(func() bool { return apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed") })
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType))
+	require.Equal(t, []string{"policy-id"}, applied[len(applied)-1])
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+	require.Equal(t, "default/chain/chain-uid", parent.Annotations[listenerPolicyChainOwnerAnnotation], "the claim names the namespace of the chain")
+
+	// Once the listener grant is revoked, the chain no longer resolves its
+	// listener, and its claim is stale: a chain of the namespace of the
+	// listener can take it.
+	require.NoError(t, cl.Delete(ctx, listenerGrant))
+	reconcileUntil(func() bool {
+		return apimeta.IsStatusConditionFalse(chain.Status.Conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+	})
+	local := testListenerPolicyChain("local")
+	local.Namespace = "parent"
+	require.NoError(t, cl.Create(ctx, local))
+	owner, err := policychain.Claim(ctx, cl, local)
+	require.NoError(t, err)
+	require.Empty(t, owner, "a chain no KongReferenceGrant allows anymore doesn't hold its claim")
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+	require.Equal(t, policychain.ClaimValue(local), parent.Annotations[listenerPolicyChainOwnerAnnotation])
+
+	require.NoError(t, cl.Delete(ctx, chain))
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+	_, err = r.Reconcile(ctx, chain)
+	require.NoError(t, err)
+	require.True(t, apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(chain), chain)))
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+	require.Equal(t, policychain.ClaimValue(local), parent.Annotations[listenerPolicyChainOwnerAnnotation], "deleting the chain leaves the claim of another")
+}
+
+// TestListenerPolicyChainPoliciesOfTheSameNameInTwoNamespaces checks two
+// policies of the same name, of two namespaces, aren't duplicates: the
+// chain resolves both, in its order.
+func TestListenerPolicyChainPoliciesOfTheSameNameInTwoNamespaces(t *testing.T) {
+	t.Parallel()
+	chain := testListenerPolicyChain("chain")
+	chain.SetGatewayID("gateway-id")
+	chain.SetEventGatewayListenerID("listener-id")
+	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayListenerPolicyRef{
+		{Name: "policy", Namespace: "other"}, {Name: "policy"},
+	}
+	objects := []client.Object{chain}
+	for _, ns := range []string{chain.Namespace, "other"} {
+		policy := &configurationv1alpha1.EventGatewayListenerPolicy{
+			Name: "policy", Namespace: ns, Generation: 1,
+			Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{EventGatewayListenerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "listener", Namespace: new(chain.Namespace)},
+			}},
+		}
+		policy.SetKonnectID(ns + "-id")
+		policy.SetGatewayID("gateway-id")
+		policy.SetEventGatewayListenerID("listener-id")
+		ops.SetKonnectEntityProgrammedConditionTrue(policy)
+		objects = append(objects, policy)
+	}
+	cl := newFakeClientBuilder(scheme.Get()).WithObjects(objects...).Build()
+	ids, err := chain.ResolveValidatedPolicyIDs(t.Context(), cl)
+	require.NoError(t, err)
+	require.Equal(t, []string{"other-id", chain.Namespace + "-id"}, ids)
 }

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/policychain"
@@ -177,9 +178,9 @@ func TestListenerPolicyOrderValidation(t *testing.T) {
 		{name: "wrong kind", change: func(c *configurationv1alpha1.EventGatewayListenerPolicyChain, _ []*configurationv1alpha1.EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterPolicy"
 		}, problem: "must name an EventGatewayListenerPolicy"},
-		{name: "cross namespace policy", change: func(c *configurationv1alpha1.EventGatewayListenerPolicyChain, _ []*configurationv1alpha1.EventGatewayListenerPolicy) {
+		{name: "cross namespace policy without a KongReferenceGrant", change: func(c *configurationv1alpha1.EventGatewayListenerPolicyChain, _ []*configurationv1alpha1.EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies[0].Namespace = "other"
-		}, problem: "EventGatewayListenerPolicy other/z-second uses cross-namespace reference from namespace " + ns + ", which is not supported yet"},
+		}, problem: "no KongReferenceGrant allows it to reference the EventGatewayListenerPolicy other/z-second"},
 		{name: "wrong parent", change: func(_ *configurationv1alpha1.EventGatewayListenerPolicyChain, p []*configurationv1alpha1.EventGatewayListenerPolicy) {
 			p[1].Spec.EventGatewayListenerRef = namespacedRef("other-listener")
 		}, problem: "different listener"},
@@ -230,54 +231,72 @@ func TestBuildListenerPolicyChainInvalidHoldsBackConfiguration(t *testing.T) {
 }
 
 // TestBuildListenerPolicyChainOfAnotherNamespace checks a listener policy
-// chain of another namespace than its listener is left out, without holding
-// back the configuration nor claiming the listener: without a
-// KongReferenceGrant as any entity, and with one as it must be in the
-// namespace of its listener.
+// chain of another namespace than its listener and its policies: it orders
+// them with a KongReferenceGrant for each; without one for its listener, it
+// is left out without holding back the configuration; without one for its
+// policies, it holds back the configuration of the listener no other chain
+// owns, as it would keep the default order of its policies.
 func TestBuildListenerPolicyChainOfAnotherNamespace(t *testing.T) {
+	grant := func(name, toKind string) *configurationv1alpha1.KongReferenceGrant {
+		return &configurationv1alpha1.KongReferenceGrant{
+			Name: name, Namespace: ns,
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain", Namespace: "other"}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(toKind)}},
+			},
+		}
+	}
 	for _, tt := range []struct {
-		name    string
-		granted bool
-		message string
+		name             string
+		grants           []client.Object
+		ordered, blocked bool
+		message          string
+		reason           kcfgconsts.ConditionReason
 	}{
-		{name: "without a KongReferenceGrant", message: "no KongReferenceGrant allows it to reference the EventGatewayListener " + ns + "/listener"},
-		{name: "with a KongReferenceGrant", granted: true,
-			message: "policy-chain ownership requires a same-namespace parent reference"},
+		{name: "with KongReferenceGrants", grants: []client.Object{grant("listeners", "EventGatewayListener"), grant("policies", "EventGatewayListenerPolicy")}, ordered: true},
+		{name: "without a KongReferenceGrant for its listener", grants: []client.Object{grant("policies", "EventGatewayListenerPolicy")},
+			message: "no KongReferenceGrant allows it to reference the EventGatewayListener " + ns + "/listener", reason: eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason},
+		{name: "without a KongReferenceGrant for its policies", grants: []client.Object{grant("listeners", "EventGatewayListener")}, blocked: true,
+			message: "no KongReferenceGrant allows it to reference the EventGatewayListenerPolicy " + ns + "/z-second", reason: eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			gateway, chain, policies, objects := listenerPolicyChainObjects(t)
 			chain.Namespace = "other"
 			chain.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(ns)
-			objects = append(objects, chain)
-			if tt.granted {
-				objects = append(objects, &configurationv1alpha1.KongReferenceGrant{
-					Name: "chains", Namespace: ns,
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain", Namespace: "other"}},
-						To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayListener"}},
-					},
-				})
+			for i := range chain.Spec.APISpec.Policies {
+				chain.Spec.APISpec.Policies[i].Namespace = ns
 			}
-			cl := newFakeClient(t, objects...)
+			cl := newFakeClient(t, append(append(objects, chain), tt.grants...)...)
 			cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 			require.NoError(t, err)
-			require.Empty(t, cfg.invalidChains)
-			require.Empty(t, cfg.orderedPolicies)
-			require.Len(t, cfg.excluded, 1)
-			require.Equal(t, tt.message, cfg.excluded[0].message)
-			require.False(t, cfg.excluded[0].blocks)
-			require.Equal(t, policies[0].UID, types.UID(cfg.entities.Listeners[0].Policies[0].Id.String()))
 			listener := &configurationv1alpha1.EventGatewayListener{}
 			require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "listener"}, listener))
+			if tt.ordered {
+				require.Empty(t, cfg.invalidChains)
+				require.Empty(t, cfg.excluded)
+				require.Equal(t, policies[1].UID, types.UID(cfg.entities.Listeners[0].Policies[0].Id.String()))
+				require.Equal(t, "other/chain/"+string(chain.UID), listener.Annotations[policychain.ListenerOwnerAnnotation], "the claim names the namespace of the chain")
+				return
+			}
+			require.Len(t, cfg.excluded, 1)
+			require.Equal(t, tt.message, cfg.excluded[0].message)
+			require.Equal(t, tt.reason, cfg.excluded[0].reason)
+			require.False(t, cfg.excluded[0].blocks)
+			if tt.blocked {
+				require.Equal(t, []string{"other/chain: " + tt.message}, cfg.invalidChains)
+			} else {
+				require.Empty(t, cfg.invalidChains)
+			}
+			require.Empty(t, cfg.orderedPolicies)
 			require.NotContains(t, listener.Annotations, policychain.ListenerOwnerAnnotation)
 		})
 	}
 }
 
 // TestBuildListenerPolicyChainWithPolicyOfAnotherNamespace checks a listener
-// policy chain is left out, without claiming its listener nor holding back
-// the configuration, when the listener has a policy of another namespace a
-// KongReferenceGrant lets in the configuration: the chain can't list it.
+// policy chain orders a policy of its listener of another namespace a
+// KongReferenceGrant lets in the configuration, one letting the chain
+// reference it too.
 func TestBuildListenerPolicyChainWithPolicyOfAnotherNamespace(t *testing.T) {
 	gateway, chain, policies, objects := listenerPolicyChainObjects(t)
 	foreign := policies[0].DeepCopy()
@@ -310,27 +329,27 @@ spec:
 			},
 		},
 	}
-	cl := newFakeClient(t, append(objects, chain, foreign, foreignVC, grant)...)
+	policyGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "chains", Namespace: "other",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain", Namespace: ns}},
+			To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicy"}},
+		},
+	}
+	chain.Spec.APISpec.Policies = append(chain.Spec.APISpec.Policies, configurationv1alpha1.EventGatewayListenerPolicyRef{Name: "foreign", Namespace: "other"})
+	cl := newFakeClient(t, append(objects, chain, foreign, foreignVC, grant, policyGrant)...)
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
-	require.Empty(t, cfg.invalidChains, "the chain doesn't hold back the configuration")
-	require.Empty(t, cfg.orderedPolicies)
-	require.Len(t, cfg.entities.Listeners[0].Policies, 3, "the policy of another namespace is in the configuration")
-	require.Len(t, cfg.excluded, 1)
-	require.Equal(t, "the EventGatewayListener listener has the EventGatewayListenerPolicy other/foreign of another namespace, which a chain can't order; cross-namespace references are not supported",
-		cfg.excluded[0].message)
+	require.Empty(t, cfg.invalidChains)
+	require.Empty(t, cfg.excluded)
+	ids := make([]string, 0, 3)
+	for _, p := range cfg.entities.Listeners[0].Policies {
+		ids = append(ids, p.Id.String())
+	}
+	require.Equal(t, []string{string(policies[1].UID), string(policies[0].UID), string(foreign.UID)}, ids)
 	listener := &configurationv1alpha1.EventGatewayListener{}
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "listener"}, listener))
-	require.NotContains(t, listener.Annotations, policychain.ListenerOwnerAnnotation)
-
-	// A chain already owning the listener holds back the configuration
-	// instead: its order would otherwise be lost.
-	listener.Annotations = map[string]string{policychain.ListenerOwnerAnnotation: policychain.ClaimValue(chain)}
-	require.NoError(t, cl.Update(t.Context(), listener))
-	cfg, err = buildConfiguration(t.Context(), cl, gateway, "", nil)
-	require.NoError(t, err)
-	require.Equal(t, []string{ns + "/chain: " + cfg.excluded[0].message}, cfg.invalidChains)
-	require.Equal(t, policychain.ClaimValue(chain), read(t, cl, listener).Annotations[policychain.ListenerOwnerAnnotation])
+	require.Equal(t, policychain.ClaimValue(chain), listener.Annotations[policychain.ListenerOwnerAnnotation])
 }
 
 // TestBuildListenerPolicyChainExcludedParentOwnership checks, for a listener
@@ -501,4 +520,70 @@ func TestReconcileListenerPolicyChainLifecycle(t *testing.T) {
 	f.pod().reset()
 	reconcile()
 	require.NotContains(t, f.pod().recorded(), callEntities, "no-chain configurations must not be pushed repeatedly")
+}
+
+// TestBuildListenerPolicyChainClaimsAcrossNamespaces checks the claim on a
+// listener moves to a chain of its namespace once no KongReferenceGrant lets
+// the chain of another namespace holding it reference it anymore, and that
+// an older chain no KongReferenceGrant lets order its policies leaves the
+// listener to a valid one.
+func TestBuildListenerPolicyChainClaimsAcrossNamespaces(t *testing.T) {
+	listenerGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "listeners", Namespace: ns,
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain", Namespace: "other"}},
+			To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayListener"}},
+		},
+	}
+	policyGrant := listenerGrant.DeepCopy()
+	policyGrant.Name, policyGrant.Spec.To[0].Kind = "policies", "EventGatewayListenerPolicy"
+	listenerKey := client.ObjectKey{Namespace: ns, Name: "listener"}
+	ownerOf := func(t *testing.T, cl client.Client) string {
+		t.Helper()
+		listener := &configurationv1alpha1.EventGatewayListener{}
+		require.NoError(t, cl.Get(t.Context(), listenerKey, listener))
+		return listener.Annotations[policychain.ListenerOwnerAnnotation]
+	}
+
+	t.Run("a revoked KongReferenceGrant hands the listener over", func(t *testing.T) {
+		gateway, remote, policies, objects := listenerPolicyChainObjects(t)
+		remote.Namespace = "other"
+		remote.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(ns)
+		for i := range remote.Spec.APISpec.Policies {
+			remote.Spec.APISpec.Policies[i].Namespace = ns
+		}
+		cl := newFakeClient(t, append(objects, remote, listenerGrant.DeepCopy(), policyGrant.DeepCopy())...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.invalidChains)
+		require.Equal(t, policychain.ClaimValue(remote), ownerOf(t, cl))
+
+		require.NoError(t, cl.Delete(t.Context(), listenerGrant.DeepCopy()))
+		local := remote.DeepCopy()
+		local.Namespace, local.UID, local.ResourceVersion = ns, types.UID(uuid.NewString()), ""
+		local.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "a-first"}, {Name: "z-second"}}
+		require.NoError(t, cl.Create(t.Context(), local))
+		cfg, err = buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.invalidChains)
+		require.Equal(t, policychain.ClaimValue(local), ownerOf(t, cl), "the claim of a chain no longer granted is stale")
+		require.Equal(t, policies[0].UID, types.UID(cfg.entities.Listeners[0].Policies[0].Id.String()))
+	})
+
+	t.Run("an older chain without a KongReferenceGrant leaves the listener to a valid one", func(t *testing.T) {
+		gateway, valid, policies, objects := listenerPolicyChainObjects(t)
+		older := valid.DeepCopy()
+		older.Name, older.UID = "older", types.UID(uuid.NewString())
+		older.CreationTimestamp = metav1.NewTime(valid.CreationTimestamp.Add(-time.Hour))
+		older.Spec.APISpec.Policies = append(older.Spec.APISpec.Policies, configurationv1alpha1.EventGatewayListenerPolicyRef{Name: "elsewhere", Namespace: "other"})
+		cl := newFakeClient(t, append(objects, older, valid)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.invalidChains, "a valid chain owns the listener")
+		require.Equal(t, policychain.ClaimValue(valid), ownerOf(t, cl))
+		require.Equal(t, policies[1].UID, types.UID(cfg.entities.Listeners[0].Policies[0].Id.String()))
+		i := slices.IndexFunc(cfg.excluded, func(e excludedEntity) bool { return e.obj.GetName() == older.Name })
+		require.NotEqual(t, -1, i)
+		require.Equal(t, eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason, cfg.excluded[i].reason)
+	})
 }

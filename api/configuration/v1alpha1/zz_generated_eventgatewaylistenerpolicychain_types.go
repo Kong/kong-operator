@@ -59,10 +59,9 @@ type EventGatewayListenerPolicyChainSpec struct {
 type EventGatewayListenerPolicyChainAPISpec struct {
 	// Policies lists distinct EventGatewayListenerPolicy references in execution
 	// order.
-	// Each policy must belong to the referenced EventGatewayListener and be in the
-	// same namespace as this chain.
-	// Namespace defaults to this chain's namespace and may be set explicitly to
-	// that same namespace; cross-namespace references are not supported.
+	// Each policy must belong to the referenced EventGatewayListener.
+	// Namespace defaults to this chain's namespace; a policy in another namespace
+	// needs a KongReferenceGrant in its namespace.
 	// List every listener policy exactly once.
 	// An explicit empty list is valid only when the remote chain has no policies;
 	// it does not clear an existing chain.

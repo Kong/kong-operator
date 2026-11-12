@@ -109,9 +109,8 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain policyChain, 
 		return false, ctrl.Result{}, err
 	}
 	parentKind := chain.GetParentGVK().Kind
-	// A cluster policy chain may claim a virtual cluster of another
-	// namespace, the KongReferenceGrant checked with its parent reference; a
-	// listener policy chain only a listener of its namespace.
+	// A chain may claim a parent of another namespace, the
+	// KongReferenceGrant checked with its parent reference.
 	parentKey, err := policychain.ClaimParentKey(chain)
 	if err != nil {
 		return false, ctrl.Result{}, err
