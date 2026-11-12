@@ -1,0 +1,305 @@
+# KongDataPlaneClientCertificate provisioning owned by a KonnectExtension.
+#
+# Scenario A (Automatic provisioning, the default): the operator generates the
+#   client certificate Secret and registers it as a KongDataPlaneClientCertificate
+#   owned by the KonnectExtension.
+#
+# Scenario B (Manual provisioning): the user supplies the client certificate and the
+#   operator publishes a snapshot Secret and registers it as an owned
+#   KongDataPlaneClientCertificate.
+#
+# Both scenarios assert the owned certificate names the KonnectExtension, carries the
+# KonnectExtension certificate contents (not a stale generation), references the
+# expected ControlPlane, and is Programmed in Konnect.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectextension-dpcc-provisioning
+spec:
+  description: |
+    Verifies that a KonnectExtension provisions exactly one Programmed
+    KongDataPlaneClientCertificate for its DataPlane client certificate, for both
+    Automatic and Manual certificate provisioning.
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Random suffix: control plane names must be unique in the Konnect organization.
+    - name: run_id
+      value: (random('[a-z0-9]{6}'))
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp', $run_id]))
+    - name: auth_secret_name
+      value: konnect-auth
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: konnect-auth
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: automatic_extension_name
+      value: automatic
+    - name: manual_extension_name
+      value: manual
+    - name: cert_secret_name
+      value: manual-client-certificate
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('.', ['manual', $namespace]))
+  steps:
+    - name: create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: create-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: create-control-plane
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp_name)
+                  cluster_type: CLUSTER_TYPE_CONTROL_PLANE
+                  auth_type: pinned_client_certs
+                konnect:
+                  authRef:
+                    name: ($konnect_auth_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    # Scenario A: the extension requests no certificateSecret, so the default
+    # Automatic provisioning applies.
+    - name: create-automatic-extension
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($automatic_extension_name)
+                namespace: ($namespace)
+              spec:
+                konnect:
+                  controlPlane:
+                    ref:
+                      type: konnectNamespacedRef
+                      konnectNamespacedRef:
+                        name: ($cp_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($automatic_extension_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (conditions[?type == 'DataPlaneCertificateProvisioned']):
+                  - status: 'True'
+                (dataPlaneClientAuth.certificateSecretRef.name != null): true
+    - name: assert-automatic-dpcc
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: ($automatic_extension_name)
+              - name: CONTROL_PLANE_NAME
+                value: ($cp_name)
+              - name: EXPECTED_SECRET_PROVISIONING
+                value: automatic
+            content: bash ../../common/scripts/verify_konnectextension_dpcc.sh
+            outputs:
+              - name: dpcc
+                value: (json_parse($stdout))
+        # The published Secret is the operator-generated, immutable certificate the
+        # registration was derived from.
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($dpcc.published_secret)
+                namespace: ($namespace)
+                (labels."konghq.com/konnect-dp-cert"): "true"
+                (labels."gateway.konghq.com/secret-provisioning"): automatic
+              type: kubernetes.io/tls
+              immutable: true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongDataPlaneClientCertificate
+              metadata:
+                name: ($dpcc.certificate)
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by"): KonnectExtension
+                (labels."gateway-operator.konghq.com/managed-by-name"): ($automatic_extension_name)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+    # Scenario B: the user supplies the certificate; the extension must still register
+    # an owned KongDataPlaneClientCertificate, from its own published snapshot Secret.
+    - name: create-manual-certificate
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: create-manual-extension
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($manual_extension_name)
+                namespace: ($namespace)
+              spec:
+                clientAuth:
+                  certificateSecret:
+                    provisioning: Manual
+                    secretRef:
+                      name: ($cert_secret_name)
+                konnect:
+                  controlPlane:
+                    ref:
+                      type: konnectNamespacedRef
+                      konnectNamespacedRef:
+                        name: ($cp_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($manual_extension_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (conditions[?type == 'DataPlaneCertificateProvisioned']):
+                  - status: 'True'
+                # The published Secret is a snapshot, never the user's source Secret.
+                (dataPlaneClientAuth.certificateSecretRef.name != $cert_secret_name): true
+    - name: assert-manual-dpcc
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: ($manual_extension_name)
+              - name: CONTROL_PLANE_NAME
+                value: ($cp_name)
+            content: bash ../../common/scripts/verify_konnectextension_dpcc.sh
+            outputs:
+              - name: dpcc
+                value: (json_parse($stdout))
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongDataPlaneClientCertificate
+              metadata:
+                name: ($dpcc.certificate)
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by"): KonnectExtension
+                (labels."gateway-operator.konghq.com/managed-by-name"): ($manual_extension_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+    - name: cleanup
+      description: Delete the extensions and the control plane, waiting for each release.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              name: ($automatic_extension_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($automatic_extension_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongDataPlaneClientCertificate
+              metadata:
+                name: ($automatic_extension_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              name: ($manual_extension_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: ($manual_extension_name)
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongDataPlaneClientCertificate
+              metadata:
+                name: ($manual_extension_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnectextension-dpcc-provisioning
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
