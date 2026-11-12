@@ -2252,8 +2252,8 @@ by the operator's semver:
 - Hybridgateway: Wait for cleanup of all child resources before removing the
   finalizers of the parent resource
   [#4785](https://github.com/Kong/kong-operator/pull/4785) [#4892](https://github.com/Kong/kong-operator/pull/4892)
-- Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+- [CVE-2026-16543](https://www.cve.org/CVERecord?id=CVE-2026-16543) Preserve only one CA certificate from secrets if there are
+   multiple ones with the duplicate IDs.
   [#4877](https://github.com/Kong/kong-operator/pull/4877)
 
 ## [v2.2.2]
@@ -2679,8 +2679,8 @@ by the operator's semver:
 
 ### Fixes
 
-- Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+- [CVE-2026-16543](https://www.cve.org/CVERecord?id=CVE-2026-16543) Preserve only one CA certificate from secrets if there are
+   multiple ones with the duplicate IDs.
   [#4876](https://github.com/Kong/kong-operator/pull/4876)
 
 ## [v2.1.8]
@@ -3233,8 +3233,8 @@ by the operator's semver:
 
 ### Fixes
 
-- Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+- [CVE-2026-16543](https://www.cve.org/CVERecord?id=CVE-2026-16543) Preserve only one CA certificate from secrets if there are
+   multiple ones with the duplicate IDs.
   [#4875](https://github.com/Kong/kong-operator/pull/4875)
 
 ## [v2.0.10]
