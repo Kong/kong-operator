@@ -410,27 +410,50 @@ func TestMapEntityToOnPremEventGateway_ParentReadError(t *testing.T) {
 	}, got)
 }
 
-func TestMapKongReferenceGrantToOnPremEventGatewaysForSecrets(t *testing.T) {
-	grant := func(fromKind string, toKind configurationv1alpha1.Kind) *configurationv1alpha1.KongReferenceGrant {
+func TestMapKongReferenceGrantToOnPremEventGatewaysForEntities(t *testing.T) {
+	grant := func(group, kind string) *configurationv1alpha1.KongReferenceGrant {
 		return &configurationv1alpha1.KongReferenceGrant{
-			Name: "grant", Namespace: "secrets",
+			Name: "grant", Namespace: "targets",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
-				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(fromKind), Namespace: ns}},
-				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "core", Kind: toKind}},
+				From: []configurationv1alpha1.ReferenceGrantFrom{{
+					Group: configurationv1alpha1.Group(group), Kind: configurationv1alpha1.Kind(kind), Namespace: "entities",
+				}},
+				To: []configurationv1alpha1.ReferenceGrantTo{
+					{Group: "core", Kind: "Secret"},
+					{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway"},
+				},
 			},
 		}
 	}
-	gateway := newTestGateway("gateway")
-	other := newTestGateway("other")
-	other.Namespace = "other"
-	mapFn := mapKongReferenceGrantToOnPremEventGateways(newFakeClient(t, gateway, other))
+	readingSecretOfTargets := func(name string, gatewayRef *commonv1alpha1.GatewayRef) *configurationv1alpha1.EventGatewayBackendCluster {
+		bc := backendCluster("entities", name, gatewayRef)
+		bc.Spec.APISpec.TLS.ClientIdentity.Certificate = configurationv1alpha1.SensitiveDataSource{
+			Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+			SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls", Namespace: new("targets"), Key: "tls.crt"},
+		}
+		return bc
+	}
+	// The gateway of an entity may be in another namespace than the entity.
+	readingSecret := readingSecretOfTargets("a", onPremGatewayRef("local"))
+	sameGateway := readingSecretOfTargets("c", onPremGatewayRef("local"))
+	ofGatewayInTargets := backendCluster("entities", "b", onPremGatewayRef("remote"))
+	ofGatewayInTargets.Spec.ParentRef.Namespace = new("targets")
+	notReferencingTargets := backendCluster("entities", "unconcerned", onPremGatewayRef("unconcerned"))
+	ofKonnect := readingSecretOfTargets("konnect", konnectGatewayRef("konnect"))
+	otherNamespace := backendCluster("unrelated", "d", onPremGatewayRef("unrelated"))
+	mapFn := mapKongReferenceGrantToOnPremEventGateways(newFakeClient(t,
+		readingSecret, sameGateway, ofGatewayInTargets, notReferencingTargets, ofKonnect, otherNamespace))
 
-	assert.Equal(t,
-		[]reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(gateway)}},
-		mapFn(t.Context(), grant("EventGatewayBackendCluster", "Secret")),
-		"the gateways of the namespace whose entities may read the Secrets")
-	assert.Empty(t, mapFn(t.Context(), grant("EventGatewayBackendCluster", "ConfigMap")), "not a grant to Secrets")
-	assert.Empty(t, mapFn(t.Context(), grant("KongService", "Secret")), "not a grant to entities of an OnPremEventGateway")
+	assert.ElementsMatch(t,
+		[]reconcile.Request{
+			{Namespace: "entities", Name: "local"},
+			{Namespace: "targets", Name: "remote"},
+		},
+		mapFn(t.Context(), grant("configuration.konghq.com", "EventGatewayBackendCluster")),
+		"the gateways of the entities of the kind and namespace it allows referencing its namespace, once each")
+	assert.Empty(t, mapFn(t.Context(), grant("configuration.konghq.com", "EventGatewayListener")), "no entity of the kind")
+	assert.Empty(t, mapFn(t.Context(), grant("konnect.konghq.com", "EventGatewayBackendCluster")), "not the group of the kind")
+	assert.Empty(t, mapFn(t.Context(), grant("configuration.konghq.com", "KongService")), "not an entity of an OnPremEventGateway")
 }
 
 func TestMapSecretToOnPremEventGateways(t *testing.T) {

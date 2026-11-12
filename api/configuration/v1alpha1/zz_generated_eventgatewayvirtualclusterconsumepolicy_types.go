@@ -68,9 +68,10 @@ type EventGatewayVirtualClusterConsumePolicyAPISpec struct {
 	// +optional
 	*EventGatewayVirtualClusterConsumePolicyConfig `json:",inline"`
 
-	// ParentPolicyRef references a schemaValidation consume policy in the same
-	// namespace and virtual cluster. Required for decryptFields, maskFields and
-	// transcode, and optional for modifyHeaders and skipRecord.
+	// ParentPolicyRef references a schemaValidation consume policy of the same
+	// virtual cluster. One in another namespace needs a KongReferenceGrant in
+	// its namespace. Required for decryptFields, maskFields and transcode, and
+	// optional for modifyHeaders and skipRecord.
 	// It is immutable once this policy exists
 	// in Konnect.
 	// Deleting a parent is blocked while child policy objects reference it.

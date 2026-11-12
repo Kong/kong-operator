@@ -94,8 +94,8 @@ spec:
 	forward := forwardPolicy("forward", "listener", "{name: vc}", 4)
 	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{name: unknown}", 5)
 	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{name: vc}", 7)
-	// Of another namespace, attached to a listener of the gateway: left out,
-	// whatever its parent reference says.
+	// Of another namespace, attached to a listener of the gateway, without a
+	// KongReferenceGrant: left out.
 	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{name: vc}", 8)
 	forwardOtherNamespace.SetNamespace("other")
 	forwardOtherNamespace.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(ns)
@@ -113,7 +113,7 @@ spec:
 		"EventGatewayListenerPolicy forward-unknown": "resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: EventGatewayVirtualCluster " + ns +
 			`/unknown: eventgatewayvirtualclusters.configuration.konghq.com "unknown" not found`,
 		"EventGatewayListenerPolicy forward-of-duplicate":    "its EventGatewayListener " + ns + "/listener-duplicate isn't in the configuration",
-		"EventGatewayListenerPolicy forward-other-namespace": "it must be in the namespace of the OnPremEventGateway, " + ns,
+		"EventGatewayListenerPolicy forward-other-namespace": "no KongReferenceGrant allows it to reference the EventGatewayListener " + ns + "/listener",
 	}, excluded)
 
 	got, err := json.Marshal(cfg.entities)

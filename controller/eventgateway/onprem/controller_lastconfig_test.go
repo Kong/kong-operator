@@ -254,7 +254,7 @@ func TestEntitiesInUseBySent(t *testing.T) {
 	}`), &sent))
 
 	forwardPolicy := reportedEntity{typ: listenerPolicyType, key: client.ObjectKeyFromObject(forward)}
-	gonePolicy := reportedEntity{typ: producePolicyType, key: client.ObjectKey{Namespace: ns, Name: "validate"}}
+	gonePolicy := reportedEntity{typ: producePolicyType, key: client.ObjectKey{Name: "validate"}}
 	assert.Equal(t, map[reportedEntity][]reportedEntity{
 		{typ: virtualClusterType, key: client.ObjectKeyFromObject(vc)}:       {forwardPolicy},
 		{typ: backendClusterType, key: client.ObjectKeyFromObject(backend)}:  {forwardPolicy},

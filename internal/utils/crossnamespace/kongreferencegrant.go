@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
@@ -99,6 +100,27 @@ func CheckKongReferenceGrantForResource(
 		}
 	}
 	return nil
+}
+
+// CheckSiblingReferences checks the cross-namespace references obj declares on
+// its spec, other than its parent's (see CrossNamespaceSiblingReferences of the
+// generated types), against KongReferenceGrants. It returns the errors of the
+// references not granted, or whose grants couldn't be read, joined, or nil,
+// also for an obj declaring none.
+func CheckSiblingReferences(ctx context.Context, cl client.Client, obj any) error {
+	withRefs, ok := obj.(interface {
+		CrossNamespaceSiblingReferences() []commonv1alpha1.CrossNamespaceReferenceCheck
+	})
+	if !ok {
+		return nil
+	}
+	var errs []error
+	for _, c := range withRefs.CrossNamespaceSiblingReferences() {
+		if err := CheckKongReferenceGrantForResource(ctx, cl, c.FromNamespace, c.ToNamespace, c.ToName, c.FromGVK, c.ToGVK); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // isReferenceGranted checks if a cross-namespace reference from one resource to another

@@ -14362,7 +14362,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -14454,7 +14454,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -14598,7 +14598,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -14702,7 +14702,7 @@ EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for E
 
 | Field | Description |
 | --- | --- |
-| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields, maskFields and transcode, and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
+| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy of the same virtual cluster. One in another namespace needs a KongReferenceGrant in its namespace. Required for decryptFields, maskFields and transcode, and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -14768,7 +14768,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -14972,7 +14972,7 @@ EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for E
 
 | Field | Description |
 | --- | --- |
-| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields, maskFields and transcode, and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
+| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy of the same virtual cluster. One in another namespace needs a KongReferenceGrant in its namespace. Required for encryptFields, maskFields and transcode, and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -15036,7 +15036,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 

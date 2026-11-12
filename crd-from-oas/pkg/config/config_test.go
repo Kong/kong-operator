@@ -1421,13 +1421,12 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "injectInto must name a top-level apiSpec field",
 		},
 		{
-			name: "injectInto with cross-namespace support rejected",
+			name: "injectInto with cross-namespace support accepted",
 			cfg: base(func(rc *ReferenceConfig) {
 				rc.Path = "spec.apiSpec.customPolicyRef"
 				rc.InjectInto = "type"
 				rc.SupportCrossNamespaceReference = true
 			}),
-			wantErr: "supportCrossNamespaceReference is not supported with injectInto",
 		},
 		{
 			name: "reverseWatch on a single-kind reference accepted",

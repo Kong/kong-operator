@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -394,10 +395,6 @@ func resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrus
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayTLSTrustBundle
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -579,6 +576,26 @@ func (obj *EventGatewayListenerPolicy) ResolveKonnectReferences(ctx context.Cont
 // calling ResolveKonnectReferences.
 func (obj *EventGatewayListenerPolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
+	for _, ref := range RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayTLSTrustBundle"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayListenerPolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 

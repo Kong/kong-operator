@@ -171,7 +171,7 @@ func (r *Reconciler) recoverLastConfig(
 // policies of the entities sent reference, among the objects of cfg, which
 // FinalizerInUse can hold, with the policies referencing each, and the backend
 // cluster of each virtual cluster in use. A policy whose object is gone is
-// named after its entity.
+// named after its entity, without a namespace: it may have been of any.
 func entitiesInUseBySent(sent gwadminapi.GatewayEntitySet, cfg configuration) map[reportedEntity][]reportedEntity {
 	held := map[string]reportedEntity{}
 	objects := map[string]reportedEntity{}
@@ -190,7 +190,7 @@ func entitiesInUseBySent(sent gwadminapi.GatewayEntitySet, cfg configuration) ma
 			if names := policyName(policy); len(names) > 0 {
 				name = names[0].value
 			}
-			self = reportedEntity{typ: t, key: client.ObjectKey{Namespace: cfg.namespace, Name: name}}
+			self = reportedEntity{typ: t, key: client.ObjectKey{Name: name}}
 		}
 		for _, ref := range sentReferences(policy, held, self) {
 			if !slices.Contains(inUse[ref], self) {

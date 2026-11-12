@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -332,9 +333,16 @@ const (
 	// e.g. its parent entity was deleted.
 	OnPremEntityDetachedReason consts.ConditionReason = "Detached"
 	// OnPremEntityRefNotPermittedReason indicates the entity is left out of
-	// the configuration of its OnPremEventGateway: it reads a Secret in
-	// another namespace, and no KongReferenceGrant allows it.
+	// the configuration of its OnPremEventGateway: it references its parent,
+	// or reads a Secret, of another namespace, and no KongReferenceGrant
+	// allows it.
 	OnPremEntityRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
+	// OnPremEntityReferenceNotPermittedReason indicates the entity is left out
+	// of the configuration of its OnPremEventGateway: it references another
+	// entity than its parent, e.g. a schema registry, of another namespace,
+	// and no KongReferenceGrant allows it. It is the reason a Konnect entity
+	// reports in its KonnectReferencesResolved condition.
+	OnPremEntityReferenceNotPermittedReason consts.ConditionReason = commonv1alpha1.KonnectReferencesResolvedReasonNotPermitted
 	// OnPremEntityNotRegisteredReason indicates the data plane certificate is
 	// in the configuration of its OnPremEventGateway, and not registered yet
 	// on every gw-admin pod serving it: the message names those it isn't.

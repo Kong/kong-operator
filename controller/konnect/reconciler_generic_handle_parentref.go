@@ -94,6 +94,19 @@ func ensureKongReferenceGrantForParentRef[
 	)
 
 	if crossnamespace.IsReferenceNotGranted(err) {
+		// An entity being deleted must still be removed from Konnect: revoking
+		// the grant, e.g. deleting everything at once, can't block it. One not
+		// in Konnect has nothing to remove, and must not read a parent it was
+		// never granted.
+		if !ent.GetDeletionTimestamp().IsZero() {
+			if withID, ok := any(ent).(interface{ GetKonnectID() string }); ok && withID.GetKonnectID() != "" {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, ReferencedObjectNotGrantedOnDeletionError{
+				Reference: types.NamespacedName{Namespace: targetNamespace, Name: ref.NamespacedRef.Name},
+				TypeName:  parentTypeName,
+			}
+		}
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
@@ -267,8 +280,12 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 		}
 	}
 
+	// An entity being deleted only needs the Konnect ID of its parent to be
+	// removed from Konnect: the parent may no longer be Programmed, e.g. its
+	// KongReferenceGrant was deleted along with them.
+	beingDeletedWithParentID := !obj.GetDeletionTimestamp().IsZero() && parent.GetKonnectID() != ""
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, parent)
-	if !ok || cond.Status != metav1.ConditionTrue {
+	if (!ok || cond.Status != metav1.ConditionTrue) && !beingDeletedWithParentID {
 		msg := fmt.Sprintf("Referenced %s %s is not programmed yet", parentType, nn)
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, obj,

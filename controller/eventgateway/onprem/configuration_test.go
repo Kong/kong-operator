@@ -116,7 +116,7 @@ spec:
 	// The same name as backendCluster, created later: left out.
 	duplicate := newBackendCluster("duplicate", "backend-cluster")
 	duplicate.SetCreationTimestamp(metav1.NewTime(created.Add(time.Minute)))
-	// In another namespace than the gateway: left out.
+	// In another namespace than the gateway, without a KongReferenceGrant: left out.
 	otherNamespace := newBackendCluster("other-namespace", "other-namespace")
 	otherNamespace.SetNamespace("other")
 	otherNamespace.Spec.ParentRef.Namespace = new(ns)
@@ -202,8 +202,8 @@ spec:
 		invalid := eventgatewayv1alpha1.OnPremEntityInvalidReason
 		assert.Equal(t, invalid, excluded["default/duplicate"].reason)
 		assert.Contains(t, excluded["default/duplicate"].message, `another backend cluster of the gateway is named "backend-cluster"`)
-		assert.Equal(t, invalid, excluded["other/other-namespace"].reason)
-		assert.Contains(t, excluded["other/other-namespace"].message, "must be in the namespace of the OnPremEventGateway, default")
+		assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, excluded["other/other-namespace"].reason)
+		assert.Equal(t, "no KongReferenceGrant allows it to reference the OnPremEventGateway default/gateway", excluded["other/other-namespace"].message)
 		assert.Equal(t, invalid, excluded["default/not-v4"].reason)
 		assert.Contains(t, excluded["default/not-v4"].message, "is not a version 4 UUID")
 		assert.Equal(t, invalid, excluded["default/missing-secret"].reason)
@@ -307,6 +307,51 @@ spec:
 		assert.Empty(t, cfg.excluded)
 		require.Len(t, cfg.entities.BackendClusters, 1)
 		assert.Equal(t, "client-cert", cfg.entities.BackendClusters[0].Tls.ClientIdentity.Certificate)
+	})
+
+	t.Run("held while being deleted, an entity whose grant is revoked is sent as it was last", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			Name: "grant", Namespace: "secrets",
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayBackendCluster", Namespace: ns}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "core", Kind: "Secret"}},
+			},
+		}
+		secret := backendClusterSecret.DeepCopy()
+		secret.Name, secret.Namespace = "tls", "secrets"
+		granted, err := buildConfiguration(t.Context(), newFakeClient(t, notGranted, grant, secret, backendClusterSecret), gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, granted.excluded)
+		require.Len(t, granted.entities.BackendClusters, 1)
+
+		// Deleted with its KongReferenceGrant, e.g. along with its namespace,
+		// while policies of the last configuration sent still use it.
+		deleting := notGranted.DeepCopy()
+		deleting.SetDeletionTimestamp(new(metav1.Now()))
+		deleting.SetFinalizers([]string{FinalizerInUse})
+
+		kept, err := buildConfiguration(t.Context(), newFakeClient(t, deleting, secret, backendClusterSecret), gateway, "", granted.built)
+		require.NoError(t, err)
+		assert.Empty(t, kept.excluded, "it doesn't stop the push that releases it")
+		assert.Equal(t, granted.entities.BackendClusters, kept.entities.BackendClusters)
+		require.Len(t, kept.included, 1)
+		assert.True(t, kept.included[0].kept)
+		assertSecretRefValid(t, kept.included[0], metav1.ConditionFalse,
+			"The Secrets it reads aren't read: no KongReferenceGrant allows it to read the Secret secrets/tls")
+
+		t.Run("not sent before, it is left out as any other", func(t *testing.T) {
+			cfg, err := buildConfiguration(t.Context(), newFakeClient(t, deleting, secret, backendClusterSecret), gateway, "", nil)
+			require.NoError(t, err)
+			require.Len(t, cfg.excluded, 1)
+			assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, cfg.excluded[0].reason)
+		})
+
+		t.Run("not being deleted, it is left out as any other", func(t *testing.T) {
+			cfg, err := buildConfiguration(t.Context(), newFakeClient(t, notGranted, secret, backendClusterSecret), gateway, "", granted.built)
+			require.NoError(t, err)
+			require.Len(t, cfg.excluded, 1)
+			assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, cfg.excluded[0].reason)
+		})
 	})
 
 	t.Run("a Secret that can't be read is returned, not left out", func(t *testing.T) {
@@ -790,4 +835,22 @@ spec:
 		assert.True(t, kept.included[0].kept)
 		assert.Equal(t, "ca-pem", kept.entities.TlsTrustBundles[0].Config.TrustedCa)
 	})
+}
+
+// TestByCreationAcrossNamespaces checks objects of several namespaces sharing
+// a name and a creation second are always ordered the same way, whatever
+// order the cache lists them in.
+func TestByCreationAcrossNamespaces(t *testing.T) {
+	created := metav1.NewTime(time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC))
+	objs := []*configurationv1alpha1.EventGatewayBackendCluster{
+		{Name: "backend", Namespace: "b", CreationTimestamp: created},
+		{Name: "backend", Namespace: "a", CreationTimestamp: created},
+		{Name: "backend", Namespace: "c", CreationTimestamp: created},
+	}
+	slices.SortFunc(objs, byCreation[*configurationv1alpha1.EventGatewayBackendCluster])
+	var got []string
+	for _, o := range objs {
+		got = append(got, o.Namespace)
+	}
+	assert.Equal(t, []string{"a", "b", "c"}, got)
 }

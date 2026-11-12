@@ -46150,8 +46150,8 @@ spec:
                   - namespace
                   type: object
                   x-kubernetes-validations:
-                  - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding, KongSNI, EventGatewayStaticKey, EventGatewayBackendCluster, EventGatewaySchemaRegistry, EventGatewayTLSTrustBundle and EventGatewayListenerPolicy kinds are supported for 'configuration.konghq.com' group
-                    rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI', 'EventGatewayStaticKey', 'EventGatewayBackendCluster', 'EventGatewaySchemaRegistry', 'EventGatewayTLSTrustBundle', 'EventGatewayListenerPolicy']
+                  - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding, KongSNI and Event Gateway entity kinds are supported for 'configuration.konghq.com' group
+                    rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI', 'EventGatewayBackendCluster', 'EventGatewayDataPlaneCertificate', 'EventGatewayListener', 'EventGatewayListenerPolicy', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterProducePolicy']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com' group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind in [ 'GatewayConfiguration' ]
                   - message: namespace must be empty for KongVault and non-empty for other kinds
@@ -46186,8 +46186,8 @@ spec:
                     rule: .self.group != 'core' || .self.kind == 'Secret'
                   - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore' and 'KonnectAIGateway' kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore', 'KonnectAIGateway']
-                  - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group
-                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream']
+                  - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream' and Event Gateway entity kinds other policies and entities reference are supported for 'configuration.konghq.com' group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterProducePolicy']
                   - message: Only 'AIGatewayConsumerGroup' kind is supported for 'aiconfiguration.konghq.com' group
                     rule: .self.group != 'aiconfiguration.konghq.com' || .self.kind in ['AIGatewayConsumerGroup']
                 maxItems: 16

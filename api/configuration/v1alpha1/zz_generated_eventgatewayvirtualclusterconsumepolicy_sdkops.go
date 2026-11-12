@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -473,10 +474,6 @@ func resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ctx context.C
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayVirtualClusterConsumePolicy
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -578,10 +575,6 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConflue
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewaySchemaRegistry
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -674,10 +667,6 @@ func resolveEventGatewayVirtualClusterConsumePolicyTranscodeConfigAvroSchemaSour
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewaySchemaRegistry
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -768,10 +757,6 @@ func resolveEventGatewayVirtualClusterConsumePolicyTranscodeConfigJSONSchemaSour
 		}
 		if ref.Name == "" {
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
 		var referenced EventGatewaySchemaRegistry
@@ -891,6 +876,86 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ResolveKonnectReferences(ctx
 // calling ResolveKonnectReferences.
 func (obj *EventGatewayVirtualClusterConsumePolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
+	for _, ref := range RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualClusterConsumePolicy"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterConsumePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterConsumePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterConsumePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterConsumePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterConsumePolicyTranscodeConfigJSONSchemaSourceReferenceSchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterConsumePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 
