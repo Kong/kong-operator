@@ -11,6 +11,13 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# Bound the whole snapshot. Chainsaw does not time-limit the catch script, and
+# on a slow cluster the per-resource counting below ran for over 10 minutes,
+# which nearly used up the CI job timeout and the artifact upload after it.
+if [ -z "${DEBUG_SNAPSHOT_BOUNDED:-}" ] && command -v timeout >/dev/null 2>&1; then
+  DEBUG_SNAPSHOT_BOUNDED=1 exec timeout "${DEBUG_SNAPSHOT_TIMEOUT:-240}" bash "$0" "$@"
+fi
+
 # Variables (from environment):
 #   TEST_NAME: Name of the test (used for output directory naming).
 #   NAMESPACE: The test namespace to capture state from.
