@@ -324,8 +324,10 @@
   now get API server defaults, so stored objects materialize them instead of
   leaving the parent structs nil: `configDump` (`state` and `dumpSensitive`
   `disabled`), `dataplaneSync` (`reverseSync` `disabled`),
-  `translation.fallbackConfiguration.useLastValidConfig` (`disabled`) and
-  `network.services.ingress` (`type` `LoadBalancer`).
+  `network.services.ingress` (`type` `LoadBalancer`), and
+  `translation.fallbackConfiguration.useLastValidConfig` (`disabled`, applied
+  when `fallbackConfiguration` is set: the parent itself stays unset by
+  default).
   `useLastValidConfig` no longer defaults to `enabled`, which made the
   ControlPlane manager fail to start while the `FallbackConfiguration` feature
   gate is disabled: setting it to `enabled` now requires that feature gate,

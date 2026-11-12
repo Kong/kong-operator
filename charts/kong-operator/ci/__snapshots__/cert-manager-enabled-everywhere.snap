@@ -57731,6 +57731,8 @@ spec:
                         type: LoadBalancer
                     properties:
                       ingress:
+                        default:
+                          type: LoadBalancer
                         properties:
                           annotations:
                             additionalProperties:
@@ -85096,6 +85098,8 @@ spec:
                             type: LoadBalancer
                         properties:
                           ingress:
+                            default:
+                              type: LoadBalancer
                             properties:
                               annotations:
                                 additionalProperties:

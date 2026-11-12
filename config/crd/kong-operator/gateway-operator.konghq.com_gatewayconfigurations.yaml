@@ -29596,6 +29596,8 @@ spec:
                           and from the DataPlane.
                         properties:
                           ingress:
+                            default:
+                              type: LoadBalancer
                             description: |-
                               Ingress is the Kubernetes Service that will be used to expose ingress
                               traffic for the DataPlane. Here you can determine whether the DataPlane

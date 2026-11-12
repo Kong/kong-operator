@@ -682,6 +682,38 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 			},
 			{
+				Name: "specify nodeport for listeners with empty dataPlaneOptions.network: ingress type defaults to LoadBalancer",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{},
+						},
+						ListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
+							{
+								Name:     "http",
+								NodePort: int32(30080),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "specify nodeport for listeners without dataPlaneOptions is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
+							{
+								Name:     "http",
+								NodePort: int32(30080),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer"),
+			},
+			{
 				Name: "nodePort out of range",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),

@@ -201,6 +201,7 @@ type GatewayConfigDataPlaneServices struct {
 	// influence a cloud provider LoadBalancer configuration).
 	//
 	// +optional
+	// +kubebuilder:default={type: "LoadBalancer"}
 	Ingress *GatewayConfigServiceOptions `json:"ingress,omitempty"`
 }
 

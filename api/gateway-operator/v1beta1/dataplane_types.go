@@ -202,6 +202,7 @@ type DataPlaneServices struct {
 	// influence a cloud provider LoadBalancer configuration).
 	//
 	// +optional
+	// +kubebuilder:default={type: "LoadBalancer"}
 	Ingress *DataPlaneServiceOptions `json:"ingress,omitempty"`
 }
 
