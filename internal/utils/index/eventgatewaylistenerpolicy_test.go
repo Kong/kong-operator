@@ -19,7 +19,7 @@ func TestEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef(t *testing.T)
 	}
 	require.NotNil(t, extract)
 
-	policy := func(bundles ...configurationv1alpha1.TLSTrustBundleReference) *configurationv1alpha1.EventGatewayListenerPolicy {
+	policy := func(bundles ...configurationv1alpha1.EventGatewayTLSTrustBundleRef) *configurationv1alpha1.EventGatewayListenerPolicy {
 		return &configurationv1alpha1.EventGatewayListenerPolicy{
 			Name: "policy", Namespace: "ns",
 			Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
@@ -56,19 +56,10 @@ func TestEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef(t *testing.T)
 			expected: nil,
 		},
 		{
-			name: "only Konnect IDs and names are not indexed",
+			name: "references are indexed with the policy namespace by default",
 			input: policy(
-				configurationv1alpha1.TLSTrustBundleReference{ID: new("trust-bundle-id")},
-				configurationv1alpha1.TLSTrustBundleReference{Name: new(configurationv1alpha1.TLSTrustBundleName("trust-bundle-name"))},
-			),
-			expected: nil,
-		},
-		{
-			name: "namespacedRefs are indexed with the policy namespace by default",
-			input: policy(
-				configurationv1alpha1.TLSTrustBundleReference{ID: new("trust-bundle-id")},
-				configurationv1alpha1.TLSTrustBundleReference{NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "bundle-a"}},
-				configurationv1alpha1.TLSTrustBundleReference{NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "bundle-b", Namespace: "other"}},
+				configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "bundle-a"},
+				configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "bundle-b", Namespace: "other"},
 			),
 			expected: []string{"ns/bundle-a", "other/bundle-b"},
 		},

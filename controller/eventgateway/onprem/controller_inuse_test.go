@@ -20,10 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -181,7 +179,7 @@ func TestBuildConfigurationSchemaRegistryObjectReferences(t *testing.T) {
 	orders := f.registry("orders", "gateway", 2)
 	elsewhere := f.registry("elsewhere", "other-gateway", 3)
 
-	validateConfluent := f.validateWith("validate-confluent", `{type: namespacedRef, namespacedRef: {name: orders}}`, 4)
+	validateConfluent := f.validateWith("validate-confluent", `{name: orders}`, 4)
 	// A schema validation of type json parses without a schema: it names no
 	// registry, and a transcode policy can be its child.
 	validateJSON := f.producePolicy("validate-json", `
@@ -198,7 +196,7 @@ func TestBuildConfigurationSchemaRegistryObjectReferences(t *testing.T) {
       name: transcode-avro
       config:
         outputFormat: avro
-        avro: {failureMode: reject, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}}}}
+        avro: {failureMode: reject, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {name: orders}}}}
 `, 6)
 	parent := f.consumePolicy("parent", `
     type: schemaValidation
@@ -213,9 +211,9 @@ func TestBuildConfigurationSchemaRegistryObjectReferences(t *testing.T) {
       name: transcode-json
       config:
         outputFormat: json
-        json: {failureMode: error, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}}}}
+        json: {failureMode: error, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {name: orders}}}}
 `, 8)
-	ofAnotherGateway := f.validateWith("of-another-gateway", `{type: namespacedRef, namespacedRef: {name: elsewhere}}`, 10)
+	ofAnotherGateway := f.validateWith("of-another-gateway", `{name: elsewhere}`, 10)
 
 	cl := f.objects(orders, elsewhere, validateJSON, validateConfluent, transcodeAvro, parent, transcodeJSON, ofAnotherGateway)
 	cfg, err := buildConfiguration(t.Context(), cl, f.gateway, "", nil)
@@ -364,7 +362,7 @@ spec:
 func TestBuildConfigurationVirtualClusterInUse(t *testing.T) {
 	f := newSchemaRegistryFixture(t)
 	orders := f.namedVirtualCluster("orders-vc", "orders", 2)
-	forward := f.forward("forward", `{namespacedRef: {name: orders-vc}}`, 3)
+	forward := f.forward("forward", `{name: orders-vc}`, 3)
 
 	destinationOf := func(t *testing.T, cfg configuration) any {
 		t.Helper()
@@ -427,7 +425,7 @@ spec:
 `)
 		elsewhere := f.namedVirtualCluster("elsewhere", "elsewhere", 2)
 		elsewhere.Spec.EventGatewayBackendClusterRef.NamespacedRef.Name = "other-bc"
-		policy := f.forward("forward", `{namespacedRef: {name: elsewhere}}`, 3)
+		policy := f.forward("forward", `{name: elsewhere}`, 3)
 		cfg, err := buildConfiguration(t.Context(), f.objects(otherBackend, elsewhere, f.listener(), policy), f.gateway, "", nil)
 		require.NoError(t, err)
 		assert.Equal(t, map[string]string{
@@ -442,8 +440,8 @@ func TestBuildConfigurationStaticKeysAndTrustBundlesInUse(t *testing.T) {
 	key := f.staticKey("key", 2)
 	unusedKey := f.staticKey("unused-key", 3)
 	bundle := f.trustBundle("bundle", 4)
-	encrypt := f.encrypt("encrypt", `{namespacedRef: {name: key}}`, 5)
-	tls := f.tlsServer("tls", `[{namespacedRef: {name: bundle}}]`, 6)
+	encrypt := f.encrypt("encrypt", `{name: key}`, 5)
+	tls := f.tlsServer("tls", `[{name: bundle}]`, 6)
 
 	cfg, err := buildConfiguration(t.Context(), f.objects(f.keySecret(), f.tlsSecret(), key, unusedKey, bundle, f.listener(), encrypt, tls), f.gateway, "", nil)
 	require.NoError(t, err)
@@ -483,178 +481,50 @@ spec:
 	})
 }
 
-func TestReferencesByObjectAt(t *testing.T) {
-	// Paths no fixture of the configuration tests goes through.
-	t.Run("every encryption key of an encryptFields policy", func(t *testing.T) {
-		value := map[string]any{"encryptFields": map[string]any{"config": map[string]any{"encryptFields": []any{
-			map[string]any{"encryptionKey": map[string]any{"static": map[string]any{"key": map[string]any{"namespacedRef": map[string]any{"name": "key"}}}}},
-			map[string]any{"encryptionKey": map[string]any{"static": map[string]any{"key": map[string]any{"id": "x"}}}},
-		}}}}
-		ref := configurationv1alpha1.ObjectReferencePath{Path: "encryptFields.config.encryptFields.encryptionKey.static.key", Kind: "EventGatewayStaticKey"}
-		require.EqualError(t, referencesByObjectAt(value, strings.Split(ref.Path, "."), "spec.apiSpec", ref),
-			"spec.apiSpec.encryptFields.config.encryptFields.1.encryptionKey.static.key references an EventGatewayStaticKey by id: with an OnPremEventGateway, only namespacedRef is allowed")
-	})
-	t.Run("a name set directly names the object only where the reference says so", func(t *testing.T) {
-		value := map[string]any{"schemaRegistry": map[string]any{"name": "orders"}}
-		ref := configurationv1alpha1.ObjectReferencePath{Path: "schemaRegistry", Kind: "EventGatewaySchemaRegistry", NameIsObject: true}
-		require.NoError(t, referencesByObjectAt(value, []string{"schemaRegistry"}, "", ref))
-		ref.NameIsObject = false
-		require.EqualError(t, referencesByObjectAt(value, []string{"schemaRegistry"}, "", ref),
-			"schemaRegistry references an EventGatewaySchemaRegistry by name: with an OnPremEventGateway, only namespacedRef is allowed")
-	})
-}
-
-// TestObjectReferencePathsOfThePolicies checks the generated paths of the
-// references on-prem checks: each kind of reference to an entity the policies
-// of an OnPremEventGateway can hold is declared.
-func TestObjectReferencePathsOfThePolicies(t *testing.T) {
-	kinds := func(paths []configurationv1alpha1.ObjectReferencePath) []string {
-		var kinds []string
-		for _, p := range paths {
-			require.True(t, strings.HasPrefix(p.Path, "spec.apiSpec."), p.Path)
-			if !slices.Contains(kinds, p.Kind) {
-				kinds = append(kinds, p.Kind)
-			}
-		}
-		slices.Sort(kinds)
-		return kinds
-	}
-	assert.Equal(t, []string{"EventGatewayTLSTrustBundle", "EventGatewayVirtualCluster"},
-		kinds((&configurationv1alpha1.EventGatewayListenerPolicy{}).ObjectReferencePaths()))
-	assert.Equal(t, []string{"EventGatewaySchemaRegistry", "EventGatewayStaticKey"},
-		kinds((&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{}).ObjectReferencePaths()))
-	consume := (&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{}).ObjectReferencePaths()
-	assert.Equal(t, []string{"EventGatewaySchemaRegistry"}, kinds(consume))
-	for _, p := range consume {
-		assert.Equal(t, strings.HasPrefix(p.Path, "spec.apiSpec.schemaValidation."), p.NameIsObject,
-			"%s: only a schema validation names its registry directly", p.Path)
-	}
-}
-
-func TestBuildConfigurationReferencesOnlyByObject(t *testing.T) {
+// TestBuildConfigurationReferencesByObject checks the policies referencing
+// another entity by object are included, and hold what they reference.
+func TestBuildConfigurationReferencesByObject(t *testing.T) {
 	f := newSchemaRegistryFixture(t)
 	orders := f.registry("orders", "gateway", 2)
-	uid := string(orders.UID)
-	const notByObject = " references an EventGatewaySchemaRegistry by %s: with an OnPremEventGateway, only namespacedRef is allowed"
-	transcodeSource := func(ref string) string {
-		return `{type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: ` + ref + `}}`
-	}
 
 	testCases := []struct {
 		name     string
 		policies []client.Object
-		excluded map[string]string
 	}{
 		{
-			name:     "a produce schema validation by name, even the UID of the registry",
-			policies: []client.Object{f.validateWith("p", `{type: name, name: {name: "`+uid+`"}}`, 3)},
-			excluded: map[string]string{"EventGatewayVirtualClusterProducePolicy p": "spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry" + fmt.Sprintf(notByObject, "name")},
+			name:     "a produce schema validation",
+			policies: []client.Object{f.validateWith("p", `{name: orders}`, 3)},
 		},
 		{
-			name:     "a produce schema validation by id",
-			policies: []client.Object{f.validateWith("p", `{type: id, id: {id: 6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60}}`, 3)},
-			excluded: map[string]string{"EventGatewayVirtualClusterProducePolicy p": "spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry" + fmt.Sprintf(notByObject, "id")},
-		},
-		{
-			name: "a produce transcode by id, left out, not its parent",
-			policies: []client.Object{
-				f.validateWith("parent", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3),
-				f.producePolicy("p", `
-    type: transcode
-    parentPolicyRef: {name: parent}
-    transcode:
-      name: p
-      config:
-        outputFormat: avro
-        avro: {failureMode: reject, schemaSource: `+transcodeSource(`{type: id, id: {id: 6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60}}`)+`}
-`, 4),
-			},
-			excluded: map[string]string{"EventGatewayVirtualClusterProducePolicy p": "spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry" + fmt.Sprintf(notByObject, "id")},
-		},
-		{
-			name: "a consume transcode by name, left out, not its parent",
-			policies: []client.Object{
-				f.consumePolicy("parent", `
-    type: schemaValidation
-    schemaValidation:
-      name: parent
-      config: {type: json, json: {valueValidationAction: mark}}
-`, 3),
-				f.consumePolicy("p", `
-    type: transcode
-    parentPolicyRef: {name: parent}
-    transcode:
-      name: p
-      config:
-        outputFormat: json
-        json: {failureMode: error, schemaSource: `+transcodeSource(`{type: name, name: {name: "`+uid+`"}}`)+`}
-`, 4),
-			},
-			excluded: map[string]string{"EventGatewayVirtualClusterConsumePolicy p": "spec.apiSpec.transcode.config.json.schemaSource.reference.schemaRegistry" + fmt.Sprintf(notByObject, "name")},
-		},
-		{
-			name:     "the type alone decides: a reference by name with a stray namespacedRef",
-			policies: []client.Object{f.validateWith("p", `{type: name, name: {name: "`+uid+`"}, namespacedRef: {name: orders}}`, 3)},
-			excluded: map[string]string{"EventGatewayVirtualClusterProducePolicy p": "spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry" + fmt.Sprintf(notByObject, "name")},
-		},
-		{
-			name: "a consume schema validation naming its registry object directly, without type namespacedRef",
+			name: "a consume schema validation",
 			policies: []client.Object{f.consumePolicy("p", `
     type: schemaValidation
     schemaValidation:
       name: p
       config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: orders}, valueValidationAction: mark}}
 `, 3)},
-			excluded: map[string]string{},
 		},
 		{
-			name: "a consume schema validation by namespacedRef",
-			policies: []client.Object{f.consumePolicy("p", `
-    type: schemaValidation
-    schemaValidation:
-      name: p
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}, valueValidationAction: mark}}
-`, 3)},
-			excluded: map[string]string{},
+			name:     "an encrypt policy",
+			policies: []client.Object{f.staticKey("key", 3), f.keySecret(), f.encrypt("p", `{name: key}`, 4)},
 		},
 		{
-			name:     "an encrypt policy by the id of its static key",
-			policies: []client.Object{f.encrypt("p", `{id: "`+string(f.staticKey("key", 3).UID)+`"}`, 4)},
-			excluded: map[string]string{"EventGatewayVirtualClusterProducePolicy p": "spec.apiSpec.encrypt.config.encryptionKey.static.key references an EventGatewayStaticKey by id: with an OnPremEventGateway, only namespacedRef is allowed"},
-		},
-		{
-			name:     "an encrypt policy by the name of its static key",
-			policies: []client.Object{f.encrypt("p", `{name: key}`, 4)},
-			excluded: map[string]string{"EventGatewayVirtualClusterProducePolicy p": "spec.apiSpec.encrypt.config.encryptionKey.static.key references an EventGatewayStaticKey by name: with an OnPremEventGateway, only namespacedRef is allowed"},
-		},
-		{
-			name:     "an encrypt policy by object",
-			policies: []client.Object{f.staticKey("key", 3), f.keySecret(), f.encrypt("p", `{namespacedRef: {name: key}}`, 4)},
-			excluded: map[string]string{},
-		},
-		{
-			name:     "a listener policy with a TLS trust bundle by id, among those by object",
-			policies: []client.Object{f.trustBundle("bundle", 3), f.listener(), f.tlsSecret(), f.tlsServer("p", `[{namespacedRef: {name: bundle}}, {id: "6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60"}]`, 4)},
-			excluded: map[string]string{"EventGatewayListenerPolicy p": "spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles.1 references an EventGatewayTLSTrustBundle by id: with an OnPremEventGateway, only namespacedRef is allowed"},
-		},
-		{
-			name:     "a listener policy with a TLS trust bundle by name",
+			name:     "a listener policy with TLS trust bundles",
 			policies: []client.Object{f.trustBundle("bundle", 3), f.listener(), f.tlsSecret(), f.tlsServer("p", `[{name: bundle}]`, 4)},
-			excluded: map[string]string{"EventGatewayListenerPolicy p": "spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles.0 references an EventGatewayTLSTrustBundle by name: with an OnPremEventGateway, only namespacedRef is allowed"},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg, err := buildConfiguration(t.Context(), f.objects(append(tc.policies, orders)...), f.gateway, "", nil)
 			require.NoError(t, err)
-			assert.Equal(t, tc.excluded, excludedMessages(cfg))
-			if len(tc.excluded) > 0 {
-				for _, policies := range cfg.entitiesInUse {
-					for _, policy := range policies {
-						assert.NotEqual(t, "p", policy.key.Name, "a policy left out doesn't hold an entity")
-					}
+			assert.Empty(t, excludedMessages(cfg))
+			var holders []string
+			for _, policies := range cfg.entitiesInUse {
+				for _, policy := range policies {
+					holders = append(holders, policy.key.Name)
 				}
 			}
+			assert.Contains(t, holders, "p", "the policy holds what it references")
 		})
 	}
 }
@@ -666,7 +536,7 @@ func TestBuildConfigurationHeldSchemaRegistry(t *testing.T) {
 		orders := f.registry("orders", "gateway", 2)
 		orders.SetFinalizers([]string{FinalizerInUse})
 		orders.SetDeletionTimestamp(new(metav1.NewTime(f.at(fixtureDeletion))))
-		policy := f.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		policy := f.validateWith("validate", `{name: orders}`, 3)
 
 		cfg, err := buildConfiguration(t.Context(), f.objects(orders, policy), f.gateway, "", nil)
 		require.NoError(t, err)
@@ -692,7 +562,7 @@ func TestBuildConfigurationHeldSchemaRegistry(t *testing.T) {
 		orders := f.registry("orders", "gateway", 2)
 		orders.SetFinalizers([]string{"example.com/hold"})
 		orders.SetDeletionTimestamp(new(metav1.NewTime(f.at(fixtureDeletion))))
-		policy := f.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		policy := f.validateWith("validate", `{name: orders}`, 3)
 
 		cfg, err := buildConfiguration(t.Context(), f.objects(orders, policy), f.gateway, "", nil)
 		require.NoError(t, err)
@@ -709,12 +579,12 @@ func TestBuildConfigurationHeldSchemaRegistry(t *testing.T) {
 		orders := f.registry("orders", "gateway", 2)
 		orders.SetFinalizers([]string{FinalizerInUse})
 		orders.SetDeletionTimestamp(new(metav1.NewTime(f.at(fixtureDeletion))))
-		produce := f.validateWith("same", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		produce := f.validateWith("same", `{name: orders}`, 3)
 		consume := f.consumePolicy("same", `
     type: schemaValidation
     schemaValidation:
       name: same-consume
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: orders}, valueValidationAction: mark}}
 `, 4)
 		cfg, err := buildConfiguration(t.Context(), f.objects(orders, produce, consume), f.gateway, "", nil)
 		require.NoError(t, err)
@@ -863,7 +733,7 @@ func TestHoldEntities(t *testing.T) {
 // entities in use, not only the helpers doing it.
 func TestInUseWiring(t *testing.T) {
 	inConfiguration := func(s schemaRegistryFixture, registry *configurationv1alpha1.EventGatewaySchemaRegistry) []client.Object {
-		return append(s.virtualCluster(), registry, s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: `+registry.Name+`}}`, 3))
+		return append(s.virtualCluster(), registry, s.validateWith("validate", `{name: `+registry.Name+`}`, 3))
 	}
 	withObjects := func(objs ...client.Object) func(*pushFixture) []client.Object {
 		return func(f *pushFixture) []client.Object {
@@ -950,7 +820,7 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 			entity:  func() client.Object { return f.registry("entity", "gateway", 1) },
 			objects: func() []client.Object { return nil },
 			policy: func(minutes int) client.Object {
-				return f.validateWith("p", `{type: namespacedRef, namespacedRef: {name: entity}}`, minutes)
+				return f.validateWith("p", `{name: entity}`, minutes)
 			},
 			kind:    "EventGatewayVirtualClusterProducePolicy p",
 			message: "it references the EventGatewaySchemaRegistry " + ns + "/entity, which is being deleted",
@@ -960,7 +830,7 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 			entity:  func() client.Object { return f.staticKey("entity", 1) },
 			objects: func() []client.Object { return []client.Object{f.keySecret()} },
 			policy: func(minutes int) client.Object {
-				return f.encrypt("p", `{namespacedRef: {name: entity}}`, minutes)
+				return f.encrypt("p", `{name: entity}`, minutes)
 			},
 			kind:    "EventGatewayVirtualClusterProducePolicy p",
 			message: "it references the EventGatewayStaticKey " + ns + "/entity, which is being deleted",
@@ -970,7 +840,7 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 			entity:  func() client.Object { return f.trustBundle("entity", 1) },
 			objects: func() []client.Object { return []client.Object{f.listener(), f.tlsSecret()} },
 			policy: func(minutes int) client.Object {
-				return f.tlsServer("p", `[{namespacedRef: {name: entity}}]`, minutes)
+				return f.tlsServer("p", `[{name: entity}]`, minutes)
 			},
 			kind:    "EventGatewayListenerPolicy p",
 			message: "it references the EventGatewayTLSTrustBundle " + ns + "/entity, which is being deleted",
@@ -980,7 +850,7 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 			entity:  func() client.Object { return f.namedVirtualCluster("entity", "entity", 1) },
 			objects: func() []client.Object { return []client.Object{f.listener()} },
 			policy: func(minutes int) client.Object {
-				return f.forward("p", `{namespacedRef: {name: entity}}`, minutes)
+				return f.forward("p", `{name: entity}`, minutes)
 			},
 			kind:    "EventGatewayListenerPolicy p",
 			message: "it references the EventGatewayVirtualCluster " + ns + "/entity, which is being deleted",
@@ -1028,7 +898,7 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 
 	t.Run("an existing policy changed to reference it still can, as with Konnect", func(t *testing.T) {
 		orders := beingDeleted(f.registry("orders", "gateway", 1)).(*configurationv1alpha1.EventGatewaySchemaRegistry)
-		edited := f.validateWith("edited", `{type: namespacedRef, namespacedRef: {name: orders}}`, before)
+		edited := f.validateWith("edited", `{name: orders}`, before)
 		edited.Generation = 2
 		cfg, err := buildConfiguration(t.Context(), f.objects(orders, edited), f.gateway, "", nil)
 		require.NoError(t, err)
@@ -1038,8 +908,8 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 
 	t.Run("a new and an existing policy: only the existing one holds it", func(t *testing.T) {
 		orders := beingDeleted(f.registry("orders", "gateway", 1)).(*configurationv1alpha1.EventGatewaySchemaRegistry)
-		existing := f.validateWith("existing", `{type: namespacedRef, namespacedRef: {name: orders}}`, before)
-		late := f.validateWith("late", `{type: namespacedRef, namespacedRef: {name: orders}}`, after)
+		existing := f.validateWith("existing", `{name: orders}`, before)
+		late := f.validateWith("late", `{name: orders}`, after)
 		cfg, err := buildConfiguration(t.Context(), f.objects(orders, existing, late), f.gateway, "", nil)
 		require.NoError(t, err)
 		assert.Equal(t, map[string]string{
@@ -1050,7 +920,7 @@ func TestNewUserOfDeletedEntity(t *testing.T) {
 
 	t.Run("an entity that can't be read fails the build, the policy isn't left out", func(t *testing.T) {
 		orders := f.registry("orders", "gateway", 1)
-		policy := f.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 2)
+		policy := f.validateWith("validate", `{name: orders}`, 2)
 		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 				if _, ok := obj.(*configurationv1alpha1.EventGatewaySchemaRegistry); ok {
@@ -1071,7 +941,7 @@ func TestHoldFailureDoesNotHoldBackThePush(t *testing.T) {
 		return func(f *pushFixture) []client.Object {
 			return append(append(f.gwAdmin.Objects(), f.gateway),
 				append(s.virtualCluster(), s.registry("orders", "gateway", 1),
-					s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3))...)
+					s.validateWith("validate", `{name: orders}`, 3))...)
 		}
 	}
 	patchingRegistry := func(fail func(name string) error) interceptor.Funcs {
@@ -1131,9 +1001,9 @@ func TestDeletionBlockedStatus(t *testing.T) {
 		require.NotNil(t, cond)
 		return cond
 	}
-	objects := func(s schemaRegistryFixture, held *configurationv1alpha1.EventGatewaySchemaRegistry, policy client.Object) func(*pushFixture) []client.Object {
+	objects := func(s schemaRegistryFixture, held *configurationv1alpha1.EventGatewaySchemaRegistry, others ...client.Object) func(*pushFixture) []client.Object {
 		return func(f *pushFixture) []client.Object {
-			return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), held, policy)...)
+			return append(append(f.gwAdmin.Objects(), f.gateway), append(append(s.virtualCluster(), held), others...)...)
 		}
 	}
 	const heldBy = "being deleted, it is kept while these policies reference it: EventGatewayVirtualClusterProducePolicy validate"
@@ -1143,7 +1013,7 @@ func TestDeletionBlockedStatus(t *testing.T) {
 		held := s.registry("orders", "gateway", 1)
 		held.SetFinalizers([]string{FinalizerInUse})
 		held.SetDeletionTimestamp(new(metav1.NewTime(s.at(fixtureDeletion))))
-		policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		policy := s.validateWith("validate", `{name: orders}`, 3)
 		f := newPushFixture(t, interceptor.Funcs{}, objects(s, held, policy))
 
 		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
@@ -1167,7 +1037,7 @@ func TestDeletionBlockedStatus(t *testing.T) {
 		held := s.registry("orders", "gateway", 1)
 		held.SetFinalizers([]string{FinalizerInUse})
 		held.SetDeletionTimestamp(new(metav1.NewTime(s.at(fixtureDeletion))))
-		policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		policy := s.validateWith("validate", `{name: orders}`, 3)
 		f := newPushFixture(t, interceptor.Funcs{}, objects(s, held, policy))
 		cfg, err := buildConfiguration(t.Context(), f.cl, f.gateway, "", nil)
 		require.NoError(t, err)
@@ -1187,8 +1057,9 @@ func TestDeletionBlockedStatus(t *testing.T) {
 		held := s.registry("orders", "gateway", 1)
 		held.SetFinalizers([]string{FinalizerInUse, "example.com/keep"})
 		held.SetDeletionTimestamp(new(metav1.NewTime(s.at(fixtureDeletion))))
-		policy := s.validateWith("validate", `{type: name, name: {name: other}}`, 3)
-		f := newPushFixture(t, interceptor.Funcs{}, objects(s, held, policy))
+		other := s.registry("other", "gateway", 2)
+		policy := s.validateWith("validate", `{name: other}`, 3)
+		f := newPushFixture(t, interceptor.Funcs{}, objects(s, held, other, policy))
 		cfg, err := buildConfiguration(t.Context(), f.cl, f.gateway, "", nil)
 		require.NoError(t, err)
 
@@ -1205,28 +1076,6 @@ func TestDeletionBlockedStatus(t *testing.T) {
 		}}
 		assert.False(t, ownsEntityCondition(byKonnect, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)))
 	})
-}
-
-// TestConsumeJSONWithSchemaRegistryIsNotLeftOut checks a policy gw-admin refuses,
-// which the CRDs no longer admit but which may be stored from before, is sent as
-// it is: gw-admin refusing it stops the push, which the gateway reports, instead
-// of the policy being dropped without enforcing what it should.
-func TestConsumeJSONWithSchemaRegistryIsNotLeftOut(t *testing.T) {
-	f := newSchemaRegistryFixture(t)
-	orders := f.registry("orders", "gateway", 1)
-	consume := f.consumePolicy("consume-json", `
-    type: schemaValidation
-    schemaValidation:
-      name: consume-json
-      config: {type: json, json: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}, valueValidationAction: mark}}
-`, 2)
-
-	cfg, err := buildConfiguration(t.Context(), f.objects(orders, consume), f.gateway, "", nil)
-	require.NoError(t, err)
-	assert.Empty(t, excludedMessages(cfg))
-	_, got := policiesOf(t, cfg)
-	require.Len(t, got, 1)
-	assert.Equal(t, map[string]any{"id": string(orders.UID)}, at(t, got[0], "config", "schema_registry"))
 }
 
 // A held parent policy being deleted keeps its name: a newer policy naming it
@@ -1250,7 +1099,7 @@ func TestHeldParentPolicyKeepsItsName(t *testing.T) {
       name: transcode-avro
       config:
         outputFormat: avro
-        avro: {failureMode: reject, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}}}}
+        avro: {failureMode: reject, schemaSource: {type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {name: orders}}}}
 `, 6)
 	newer := f.producePolicy("newer", `
     type: schemaValidation
@@ -1272,7 +1121,7 @@ func TestHeldParentPolicyKeepsItsName(t *testing.T) {
 // wouldn't be applied.
 func TestParentPolicyHeldByItsChildren(t *testing.T) {
 	s := newSchemaRegistryFixture(t)
-	parent := s.validateWith("parent", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+	parent := s.validateWith("parent", `{name: orders}`, 3)
 	child := s.producePolicy("child", `
     parentPolicyRef: {name: parent}
     type: modifyHeaders
@@ -1349,7 +1198,7 @@ func TestParentPolicyHeldByItsChildren(t *testing.T) {
 func TestKeptPolicyHoldsWhatItWasSentWith(t *testing.T) {
 	f := newSchemaRegistryFixture(t)
 	bundleA, bundleB := f.trustBundle("bundle-a", 1), f.trustBundle("bundle-b", 2)
-	policy := f.tlsServer("mtls", `[{namespacedRef: {name: bundle-a}}]`, 3)
+	policy := f.tlsServer("mtls", `[{name: bundle-a}]`, 3)
 
 	cfg, err := buildConfiguration(t.Context(), f.objects(f.listener(), f.tlsSecret(), bundleA, bundleB, policy), f.gateway, "", nil)
 	require.NoError(t, err)
@@ -1358,7 +1207,7 @@ func TestKeptPolicyHoldsWhatItWasSentWith(t *testing.T) {
 
 	// It now names bundle B, and its Secret is gone: it is sent as it was, with
 	// bundle A.
-	moved := f.tlsServer("mtls", `[{namespacedRef: {name: bundle-b}}]`, 3)
+	moved := f.tlsServer("mtls", `[{name: bundle-b}]`, 3)
 	moved.SetUID(policy.GetUID())
 	kept, err := buildConfiguration(t.Context(), f.objects(f.listener(), bundleA, bundleB, moved), f.gateway, "", cfg.built)
 	require.NoError(t, err)
@@ -1375,7 +1224,7 @@ func TestHoldingDoesNotConflictWithTheStatus(t *testing.T) {
 	registry := s.registry("orders", "gateway", 1)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 		return append(append(f.gwAdmin.Objects(), f.gateway),
-			append(s.virtualCluster(), registry, s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3))...)
+			append(s.virtualCluster(), registry, s.validateWith("validate", `{name: orders}`, 3))...)
 	})
 	res, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
 	require.NoError(t, err)
@@ -1400,7 +1249,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: forward
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: vc}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: vc}}}
 `)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 		return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), s.listener(), forward)...)

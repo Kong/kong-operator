@@ -210,7 +210,7 @@ func TestDeleteEventGatewayTLSTrustBundleGuarded(t *testing.T) {
 		t.Parallel()
 
 		// A programmed policy in another namespace names the trust bundle
-		// through namespacedRef: the reference is rejected and never reaches
+		// by object: the reference is rejected and never reaches
 		// Konnect, so it must not block the deletion.
 		s := newSDKs(t)
 		expectGet(s.trustBundles, trustBundleName)
@@ -218,9 +218,7 @@ func TestDeleteEventGatewayTLSTrustBundleGuarded(t *testing.T) {
 		expectPolicies(s.policies, "listener-1", policiesNotUsing)
 		expectDelete(s.trustBundles)
 		other := newClusterPolicy("team-b", "other", "policy-c-id")
-		other.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.TLSTrustBundleReference{{
-			NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle", Namespace: "default"},
-		}}
+		other.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.EventGatewayTLSTrustBundleRef{{Name: "trust-bundle", Namespace: "default"}}
 
 		require.NoError(t, guardedDelete(t, s, newClient(t, other), newTrustBundle()))
 	})

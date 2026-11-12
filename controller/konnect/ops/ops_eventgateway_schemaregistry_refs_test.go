@@ -70,27 +70,11 @@ spec:
 	t.Run("a schema validation names its registry by object", func(t *testing.T) {
 		t.Parallel()
 
-		policy := validateWith(t, `{type: namespacedRef, namespacedRef: {name: orders}}`)
+		policy := validateWith(t, `{name: orders}`)
 		assert.Equal(t, []client.ObjectKey{{Namespace: "default", Name: "orders"}},
 			configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(policy))
 		assert.Equal(t, map[string]any{"name": "orders-in-konnect"}, schemaRegistrySent(t, policy),
 			"the registry is sent by its Konnect name")
-	})
-
-	t.Run("a reference by name is sent as it is", func(t *testing.T) {
-		t.Parallel()
-
-		policy := validateWith(t, `{type: name, name: {name: konnect-registry}}`)
-		assert.Empty(t, configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(policy))
-		assert.Equal(t, map[string]any{"name": "konnect-registry"}, schemaRegistrySent(t, policy))
-	})
-
-	t.Run("a reference by id is sent as it is", func(t *testing.T) {
-		t.Parallel()
-
-		policy := validateWith(t, `{type: id, id: {id: 6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60}}`)
-		assert.Empty(t, configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(policy))
-		assert.Equal(t, map[string]any{"id": "6f1d3c9a-2b7e-4c5d-8a1f-9e3b7c2d4f60"}, schemaRegistrySent(t, policy))
 	})
 
 	t.Run("a transcode names its registry by object", func(t *testing.T) {
@@ -98,7 +82,7 @@ spec:
 
 		// A transcode policy requires a parent_policy_id, so a full SDK
 		// request isn't built: the references are collected and resolved.
-		reference := `{type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}}}`
+		reference := `{type: reference, reference: {subject: orders-value, version: latest, schemaRefDestination: {type: none, none: {}}, schemaRegistry: {name: orders}}}`
 		produce := producePolicy(t, `
     type: transcode
     transcode:
@@ -125,12 +109,12 @@ spec:
 		require.NoError(t, consume.ResolveKonnectReferences(t.Context(), cl))
 	})
 
-	t.Run("a consume schema validation names its registry in either form", func(t *testing.T) {
+	t.Run("a consume schema validation names its registry by object", func(t *testing.T) {
 		t.Parallel()
 
 		for name, schemaRegistry := range map[string]string{
-			"its name set directly": `{name: orders}`,
-			"type namespacedRef":    `{type: namespacedRef, namespacedRef: {name: orders}}`,
+			"its name":                     `{name: orders}`,
+			"its kind, name and namespace": `{kind: EventGatewaySchemaRegistry, name: orders, namespace: default}`,
 		} {
 			t.Run(name, func(t *testing.T) {
 				var consume configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy
@@ -161,7 +145,7 @@ spec:
 	t.Run("a registry that doesn't exist is reported", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := validateWith(t, `{type: namespacedRef, namespacedRef: {name: missing}}`).
+		_, err := validateWith(t, `{name: missing}`).
 			ToCreateEventGatewayVirtualClusterProducePolicyRequest(t.Context(), cl)
 		var notFound configurationv1alpha1.ReferenceNotFoundError
 		require.ErrorAs(t, err, &notFound)
@@ -170,7 +154,7 @@ spec:
 	t.Run("a registry of another gateway is reported", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := validateWith(t, `{type: namespacedRef, namespacedRef: {name: elsewhere}}`).
+		_, err := validateWith(t, `{name: elsewhere}`).
 			ToCreateEventGatewayVirtualClusterProducePolicyRequest(t.Context(), cl)
 		var otherGateway configurationv1alpha1.ReferenceDifferentGatewayError
 		require.ErrorAs(t, err, &otherGateway)
@@ -192,9 +176,8 @@ spec:
       name: validate
       config:
         type: json
-        json: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: active}}, valueValidationAction: skip}
-        confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: leftover}}, valueValidationAction: skip}
+        json: {valueValidationAction: skip}
+        confluentSchemaRegistry: {schemaRegistry: {name: leftover}, valueValidationAction: skip}
 `), &p))
-	assert.Equal(t, []client.ObjectKey{{Namespace: "default", Name: "active"}},
-		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRefsToEventGatewaySchemaRegistry(&p))
+	assert.Empty(t, configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRefsToEventGatewaySchemaRegistry(&p))
 }

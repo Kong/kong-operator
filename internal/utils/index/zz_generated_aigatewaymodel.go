@@ -258,25 +258,8 @@ func aiGatewayModelOnAIGatewayDatastoreRef(object client.Object) []string {
 		return nil
 	}
 	var out []string
-	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIDatastores(ent) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
-	}
-	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelDatastores(ent) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
+	for _, key := range aiconfigurationv1alpha1.AIGatewayModelRefsToAIGatewayDatastore(ent) {
+		out = append(out, key.String())
 	}
 	return out
 }

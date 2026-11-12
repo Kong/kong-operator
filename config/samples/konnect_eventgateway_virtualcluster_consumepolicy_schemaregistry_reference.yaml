@@ -238,12 +238,7 @@ spec:
       config:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
-          # The EventGatewaySchemaRegistry object, named directly. It can also be
-          # written as in the other policies:
-          #   schemaRegistry:
-          #     type: namespacedRef
-          #     namespacedRef:
-          #       name: cp-event-1-schema-registry
+          # The EventGatewaySchemaRegistry object.
           schemaRegistry:
             kind: EventGatewaySchemaRegistry # optional
             name: cp-event-1-schema-registry

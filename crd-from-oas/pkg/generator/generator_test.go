@@ -980,6 +980,9 @@ func TestGenerateCRDType_ParentRefIsImmutableOnceProgrammed(t *testing.T) {
 		assert.Contains(t, content, "ControlPlaneRef commonv1alpha1.ObjectRef")
 		assert.Contains(t, content, rulePrefix+"controlPlaneRef)")
 		assert.Contains(t, content, `message="spec.controlPlaneRef is immutable when an entity is already Programmed"`)
+		// An object updated before any status is written has no self.status,
+		// and self.status.conditions would fail with "no such key".
+		assert.Contains(t, content, `rule="!has(self.spec.controlPlaneRef) || !has(self.status) || !has(self.status.conditions) ||`)
 	})
 
 	t.Run("root entity without a parent", func(t *testing.T) {

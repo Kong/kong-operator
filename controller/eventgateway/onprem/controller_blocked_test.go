@@ -51,7 +51,7 @@ func TestInvalidEntityBlocksThePush(t *testing.T) {
 
 	t.Run("a new gateway isn't pushed until its entities can be sent", func(t *testing.T) {
 		s := newSchemaRegistryFixture(t)
-		policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		policy := s.validateWith("validate", `{name: orders}`, 3)
 		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 			return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), policy)...)
 		})
@@ -97,7 +97,7 @@ func TestInvalidEntityBlocksThePush(t *testing.T) {
 
 	t.Run("gw-admin keeps the configuration it has while an entity can't be sent", func(t *testing.T) {
 		s := newSchemaRegistryFixture(t)
-		policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+		policy := s.validateWith("validate", `{name: orders}`, 3)
 		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 			return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), s.registry("orders", "gateway", 1), policy)...)
 		})
@@ -111,7 +111,7 @@ func TestInvalidEntityBlocksThePush(t *testing.T) {
 		recordedEvents(f.recorder)
 
 		// It now names a registry that doesn't exist.
-		changed := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: missing}}`, 3)
+		changed := s.validateWith("validate", `{name: missing}`, 3)
 		changed.ObjectMeta = read(t, f.cl, policy).ObjectMeta
 		changed.Generation++
 		require.NoError(t, f.cl.Update(t.Context(), changed))
@@ -177,7 +177,7 @@ func TestInvalidEntityBlocksThePush(t *testing.T) {
 
 	t.Run("a gateway never pushed has nothing to push while an entity can't be sent", func(t *testing.T) {
 		s := newSchemaRegistryFixture(t)
-		policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: missing}}`, 3)
+		policy := s.validateWith("validate", `{name: missing}`, 3)
 		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 			return append(append(f.gwAdmin.Objects(), f.gateway), append(s.virtualCluster(), policy)...)
 		})

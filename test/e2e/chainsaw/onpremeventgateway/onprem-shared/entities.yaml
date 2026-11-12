@@ -100,5 +100,4 @@ spec:
           # The Kafka Service of the data plane, in the cluster.
           advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
           destination:
-            namespacedRef:
-              name: ($virtual_cluster_name)
+            name: ($virtual_cluster_name)

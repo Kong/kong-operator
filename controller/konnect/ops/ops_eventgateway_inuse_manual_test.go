@@ -61,7 +61,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: forward
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: orders}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: orders}}}
 `))
 		sdk := sdkmocks.NewMockEventGatewayBackendClustersSDK(t)
 		sdk.EXPECT().DeleteEventGatewayBackendCluster(mock.Anything, gatewayID, "bc-id").Return(nil, badRequest()).Once()
@@ -87,7 +87,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: forward
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: orders}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: orders}}}
 `))
 		expectDelete := func(t *testing.T, err error) *sdkmocks.MockEventGatewayVirtualClustersSDK {
 			sdk := sdkmocks.NewMockEventGatewayVirtualClustersSDK(t)

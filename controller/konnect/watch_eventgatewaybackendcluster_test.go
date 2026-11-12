@@ -38,7 +38,6 @@ spec:
 	enqueue := enqueueEventGatewayBackendClusterForEventGatewayListenerPolicy(cl)
 
 	assert.Equal(t, []reconcile.Request{{Namespace: "default", Name: "bc"}},
-		enqueue(t.Context(), forward(`{namespacedRef: {name: orders}}`)), "the backend cluster of the virtual cluster it forwards to")
-	assert.Empty(t, enqueue(t.Context(), forward(`{namespacedRef: {name: missing}}`)), "a virtual cluster that doesn't exist")
-	assert.Empty(t, enqueue(t.Context(), forward(`{name: orders}`)), "a destination by Konnect name holds nothing")
+		enqueue(t.Context(), forward(`{name: orders}`)), "the backend cluster of the virtual cluster it forwards to")
+	assert.Empty(t, enqueue(t.Context(), forward(`{name: missing}`)), "a virtual cluster that doesn't exist")
 }

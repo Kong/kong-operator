@@ -21,8 +21,9 @@ reference resolution (`KonnectReferencesResolved=False`).
 | Other policy types | Not supported |
 
 The reference belongs directly under `apiSpec`, not inside the policy variant.
-For example, given an `EventGatewayVirtualCluster` named `vc` and a Konnect
-static key named `encryption-key` in that gateway:
+For example, given an `EventGatewayVirtualCluster` named `vc` and an
+`EventGatewayStaticKey` named `encryption-key` in the same namespace, both
+belonging to the same gateway:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1alpha1

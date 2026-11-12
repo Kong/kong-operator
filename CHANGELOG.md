@@ -93,26 +93,39 @@
   update must use the object shape.**
   [#6433](https://github.com/Kong/kong-operator/pull/6433)
 - `EventGatewayVirtualClusterProducePolicy` and
-  `EventGatewayVirtualClusterConsumePolicy`: the CRDs reject specs Konnect
-  refuses: a schema registry reference whose `type` doesn't match the member
-  set, or of `type: id` without its id, `schemaRegistry` in a `json` schema
-  validation, and a `transcode` or `maskFields` policy without
-  `parentPolicyRef`. A stored object that doesn't follow them can still be
-  updated, e.g. its finalizer removed, as long as it keeps or drops the
-  schema registry reference it has.
+  `EventGatewayVirtualClusterConsumePolicy`: the CRDs reject a `transcode` or
+  `maskFields` policy without `parentPolicyRef`, which Konnect refuses.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
-- `EventGatewayVirtualClusterConsumePolicy` Go API: the `schemaRegistry` field
-  of a `schemaValidation` policy's `json` and `confluentSchemaRegistry` configs
-  is now an `EventGatewaySchemaRegistryRefWithNamespacedRef`, instead of an
-  `EventGatewaySchemaRegistryRef`. Its `kind`, `name` and `namespace` fields
-  are kept; `Ref()` returns the reference in either form. The CRD still
-  accepts the released shape.
-  [#6491](https://github.com/Kong/kong-operator/pull/6491)
-- `OnPremEventGateway`: the policies reference schema registries, static keys
-  and TLS trust bundles by object only, with `namespacedRef`, or, in a consume
-  `schemaValidation` policy, the name of the object set directly. A policy that
-  references one by id or by name is refused.
-  [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- Event Gateway: references between entities name only the Kubernetes object,
+  as `{kind, name, namespace}` (`kind` and `namespace` optional).
+  - The Konnect ID and name forms, and the `namespacedRef` wrapper, are
+    removed from:
+    - `EventGatewayListenerPolicy`: `forwardToVirtualCluster` `destination`
+      and `tlsServer` `clientAuthentication.tlsTrustBundles`
+    - `EventGatewayVirtualClusterProducePolicy`: the `encrypt` and
+      `encryptFields` static `key`, and the `schemaValidation` and
+      `transcode` `schemaRegistry`
+    - `EventGatewayVirtualClusterConsumePolicy`: the `transcode`
+      `schemaRegistry`
+  - The `json` `schemaRegistry` of `schemaValidation` policies is removed:
+    Konnect and gw-admin refuse a registry there.
+  - A `konnectID` parent reference (`gatewayRef`,
+    `eventGatewayBackendClusterRef`, `eventGatewayListenerRef`,
+    `eventGatewayVirtualClusterRef`), which was never resolved, is rejected. A
+    stored object keeping one can still be updated, e.g. to remove its
+    finalizer.
+
+  **Migrate every stored reference to the object form before upgrading.**
+  After the upgrade:
+  - a reference by Konnect ID or by `namespacedRef`, or a schema registry
+    reference by Konnect name, loses its name, and the policy fails with
+    `reference has no name set`;
+  - a reference by Konnect name to a static key, a TLS trust bundle or a
+    virtual cluster, `{name: x}`, is read as the name of an object in the
+    policy's namespace: if an object of that kind is named `x`, the policy
+    uses it, e.g. encrypts with that static key.
+
+  [#6550](https://github.com/Kong/kong-operator/pull/6550)
 
 ### Fixed
 
@@ -147,6 +160,12 @@
   with reason `InvalidRouteKinds`, and so do listeners that explicitly allow a
   route kind whose CRD is not installed in the cluster.
   [#6482](https://github.com/Kong/kong-operator/pull/6482)
+- Event Gateway, Konnect portal, `KonnectConfigStore` and
+  `AIGatewayConsumerCredential` CRDs: an object without a status, e.g. updated
+  before its controller wrote one, can be updated again instead of being
+  refused with `no such key: status` by the rule keeping its parent reference
+  once Programmed.
+  [#6550](https://github.com/Kong/kong-operator/pull/6550)
 
 ### Added
 
@@ -193,10 +212,8 @@
   [#6515](https://github.com/Kong/kong-operator/pull/6515)
 - `EventGatewayVirtualClusterProducePolicy` and
   `EventGatewayVirtualClusterConsumePolicy`: schema registry references.
-  - A schema registry can be referenced by object, with `type: namespacedRef`,
-    next to `id` and `name`. For a consume `schemaValidation` policy, a
-    reference moved to `namespacedRef` must drop `kind`.
-  - A `type: id` reference now keeps its id (`id: {id: <uuid>}`).
+  - A schema registry is referenced by object, as `{kind, name, namespace}`
+    (`kind` and `namespace` optional).
   - `transcode` and `maskFields` policies accept `parentPolicyRef`.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
 - `EventGatewaySchemaRegistry`: a schema registry policies use in Konnect
@@ -212,14 +229,15 @@
   `OnPremEventGateway` controller owns the status of its entities, and clears
   what the Konnect controllers set on them.
   [#6530](https://github.com/Kong/kong-operator/pull/6530)
-- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy can
-  reference its virtual cluster by object, with `destination.namespacedRef`. A
-  virtual cluster, or its backend cluster, that listener policies forward to
-  isn't deleted until they stop: it reports `DeletionBlocked`, naming the
-  policies, created in Konnect, that forward to it.
-  - `OnPremEventGateway`: only `destination.namespacedRef` is allowed, and the
-    virtual cluster and its backend cluster are held by the finalizer
-    `gateway-operator.konghq.com/onprem-eventgateway-in-use` while in use.
+- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy
+  references its virtual cluster by object, with
+  `destination: {kind, name, namespace}`. A virtual cluster, or its backend
+  cluster, that listener policies forward to isn't deleted until they stop:
+  it reports `DeletionBlocked`, naming the policies, created in Konnect, that
+  forward to it.
+  - `OnPremEventGateway`: the virtual cluster and its backend cluster are held
+    by the finalizer `gateway-operator.konghq.com/onprem-eventgateway-in-use`
+    while in use.
   [#6492](https://github.com/Kong/kong-operator/pull/6492)
 - `OnPremEventGateway`: an entity that can't be sent stops the push of its
   gateway instead of being left out, e.g. a policy whose reference, parent

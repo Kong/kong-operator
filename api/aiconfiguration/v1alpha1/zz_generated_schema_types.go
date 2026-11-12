@@ -2918,10 +2918,6 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
 }
 
-// AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-// name.
-type AIGatewayAuthStrategyReference string
-
 // AIGatewayAzureEmbeddingsModelConfig Azure OpenAI-specific configuration for
 // an embeddings model.
 // Azure AI Foundry

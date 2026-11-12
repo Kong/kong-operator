@@ -16,9 +16,7 @@ spec:
         type: confluentSchemaRegistry
         confluentSchemaRegistry:
           schemaRegistry:
-            type: namespacedRef
-            namespacedRef:
-              name: held-registry
+            name: held-registry
           valueValidationAction: reject
 ---
 apiVersion: configuration.konghq.com/v1alpha1
@@ -42,8 +40,7 @@ spec:
           type: static
           static:
             key:
-              namespacedRef:
-                name: held-key
+              name: held-key
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: EventGatewayListenerPolicy
@@ -73,8 +70,7 @@ spec:
         clientAuthentication:
           mode: required
           tlsTrustBundles:
-            - namespacedRef:
-                name: held-bundle
+            - name: held-bundle
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: EventGatewayListenerPolicy
@@ -95,5 +91,4 @@ spec:
           bootstrapPort: at_start
           advertisedHost: placeholder.invalid
           destination:
-            namespacedRef:
-              name: held-vc
+            name: held-vc

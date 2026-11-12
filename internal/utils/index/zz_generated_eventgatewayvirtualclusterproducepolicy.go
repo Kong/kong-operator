@@ -68,15 +68,8 @@ func eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProduceP
 		return nil
 	}
 	var out []string
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterProducePolicy" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
+	for _, key := range configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy(ent) {
+		out = append(out, key.String())
 	}
 	return out
 }
@@ -87,25 +80,8 @@ func eventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef(object cl
 		return nil
 	}
 	var out []string
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
-	}
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
+	for _, key := range configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(ent) {
+		out = append(out, key.String())
 	}
 	return out
 }
@@ -116,35 +92,8 @@ func eventGatewayVirtualClusterProducePolicyOnEventGatewaySchemaRegistryRef(obje
 		return nil
 	}
 	var out []string
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigJSONSchemaRegistry(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
-	}
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
-	}
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
+	for _, key := range configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(ent) {
+		out = append(out, key.String())
 	}
 	return out
 }
