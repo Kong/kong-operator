@@ -622,6 +622,27 @@ spec:
 		require.Equal(t, "chain/"+string(chain.UID), got.Annotations[policychain.OwnerAnnotation])
 	})
 
+	t.Run("a chain losing the claim to an owner without a KongReferenceGrant to its policies doesn't release the push", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		// The owner keeps its claim, as it may still reference the virtual
+		// cluster, but can't order its policies.
+		owner := otherChain(chain)
+		vc := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+		vc.Annotations = map[string]string{policychain.OwnerAnnotation: policychain.ClaimValue(owner)}
+		cl := newFakeClient(t, append(objects, chain, owner,
+			grant(ns, other, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.orderedClusterPolicies)
+		require.Equal(t, []string{
+			other + "/chain: no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterPolicy " + ns + "/z-second",
+		}, cfg.invalidChains, "the owner's policies would keep their default order")
+		var got configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(vc), &got))
+		require.Equal(t, policychain.ClaimValue(owner), got.Annotations[policychain.OwnerAnnotation])
+	})
+
 	t.Run("a virtual cluster of another namespace not let reference its backend cluster doesn't hold back the push", func(t *testing.T) {
 		gateway, chain, _, objects := clusterPolicyChainObjects(t)
 		foreign := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster).DeepCopy()

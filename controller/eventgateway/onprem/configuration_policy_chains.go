@@ -101,13 +101,16 @@ func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Cl
 		if err != nil {
 			return err
 		}
-		owned[parent] = true
 		if owner != "" {
 			message := fmt.Sprintf("EventGatewayVirtualCluster %s is owned by policy chain %s; delete that chain before claiming it", policychain.NameIn(parent, chain.Namespace), owner)
 			status.conditions = []metav1.Condition{entityCondition(chain, "PolicyChainOwnerValid", metav1.ConditionFalse, "ConflictingChain", message)}
 			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 			continue
 		}
+		// Only the chain holding the claim owns the virtual cluster: one that
+		// lost it to a chain that can't order its policies doesn't release
+		// the push.
+		owned[parent] = true
 		status.conditions = []metav1.Condition{entityCondition(chain, "PolicyChainOwnerValid", metav1.ConditionTrue, "Owner", "This resource owns the parent cluster policy chain")}
 		ordered, problem, err := c.clusterPolicyOrder(ctx, cl, chain)
 		if err != nil {
