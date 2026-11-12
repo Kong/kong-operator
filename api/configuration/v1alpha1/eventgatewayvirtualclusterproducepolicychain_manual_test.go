@@ -120,6 +120,31 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 				ParsedRecordEncryptFieldsPolicyCreate: &EventGatewayParsedRecordEncryptFieldsPolicyCreate{},
 			}
 		}},
+		{name: "nested maskFields", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type: EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate,
+				ParsedRecordMaskFieldsProducePolicyCreate: &EventGatewayParsedRecordMaskFieldsProducePolicyCreate{},
+			}
+		}},
+		{name: "nested transcode", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type:                                     EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate,
+				ParsedRecordTranscodeProducePolicyCreate: &EventGatewayParsedRecordTranscodeProducePolicyCreate{},
+			}
+		}},
+		{name: "maskFields needs schemaValidation parent", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type: EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate,
+				ParsedRecordMaskFieldsProducePolicyCreate: &EventGatewayParsedRecordMaskFieldsProducePolicyCreate{},
+			}
+			p["first"].Spec.APISpec.ParentPolicyRef.Name = "root"
+		}, err: "root schemaValidation"},
+		{name: "transcode cannot interleave root", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type:                                     EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate,
+				ParsedRecordTranscodeProducePolicyCreate: &EventGatewayParsedRecordTranscodeProducePolicyCreate{},
+			}
+		}, order: []string{"parent", "second", "root", "first"}, err: "contiguous group"},
 		{name: "explicit kind and namespace", change: func(c *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterProducePolicy"
@@ -214,6 +239,20 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
 				Type:                                  EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate,
 				ParsedRecordEncryptFieldsPolicyCreate: &EventGatewayParsedRecordEncryptFieldsPolicyCreate{},
+			}
+			p["first"].Spec.APISpec.ParentPolicyRef = EventGatewayVirtualClusterProducePolicyRef{}
+		}, err: "valid parentPolicyRef"},
+		{name: "maskFields requires parent", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type: EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate,
+				ParsedRecordMaskFieldsProducePolicyCreate: &EventGatewayParsedRecordMaskFieldsProducePolicyCreate{},
+			}
+			p["first"].Spec.APISpec.ParentPolicyRef = EventGatewayVirtualClusterProducePolicyRef{}
+		}, err: "valid parentPolicyRef"},
+		{name: "transcode requires parent", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["first"].Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type:                                     EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate,
+				ParsedRecordTranscodeProducePolicyCreate: &EventGatewayParsedRecordTranscodeProducePolicyCreate{},
 			}
 			p["first"].Spec.APISpec.ParentPolicyRef = EventGatewayVirtualClusterProducePolicyRef{}
 		}, err: "valid parentPolicyRef"},

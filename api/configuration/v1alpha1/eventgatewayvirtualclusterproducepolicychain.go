@@ -87,7 +87,9 @@ func (obj *EventGatewayVirtualClusterProducePolicyChain) ResolveValidatedPolicyI
 		parentRef := policy.Spec.APISpec.ParentPolicyRef
 		if parentRef.Name == "" {
 			if parentRef.Kind != "" || parentRef.Namespace != "" ||
-				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate {
+				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate ||
+				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate ||
+				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate {
 				return nil, PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
 			}
 			currentRoot = policy.Name
@@ -143,8 +145,10 @@ func validateProducePolicyChainParent(policy *EventGatewayVirtualClusterProduceP
 		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef cannot reference itself", policy.Name)}
 	}
 	if policy.Spec.APISpec.Type != EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate &&
-		policy.Spec.APISpec.Type != EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate {
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef is only supported for encryptFields and modifyHeaders", policy.Name)}
+		policy.Spec.APISpec.Type != EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate &&
+		policy.Spec.APISpec.Type != EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate &&
+		policy.Spec.APISpec.Type != EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate {
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef is only supported for encryptFields, modifyHeaders, maskFields and transcode", policy.Name)}
 	}
 	parent, included := policies[ref.Name]
 	if !included {
