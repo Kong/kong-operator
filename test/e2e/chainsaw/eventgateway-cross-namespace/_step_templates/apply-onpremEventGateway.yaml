@@ -19,6 +19,10 @@ spec:
             name: ($gwadmin_name)
             namespace: ($namespace)
           spec:
+            license:
+              secretRef:
+                name: gw-admin-license
+                key: license
             deployment:
               podTemplateSpec:
                 spec:
