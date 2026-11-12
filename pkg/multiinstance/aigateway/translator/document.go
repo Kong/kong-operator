@@ -21,7 +21,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Kong/ai-deck-converter/aigw"
@@ -326,7 +328,7 @@ func modelAliases(m *aigw.Model) []string {
 }
 
 // ModelAliasConflictError reports a model whose selector alias (or entity name, when no
-// selector is set) is already claimed by another model of the same gateway.
+// selector is set) is already claimed by another model on the same route.
 //
 // It is a per-entity routing conflict, not a gateway-level translation failure: the
 // later model is excluded from the document and reports the conflict on its own status,
@@ -334,17 +336,29 @@ func modelAliases(m *aigw.Model) []string {
 // detects this type and treats it as a warning on the gateway's aggregated
 // ConfigurationTranslated condition, which therefore stays True and lets the gateway —
 // and its data planes — become Ready (see ai-deck-converter#248).
+//
+// Two models sharing an alias across DIFFERENT routes are not a conflict: the converter
+// renders one shared ai_models row for them and each model keeps its own route and
+// plugin.
 type ModelAliasConflictError struct {
 	// Alias is the contested selector alias.
 	Alias string
+	// Route is the name of the rendered route both models land on.
+	Route string
+	// Paths are the route paths that the excluded model configures.
+	Paths []string
 	// First is the name of the AIGatewayModel that keeps the alias (the earliest created).
 	First string
 }
 
 func (e *ModelAliasConflictError) Error() string {
+	var paths string
+	if len(e.Paths) > 0 {
+		paths = fmt.Sprintf(" (paths %s)", strings.Join(e.Paths, ", "))
+	}
 	return fmt.Sprintf(
-		"duplicate model alias %q: AIGatewayModel %q already uses it, and each model alias renders one ai_models entity named after it (the data plane rejects duplicate names; the earliest-created model keeps the alias, ties go to namespace/name order)",
-		e.Alias, e.First,
+		"duplicate model alias %q on route %q%s: AIGatewayModel %q already uses it there.",
+		e.Alias, e.Route, paths, e.First,
 	)
 }
 
@@ -741,67 +755,239 @@ func BuildDocument(
 		doc.MCPServers = kept
 	}
 
-	// Model aliases share one name space: two models claiming one alias render
-	// identically named ai_models rows, and the data plane rejects the whole
-	// import. Claim aliases in creation order (tie: namespace/name), so a model
-	// created later can never displace a programmed one, which the translate
-	// order (namespace/name) would allow. A model is excluded only when an
-	// alias is already held by a kept model. Disabled models claim nothing:
-	// the converter renders no ai_models rows for them. See
-	// ai-deck-converter#248.
-	if len(doc.Models) > 1 {
-		order := make([]int, len(doc.Models))
-		for i := range order {
-			order[i] = i
-		}
-		slices.SortFunc(order, func(a, b int) int {
-			ca, cb := translatedModelCRs[a], translatedModelCRs[b]
-			return cmp.Or(
-				ca.CreationTimestamp.Compare(cb.CreationTimestamp.Time),
-				cmp.Compare(ca.Namespace, cb.Namespace),
-				cmp.Compare(ca.Name, cb.Name),
-			)
-		})
-		owner := make(map[string]string) // alias → claiming CR name
-		exclude := make(map[int]*ModelAliasConflictError)
-		for _, i := range order {
-			if m := &doc.Models[i]; m.Enabled != nil && !*m.Enabled {
-				continue
-			}
-			aliases := modelAliases(&doc.Models[i])
-			// Find the first alias of this model that a kept model already
-			// claims. If one exists, exclude this model.
-			claimed := func(a string) bool { _, ok := owner[a]; return ok }
-			if j := slices.IndexFunc(aliases, claimed); j >= 0 {
-				exclude[i] = &ModelAliasConflictError{Alias: aliases[j], First: owner[aliases[j]]}
-				continue
-			}
-			for _, a := range aliases {
-				owner[a] = translatedModelCRs[i].Name
-			}
-		}
-		if len(exclude) > 0 {
-			kept := make([]aigw.Model, 0, len(doc.Models)-len(exclude))
-			for i := range doc.Models {
-				conflict, loser := exclude[i]
-				if !loser {
-					kept = append(kept, doc.Models[i])
-					continue
-				}
-				// The status reported success during translation: patch it in
-				// place, as the MCPServer sources pass does.
-				cr := translatedModelCRs[i]
-				for j := range statuses {
-					if statuses[j].Obj == cr {
-						statuses[j].Err = fmt.Errorf("converting %T %s: %w", cr, client.ObjectKeyFromObject(cr), conflict)
-					}
-				}
-			}
-			doc.Models = kept
-		}
+	// Same-route alias conflicts need the converter's route grouping, so they
+	// are resolved on a probe render. See resolveModelAliasRouteConflicts.
+	// The resolution indexes both slices together. A mismatch is a bug, so
+	// fail the sync instead of a panic or a wrong exclusion.
+	if len(translatedModelCRs) != len(doc.Models) {
+		return nil, nil, fmt.Errorf(
+			"internal error: %d translated AIGatewayModel CRs for %d document models",
+			len(translatedModelCRs), len(doc.Models),
+		)
 	}
+	resolveModelAliasRouteConflicts(doc, statuses, translatedModelCRs)
 
 	return doc, statuses, nil
+}
+
+// sameRouteAliasConflictRe matches the converter's same-route alias warning.
+// The warning has no structured details, and ROUTING_CONFLICT has other
+// emitters, so the match uses severity, code, and message, as agreed with the
+// converter team. TestCollectAliasConflicts_ConverterContract fails when a
+// converter bump changes the message. If a change is not caught, the conflict
+// stays a plain warning: the payload is still valid, so this fails open.
+var sameRouteAliasConflictRe = regexp.MustCompile(
+	`^model ("(?:[^"\\]|\\.)*") uses the alias ("(?:[^"\\]|\\.)*") on the route ("(?:[^"\\]|\\.)*"), but model ("(?:[^"\\]|\\.)*") already uses it there\.`,
+)
+
+// aliasConflict is one same-route alias conflict that the converter reported:
+// claimer uses alias on route, and owner used it there first.
+type aliasConflict struct {
+	route   string
+	alias   string
+	owner   string
+	claimer string
+}
+
+// collectAliasConflicts returns the same-route alias conflicts in issues.
+func collectAliasConflicts(issues []convert.ConversionIssue) []aliasConflict {
+	var conflicts []aliasConflict
+	for _, issue := range issues {
+		if issue.Severity != convert.Warning || issue.Code != convert.RoutingConflict {
+			continue
+		}
+		m := sameRouteAliasConflictRe.FindStringSubmatch(issue.Reason)
+		if len(m) == 0 {
+			continue
+		}
+		// The converter formats the values with %q.
+		var fields [4]string
+		ok := true
+		for i := range fields {
+			var err error
+			if fields[i], err = strconv.Unquote(m[i+1]); err != nil {
+				ok = false
+			}
+		}
+		// The message and the structured source must name the same model.
+		if !ok || fields[0] != issue.Source.Name {
+			continue
+		}
+		conflicts = append(conflicts, aliasConflict{
+			claimer: fields[0], alias: fields[1], route: fields[2], owner: fields[3],
+		})
+	}
+	return conflicts
+}
+
+// resolveModelAliasRouteConflicts excludes each model that uses an alias that
+// an earlier-created model already uses on the same route. Two such models
+// make two ai-proxy plugins with the same route and ai_models scope, and the
+// data plane then sends all traffic to one of them. The converter accepts
+// this for compatibility (it only warns), so the operator enforces it.
+// Models that share an alias on different routes stay: they share one
+// ai_models row and keep their own routes.
+//
+// The function sorts doc.Models by creation time (ties: namespace/name), so a
+// new model cannot take an alias from a programmed model. The converter
+// claims aliases in document order, so the owner in each warning is then the
+// earlier-created model.
+//
+// The resolution repeats until a probe render has no conflicts. In each pass,
+// a claimer loses only if its owner is not a claimer too: such an owner stays
+// in all later passes, so the loss is final. A claimer whose owner can still
+// lose waits for the next pass, because an excluded model must not exclude
+// other models. The earliest claimer always has an owner that is not a
+// claimer, so each pass excludes at least one model and the loop ends.
+//
+// The function changes doc.Models and the Err of the excluded models' statuses
+// in place.
+func resolveModelAliasRouteConflicts(
+	doc *aigw.Document,
+	statuses []EntityStatus,
+	crs []*aiconfigurationv1alpha1.AIGatewayModel,
+) {
+	if len(doc.Models) < 2 {
+		return
+	}
+	sortModelsByCreation(doc.Models, crs)
+	// A conflict needs one alias on two enabled models. Most gateways have
+	// none, so skip the probe render, which is a full converter run.
+	if !hasSharedAlias(doc.Models) {
+		return
+	}
+
+	for {
+		probe, idxByName := buildProbeDoc(doc)
+		_, issues, err := RenderDBLessYAML(probe, convert.Options{})
+		if err != nil {
+			// The probe differs from doc only in model names, and no converter
+			// failure depends on a name, so the caller's render reports the
+			// same error.
+			return
+		}
+		conflicts := collectAliasConflicts(issues)
+
+		claimers := make(map[string]bool, len(conflicts))
+		for _, c := range conflicts {
+			claimers[c.claimer] = true
+		}
+		losers := make(map[int]*ModelAliasConflictError)
+		for _, c := range conflicts {
+			owner, ownerOK := idxByName[c.owner]
+			claimer, claimerOK := idxByName[c.claimer]
+			if !ownerOK || !claimerOK || claimers[c.owner] {
+				continue
+			}
+			if _, ok := losers[claimer]; !ok {
+				losers[claimer] = &ModelAliasConflictError{
+					Alias: c.alias,
+					Route: c.route,
+					Paths: doc.Models[claimer].Config.Route.Paths,
+					First: crs[owner].Name,
+				}
+			}
+		}
+		if len(losers) == 0 {
+			return
+		}
+
+		keptModels := make([]aigw.Model, 0, len(doc.Models)-len(losers))
+		keptCRs := make([]*aiconfigurationv1alpha1.AIGatewayModel, 0, len(crs)-len(losers))
+		for i := range doc.Models {
+			conflict, loser := losers[i]
+			if !loser {
+				keptModels = append(keptModels, doc.Models[i])
+				keptCRs = append(keptCRs, crs[i])
+				continue
+			}
+			// The status reported success during translation: patch it in
+			// place, as the MCPServer sources pass does.
+			cr := crs[i]
+			for j := range statuses {
+				if statuses[j].Obj == cr {
+					statuses[j].Err = fmt.Errorf("converting %T %s: %w", cr, client.ObjectKeyFromObject(cr), conflict)
+				}
+			}
+		}
+		doc.Models = keptModels
+		crs = keptCRs
+	}
+}
+
+// hasSharedAlias reports whether two enabled models use one alias. Disabled
+// models render nothing, so they cannot conflict.
+func hasSharedAlias(models []aigw.Model) bool {
+	seen := make(map[string]bool, len(models))
+	for i := range models {
+		if m := &models[i]; m.Enabled == nil || *m.Enabled {
+			for _, alias := range modelAliases(m) {
+				if seen[alias] {
+					return true
+				}
+				seen[alias] = true
+			}
+		}
+	}
+	return false
+}
+
+// sortModelsByCreation sorts models and their index-aligned crs by the CR
+// creation time, with namespace/name as the tie-break.
+func sortModelsByCreation(models []aigw.Model, crs []*aiconfigurationv1alpha1.AIGatewayModel) {
+	order := make([]int, len(models))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortStableFunc(order, func(a, b int) int {
+		ca, cb := crs[a], crs[b]
+		return cmp.Or(
+			ca.CreationTimestamp.Compare(cb.CreationTimestamp.Time),
+			cmp.Compare(ca.Namespace, cb.Namespace),
+			cmp.Compare(ca.Name, cb.Name),
+		)
+	})
+	sortedModels := make([]aigw.Model, len(models))
+	sortedCRs := make([]*aiconfigurationv1alpha1.AIGatewayModel, len(crs))
+	for i, j := range order {
+		sortedModels[i], sortedCRs[i] = models[j], crs[j]
+	}
+	copy(models, sortedModels)
+	copy(crs, sortedCRs)
+}
+
+// buildProbeDoc returns a copy of doc in which each model has a unique name,
+// and the index in doc of each probe model name. The converter names models in
+// its warnings by entity name, but two CRs can set the same spec name.
+//
+// A renamed model gets its aliases as explicit selector values: without a
+// selector, the entity name is the alias. The converter renders explicit
+// values that equal the name the same as no values, so the probe has the
+// same routes and conflicts as doc.
+func buildProbeDoc(doc *aigw.Document) (*aigw.Document, map[string]int) {
+	probe := *doc
+	probe.Models = slices.Clone(doc.Models)
+
+	// Names are not restricted, so a new name must not match any model name.
+	used := make(map[string]bool, len(probe.Models))
+	for _, m := range probe.Models {
+		used[m.Name] = true
+	}
+	idxByName := make(map[string]int, len(probe.Models))
+	for i := range probe.Models {
+		m := &probe.Models[i]
+		if _, dup := idxByName[m.Name]; dup {
+			m.Config.Route.Model.Values = modelAliases(m)
+			name := m.Name
+			for n := i; used[name]; n++ {
+				name = fmt.Sprintf("%s#%d", m.Name, n)
+			}
+			used[name] = true
+			m.Name = name
+		}
+		idxByName[m.Name] = i
+	}
+	return &probe, idxByName
 }
 
 // stubUpstreamName is the name of the inert upstream that is pushed as the only
