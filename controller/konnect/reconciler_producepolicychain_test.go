@@ -70,6 +70,17 @@ func TestProducePolicyChainReconcileSnapshots(t *testing.T) {
 			}
 		} else if name != "root" {
 			p.Spec.APISpec.ParentPolicyRef.Name = "parent"
+			if name == "first" {
+				p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+					Type: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate,
+					ParsedRecordMaskFieldsProducePolicyCreate: &configurationv1alpha1.EventGatewayParsedRecordMaskFieldsProducePolicyCreate{},
+				}
+			} else {
+				p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+					Type:                                     configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate,
+					ParsedRecordTranscodeProducePolicyCreate: &configurationv1alpha1.EventGatewayParsedRecordTranscodeProducePolicyCreate{},
+				}
+			}
 		}
 		p.SetKonnectID(name + "-id")
 		p.SetGatewayID("gateway-id")

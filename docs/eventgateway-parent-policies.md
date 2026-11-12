@@ -523,10 +523,11 @@ version or region.
   children, cross-parent interleaving, roots-only lists, and children-only lists
   are invalid.
 - Ordering does not change `parent_policy_id`. Existing `parentPolicyRef`
-  validation and immutability remain unchanged: Produce `encryptFields` requires
-  a same-kind, same-namespace, same-virtual-cluster `schemaValidation` parent;
-  `modifyHeaders` may reference one. Moving a child to another parent requires
-  recreating the policy, not moving its chain entry.
+  validation and immutability remain unchanged: Produce `encryptFields`,
+  `maskFields`, and `transcode` require a same-kind, same-namespace,
+  same-virtual-cluster `schemaValidation` parent; `modifyHeaders` may reference
+  one. Moving a child to another parent requires recreating the policy, not
+  moving its chain entry.
 
 No separate nested-list declaration is needed: the complete atomic list
 represents both root-group and sibling order without changing parent references.
