@@ -73,6 +73,19 @@ KONNECT_SYNC_PERIOD_SECONDS=5 WINDOW_SECONDS=8 CHECK_INTERVAL=1 \
     CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/listenerpolicychain-lifecycle
 ```
 
+CI keeps the operator's default 60-second sync period and the 75-second observation
+windows. The listener lifecycle has 19 sequential observation windows, requiring
+at least 23 minutes 45 seconds before resource convergence, drift repair, and
+cleanup. The mutation/recovery checks run sequentially against the same resources;
+shortening their windows below the sync period would no longer verify stability
+across periodic reconciliation.
+In [a passing CI run](https://github.com/Kong/kong-operator/actions/runs/43178413365/job/131049655973),
+the listener scenario took 27 minutes 10 seconds, the full Chainsaw suite took
+28 minutes 39 seconds, and the whole job including cluster/operator setup took
+31 minutes 58 seconds. The workflow therefore allows 45 minutes for `eventgateway`
+only, with headroom for API/runner latency and cleanup; other suites retain their
+30-minute default and `GHA_EXTENDED_TIMEOUT_MINUTES` still overrides both.
+
 Cleanup is registered before resource creation and targets only this namespace's
 named probe resources and the exact-name, test-labeled remote gateway. It restores
 the probe's authentication if a failure interrupted the no-auth scenario, removes
