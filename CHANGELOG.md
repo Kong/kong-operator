@@ -138,6 +138,14 @@
     uses it, e.g. encrypts with that static key.
 
   [#6550](https://github.com/Kong/kong-operator/pull/6550)
+- `AIGatewayMCPServer`: the `route` field in `config` is now required for four
+  types: `conversion-listener`, `listener`, `passthrough-listener` and
+  `upstream-server`. The Konnect API now requires this field. The
+  `conversion-only` type is not affected. A manifest without `route` fails on
+  create. A stored object without `route` fails on the next update. **Add a
+  `route` block to each of these MCP servers before you upgrade the CRDs.** Set
+  one matcher in the block: `paths`, `hosts`, `methods` or `headers`.
+  [#6485](https://github.com/Kong/kong-operator/pull/6485)
 
 ### Fixed
 
