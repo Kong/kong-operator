@@ -204,7 +204,8 @@ spec:
     namespacedRef: {name: vc, namespace: `+parentNS.Name+`}
   apiSpec: {policies: []}
 `)
-	// Rejected cross-namespace parents must not strand an existing cleanup finalizer.
+	// No KongReferenceGrant allows it. Seed the cleanup finalizer here; the
+	// grant-authorized runtime path is covered by a fake-client test.
 	chain.Finalizers = []string{konnect.KonnectCleanupFinalizer}
 	require.NoError(t, cl.Create(ctx, chain), "cross-namespace parents are admitted")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -212,12 +213,10 @@ spec:
 			return
 		}
 		assert.Contains(ct, chain.Finalizers, konnect.KonnectCleanupFinalizer)
-		assert.Nil(ct, meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs"))
-		parent := meta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid())
-		if assert.NotNil(ct, parent) {
-			assert.Equal(ct, metav1.ConditionFalse, parent.Status)
-			assert.Equal(ct, chain.GetStatusConditionReasonParentRefInvalid(), parent.Reason)
-			assert.Contains(ct, parent.Message, "same namespace")
+		grant := meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs")
+		if assert.NotNil(ct, grant) {
+			assert.Equal(ct, metav1.ConditionFalse, grant.Status)
+			assert.Equal(ct, string(configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted), grant.Reason)
 		}
 		assert.Empty(ct, chain.GetVirtualClusterID())
 		assert.Empty(ct, chain.GetGatewayID())

@@ -425,11 +425,10 @@ func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp sharedda
 	return cp.IsResolved() && cp.Kind == onPremAIGatewayKind.Kind
 }
 
-// checkKonnectAIGatewayEndpoints reports whether the endpoints of a resolved
-// KonnectAIGateway can be used: a nil Status.Endpoints is left to
-// buildAIGatewayEnvVars, which refuses it with its own message. An endpoint the
-// pod template sets is left out: that value wins over the rendered one, so the
-// rendered value is not what the data plane boots with.
+// checkKonnectAIGatewayEndpoints reports whether a resolved KonnectAIGateway has
+// usable endpoints. An endpoint the pod template sets is left out: that value
+// wins over the rendered one, so the rendered value is not what the data plane
+// boots with. A nil Status.Endpoints is left to buildAIGatewayEnvVars.
 func checkKonnectAIGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	aigw, ok := cp.(*konnectv1alpha1.KonnectAIGateway)
 	if !ok {

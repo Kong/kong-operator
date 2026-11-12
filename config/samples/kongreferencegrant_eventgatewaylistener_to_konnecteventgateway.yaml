@@ -50,7 +50,7 @@ metadata:
   namespace: event-gateways
 spec:
   from:
-    - group: konnect.konghq.com
+    - group: configuration.konghq.com
       kind: EventGatewayListener
       namespace: event-listeners
   to:

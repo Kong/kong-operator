@@ -21,11 +21,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
@@ -153,28 +151,4 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 func TestCheckKonnectAIGatewayEndpointsUnexpectedObject(t *testing.T) {
 	err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.AIGatewayDataPlane{}, &aigatewayv1alpha1.OnPremAIGateway{})
 	require.ErrorContains(t, err, "unexpected control plane object")
-}
-
-// aigwdpWithOverlay returns an AIGatewayDataPlane whose pod template sets the
-// given env vars on the gateway container.
-func aigwdpWithOverlay(envVarNames []string) *aigatewayv1alpha1.AIGatewayDataPlane {
-	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{}
-	if len(envVarNames) == 0 {
-		return aigwdp
-	}
-	env := make([]corev1.EnvVar, 0, len(envVarNames))
-	for _, name := range envVarNames {
-		env = append(env, corev1.EnvVar{Name: name, Value: "overlay"})
-	}
-	aigwdp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{
-		PodTemplateSpec: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{{
-					Name: consts.AIGatewayDataPlaneContainerName,
-					Env:  env,
-				}},
-			},
-		},
-	}
-	return aigwdp
 }

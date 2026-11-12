@@ -141,11 +141,11 @@ func TestEventGatewayListenerPolicyTLSTrustBundleReferenceResolutionErrors(t *te
 			},
 		},
 		{
-			name:    "referenced trust bundle in another namespace",
+			name:    "referenced trust bundle missing from the named namespace",
 			objects: []client.Object{trustBundle(nil)},
 			policy:  withRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle", Namespace: "other"}),
 			assertErr: func(t *testing.T, err error) {
-				var target configurationv1alpha1.ReferenceCrossNamespaceError
+				var target configurationv1alpha1.ReferenceNotFoundError
 				assert.ErrorAs(t, err, &target)
 			},
 		},

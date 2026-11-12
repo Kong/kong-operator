@@ -31,6 +31,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 )
 
 // An entity the policies in the configuration of a gateway reference is held
@@ -344,7 +345,13 @@ func heldMessage(cfg configuration, e entityStatus) string {
 	}
 	names := make([]string, 0, len(policies))
 	for _, p := range policies {
-		names = append(names, p.typ.Elem().Name()+" "+p.key.Name)
+		name := p.key.Name
+		// A policy of another namespace is named with it; one whose object
+		// is gone has none.
+		if p.key.Namespace != "" {
+			name = policychain.NameIn(p.key, e.obj.GetNamespace())
+		}
+		names = append(names, p.typ.Elem().Name()+" "+name)
 	}
 	slices.Sort(names)
 	return fmt.Sprintf("; being deleted, it is kept while these policies reference it: %s", strings.Join(names, ", "))

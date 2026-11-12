@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 )
@@ -196,8 +197,8 @@ spec:
         partOfRecord: [value]
         encryptionKey: {type: static, static: {key: {name: key}}}
 `)
-	// Of another namespace, attached to a backend cluster of the gateway: left
-	// out, whatever its parent reference says.
+	// Of another namespace, attached to a backend cluster of the gateway,
+	// without a KongReferenceGrant: left out.
 	vcOtherNamespace := virtualCluster("vc-other-namespace", "vc-other-namespace", "bc", 14)
 	vcOtherNamespace.SetNamespace("other")
 	vcOtherNamespace.Spec.EventGatewayBackendClusterRef.NamespacedRef.Namespace = new(ns)
@@ -235,7 +236,7 @@ spec:
 		"EventGatewayVirtualCluster vc-of-duplicate":                    "its EventGatewayBackendCluster " + ns + "/bc-duplicate isn't in the configuration",
 		"EventGatewayVirtualClusterConsumePolicy orphan":                "its parent policy " + ns + "/missing doesn't exist, is being deleted, or is in a cycle of parent policies",
 		"EventGatewayVirtualClusterConsumePolicy with-missing-registry": "resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: EventGatewaySchemaRegistry " + ns + "/missing: eventgatewayschemaregistries.configuration.konghq.com \"missing\" not found",
-		"EventGatewayVirtualCluster vc-other-namespace":                 "it must be in the namespace of the OnPremEventGateway, " + ns,
+		"EventGatewayVirtualCluster vc-other-namespace":                 "no KongReferenceGrant allows it to reference the EventGatewayBackendCluster " + ns + "/bc",
 		"EventGatewaySchemaRegistry duplicate-registry":                 `another schema registry of the gateway is named "registry"`,
 		"EventGatewayVirtualClusterConsumePolicy with-other-registry": "it references the EventGatewaySchemaRegistry " + ns +
 			"/other-registry, which isn't in the configuration of the gateway",
@@ -326,10 +327,12 @@ spec:
 	}
 }
 
-// A policy of another namespace naming a virtual cluster of the gateway is
-// only left out, whatever its parent policy: it can't hold the gateway back.
-// A parent policy attached to another virtual cluster stops the push, as
-// Konnect refuses it.
+// A policy of another namespace naming a virtual cluster of the gateway,
+// without a KongReferenceGrant, is only left out, whatever its parent policy:
+// it can't hold the gateway back. With one, it belongs to the gateway, and a
+// missing parent policy stops the push, as for a policy of the gateway's
+// namespace. A parent policy attached to another virtual cluster stops the
+// push, as Konnect refuses it.
 func TestBuildConfigurationParentPolicyScope(t *testing.T) {
 	f := newSchemaRegistryFixture(t)
 	child := func(name, namespace, vc, parent string, minutes int) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
@@ -364,8 +367,59 @@ spec:
 		require.NoError(t, cfg.blocked())
 		assert.Len(t, cfg.excluded, 3)
 		for _, e := range cfg.excluded {
-			assert.Equal(t, "it must be in the namespace of the OnPremEventGateway, "+ns, e.message)
+			assert.Equal(t, "no KongReferenceGrant allows it to reference the EventGatewayVirtualCluster "+ns+"/vc", e.message)
+			assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, e.reason)
 		}
+	})
+
+	t.Run("another namespace a KongReferenceGrant lets in blocks on a missing parent", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			Name: "grant", Namespace: ns,
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: "elsewhere"}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualCluster"}},
+			},
+		}
+		cfg, err := buildConfiguration(t.Context(), f.objects(grant, child("orphan", "elsewhere", "vc", "nope", 4)), f.gateway, "", nil)
+		require.NoError(t, err)
+		require.Error(t, cfg.blocked())
+		require.Len(t, cfg.excluded, 1)
+		assert.Equal(t, "its parent policy elsewhere/nope doesn't exist, is being deleted, or is in a cycle of parent policies", cfg.excluded[0].message)
+	})
+
+	// The parent of another namespace is left out, its own reference to the
+	// virtual cluster not granted: the child, which belongs to the gateway,
+	// reports first that it may not reference the parent itself, as when its
+	// parent is in the configuration, and as on Konnect.
+	t.Run("a child not granted its parent of another namespace reports it", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			Name: "grant", Namespace: ns,
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: "elsewhere"}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualCluster"}},
+			},
+		}
+		orphan := child("orphan", "elsewhere", "vc", "parent", 4)
+		orphan.Spec.APISpec.ParentPolicyRef.Namespace = "third"
+		thirdParent := child("parent", "third", "vc", "none", 3)
+		thirdParent.Spec.APISpec.ParentPolicyRef = configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{}
+		cfg, err := buildConfiguration(t.Context(), f.objects(grant, thirdParent, orphan), f.gateway, "", nil)
+		require.NoError(t, err)
+		require.Error(t, cfg.blocked())
+		assert.Equal(t, map[string]string{
+			"EventGatewayVirtualClusterProducePolicy parent": "no KongReferenceGrant allows it to reference the EventGatewayVirtualCluster " + ns + "/vc",
+			"EventGatewayVirtualClusterProducePolicy orphan": "no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterProducePolicy third/parent",
+		}, excludedMessages(cfg))
+		// The parent policy isn't let reference its parent, the child its
+		// parent policy, of another kind than its parent: as against Konnect.
+		reasons := map[string]kcfgconsts.ConditionReason{}
+		for _, e := range cfg.excluded {
+			reasons[e.obj.GetName()] = e.reason
+		}
+		assert.Equal(t, map[string]kcfgconsts.ConditionReason{
+			"parent": eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason,
+			"orphan": eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason,
+		}, reasons)
 	})
 
 	t.Run("a parent of another virtual cluster blocks", func(t *testing.T) {

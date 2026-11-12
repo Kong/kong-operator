@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -94,6 +95,19 @@ func ensureKongReferenceGrantForParentRef[
 	)
 
 	if crossnamespace.IsReferenceNotGranted(err) {
+		// An entity being deleted must still be removed from Konnect: revoking
+		// the grant, e.g. deleting everything at once, can't block it. One not
+		// in Konnect has nothing to remove, and must not read a parent it was
+		// never granted.
+		if !ent.GetDeletionTimestamp().IsZero() {
+			if withID, ok := any(ent).(interface{ GetKonnectID() string }); ok && withID.GetKonnectID() != "" {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, ReferencedObjectNotGrantedOnDeletionError{
+				Reference: types.NamespacedName{Namespace: targetNamespace, Name: ref.NamespacedRef.Name},
+				TypeName:  parentTypeName,
+			}
+		}
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
@@ -172,12 +186,16 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 
 	parentRef := obj.GetParentRef()
 
-	if _, isChain := obj.(policyChain); isChain && parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
+	// A listener policy chain must be in the namespace of its listener. A
+	// cluster policy chain may reference a virtual cluster of another
+	// namespace, with a KongReferenceGrant, checked below as for any parent.
+	if chain, isChain := obj.(policyChain); isChain && !policychain.CrossNamespaceAllowed(chain) &&
+		parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
 		parentRef.NamespacedRef != nil && parentRef.NamespacedRef.Namespace != nil &&
 		*parentRef.NamespacedRef.Namespace != "" && *parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
 		err := ReferencedObjectIsInvalidError{
 			Reference: *parentRef.NamespacedRef.Namespace + "/" + parentRef.NamespacedRef.Name,
-			Msg:       fmt.Sprintf("policy chains require a %s in the same namespace as the chain (%s); cross-namespace parents are not supported", parentType, obj.GetNamespace()),
+			Msg:       fmt.Sprintf("listener policy chains require a %s in the same namespace as the chain (%s); cross-namespace parents are not supported", parentType, obj.GetNamespace()),
 		}
 		old := obj.DeepCopyObject().(client.Object)
 		// Older reconciliations could adopt parent IDs and grant conditions
@@ -267,8 +285,12 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 		}
 	}
 
+	// An entity being deleted only needs the Konnect ID of its parent to be
+	// removed from Konnect: the parent may no longer be Programmed, e.g. its
+	// KongReferenceGrant was deleted along with them.
+	beingDeletedWithParentID := !obj.GetDeletionTimestamp().IsZero() && parent.GetKonnectID() != ""
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, parent)
-	if !ok || cond.Status != metav1.ConditionTrue {
+	if (!ok || cond.Status != metav1.ConditionTrue) && !beingDeletedWithParentID {
 		msg := fmt.Sprintf("Referenced %s %s is not programmed yet", parentType, nn)
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, obj,

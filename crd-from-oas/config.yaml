@@ -1352,12 +1352,13 @@ apiGroupVersions:
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || self.spec.eventGatewayListenerRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayListenerRef) && oldSelf.value().spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef)",message="spec.eventGatewayListenerRef must use namespacedRef",fieldPath=".spec.eventGatewayListenerRef",optionalOldSelf=true'
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef\",message=\"spec.eventGatewayListenerRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayListenerRef\""
         references:
-          # References EventGatewayTLSTrustBundles in the cluster. Each resolves
+          # References an EventGatewayTLSTrustBundle in the cluster. It resolves
           # to the Konnect ID, which is how Konnect binds the bundle, so renaming
           # a trust bundle can't rebind the policy to another bundle.
           - path: spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles
             kinds: [EventGatewayTLSTrustBundle]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             # Konnect allows deleting a trust bundle used by listener policies,
             # leaving them referencing a missing trust bundle (failing their
             # next update), so the operator blocks the deletion while Konnect
@@ -1365,13 +1366,14 @@ apiGroupVersions:
             # deleteEventGatewayTLSTrustBundleGuarded). The
             # EventGatewayTLSTrustBundle controller watches the policies so the
             # deletion is retried as soon as one referencing it is deleted
-            # (otherwise on the periodic retry of a blocked deletion), and a trust bundle being deleted is not
+            # (otherwise on the periodic retry of a
+            # blocked deletion), and a trust bundle being deleted is not
             # resolved for policies not created in Konnect yet.
             reverseWatch: true
           # References an EventGatewayVirtualCluster in the cluster, by its
           # object name rather than the name of its API entity. It resolves to
-          # the Konnect ID, so renaming a virtual cluster can't
-          # rebind the policy to another one.
+          # the Konnect ID, so renaming a virtual cluster can't rebind the policy
+          # to another one.
           # Konnect refuses to delete a virtual cluster a listener policy forwards
           # to: the virtual cluster is reconciled again once they stop using it.
           - path: spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
@@ -1536,13 +1538,15 @@ apiGroupVersions:
           - path: spec.apiSpec.parentPolicyRef
             kinds: [EventGatewayVirtualClusterProducePolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             injectInto: parentPolicyID
             requiredAPISpecType: schemaValidation
             reverseWatch: true
             description: |-
-              ParentPolicyRef references a schemaValidation produce policy in the same
-              namespace and virtual cluster. Required for encryptFields, maskFields and
-              transcode, and optional for modifyHeaders. It is immutable once this policy exists in Konnect.
+              ParentPolicyRef references a schemaValidation produce policy of the same
+              virtual cluster. One in another namespace needs a KongReferenceGrant in
+              its namespace. Required for encryptFields, maskFields and transcode, and
+              optional for modifyHeaders. It is immutable once this policy exists in Konnect.
               Deleting a parent is blocked while child policy objects reference it.
           # References an EventGatewayStaticKey in the cluster, resolved to its
           # Konnect ID. Konnect refuses to delete a static key
@@ -1552,10 +1556,12 @@ apiGroupVersions:
           - path: spec.apiSpec.encrypt.config.encryptionKey.static.key
             kinds: [EventGatewayStaticKey]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key
             kinds: [EventGatewayStaticKey]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             reverseWatch: true
           # Konnect refuses to delete a schema registry a policy uses: the
           # registry is reconciled again once the policies stop using it.
@@ -1567,10 +1573,12 @@ apiGroupVersions:
           - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
+            supportCrossNamespaceReference: true
             reverseWatch: true
         schemaFieldOmissions:
           # The type json parses without a schema: Konnect and gw-admin both
@@ -1644,27 +1652,32 @@ apiGroupVersions:
           - path: spec.apiSpec.parentPolicyRef
             kinds: [EventGatewayVirtualClusterConsumePolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             injectInto: parentPolicyID
             requiredAPISpecType: schemaValidation
             reverseWatch: true
             description: |-
-              ParentPolicyRef references a schemaValidation consume policy in the same
-              namespace and virtual cluster. Required for decryptFields, maskFields and
-              transcode, and optional for modifyHeaders and skipRecord. It is immutable once this policy exists
+              ParentPolicyRef references a schemaValidation consume policy of the same
+              virtual cluster. One in another namespace needs a KongReferenceGrant in
+              its namespace. Required for decryptFields, maskFields and transcode, and
+              optional for modifyHeaders and skipRecord. It is immutable once this policy exists
               in Konnect. Deleting a parent is blocked while child policy objects reference it.
           # Konnect refuses to delete a schema registry a policy uses: the
           # registry is reconciled again once the policies stop using it.
           - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.transcode.config.json.schemaSource.reference.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
+            supportCrossNamespaceReference: true
             reverseWatch: true
         schemaFieldOmissions:
           # The type json parses without a schema: Konnect and gw-admin both
@@ -1755,6 +1768,7 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayVirtualClusterPolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             resolverMethod: ResolveValidatedPolicyIDs
         cel:
           _validations:
@@ -1770,10 +1784,9 @@ apiGroupVersions:
               policies:
                 _description: >-
                   Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order.
-                  Each policy must belong to the referenced EventGatewayVirtualCluster
-                  and be in the same namespace as this chain.
-                  Namespace defaults to this chain's namespace and may be set explicitly
-                  to that same namespace; cross-namespace references are not supported.
+                  Each policy must belong to the referenced EventGatewayVirtualCluster.
+                  Namespace defaults to this chain's namespace; a policy in another
+                  namespace needs a KongReferenceGrant in its namespace.
                   List every cluster-level policy exactly once. An explicit empty list
                   is valid only when the remote chain has no policies; it does not clear
                   an existing chain. When a policy is created or deleted, update this

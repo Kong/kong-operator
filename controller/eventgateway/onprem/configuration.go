@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
@@ -79,8 +80,9 @@ type configuration struct {
 	// gateway, by the UID of their object, and built those of this one: an
 	// entity reading a Secret that is gone is sent as it was last.
 	previous, built map[types.UID]any
-	// namespace is the namespace of the gateway: every entity of the
-	// configuration must be in it.
+	// namespace is the namespace of the gateway. An entity of another
+	// namespace belongs to the gateway only when KongReferenceGrants allow
+	// its references up to the gateway (see parentNotGranted).
 	namespace string
 	// secretHint tells how to make a Secret visible to the operator, when
 	// its Secret cache is filtered by a label.
@@ -94,6 +96,10 @@ type configuration struct {
 	// reserved holds, by policy name, the oldest policy of the gateway naming
 	// it (see reservePolicyNames).
 	reserved map[string]string
+	// parentsNotGranted holds, by "Kind namespace/name", why each object of
+	// another namespace than its parent can't reference it, or "" (see
+	// parentNotGranted).
+	parentsNotGranted map[string]string
 }
 
 // uniqueValue is a value of an entity that no other entity of the gateway may
@@ -399,12 +405,17 @@ func childrenOf[T any, PT interface {
 		for _, child := range live[T, PT](*items) {
 			key := client.ObjectKeyFromObject(child)
 			keys = append(keys, key)
-			// An object of another namespace never belongs to the gateway,
-			// whatever it references: it is only left out, before its parent
-			// policy, if any, is looked at, so that it can't hold back the
-			// configuration of a gateway it may not belong to.
-			if message := c.outsideNamespace(child); message != "" {
-				c.leaveOut(entityStatus{obj: child}, message)
+			// An object of another namespace no KongReferenceGrant lets
+			// reference its parent doesn't belong to the gateway, whatever it
+			// references: it is only left out, before its parent policy, if
+			// any, is looked at, so that it can't hold back the configuration
+			// of a gateway it may not belong to.
+			message, err := c.parentNotGranted(ctx, cl, child, reflect.TypeOf(child).Elem().Name())
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			if message != "" {
+				c.leaveOutNotPermitted(entityStatus{obj: child}, message)
 				continue
 			}
 			i, ok := p.index[parent]
@@ -469,8 +480,7 @@ func addParentsFirst[PT entityObject, E any](
 			ready = append(ready, obj)
 		}
 		if len(ready) == 0 {
-			excludeOrphans(c, waiting, parentOf, added)
-			return nil
+			return excludeOrphans(ctx, c, cl, waiting, parentOf, added)
 		}
 		index, err := addEntities(ctx, c, cl, ready, k)
 		if err != nil {
@@ -483,13 +493,29 @@ func addParentsFirst[PT entityObject, E any](
 }
 
 // excludeOrphans leaves out the objects whose parent, of their own kind, isn't
-// in the configuration. One whose parent is left out, directly or through its
+// in the configuration. One no KongReferenceGrant lets reference its parent, or
+// another entity, in another namespace reports it, as when its parent is in
+// the configuration, and stops the configuration from being pushed (see
+// siblingsNotGranted). One whose parent is left out, directly or through its
 // own parent, goes along with it: the parent tells why. One whose parent
 // doesn't exist, is being deleted, or is in a cycle of parents stops the
 // configuration from being pushed: without its parent, it isn't applied, e.g.
 // fields are no longer encrypted.
-func excludeOrphans[PT entityObject](c *configuration, objs []PT, parentOf func(PT) (client.ObjectKey, bool), added map[client.ObjectKey]int) {
-	pending := slices.Clone(objs)
+func excludeOrphans[PT entityObject](
+	ctx context.Context, c *configuration, cl client.Client, objs []PT, parentOf func(PT) (client.ObjectKey, bool), added map[client.ObjectKey]int,
+) error {
+	pending := make([]PT, 0, len(objs))
+	for _, obj := range objs {
+		message, err := siblingsNotGranted(ctx, cl, obj)
+		if err != nil {
+			return err
+		}
+		if message != "" {
+			c.exclude(entityStatus{obj: obj}, eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason, message)
+			continue
+		}
+		pending = append(pending, obj)
+	}
 	for changed := true; changed; {
 		changed = false
 		for i := 0; i < len(pending); i++ {
@@ -512,6 +538,7 @@ func excludeOrphans[PT entityObject](c *configuration, objs []PT, parentOf func(
 		}
 		c.exclude(entityStatus{obj: obj}, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 	}
+	return nil
 }
 
 // converted is an object converted into its entity.
@@ -522,10 +549,10 @@ type converted[E any] struct {
 
 // convertObject converts the object into its entity, from its Konnect SDK
 // request, whose JSON payload adjust, when set, adjusts, e.g. to resolve its
-// references. It leaves the object out, with the reason, when it is in
-// another namespace than the gateway, its UID is not a version 4 UUID, it
-// reads a Secret of another namespace no KongReferenceGrant allows, or it
-// can't be converted, unless only a Secret it reads is gone or lacks the key
+// references. It leaves the object out, with the reason, when its UID is not a
+// version 4 UUID, it references an object or reads a Secret of another
+// namespace no KongReferenceGrant allows, or it can't be converted, unless
+// only a Secret it reads is gone or lacks the key
 // read: its entity is then the one of the last configuration built for the
 // gateway. It returns false for an object left out, and an error when what it
 // references can't be read, other than an object that doesn't exist.
@@ -540,22 +567,43 @@ func convertObject[PT entityObject, E any](
 			conv.status.secretRefValid = secretRefValidCondition(obj, problem)
 		}
 	}
-	id, message := c.entityID(obj)
-	if message != "" {
-		if obj.GetNamespace() != c.namespace {
-			// Anyone may name the gateway from another namespace: that must not
-			// hold back its configuration.
-			c.leaveOut(conv.status, message)
-		} else {
-			c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
-		}
-		return conv, false, nil
-	}
-	message, err := secretRefsNotGranted(ctx, cl, obj, refs, kind)
+	// Anyone may name the gateway from another namespace: an object no
+	// KongReferenceGrant lets in doesn't belong to it, and is only left out,
+	// whatever else is wrong with it.
+	message, err := c.parentNotGranted(ctx, cl, obj, kind)
 	if err != nil {
 		return conv, false, err
 	}
 	if message != "" {
+		c.leaveOutNotPermitted(conv.status, message)
+		return conv, false, nil
+	}
+	id, message := c.entityID(obj)
+	if message != "" {
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
+		return conv, false, nil
+	}
+	message, err = siblingsNotGranted(ctx, cl, obj)
+	if err != nil {
+		return conv, false, err
+	}
+	if message != "" {
+		if keepBeingDeleted(c, obj, id, adjust, &conv) {
+			return conv, true, nil
+		}
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason, message)
+		return conv, false, nil
+	}
+	message, err = secretRefsNotGranted(ctx, cl, obj, refs, kind)
+	if err != nil {
+		return conv, false, err
+	}
+	if message != "" {
+		if keepBeingDeleted(c, obj, id, adjust, &conv) {
+			// As for an object left out: its Secrets aren't read.
+			setSecretRefValid("The Secrets it reads aren't read: " + message)
+			return conv, true, nil
+		}
 		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, message)
 		return conv, false, nil
 	}
@@ -603,6 +651,28 @@ func convertObject[PT entityObject, E any](
 	}
 	conv.status.kept = true
 	return conv, true, nil
+}
+
+// keepBeingDeleted sets conv to the entity of an object being deleted, which
+// FinalizerInUse holds for the policies of the last configuration sent, as it
+// was in that configuration, and tells whether it did. Revoking a grant the
+// object needs, e.g. deleting a namespace with its KongReferenceGrants, must
+// not hold back its deletion, as against Konnect: excluded, it would stop the
+// push that drops the policies using it, which alone releases it. The entity
+// sent is the one gw-admin already has, so nothing the grant protects is read.
+func keepBeingDeleted[E any](c *configuration, obj entityObject, id uuid.UUID, adjust func(map[string]any) error, conv *converted[E]) bool {
+	if obj.GetDeletionTimestamp().IsZero() {
+		return false
+	}
+	last, ok := c.previous[obj.GetUID()].(E)
+	if !ok {
+		return false
+	}
+	if err := convertEntity(last, obj, id, &conv.entity, adjust); err != nil {
+		return false
+	}
+	conv.status.kept = true
+	return true
 }
 
 // allObjects returns the objects of the configuration, included or not.
@@ -654,7 +724,8 @@ func (c *configuration) exclude(status entityStatus, reason kcfgconsts.Condition
 
 // leaveOut leaves the object out of the configuration, with the reason,
 // without stopping the configuration from being pushed: the object doesn't
-// belong to it, e.g. it is in another namespace, which must not hold back the
+// belong to it, e.g. it is in another namespace no KongReferenceGrant lets in,
+// which must not hold back the
 // gateway, or it is left out along with its parent, which tells why.
 func (c *configuration) leaveOut(status entityStatus, message string) {
 	c.addExcluded(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message, false)
@@ -671,11 +742,28 @@ func (c *configuration) excludeConflict(status entityStatus, leftOut bool, messa
 	c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 }
 
+// leaveOutNotPermitted leaves out, like leaveOut, an object of another
+// namespace no KongReferenceGrant lets reference its parent: it doesn't belong
+// to the gateway.
+func (c *configuration) leaveOutNotPermitted(status entityStatus, message string) {
+	c.addExcluded(status, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, message, false)
+}
+
 func (c *configuration) addExcluded(status entityStatus, reason kcfgconsts.ConditionReason, message string, blocks bool) {
 	if status.secretRefValid == nil && len(sensitiveDataSecretRefs(status.obj)) > 0 {
 		status.secretRefValid = secretRefValidCondition(status.obj, "The Secrets it reads aren't read: "+message)
 	}
 	c.excluded = append(c.excluded, excludedEntity{entityStatus: status, reason: reason, message: message, blocks: blocks})
+}
+
+// leftOutNotPermitted tells the object is left out of the configuration as it
+// doesn't belong to the gateway: no KongReferenceGrant lets it reference its
+// parent of another namespace (see leaveOutNotPermitted).
+func (c *configuration) leftOutNotPermitted(t reflect.Type, key client.ObjectKey) bool {
+	return slices.ContainsFunc(c.excluded, func(e excludedEntity) bool {
+		return !e.blocks && e.reason == eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason &&
+			reflect.TypeOf(e.obj) == t && client.ObjectKeyFromObject(e.obj) == key
+	})
 }
 
 // isExcluded tells the object is left out of the configuration.
@@ -724,11 +812,14 @@ func (e invalidEntitiesError) Error() string {
 	return "The configuration isn't pushed, " + keeps + ": these entities can't be sent: " + strings.Join(problems, "; ")
 }
 
-// byCreation orders objects from the oldest to the newest, then by name.
+// byCreation orders objects from the oldest to the newest, then by name and
+// namespace: objects of several namespaces may share a name and a creation
+// second, and come from the cache in any order.
 func byCreation[PT client.Object](a, b PT) int {
 	return cmp.Or(
 		a.GetCreationTimestamp().Compare(b.GetCreationTimestamp().Time),
 		cmp.Compare(a.GetName(), b.GetName()),
+		cmp.Compare(a.GetNamespace(), b.GetNamespace()),
 	)
 }
 
@@ -739,15 +830,8 @@ func asEntities(v any) map[types.UID]any {
 }
 
 // entityID returns the id of the entity in gw-admin, its UID, or why the
-// entity is left out: it is in another namespace than the gateway, or its UID
-// is not a version 4 UUID. Every entity of the configuration must be in the
-// namespace of the gateway, like its parent: a parent reference may name
-// another namespace, which would let an entity of any namespace into the
-// configuration of the gateway.
+// entity is left out: its UID is not a version 4 UUID.
 func (c *configuration) entityID(obj client.Object) (uuid.UUID, string) {
-	if message := c.outsideNamespace(obj); message != "" {
-		return uuid.UUID{}, message
-	}
 	id, ok := uidV4(obj)
 	if !ok {
 		return uuid.UUID{}, fmt.Sprintf("its UID %q is not a version 4 UUID", obj.GetUID())
@@ -755,14 +839,65 @@ func (c *configuration) entityID(obj client.Object) (uuid.UUID, string) {
 	return id, ""
 }
 
-// outsideNamespace returns why the object can't belong to the gateway, as it
-// is in another namespace, or "". Such an object is only left out: anyone may
-// name the gateway from another namespace, which must not hold it back.
-func (c *configuration) outsideNamespace(obj client.Object) string {
-	if obj.GetNamespace() != c.namespace {
-		return fmt.Sprintf("it must be in the namespace of the OnPremEventGateway, %s", c.namespace)
+// parentNotGranted returns why the object can't reference its parent, in
+// another namespace, or "" when a KongReferenceGrant allows it or the parent
+// is in its namespace. The grant of each reference, from the entity to its
+// parent up to the gateway, is what lets an entity of another namespace into
+// the configuration of the gateway: an object without it doesn't belong to the
+// gateway, and is only left out, as anyone may name the gateway from another
+// namespace, which must not hold back its configuration. It is checked once
+// per object for the configuration.
+func (c *configuration) parentNotGranted(ctx context.Context, cl client.Client, obj client.Object, kind string) (string, error) {
+	entity, ok := obj.(entityWithParent)
+	if !ok {
+		return "", nil
 	}
-	return ""
+	ref := entity.GetParentRef()
+	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
+		return "", nil
+	}
+	parent := refKey(obj, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name)
+	if parent.Namespace == obj.GetNamespace() {
+		return "", nil
+	}
+	self := kind + " " + client.ObjectKeyFromObject(obj).String()
+	if message, ok := c.parentsNotGranted[self]; ok {
+		return message, nil
+	}
+	message, err := notGrantedMessage(crossnamespace.CheckKongReferenceGrantForResource(
+		ctx, cl, obj.GetNamespace(), parent.Namespace, parent.Name,
+		metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(kind)), metav1.GroupVersionKind(entity.GetParentGVK()),
+	))
+	if err != nil {
+		return "", err
+	}
+	if c.parentsNotGranted == nil {
+		c.parentsNotGranted = map[string]string{}
+	}
+	c.parentsNotGranted[self] = message
+	return message, nil
+}
+
+// siblingsNotGranted returns why the object can't reference another entity
+// than its parent, e.g. a schema registry or a parent policy, in another
+// namespace, or "" when a KongReferenceGrant allows every such reference. The
+// object belongs to the gateway: without the reference it can't be sent.
+func siblingsNotGranted(ctx context.Context, cl client.Client, obj client.Object) (string, error) {
+	return notGrantedMessage(crossnamespace.CheckSiblingReferences(ctx, cl, obj))
+}
+
+// notGrantedMessage returns why a reference isn't allowed, from the error of
+// its KongReferenceGrant check, or "" without one. It returns the error when
+// it isn't a reference not granted, e.g. the grants couldn't be read.
+func notGrantedMessage(err error) (string, error) {
+	if err == nil {
+		return "", nil
+	}
+	notGranted, ok := errors.AsType[*crossnamespace.ReferenceNotGrantedError](err)
+	if !ok {
+		return "", err
+	}
+	return fmt.Sprintf("no KongReferenceGrant allows it to reference the %s %s/%s", notGranted.ToGVK.Kind, notGranted.ToNamespace, notGranted.ToName), nil
 }
 
 // secretRefsNotGranted returns why the object can't read a Secret of refs,

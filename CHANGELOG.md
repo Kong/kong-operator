@@ -75,6 +75,18 @@
 
 ### Breaking changes
 
+- A `KegDataPlane` whose `KonnectEventGateway` `serverURL` carries a path is no
+  longer reconciled: it keeps serving, but no spec, image or certificate change
+  is applied, its certificate is not renewed, and a data plane that was not
+  deployed yet is not deployed at all. Its `KonnectEventGatewayResolved`
+  condition is `False` with reason `EndpointMismatch`: the Event Gateway
+  composes a public Konnect host from the region and the domain and cannot use a
+  path. Setting `spec.config.konnect.domain` to a host does not make that
+  connection private, it only lets the data plane connect over the public
+  internet. A `KONG_KONNECT_DOMAIN` set in
+  `spec.deployment.podTemplateSpec` does not count as that override: move the
+  value to `spec.config.konnect.domain` to keep the data plane reconciled.
+  [#6107](https://github.com/Kong/kong-operator/issues/6107)
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
   it keeps serving, but no spec, image or certificate change is applied until
@@ -195,6 +207,46 @@
   description and enabled flag to avoid repeatedly pushing an unchanged
   configuration.
   [#6395](https://github.com/Kong/kong-operator/pull/6395)
+- Event Gateway entities can reference their parent, the entities they use
+  (schema registries, static keys, TLS trust bundles, parent policies) and the
+  Secrets they read in another namespace, with a `KongReferenceGrant` in its
+  namespace, on both `KonnectEventGateway`s and `OnPremEventGateway`s. The
+  virtual cluster a listener policy forwards to stays in the namespace of the
+  referrer, whatever the `KongReferenceGrant`s. A
+  `KongReferenceGrant` names these kinds under their own group,
+  `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
+  never matched, and is still accepted only so that existing grants stay
+  valid.
+  Without a `KongReferenceGrant`:
+  - an entity that can't reference its parent reports `RefNotPermitted`; on
+    an `OnPremEventGateway` it is left out and the configuration is still
+    pushed, as the entity doesn't belong to the gateway;
+  - an entity that can't reference another entity reports
+    `ReferenceNotPermitted`, against Konnect in `KonnectReferencesResolved`
+    and on an `OnPremEventGateway` in `Programmed`, and one that can't read a
+    Secret `RefNotPermitted`; on an `OnPremEventGateway`, both stop the
+    configuration from being pushed, except for an
+    `EventGatewayDataPlaneCertificate`, which is only left out, no longer
+    trusted;
+  - a child policy of another namespace that isn't in Konnect doesn't block
+    the deletion of its parent policy;
+  - an entity being deleted isn't held back: against Konnect it is still
+    deleted, and on an `OnPremEventGateway` one kept for the policies using
+    it is sent as it was last, so that deleting a namespace with its
+    `KongReferenceGrant`s doesn't stop the push that releases it.
+  [#6580](https://github.com/Kong/kong-operator/pull/6580)
+- `EventGatewayVirtualClusterPolicyChain`s can reference their virtual
+  cluster, and order policies, in another namespace, with a
+  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
+  `OnPremEventGateway`s. The policies of a listener policy chain stay in the
+  namespace of the chain.
+  Without a `KongReferenceGrant`:
+  - a policy chain that can't order its policies reports
+    `ReferenceNotPermitted`, and doesn't claim its virtual cluster;
+  - a policy chain of another namespace loses its claim on its virtual
+    cluster, so that a chain of the namespace of the virtual cluster can
+    claim it.
+  [#6582](https://github.com/Kong/kong-operator/pull/6582)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`

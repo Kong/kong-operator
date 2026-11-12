@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -41,6 +42,13 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 			{name: "different with grant", namespace: new("other"), grant: true},
 			{name: "different with stale status", namespace: new("other"), grant: true, stale: true},
 		} {
+			crossNamespace := tc.namespace != nil && *tc.namespace == "other"
+			if kind == "virtual cluster" && crossNamespace {
+				// A cluster policy chain may reference a virtual cluster of
+				// another namespace, with a KongReferenceGrant (see
+				// TestPolicyChainCrossNamespaceGrantedLifecycle).
+				continue
+			}
 			t.Run(kind+"/"+tc.name, func(t *testing.T) {
 				var chain objectWithParentRef
 				var parent objectWithParentRef
@@ -63,7 +71,6 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 						return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl).Reconcile(ctx, c)
 					}
 				}
-				crossNamespace := tc.namespace != nil && *tc.namespace == "other"
 				chain.GetParentRef().NamespacedRef.Namespace = tc.namespace
 				chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(chain.GetParentGVK().Kind + "PolicyChain"))
 				chain.SetFinalizers([]string{KonnectCleanupFinalizer})
@@ -906,4 +913,97 @@ func TestHandleParentRef_NotKonnectManagedParent(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, cred.GetStatusConditionReasonParentRefInvalid(), cond.Reason)
 	})
+}
+
+func TestEnsureKongReferenceGrantForParentRef_NotGranted(t *testing.T) {
+	newListener := func() *configurationv1alpha1.EventGatewayListener {
+		listener := &configurationv1alpha1.EventGatewayListener{
+			Name: "listener", Namespace: "listeners",
+			Finalizers: []string{KonnectCleanupFinalizer},
+		}
+		listener.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayListener"))
+		return listener
+	}
+	ref := commonv1alpha1.ObjectRef{
+		Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gateway", Namespace: new("gateways")},
+	}
+	parentGVK := konnectv1alpha1.GroupVersion.WithKind("KonnectEventGateway")
+
+	t.Run("an entity not being deleted waits for a grant, and reports it", func(t *testing.T) {
+		listener := newListener()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(listener).WithStatusSubresource(listener).Build()
+		res, err := ensureKongReferenceGrantForParentRef(t.Context(), cl, listener, ref, parentGVK)
+		require.NoError(t, err)
+		require.False(t, res.IsZero())
+		require.True(t, meta.IsStatusConditionFalse(listener.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)))
+	})
+
+	t.Run("an entity being deleted in Konnect isn't held back by a revoked grant", func(t *testing.T) {
+		listener := newListener()
+		listener.DeletionTimestamp = new(metav1.Now())
+		listener.SetKonnectID("listener-id")
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(listener).WithStatusSubresource(listener).Build()
+		res, err := ensureKongReferenceGrantForParentRef(t.Context(), cl, listener, ref, parentGVK)
+		require.NoError(t, err)
+		require.True(t, res.IsZero())
+	})
+
+	t.Run("an entity being deleted not in Konnect stops, without reading its parent, and drops its finalizer", func(t *testing.T) {
+		listener := newListener()
+		listener.DeletionTimestamp = new(metav1.Now())
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(listener).WithStatusSubresource(listener).Build()
+		res, err := ensureKongReferenceGrantForParentRef(t.Context(), cl, listener, ref, parentGVK)
+		_, ok := errors.AsType[ReferencedObjectNotGrantedOnDeletionError](err)
+		require.True(t, ok, "expected ReferencedObjectNotGrantedOnDeletionError, got %v", err)
+
+		stop, res, err := handleRefResult(t.Context(), cl, listener, res, err)
+		require.NoError(t, err)
+		require.True(t, stop)
+		require.True(t, res.IsZero())
+		require.Empty(t, listener.Finalizers)
+		require.Empty(t, listener.GetGatewayID())
+	})
+}
+
+func TestHandleParentRef_EntityBeingDeletedWithParentNotProgrammed(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		parentID     string
+		wantDeferred bool
+	}{
+		{name: "the entity goes on, with the Konnect ID of its parent", parentID: "listener-id"},
+		{name: "without a Konnect ID on its parent, it waits", wantDeferred: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parent := &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: "listeners"}
+			parent.SetKonnectID(tc.parentID)
+			parent.SetGatewayID("gateway-id")
+			parent.SetConditions([]metav1.Condition{{Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionFalse}})
+			policy := &configurationv1alpha1.EventGatewayListenerPolicy{
+				Name: "policy", Namespace: "listeners",
+				Finalizers:        []string{KonnectCleanupFinalizer},
+				DeletionTimestamp: new(metav1.Now()),
+				Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
+					EventGatewayListenerRef: commonv1alpha1.ObjectRef{
+						Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "listener"},
+					},
+				},
+			}
+			policy.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayListenerPolicy"))
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(parent, policy).WithStatusSubresource(parent, policy).Build()
+
+			handler := parentRefHandler[configurationv1alpha1.EventGatewayListener, *configurationv1alpha1.EventGatewayListener]{}
+			res, err := handler.handleParentRef(t.Context(), cl, policy)
+			if tc.wantDeferred {
+				require.NoError(t, err)
+				require.False(t, res.IsZero())
+				return
+			}
+			require.NoError(t, err)
+			require.True(t, res.IsZero())
+			require.Equal(t, "listener-id", policy.GetEventGatewayListenerID())
+		})
+	}
 }

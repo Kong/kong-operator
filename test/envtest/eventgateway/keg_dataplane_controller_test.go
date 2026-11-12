@@ -33,6 +33,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/update"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
 // kegCRDGroups are the CRD groups whose types the KEG DataPlane controller
@@ -153,6 +154,114 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			client.MatchingLabels{consts.GatewayOperatorManagedByNameLabel: egdp.Name},
 		))
 		require.Empty(t, deployList.Items)
+	})
+
+	t.Run("KonnectEventGateway with a private serverURL: EndpointMismatch, no Deployment, no certificate", func(t *testing.T) {
+		t.Parallel()
+
+		kep := &konnectv1alpha1.KonnectEventGateway{
+			Name: "kep-private-server-url", Namespace: ns.Name,
+		}
+		require.NoError(t, cl.Create(ctx, kep))
+		envtest.UpdateKonnectEventGatewayStatusWithServerURL(t, ctx, cl, kep, "konnect-id-private", envtest.KonnectPrivateServerURL)
+
+		egdp := &eventgatewayv1alpha1.KegDataPlane{
+			Name: "egdp-private-server-url", Namespace: ns.Name,
+			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+					Type:                 eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+					KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{Name: kep.Name},
+				},
+			},
+		}
+		require.NoError(t, cl.Create(ctx, egdp))
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(egdp.Status.Conditions, string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType))
+			if !assert.NotNil(ct, cond) {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+			assert.Equal(ct, string(eventgatewayv1alpha1.KonnectEventGatewayEndpointMismatchReason), cond.Reason)
+			assert.Contains(ct, cond.Message, envtest.KonnectPrivateServerURL)
+		}, waitTime, tickTime)
+
+		// The value was never used: no Deployment, and the certificate was not even registered.
+		var deployList appsv1.DeploymentList
+		require.NoError(t, cl.List(ctx, &deployList,
+			client.InNamespace(ns.Name),
+			client.MatchingLabels{consts.GatewayOperatorManagedByNameLabel: egdp.Name},
+		))
+		require.Empty(t, deployList.Items)
+		require.Empty(t, listKEGCertificates(t, ctx, cl, egdp))
+	})
+
+	t.Run("private serverURL on an already deployed data plane: held, not destroyed", func(t *testing.T) {
+		t.Parallel()
+
+		const kepName = "kep-private-existing"
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name, kepName, "konnect-id-private-existing", "egdp-private-existing",
+			eventgatewayv1alpha1.KegDataPlaneSpec{})
+		deployBefore := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+
+		kep := &konnectv1alpha1.KonnectEventGateway{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: kepName, Namespace: ns.Name}, kep))
+		envtest.UpdateKonnectEventGatewayStatusWithServerURL(t, ctx, cl, kep, "konnect-id-private-existing", envtest.KonnectPrivateServerURL)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(egdp.Status.Conditions, string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType))
+			if !assert.NotNil(ct, cond) {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+			assert.Equal(ct, string(eventgatewayv1alpha1.KonnectEventGatewayEndpointMismatchReason), cond.Reason)
+		}, waitTime, tickTime)
+
+		// The Deployment the data plane already had is left alone, byte for byte.
+		deployAfter := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		assert.Equal(t, deployBefore.ResourceVersion, deployAfter.ResourceVersion)
+	})
+
+	t.Run("private serverURL with an explicit domain: Deployment created with that domain", func(t *testing.T) {
+		t.Parallel()
+
+		const domain = "us.svc.konghq.tech"
+		egdp := setupProgrammedKEGDPWithServerURL(t, ctx, cl, ns.Name,
+			"kep-private-override", "konnect-id-private-override", "egdp-private-override", envtest.KonnectPrivateServerURL,
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Konnect: &eventgatewayv1alpha1.KonnectConfig{Domain: new(domain)},
+				},
+			})
+
+		// No EndpointMismatch: the user set the domain, so the check does not hold it.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(egdp.Status.Conditions, string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType))
+			if !assert.NotNil(ct, cond) {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+			assert.Equal(ct, string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason), cond.Reason)
+		}, waitTime, tickTime)
+
+		// The domain the exemption lets through is the one that reaches the keg.
+		container := getKEGContainer(t, waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name))
+		var gotDomain string
+		for _, e := range container.Env {
+			if e.Name == egdataplane.EnvKonnectDomain {
+				gotDomain = e.Value
+			}
+		}
+		assert.Equal(t, domain, gotDomain)
 	})
 
 	t.Run("KEP programmed but cert not yet programmed: cert Secret + EventGatewayDataPlaneCertificate created, no Deployment", func(t *testing.T) {
@@ -1105,11 +1214,25 @@ func setupProgrammedKEGDP(
 ) *eventgatewayv1alpha1.KegDataPlane {
 	t.Helper()
 
+	return setupProgrammedKEGDPWithServerURL(t, ctx, cl, ns, kepName, konnectID, egdpName, sdkmocks.SDKServerURL, spec)
+}
+
+// setupProgrammedKEGDPWithServerURL is setupProgrammedKEGDP with the server URL
+// its KonnectEventGateway is programmed with.
+func setupProgrammedKEGDPWithServerURL(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	ns, kepName, konnectID, egdpName, serverURL string,
+	spec eventgatewayv1alpha1.KegDataPlaneSpec,
+) *eventgatewayv1alpha1.KegDataPlane {
+	t.Helper()
+
 	kep := &konnectv1alpha1.KonnectEventGateway{
 		Name: kepName, Namespace: ns,
 	}
 	require.NoError(t, cl.Create(ctx, kep))
-	envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, konnectID)
+	envtest.UpdateKonnectEventGatewayStatusWithServerURL(t, ctx, cl, kep, konnectID, serverURL)
 
 	spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
 		Type:                 eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -1144,9 +1267,9 @@ func waitForKEGCertificate(t *testing.T, ctx context.Context, cl client.Client, 
 
 // listKEGCertificates lists the EventGatewayDataPlaneCertificates controlled
 // by the given KegDataPlane.
-func listKEGCertificates(ct *assert.CollectT, ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) []configurationv1alpha1.EventGatewayDataPlaneCertificate {
+func listKEGCertificates(t assert.TestingT, ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) []configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	var certList configurationv1alpha1.EventGatewayDataPlaneCertificateList
-	if !assert.NoError(ct, cl.List(ctx, &certList, client.InNamespace(egdp.Namespace))) {
+	if !assert.NoError(t, cl.List(ctx, &certList, client.InNamespace(egdp.Namespace))) {
 		return nil
 	}
 	var owned []configurationv1alpha1.EventGatewayDataPlaneCertificate
