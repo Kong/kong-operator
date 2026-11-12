@@ -20,7 +20,7 @@ description = "Generate Kubernetes Go API from OpenAPI spec"
 run = '''
 set -eu
 go mod download
-sdk_konnect_go_dir="$(cd .. && go list -m -json "github.com/Kong/sdk-konnect-go" | jq -re '.Dir')"
+sdk_konnect_go_dir="$(cd .. && go mod download -json "github.com/Kong/sdk-konnect-go" | jq -re '.Dir')"
 if [ -z "$sdk_konnect_go_dir" ]; then
        echo "failed to resolve github.com/Kong/sdk-konnect-go module directory" >&2
        exit 1

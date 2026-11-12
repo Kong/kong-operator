@@ -1305,8 +1305,8 @@ func fieldConfigsEqual(a, b *config.FieldConfig) bool {
 }
 
 // isEmptyFieldConfig reports whether a field config carries no validations,
-// no description and no non-empty descendants, which makes it equivalent to an
-// absent cursor.
+// no description, no omitZero override and no non-empty descendants, which
+// makes it equivalent to an absent cursor.
 func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	if fc == nil {
 		return true
@@ -8890,6 +8890,7 @@ func tagOmitSuffix(resolvedGoType string, forceOmitZero bool) string {
 // jsonTag generates the json struct tag using camelCase for K8s wire format.
 // resolvedGoType is the Go type string as it appears in the emitted field declaration
 // (e.g. "string", "*KonnectEntityRef", "[]Foo", "VirtualClusterNamespace").
+// forceOmitZero selects omitzero even for a pointer, slice or map type.
 func jsonTag(prop *parser.Property, resolvedGoType string, forceOmitZero bool) string {
 	return jsonName(prop.Name) + tagOmitSuffix(resolvedGoType, forceOmitZero)
 }
