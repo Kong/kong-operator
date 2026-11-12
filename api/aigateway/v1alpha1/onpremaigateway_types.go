@@ -60,6 +60,17 @@ type OnPremAIGatewayList struct {
 
 // OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
 type OnPremAIGatewaySpec struct {
+	// MinRuntimeVersion is the oldest AI Gateway release that must accept the
+	// generated configuration, in MAJOR.MINOR form.
+	// If not specified, the default applies.
+	// This value is independent of DataPlane image tags. Changing it changes the
+	// configuration for every DataPlane that references this OnPremAIGateway.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=32
+	// +kubebuilder:validation:Pattern=`^\d+\.\d+$`
+	MinRuntimeVersion *string `json:"minRuntimeVersion,omitempty"`
+
 	// DataPlaneSync defines the configuration for syncing configuration
 	// to the data planes referencing this OnPremAIGateway.
 	//

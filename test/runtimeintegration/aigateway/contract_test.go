@@ -223,7 +223,15 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := translator.BuildDocument(context.Background(), cl, types.NamespacedName{Namespace: "default", Name: gwName})
+	doc, statuses, err := translator.BuildDocument(
+		context.Background(),
+		cl,
+		types.NamespacedName{
+			Namespace: "default",
+			Name:      gwName,
+		},
+		convert.Options{},
+	)
 	require.NoError(t, err)
 	for _, s := range statuses {
 		require.NoError(t, s.Err, "entity %s failed to translate", client.ObjectKeyFromObject(s.Obj))

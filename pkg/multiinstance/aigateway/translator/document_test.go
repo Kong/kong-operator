@@ -438,7 +438,7 @@ func TestBuildDocument(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Len(t, doc.Models, 2)
 	require.Equal(t, "model-a", doc.Models[0].Name)
@@ -618,7 +618,7 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Empty(t, statuses)
 	require.Empty(t, doc.Models)
@@ -660,7 +660,7 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Models, 1)
@@ -706,7 +706,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.CACertificates, 1)
@@ -747,7 +747,7 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Vaults, 1)
@@ -829,7 +829,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		scoped := withAlias("scoped-model", dayOne)
 
 		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 1)
@@ -857,7 +857,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		scoped := withAlias("scoped-model", dayOne)
 
 		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 1)
@@ -900,7 +900,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		}
 
 		cl := buildClient(t, gw.DeepCopy(), oldest, middle, newest)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		names := make([]string, 0, len(doc.Models))
@@ -930,7 +930,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		enabled := withAlias("enabled-model", dayTwo)
 
 		cl := buildClient(t, gw.DeepCopy(), disabled, enabled)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 2)
@@ -955,7 +955,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		}
 
 		cl := buildClient(t, objs...)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 1)
@@ -987,7 +987,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		right.Spec.APISpec.Model.Config.Route.Paths = []string{"/right"}
 
 		cl := buildClient(t, gw.DeepCopy(), left, right)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		names := make([]string, 0, len(doc.Models))
@@ -1064,7 +1064,7 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	// Equal (zero) creation timestamps: the tie-break by name decides. model-c
@@ -1123,7 +1123,7 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Certificates, 1)
@@ -1247,7 +1247,7 @@ func TestBuildDocument_CrossNamespaceEntityNeedsKongReferenceGrant(t *testing.T)
 				append([]client.Object{gw, crossNamespace, sameNamespace}, tt.grants...)...,
 			)
 
-			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 			require.NoError(t, err)
 
 			require.Empty(t, doc.Models)
@@ -1312,7 +1312,7 @@ func TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant(t *testing.
 
 	cl := newTranslatorTestClient(t, gw, consumer, credential)
 
-	_, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	_, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	var consumerStatus, credentialStatus *EntityStatus
@@ -1377,7 +1377,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	// The consumer and the credential embedded in it: the credential has no document
 	// entity of its own, so the consumer's translation reports it.
@@ -1392,7 +1392,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 	secret.Data["key"] = []byte("n3w-s3cr3t")
 	require.NoError(t, cl.Update(t.Context(), secret))
 
-	doc, statuses, err = BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err = BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Len(t, statuses, 2)
 	require.NoError(t, findStatusByName(t, statuses, "cred-a").Err)
@@ -1452,7 +1452,7 @@ func TestBuildDocument_ReportsBrokenCredentialOnTheCredential(t *testing.T) {
 		healthySecret,
 	).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	// The consumer renders with the healthy credential only.
@@ -1533,7 +1533,7 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, brokenProvider, healthyProvider, modelBroken, modelHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.ModelProviders, 1)
@@ -1585,7 +1585,7 @@ func TestBuildDocument_ModelEmbeddingsProviderResolvedByCRName(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, provider, model).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Models, 1)
@@ -1646,7 +1646,7 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, consumerBroken, consumerHealthy, credentialOfBrokenConsumer).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Policies, 1)
@@ -1699,7 +1699,7 @@ func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T)
 
 	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, groupBroken, groupHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Policies, 1)
@@ -1769,7 +1769,7 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, brokenAuthStrategy, healthyAuthStrategy, healthyPolicy, healthyGroup, agentBroken, agentHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.AuthStrategies, 1)
@@ -1824,7 +1824,7 @@ func TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails(t *testing
 
 	cl := newTestBuilder(scheme, gw, brokenGroup, healthyGroup, healthyPolicy, mcpBroken, mcpHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.ConsumerGroups, 1)
@@ -1922,7 +1922,7 @@ func TestBuildDocument_MCPServerListenerFailsWhenSourceFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, srcBroken, srcHealthy, listenerBroken, listenerCascade, listenerHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.MCPServers, 2)
@@ -1969,7 +1969,7 @@ func TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped(t *tes
 
 	cl := newTestBuilder(scheme, gw, deniedPolicy, src, listener, cascade).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Empty(t, doc.MCPServers)
 
@@ -1999,7 +1999,7 @@ func TestBuildDocument_MCPServerSourceSortedLater(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, listener, source).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.MCPServers, 2)
@@ -2033,7 +2033,7 @@ func TestBuildDocument_MCPServerDuplicateEntityNameRejected(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, first, second).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.MCPServers, 1)
@@ -2176,8 +2176,8 @@ func TestBuildDocument_DatastoreRefs(t *testing.T) {
 	objs := append([]client.Object{aiGatewayDatastoreFixture("datastore")},
 		datastoreRefsReferrers("datastore")...)
 
-	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
-		client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
+
 	require.NoError(t, err)
 
 	require.Len(t, doc.Datastores, 1)
@@ -2228,8 +2228,8 @@ func TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails(t *testing.T) 
 	}
 	objs := append([]client.Object{broken}, datastoreRefsReferrers("datastore")...)
 
-	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
-		client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
+
 	require.NoError(t, err)
 
 	require.Empty(t, doc.Datastores)
@@ -2269,7 +2269,7 @@ func TestBuildDocument_DatastoreReferrersOfGrantDeniedDatastoreAreEntityScoped(t
 	}
 	objs := append([]client.Object{gw, denied}, datastoreRefsReferrers("datastore")...)
 
-	_, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, objs...).Build(), client.ObjectKeyFromObject(gw))
+	_, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, objs...).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	for _, name := range []string{"datastore", "policy", "model", "provider", "mcp-server-a", "auth-strategy"} {
@@ -2293,8 +2293,8 @@ func TestBuildDocument_DatastoreDuplicateEntityNameRejected(t *testing.T) {
 	first := aiGatewayDatastoreFixture("datastore-a")
 	second := aiGatewayDatastoreFixture("datastore-b")
 
-	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, gw, first, second).Build(),
-		client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, gw, first, second).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
+
 	require.NoError(t, err)
 
 	require.Len(t, doc.Datastores, 1)
@@ -2330,7 +2330,7 @@ func TestBuildDocument_DependentOfGatewayRefDeniedEntityIsEntityScoped(t *testin
 	// Only the model's kind may reference the gateway from the other namespace.
 	cl := newTranslatorTestClient(t, gw, provider, model, crossNamespaceGrant("AIGatewayModel", nil))
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Empty(t, doc.ModelProviders)
 	require.Empty(t, doc.Models)
@@ -2385,7 +2385,7 @@ func TestBuildDocument_ModelDuplicateSpecName(t *testing.T) {
 	cl := newTestBuilder(scheme, gw, aiGatewayModelProviderFixture("provider-shared"),
 		sameA, sameB, crossA, crossB, noSelectorE, noSelectorF).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	names := make([]string, 0, len(doc.Models))
