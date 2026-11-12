@@ -130,6 +130,8 @@ type KonnectOptions struct {
 
 // GatewayConfigControlPlaneOptions contains the options for configuring
 // ControlPlane resources that will be managed as part of the Gateway.
+//
+// +kubebuilder:validation:XValidation:message="fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled",rule="!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != 'enabled' || (has(self.featureGates) && self.featureGates.exists(g, g.name == 'FallbackConfiguration' && g.state == 'enabled'))"
 type GatewayConfigControlPlaneOptions struct {
 	ControlPlaneOptions `json:",inline"`
 }

@@ -63,6 +63,7 @@ type ControlPlaneList struct {
 // ControlPlaneSpec defines the desired state of ControlPlane
 //
 // +kubebuilder:validation:XValidation:message="When dataplane target is of type 'ref' the ingressClass must be set",rule="self.dataplane.type != 'ref' || has(self.ingressClass)"
+// +kubebuilder:validation:XValidation:message="fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled",rule="!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != 'enabled' || (has(self.featureGates) && self.featureGates.exists(g, g.name == 'FallbackConfiguration' && g.state == 'enabled'))"
 type ControlPlaneSpec struct {
 	ControlPlaneOptions `json:",inline"`
 
@@ -171,7 +172,6 @@ type ControlPlaneTranslationOptions struct {
 	// FallbackConfiguration defines the fallback configuration options for the ControlPlane.
 	//
 	// +optional
-	// +kubebuilder:default={useLastValidConfig: "enabled"}
 	FallbackConfiguration *ControlPlaneFallbackConfiguration `json:"fallbackConfiguration,omitempty"`
 
 	// DrainSupport defines the configuration for the ControlPlane to include
@@ -211,7 +211,7 @@ type ControlPlaneFallbackConfiguration struct {
 	// when the current configuration is invalid.
 	//
 	// +optional
-	// +kubebuilder:default=enabled
+	// +kubebuilder:default=disabled
 	// +kubebuilder:validation:Enum=enabled;disabled
 	UseLastValidConfig *ControlPlaneFallbackConfigurationState `json:"useLastValidConfig,omitempty"`
 }

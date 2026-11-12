@@ -532,13 +532,37 @@ func TestControlPlaneV2(t *testing.T) {
 		t.Run("fallbackConfiguration", func(t *testing.T) {
 			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
-					Name: "fallbackConfiguration.useLastValidConfig set to enabled",
+					Name: "fallbackConfiguration.useLastValidConfig set to enabled without FallbackConfiguration feature gate",
 					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
 								IngressClass: new("kong"),
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
+									},
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: new("fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled"),
+				},
+				{
+					Name: "fallbackConfiguration.useLastValidConfig set to enabled with FallbackConfiguration feature gate enabled",
+					TestObject: &operatorv2beta1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: operatorv2beta1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								IngressClass: new("kong"),
+								FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+									{
+										Name:  "FallbackConfiguration",
+										State: operatorv2beta1.FeatureGateStateEnabled,
+									},
+								},
 								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
 									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
 										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
@@ -826,7 +850,7 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 			},
 			{
-				Name: "translation fallbackConfiguration defaults",
+				Name: "translation fallbackConfiguration is not defaulted",
 				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
@@ -839,10 +863,29 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
 					require.NotNil(t, cp.Spec.Translation)
+					require.Nil(t, cp.Spec.Translation.FallbackConfiguration)
+				},
+			},
+			{
+				Name: "translation fallbackConfiguration defaults to disabled",
+				TestObject: &operatorv2beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							IngressClass: new("kong"),
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{},
+							},
+						},
+					},
+				},
+				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
+					require.NotNil(t, cp.Spec.Translation)
 					require.NotNil(t, cp.Spec.Translation.FallbackConfiguration)
 					require.NotNil(t, cp.Spec.Translation.FallbackConfiguration.UseLastValidConfig)
 					require.Equal(t,
-						operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled,
+						operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled,
 						*cp.Spec.Translation.FallbackConfiguration.UseLastValidConfig,
 					)
 				},

@@ -9559,13 +9559,11 @@ spec:
                     - disabled
                     type: string
                   fallbackConfiguration:
-                    default:
-                      useLastValidConfig: enabled
                     description: FallbackConfiguration defines the fallback configuration
                       options for the ControlPlane.
                     properties:
                       useLastValidConfig:
-                        default: enabled
+                        default: disabled
                         description: |-
                           UseLastValidConfig indicates whether the ControlPlane should use the last valid configuration
                           when the current configuration is invalid.
@@ -9614,6 +9612,13 @@ spec:
             - message: When dataplane target is of type 'ref' the ingressClass must
                 be set
               rule: self.dataplane.type != 'ref' || has(self.ingressClass)
+            - message: fallbackConfiguration.useLastValidConfig can only be enabled
+                when the FallbackConfiguration feature gate is enabled
+              rule: '!has(self.translation) || !has(self.translation.fallbackConfiguration)
+                || !has(self.translation.fallbackConfiguration.useLastValidConfig)
+                || self.translation.fallbackConfiguration.useLastValidConfig != ''enabled''
+                || (has(self.featureGates) && self.featureGates.exists(g, g.name ==
+                ''FallbackConfiguration'' && g.state == ''enabled''))'
           status:
             description: Status is the status of the ControlPlane resource.
             properties:

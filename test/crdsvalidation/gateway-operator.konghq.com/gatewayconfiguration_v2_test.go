@@ -347,6 +347,47 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					},
 				},
 			},
+			{
+				Name: "specifying fallbackConfiguration.useLastValidConfig=enabled without FallbackConfiguration feature gate",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled"),
+			},
+			{
+				Name: "specifying fallbackConfiguration.useLastValidConfig=enabled with FallbackConfiguration feature gate enabled",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+									{
+										Name:  "FallbackConfiguration",
+										State: operatorv2beta1.FeatureGateStateEnabled,
+									},
+								},
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

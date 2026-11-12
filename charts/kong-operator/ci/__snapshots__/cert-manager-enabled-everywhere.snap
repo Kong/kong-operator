@@ -71692,11 +71692,9 @@ spec:
                     - disabled
                     type: string
                   fallbackConfiguration:
-                    default:
-                      useLastValidConfig: enabled
                     properties:
                       useLastValidConfig:
-                        default: enabled
+                        default: disabled
                         enum:
                         - enabled
                         - disabled
@@ -71733,6 +71731,8 @@ spec:
             x-kubernetes-validations:
             - message: When dataplane target is of type 'ref' the ingressClass must be set
               rule: self.dataplane.type != 'ref' || has(self.ingressClass)
+            - message: fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled
+              rule: '!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != ''enabled'' || (has(self.featureGates) && self.featureGates.exists(g, g.name == ''FallbackConfiguration'' && g.state == ''enabled''))'
           status:
             properties:
               conditions:
@@ -80694,11 +80694,9 @@ spec:
                         - disabled
                         type: string
                       fallbackConfiguration:
-                        default:
-                          useLastValidConfig: enabled
                         properties:
                           useLastValidConfig:
-                            default: enabled
+                            default: disabled
                             enum:
                             - enabled
                             - disabled
@@ -80730,6 +80728,9 @@ spec:
                     - message: list must not be specified when type is not 'list'
                       rule: 'self.type != ''list'' ? !has(self.list) : true'
                 type: object
+                x-kubernetes-validations:
+                - message: fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled
+                  rule: '!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != ''enabled'' || (has(self.featureGates) && self.featureGates.exists(g, g.name == ''FallbackConfiguration'' && g.state == ''enabled''))'
               dataPlaneOptions:
                 properties:
                   deployment:
