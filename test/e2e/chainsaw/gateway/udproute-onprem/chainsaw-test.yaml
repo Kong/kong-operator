@@ -67,6 +67,10 @@ spec:
 
     - name: Create-gateway
       description: Create an operator-managed UDP Gateway and verify UDPRoute is advertised as supported.
+      # The default 300s is not enough when four DataPlane proxy pods start at
+      # once on a slow CI node: the Kong pod alone then takes over 5 minutes.
+      timeouts:
+        assert: 15m
       try:
         - apply:
             file: 02-gateway.yaml
