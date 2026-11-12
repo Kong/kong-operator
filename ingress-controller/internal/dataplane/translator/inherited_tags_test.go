@@ -12,11 +12,13 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 func withTags[T interface{ SetAnnotations(map[string]string) }](obj T, tags string) T {
@@ -318,4 +320,71 @@ func TestGenerateKongServiceTagsWithInheritedTags(t *testing.T) {
 			assert.Equal(t, tc.expected, ir.generateKongServiceTags(tc.k8sServices, service, logr.Discard()))
 		})
 	}
+}
+
+func TestClientCertificateInheritsInheritedTags(t *testing.T) {
+	crt, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithKeyType(certificate.ECDSA), certificate.WithCommonName("client.example.com"),
+	)
+	clientSecret := &corev1.Secret{
+		APIVersion: "v1", Kind: "Secret",
+		Namespace: "default", Name: "client-cert", UID: "client-cert-uid",
+		Annotations: map[string]string{annotations.AnnotationPrefix + annotations.UserTagKey: "secret-tag"},
+		Type:        corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       crt,
+			corev1.TLSPrivateKeyKey: key,
+		},
+	}
+	s, err := store.NewFakeStore(store.FakeObjects{Secrets: []*corev1.Secret{clientSecret}})
+	require.NoError(t, err)
+	tr := mustNewTranslator(t, s)
+
+	k8sService := &corev1.Service{
+		APIVersion: "v1", Kind: "Service",
+		Namespace: "default", Name: "backend",
+		Annotations: map[string]string{
+			annotations.AnnotationPrefix + annotations.ClientCertKey: "client-cert",
+			annotations.AnnotationPrefix + annotations.ProtocolKey:   "https",
+		},
+	}
+
+	newKongService := func(name string, inherited []string) kongstate.Service {
+		return kongstate.Service{
+			Name: new(name), Protocol: new("https"),
+			InheritedTags: inherited,
+		}
+	}
+	svcA := newKongService("svc-a", []string{"gw-a", "gwc"})
+	svcB := newKongService("svc-b", []string{"gw-b", "gwc"})
+	plain := newKongService("svc-plain", nil)
+
+	failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+	ir := newIngressRules()
+	// svc-b first to show the order does not depend on the insertion order.
+	ir.handleServiceClientCertificates(s, k8sService.DeepCopy(), &svcB, failuresCollector)
+	ir.handleServiceClientCertificates(s, k8sService.DeepCopy(), &svcA, failuresCollector)
+	// A Service with several backends referencing the same Secret reaches this point once per backend.
+	ir.handleServiceClientCertificates(s, k8sService.DeepCopy(), &svcA, failuresCollector)
+	// A Service without inherited tags is not recorded.
+	ir.handleServiceClientCertificates(s, k8sService.DeepCopy(), &plain, failuresCollector)
+	require.Empty(t, failuresCollector.PopResourceFailures())
+
+	assert.Equal(t, map[string][]clientCertServiceTags{
+		"default/client-cert": {
+			{ServiceName: "svc-b", InheritedTags: []string{"gw-b", "gwc"}},
+			{ServiceName: "svc-a", InheritedTags: []string{"gw-a", "gwc"}},
+		},
+	}, ir.ClientCertSecretToServices)
+
+	wrappers := tr.getCerts(ir.SecretNameToSNIs, ir.ClientCertSecretToServices)
+	require.Len(t, wrappers, 1)
+	merged, _ := mergeCerts(logr.Discard(), wrappers)
+	require.Len(t, merged, 1)
+	assert.Equal(t, kong.StringSlice(
+		"k8s-name:client-cert", "k8s-namespace:default", "k8s-kind:Secret", "k8s-uid:client-cert-uid", "k8s-version:v1",
+		"secret-tag",
+		// The Services' inherited tags follow the Secret's own tags, in service-name order, deduplicated.
+		"gw-a", "gwc", "gw-b",
+	), merged[0].Tags)
 }
