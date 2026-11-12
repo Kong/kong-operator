@@ -7,7 +7,7 @@ require (
 	github.com/getkin/kin-openapi v0.152.0
 	github.com/gobuffalo/flect v1.0.3
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/mod v0.42.0
+	golang.org/x/mod v0.43.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.37.2
 	k8s.io/client-go v0.37.2
