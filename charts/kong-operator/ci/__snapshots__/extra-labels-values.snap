@@ -57792,6 +57792,9 @@ spec:
                     - issuer
                     type: object
                   services:
+                    default:
+                      ingress:
+                        type: LoadBalancer
                     properties:
                       ingress:
                         properties:
@@ -71526,6 +71529,9 @@ spec:
                     type: string
                 type: object
               configDump:
+                default:
+                  dumpSensitive: disabled
+                  state: disabled
                 properties:
                   dumpSensitive:
                     default: disabled
@@ -71589,6 +71595,8 @@ spec:
                 - message: Ref cannot be provided when type is set to managedByOwner
                   rule: self.type != 'managedByOwner' || !has(self.ref)
               dataplaneSync:
+                default:
+                  reverseSync: disabled
                 properties:
                   interval:
                     type: string
@@ -71750,6 +71758,8 @@ spec:
                     - disabled
                     type: string
                   fallbackConfiguration:
+                    default:
+                      useLastValidConfig: enabled
                     properties:
                       useLastValidConfig:
                         default: enabled
@@ -80572,6 +80582,9 @@ spec:
                         type: string
                     type: object
                   configDump:
+                    default:
+                      dumpSensitive: disabled
+                      state: disabled
                     properties:
                       dumpSensitive:
                         default: disabled
@@ -80611,6 +80624,8 @@ spec:
                     - name
                     x-kubernetes-list-type: map
                   dataplaneSync:
+                    default:
+                      reverseSync: disabled
                     properties:
                       interval:
                         type: string
@@ -80745,6 +80760,8 @@ spec:
                         - disabled
                         type: string
                       fallbackConfiguration:
+                        default:
+                          useLastValidConfig: enabled
                         properties:
                           useLastValidConfig:
                             default: enabled
@@ -85139,6 +85156,9 @@ spec:
                   network:
                     properties:
                       services:
+                        default:
+                          ingress:
+                            type: LoadBalancer
                         properties:
                           ingress:
                             properties:

@@ -795,7 +795,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -815,7 +815,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 						},
 					},
 				},
@@ -832,7 +832,7 @@ func TestControlPlaneV2(t *testing.T) {
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: lo.ToPtr("kong"),
+							IngressClass: new("kong"),
 							Translation:  &operatorv2beta1.ControlPlaneTranslationOptions{},
 						},
 					},

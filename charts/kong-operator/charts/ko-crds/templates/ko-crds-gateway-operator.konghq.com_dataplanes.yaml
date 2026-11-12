@@ -4445,6 +4445,9 @@ spec:
                     - issuer
                     type: object
                   services:
+                    default:
+                      ingress:
+                        type: LoadBalancer
                     properties:
                       ingress:
                         properties:
