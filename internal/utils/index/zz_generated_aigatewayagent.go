@@ -19,6 +19,10 @@ const (
 	IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef = "aiGatewayAgentOnAIGatewayConsumerGroupRef"
 	// IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef is the index field for AIGatewayAgent -> AIGatewayAuthStrategy.
 	IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef = "aiGatewayAgentOnAIGatewayAuthStrategyRef"
+	// IndexFieldAIGatewayAgentOnAIGatewayCACertificateRef is the index field for AIGatewayAgent -> AIGatewayCACertificate.
+	IndexFieldAIGatewayAgentOnAIGatewayCACertificateRef = "aiGatewayAgentOnAIGatewayCACertificateRef"
+	// IndexFieldAIGatewayAgentOnAIGatewayCertificateRef is the index field for AIGatewayAgent -> AIGatewayCertificate.
+	IndexFieldAIGatewayAgentOnAIGatewayCertificateRef = "aiGatewayAgentOnAIGatewayCertificateRef"
 	// IndexFieldAIGatewayAgentOnSecretRef is the index field for AIGatewayAgent -> the Secrets it reads.
 	IndexFieldAIGatewayAgentOnSecretRef = "aiGatewayAgentOnSecretRef"
 )
@@ -50,6 +54,16 @@ func OptionsForAIGatewayAgent() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef,
 			ExtractValueFn: aiGatewayAgentOnAIGatewayAuthStrategyRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
+			Field:          IndexFieldAIGatewayAgentOnAIGatewayCACertificateRef,
+			ExtractValueFn: aiGatewayAgentOnAIGatewayCACertificateRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
+			Field:          IndexFieldAIGatewayAgentOnAIGatewayCertificateRef,
+			ExtractValueFn: aiGatewayAgentOnAIGatewayCertificateRef,
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
@@ -158,6 +172,44 @@ func aiGatewayAgentOnAIGatewayAuthStrategyRef(object client.Object) []string {
 	var out []string
 	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentAccessAuthStrategies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayAuthStrategy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayAgentOnAIGatewayCACertificateRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentConfigCaCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCACertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayAgentOnAIGatewayCertificateRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentConfigCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCertificate" {
 			continue
 		}
 		ns := ref.Namespace

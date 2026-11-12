@@ -172,7 +172,7 @@ type AIGatewayAgentConfig struct {
 	//
 	//
 	// +optional
-	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
+	CaCertificates []AIGatewayCACertificateRef `json:"caCertificates,omitempty"`
 	// Client certificates used for mutual TLS (mTLS) authentication with the
 	// upstream agent
 	// endpoint, referenced by name.
@@ -192,7 +192,7 @@ type AIGatewayAgentConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
+	Certificates []AIGatewayCertificateRef `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional

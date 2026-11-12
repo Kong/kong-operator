@@ -68,6 +68,26 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			},
 		}
 	}
+	newReferencedCACertificate := func() *AIGatewayCACertificate {
+		return &AIGatewayCACertificate{
+			Name: "ai-gw-ca-cert", Namespace: "default",
+			Spec: AIGatewayCACertificateSpec{
+				APISpec: AIGatewayCACertificateAPISpec{
+					Name: "aigw-ca-cert",
+				},
+			},
+		}
+	}
+	newReferencedCertificate := func() *AIGatewayCertificate {
+		return &AIGatewayCertificate{
+			Name: "ai-gw-cert", Namespace: "default",
+			Spec: AIGatewayCertificateSpec{
+				APISpec: AIGatewayCertificateAPISpec{
+					Name: "aigw-cert",
+				},
+			},
+		}
+	}
 	newReferencedAuthStrategy := func() *AIGatewayAuthStrategy {
 		return &AIGatewayAuthStrategy{
 			Name: "ai-gw-auth-strategy", Namespace: "default",
@@ -213,6 +233,31 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			},
 		},
 		{
+			name: "CA and client certificates resolved by name",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-certs", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "certs-agent",
+						Type: "http",
+						Config: AIGatewayAgentConfig{
+							URL:            "http://upstream:8080",
+							CaCertificates: []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
+							Certificates:   []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{newReferencedCACertificate(), newReferencedCertificate()},
+			want: func() *aigw.Agent {
+				agent := &aigw.Agent{Name: "certs-agent", Type: "http"}
+				agent.Config.URL = "http://upstream:8080"
+				agent.Config.CACertificates = []string{"aigw-ca-cert"}
+				agent.Config.Certificates = []string{"aigw-cert"}
+				return agent
+			},
+		},
+		{
 			name: "no refs",
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-empty", Namespace: "default",
@@ -281,6 +326,24 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 				},
 			},
 			wantErr: "access.authStrategies",
+		},
+		{
+			name: "cross-namespace certificate reference rejected on-prem",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-cross-ns-cert", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "cross-ns-cert-agent",
+						Type: "http",
+						Config: AIGatewayAgentConfig{
+							URL:          "http://upstream:8080",
+							Certificates: []AIGatewayCertificateRef{{Name: "ai-gw-cert", Namespace: "other-namespace"}},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{newReferencedCertificate()},
+			wantErr: "certificates",
 		},
 		{
 			name: "cross-namespace policy reference rejected",
@@ -387,8 +450,9 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 		Labels:  PublicLabels{"app": "test1"},
 		// Pinned by KnownFields(true) below: an un-dropped managed_by fails the strict decode.
 		ManagedBy: ManagedBy{"kong-operator": "true"},
-		// Policies and access.acls/authStrategies are stripped by the payload builder (they
-		// are re-attached resolved by ToAIGWAgent), so the strict decode must not see them.
+		// Policies, access.acls/authStrategies and config certificates are stripped by the
+		// payload builder (they are re-attached resolved by ToAIGWAgent), so the strict decode
+		// must not see them.
 		Policies: []AIGatewayPolicyRef{{Name: "ai-gw-policy"}},
 		Access: AIGatewayAgentAccess{
 			Acls:           newAgentACLsFixture(),
@@ -397,6 +461,8 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 		Config: AIGatewayAgentConfig{
 			URL:                "http://upstream:8080",
 			MaxRequestBodySize: 1024,
+			CaCertificates:     []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
+			Certificates:       []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
 			Logging: AIGatewayAgentConfigLogging{
 				Payloads:       "Disabled",
 				MaxPayloadSize: 512,
@@ -421,6 +487,8 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 	require.Empty(t, agent.Access.ACLs)
 	require.Empty(t, agent.Access.AuthStrategies)
 	require.Equal(t, "http://upstream:8080", agent.Config.URL)
+	require.Empty(t, agent.Config.CACertificates)
+	require.Empty(t, agent.Config.Certificates)
 	require.NotNil(t, agent.Config.Logging)
 	require.NotNil(t, agent.Config.Logging.Payloads)
 	require.False(t, *agent.Config.Logging.Payloads)

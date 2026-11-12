@@ -325,9 +325,27 @@ spec:
                           certificate.
                         items:
                           description: |-
-                            AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-                            same AI Gateway, by CA certificate name.
-                          type: string
+                            AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayCACertificate
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayCACertificate
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace, if set to a namespace other than the referrer's, must be
+                                permitted by a KongReferenceGrant in that namespace.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       certificates:
                         description: |-
@@ -348,11 +366,27 @@ spec:
                           If unset, no client certificate is presented to the upstream.
                         items:
                           description: |-
-                            AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-                            Gateway, by certificate name.
-                            The certificate must have a valid private key to be presented as a client
-                            certificate to an upstream.
-                          type: string
+                            AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayCertificate
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayCertificate
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace, if set to a namespace other than the referrer's, must be
+                                permitted by a KongReferenceGrant in that namespace.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         maxItems: 1
                         type: array
                       logging:

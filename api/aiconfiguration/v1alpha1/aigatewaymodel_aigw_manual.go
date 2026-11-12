@@ -337,8 +337,9 @@ func renestModelSelector(cfg map[string]any) {
 	}
 }
 
-// policyRefs, authStrategyRefs and consumerGroupRefs project the CRD's per-kind reference types
-// (AIGatewayPolicyRef, AIGatewayAuthStrategyRef, AIGatewayACLRef) onto the common shape
+// policyRefs, authStrategyRefs, consumerGroupRefs, caCertificateRefs and certificateRefs
+// project the CRD's per-kind reference types (AIGatewayPolicyRef, AIGatewayAuthStrategyRef,
+// AIGatewayACLRef, AIGatewayCACertificateRef, AIGatewayCertificateRef) onto the common shape
 // resolveEntityNames needs. Each ref type is a distinct generated struct with no shared
 // interface, so this is unavoidably one small loop per type.
 
@@ -359,6 +360,22 @@ func authStrategyRefs(refs []AIGatewayAuthStrategyRef) []namespacedRef {
 }
 
 func consumerGroupRefs(refs []AIGatewayACLRef) []namespacedRef {
+	out := make([]namespacedRef, len(refs))
+	for i, r := range refs {
+		out[i] = namespacedRef{Name: r.Name, Namespace: r.Namespace}
+	}
+	return out
+}
+
+func caCertificateRefs(refs []AIGatewayCACertificateRef) []namespacedRef {
+	out := make([]namespacedRef, len(refs))
+	for i, r := range refs {
+		out[i] = namespacedRef{Name: r.Name, Namespace: r.Namespace}
+	}
+	return out
+}
+
+func certificateRefs(refs []AIGatewayCertificateRef) []namespacedRef {
 	out := make([]namespacedRef, len(refs))
 	for i, r := range refs {
 		out[i] = namespacedRef{Name: r.Name, Namespace: r.Namespace}

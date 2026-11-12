@@ -384,6 +384,16 @@ apiGroupVersions:
             kinds: [AIGatewayAuthStrategy]
             refTypeName: AIGatewayAuthStrategyRef
             resolvesTo: name
+          # The upstream's TLS trust store and client certificate. Konnect
+          # takes the certificate names, so the refs resolve to Konnect names.
+          - path: spec.apiSpec.config.caCertificates
+            kinds: [AIGatewayCACertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.config.certificates
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAgentsSDK
@@ -965,6 +975,7 @@ apiGroupVersions:
           - path: spec.apiSpec.certificate
             kinds: [AIGatewayCertificate]
             resolvesTo: name
+            supportCrossNamespaceReference: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewaySNIsSDK

@@ -17,9 +17,9 @@ spec:
     config:
       url: https://agent.upstream-tls.example
       caCertificates:
-        - ($ca_cert_name)
+        - name: ($ca_cert_name)
       certificates:
-        - ($client_cert_name)
+        - name: ($client_cert_name)
       route:
         paths:
           - /agents/upstream-tls-http
@@ -50,9 +50,9 @@ spec:
     config:
       url: https://agent.upstream-tls.example/a2a
       caCertificates:
-        - ($ca_cert_name)
+        - name: ($ca_cert_name)
       certificates:
-        - ($client_cert_name)
+        - name: ($client_cert_name)
       route:
         paths:
           - /agents/upstream-tls-a2a
