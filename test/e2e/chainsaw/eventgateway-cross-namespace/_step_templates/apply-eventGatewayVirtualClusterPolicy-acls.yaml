@@ -1,0 +1,39 @@
+# Template for creating an acls EventGatewayVirtualClusterPolicy allowing
+# everything.
+#
+# Required bindings:
+#   - policy_name, policy_namespace: The cluster policy.
+#   - virtual_cluster_name, virtual_cluster_namespace: Its virtual cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster-policy-acls
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualClusterPolicy
+          metadata:
+            name: ($policy_name)
+            namespace: ($policy_namespace)
+          spec:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($virtual_cluster_name)
+                namespace: ($virtual_cluster_namespace)
+            apiSpec:
+              type: acls
+              acls:
+                name: ($policy_name)
+                config:
+                  rules:
+                    - action: allow
+                      resourceType: topic
+                      operations:
+                        - name: all
+                      resourceNames:
+                        type: stat
+                        stat:
+                          - match: "*"

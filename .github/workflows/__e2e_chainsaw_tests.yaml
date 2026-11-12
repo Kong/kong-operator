@@ -14,7 +14,7 @@ on:
         required: false
         default: ""
       suites:
-        description: "JSON array of matrix entries ({suite, ip_family}) to run."
+        description: "JSON array of matrix entries ({suite, dir, selector, ip_family}) to run: suite names the entry, dir is the directory of its tests under test/e2e/chainsaw (default: suite), selector the labels of the tests to run (default: all)."
         type: string
         required: false
         default: >-
@@ -29,6 +29,8 @@ on:
             {"suite": "onpremaigateway"},
             {"suite": "eventgateway"},
             {"suite": "onpremeventgateway"},
+            {"suite": "eventgateway-cross-namespace-konnect", "dir": "eventgateway-cross-namespace", "selector": "gateway=konnect"},
+            {"suite": "eventgateway-cross-namespace-onprem", "dir": "eventgateway-cross-namespace", "selector": "gateway=onprem"},
             {"suite": "gwadmin"},
             {"suite": "gwadmin", "ip_family": "ipv6"},
             {"suite": "conversion-webhook"}
@@ -114,7 +116,7 @@ jobs:
       # The operator deploys gw-admin itself (RELATED_IMAGE_GW_ADMIN), so the
       # pinned image must reach the operator, not only the tests (which read
       # GW_ADMIN_IMAGE through the Makefile to assert it).
-      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' }}
+      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem' }}
       run: |
         IMAGE="$(yq -r '.chainsaw.gw-admin.image // ""' < test/test_dependencies.yaml)"
         TAG="$(yq -r '.chainsaw.gw-admin.tag // ""' < test/test_dependencies.yaml)"
@@ -129,11 +131,11 @@ jobs:
         SUITE: ${{ matrix.suite }}
       run: |
         # Only the suites that need gw-admin run the GWAdmin controller: a
-        # fault in it must not fail the other suites. Both push the
+        # fault in it must not fail the other suites. They push the
         # configuration of OnPremEventGateways to it.
         GWADMIN_FLAGS=()
         case "$SUITE" in
-          gwadmin|onpremeventgateway)
+          gwadmin|onpremeventgateway|eventgateway-cross-namespace-onprem)
             GWADMIN_FLAGS=(--set env.enable_controller_gwadmin=true
               --set env.enable_controller_onpremeventgateway=true
               --set-string customEnv.RELATED_IMAGE_GW_ADMIN="$GW_ADMIN_IMAGE") ;;
@@ -152,9 +154,9 @@ jobs:
 
     - name: Apply chainsaw suite prerequisites
       env:
-        SUITE: ${{ matrix.suite }}
+        DIRNAME: ${{ matrix.dir || matrix.suite }}
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
-      run: make test.e2e.chainsaw.prereq DIRNAME="$SUITE"
+      run: make test.e2e.chainsaw.prereq DIRNAME="$DIRNAME"
 
     - name: run chainsaw e2e tests
       id: chainsaw-tests
@@ -163,8 +165,9 @@ jobs:
         KONNECT_SERVER_URL: us.api.konghq.tech
         TEST_ID: ${{ env.TEST_ID }}
         AIGW_DP_IMAGE: ${{ inputs.aigw-dp-image }}
-        CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
+        CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.dir || matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
+        CHAINSAW_SELECTOR: ${{ matrix.selector }}
         EXPECTED_DEFAULT_STREAM_LISTEN: ${{ matrix.ip_family == 'ipv6' && '[::]:8899 ssl reuseport' || '0.0.0.0:8899 ssl reuseport' }}
       run: |
         # Use CHAINSAW_TEST_DIR to target the specific test directory
