@@ -55,6 +55,11 @@ type PortalSpec struct {
 
 // PortalAPISpec defines the API spec fields for Portal.
 type PortalAPISpec struct {
+	//
+	//
+	// +optional
+	AI AISettings `json:"ai,omitzero"`
+
 	// Whether the portal supports developer authentication.
 	// If disabled, developers cannot register for accounts or create applications.
 	//

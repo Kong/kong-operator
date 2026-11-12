@@ -2817,8 +2817,10 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -2873,8 +2875,10 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -3566,8 +3570,10 @@ type AIGatewayMCPServerConversionListener struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -3700,7 +3706,7 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	// incoming requests.
 	//
 	//
-	// +optional
+	// +required
 	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// Server-side configuration for the MCP Server.
 	//
@@ -3917,8 +3923,10 @@ type AIGatewayMCPServerConversionOnly struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -4010,8 +4018,10 @@ type AIGatewayMCPServerListener struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -4099,7 +4109,7 @@ type AIGatewayMCPServerListenerConfig struct {
 	// incoming requests.
 	//
 	//
-	// +optional
+	// +required
 	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// Server-side configuration for the MCP Server.
 	//
@@ -4842,8 +4852,10 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -5307,8 +5319,10 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -5409,7 +5423,7 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// incoming requests.
 	//
 	//
-	// +optional
+	// +required
 	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// Server-side configuration specific to `upstream-server` mode.
 	//
@@ -5929,7 +5943,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// incoming requests.
 	//
 	//
-	// +optional
+	// +required
 	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// Server-side configuration for the MCP Server.
 	//
@@ -6369,8 +6383,10 @@ type AIGatewayModelAPI struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -7983,8 +7999,10 @@ type AIGatewayModelModel struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -8329,8 +8347,10 @@ type AIGatewayModelProviderAnthropic struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -8413,8 +8433,10 @@ type AIGatewayModelProviderAzure struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -8653,8 +8675,10 @@ type AIGatewayModelProviderBaseten struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -8737,8 +8761,10 @@ type AIGatewayModelProviderBedrock struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -8939,8 +8965,10 @@ type AIGatewayModelProviderCerebras struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9023,8 +9051,10 @@ type AIGatewayModelProviderCohere struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9431,8 +9461,10 @@ type AIGatewayModelProviderDashscope struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9516,8 +9548,10 @@ type AIGatewayModelProviderDatabricks struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9600,8 +9634,10 @@ type AIGatewayModelProviderDeepseek struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9684,8 +9720,10 @@ type AIGatewayModelProviderGemini struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9887,8 +9925,10 @@ type AIGatewayModelProviderHuggingface struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -9971,8 +10011,10 @@ type AIGatewayModelProviderKimi struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10055,8 +10097,10 @@ type AIGatewayModelProviderLlama2 struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10139,8 +10183,10 @@ type AIGatewayModelProviderMistral struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10223,8 +10269,10 @@ type AIGatewayModelProviderOllama struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10307,8 +10355,10 @@ type AIGatewayModelProviderOpenai struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10395,8 +10445,10 @@ type AIGatewayModelProviderSagemaker struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10597,8 +10649,10 @@ type AIGatewayModelProviderTypesafe struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10681,8 +10735,10 @@ type AIGatewayModelProviderVercel struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10765,8 +10821,10 @@ type AIGatewayModelProviderVllm struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -10849,8 +10907,10 @@ type AIGatewayModelProviderXai struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -15848,8 +15908,10 @@ type AwsSecretsManagerVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -15974,8 +16036,10 @@ type AzureKeyVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -16108,8 +16172,10 @@ type ConjurVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -16220,8 +16286,10 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -16270,8 +16338,10 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -16504,8 +16574,10 @@ type EnvironmentVariableVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -16590,8 +16662,10 @@ type GoogleSecretManagerVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -16687,8 +16761,10 @@ type HashiCorpVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -18068,8 +18144,10 @@ type KonnectConfigStoreVault struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -18102,14 +18180,17 @@ type KonnectConfigStoreVaultConfig struct {
 // ManagedByValue is the value type for ManagedBy.
 //
 // +kubebuilder:validation:MinLength=1
-// +kubebuilder:validation:MaxLength=63
-// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+// +kubebuilder:validation:MaxLength=127
+// +kubebuilder:validation:Pattern=`^[^\s\x00-\x1F\x7F-\x9F]+$`
 type ManagedByValue string
 
 // ManagedBy Stores information about what manages this entity, such as the tool
 // or system responsible for its lifecycle (for example, `terraform`).
 //
-// Keys must be 1–63 characters long and start with an alphanumeric character.
+// Keys must be 1–63 characters long, start and end with an alphanumeric
+// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+// Values must be 1–127 characters long and must not be empty.
+// Keys and values must not contain spaces or control characters.
 //
 // +kubebuilder:validation:MaxProperties=5
 type ManagedBy map[string]ManagedByValue
@@ -18163,8 +18244,10 @@ type RedisCEDatastore struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -18267,8 +18350,10 @@ type RedisEEDatastore struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -18581,8 +18666,10 @@ type TokenVaultDatastore struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
@@ -18676,8 +18763,10 @@ type VectorDBDatastore struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional
