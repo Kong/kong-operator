@@ -56,6 +56,46 @@ const (
 	AIGatewayRuntimeAutoUpgradeDisabled AIGatewayRuntimeAutoUpgrade = "Disabled"
 )
 
+// AISettings is a type alias.
+type AISettings struct {
+	// Is AI enabled?
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// AI features configuration.
+	// When top-level `enabled` is false, every feature toggle here is
+	// automatically reset to false.
+	//
+	// +required
+	Features AISettingsFeatures `json:"features,omitzero"`
+}
+
+// AISettingsFeatures AI features configuration.
+// When top-level `enabled` is false, every feature toggle here is automatically
+// reset to false.
+type AISettingsFeatures struct {
+	// AI Features config
+	//
+	// +required
+	McpServer AISettingsFeaturesMcpServer `json:"mcpServer,omitzero"`
+}
+
+// AISettingsFeaturesMcpServer AI Features config
+type AISettingsFeaturesMcpServer struct {
+	// Whether the MCP Server is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Whether write operations are enabled or not for the Portal MCP Server
+	// enabled
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	WriteOperationsEnabled string `json:"writeOperationsEnabled,omitzero"`
+}
+
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL = apiextensionsv1.JSON
 
@@ -168,14 +208,17 @@ type LabelsUpdate map[string]LabelsUpdateValue
 // ManagedByValue is the value type for ManagedBy.
 //
 // +kubebuilder:validation:MinLength=1
-// +kubebuilder:validation:MaxLength=63
-// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+// +kubebuilder:validation:MaxLength=127
+// +kubebuilder:validation:Pattern=`^[^\s\x00-\x1F\x7F-\x9F]+$`
 type ManagedByValue string
 
 // ManagedBy Stores information about what manages this entity, such as the tool
 // or system responsible for its lifecycle (for example, `terraform`).
 //
-// Keys must be 1–63 characters long and start with an alphanumeric character.
+// Keys must be 1–63 characters long, start and end with an alphanumeric
+// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+// Values must be 1–127 characters long and must not be empty.
+// Keys and values must not contain spaces or control characters.
 //
 // +kubebuilder:validation:MaxProperties=5
 type ManagedBy map[string]ManagedByValue

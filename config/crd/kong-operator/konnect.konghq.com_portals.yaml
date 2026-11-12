@@ -63,6 +63,50 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
+                  ai:
+                    description: AISettings is a type alias.
+                    properties:
+                      enabled:
+                        description: Is AI enabled?
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      features:
+                        description: |-
+                          AI features configuration.
+                          When top-level `enabled` is false, every feature toggle here is
+                          automatically reset to false.
+                        properties:
+                          mcpServer:
+                            description: AI Features config
+                            properties:
+                              enabled:
+                                description: Whether the MCP Server is enabled or
+                                  not
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              writeOperationsEnabled:
+                                description: |-
+                                  Whether write operations are enabled or not for the Portal MCP Server
+                                  enabled
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            - writeOperationsEnabled
+                            type: object
+                        required:
+                        - mcpServer
+                        type: object
+                    required:
+                    - enabled
+                    - features
+                    type: object
                   authenticationEnabled:
                     description: |-
                       Whether the portal supports developer authentication.

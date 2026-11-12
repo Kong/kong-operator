@@ -367,6 +367,55 @@ Allowed values:
 | `Enabled` | AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.<br /> |
 | `Disabled` | AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.<br /> |
 
+#### AISettings
+
+
+AISettings is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Is AI enabled? |
+| `features` _[AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)_ | AI features configuration. When top-level `enabled` is false, every feature toggle here is automatically reset to false. |
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### AISettingsFeatures
+
+
+AISettingsFeatures AI features configuration.
+When top-level `enabled` is false, every feature toggle here is automatically
+reset to false.
+
+
+
+| Field | Description |
+| --- | --- |
+| `mcpServer` _[AISettingsFeaturesMcpServer](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesmcpserver)_ | AI Features config |
+
+_Appears in:_
+
+- [AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)
+
+#### AISettingsFeaturesMcpServer
+
+
+AISettingsFeaturesMcpServer AI Features config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether the MCP Server is enabled or not |
+| `writeOperationsEnabled` _string_ | Whether write operations are enabled or not for the Portal MCP Server enabled |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
+
 
 
 #### AWSTransitGateway
@@ -709,7 +758,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
 | `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.<br /><br />When runtime_auto_upgrade is enabled (the default), this value is raised automatically to track the minimum runtime version reported across connected data planes, so any value set here may be superseded as the fleet upgrades. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
@@ -1652,7 +1701,10 @@ _Appears in:_
 _Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
 
 ManagedBy Stores information about what manages this entity, such as the tool
-or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
+or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric
+character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+Values must be 1–127 characters long and must not be empty.
+Keys and values must not contain spaces or control characters.
 
 
 
@@ -1870,6 +1922,7 @@ PortalAPISpec defines the API spec fields for Portal.
 
 | Field | Description |
 | --- | --- |
+| `ai` _[AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)_ |  |
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |

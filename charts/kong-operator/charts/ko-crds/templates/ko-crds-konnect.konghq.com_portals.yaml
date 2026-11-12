@@ -52,6 +52,38 @@ spec:
             properties:
               apiSpec:
                 properties:
+                  ai:
+                    properties:
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      features:
+                        properties:
+                          mcpServer:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              writeOperationsEnabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            - writeOperationsEnabled
+                            type: object
+                        required:
+                        - mcpServer
+                        type: object
+                    required:
+                    - enabled
+                    - features
+                    type: object
                   authenticationEnabled:
                     enum:
                     - Enabled

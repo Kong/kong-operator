@@ -460,6 +460,7 @@ spec:
                       type: object
                     type: array
                 required:
+                - cloud_gateway
                 - name
                 type: object
               konnect:
