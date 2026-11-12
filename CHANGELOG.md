@@ -80,7 +80,10 @@
   it keeps serving, but no spec, image or certificate change is applied until
   the geo returns private endpoints. Its `KonnectExtension` reports
   `Ready=False` with reason `EndpointMismatch`. Use a `serverURL` without a path
-  to keep the previous behaviour.
+  to keep the previous behaviour, or set the endpoints in the data plane's
+  `podTemplateSpec`: an AI Gateway data plane that supplies
+  `KONG_CLUSTER_CONTROL_PLANE` and `KONG_CLUSTER_TELEMETRY_ENDPOINT` itself is
+  reconciled.
   [#6265](https://github.com/Kong/kong-operator/pull/6265)
 - AI Gateway: the Redis and Sentinel `password` fields of the OIDC `redis` and
   `clusterCacheRedis` blocks, the vector database passwords of a semantic
@@ -129,6 +132,13 @@
 
 ### Fixed
 
+- An `AIGatewayDataPlane` that sets the Konnect endpoints itself in
+  `podTemplateSpec` is no longer held with `KonnectAIGatewayResolved=False`
+  reason `EndpointMismatch` on a `serverURL` carrying a path: the operator
+  validates only the endpoints it renders, so a data plane connecting to a
+  PrivateLink control plane keeps reconciling before Konnect returns private
+  endpoints.
+  [#XXXX](https://github.com/Kong/kong-operator/pull/XXXX)
 - `KonnectConfigStoreSync` now accepts entry values up to 8192 Unicode
   characters, matching the increased Konnect Config Store limit instead of
   rejecting values above 5120 bytes. This allows larger TLS certificate/key

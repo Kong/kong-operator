@@ -186,8 +186,9 @@ type ControlPlaneKindConfig struct {
 	// with its serverURL, naming the offending endpoint in the error. A
 	// non-nil error holds the DataPlane: it sets Resolved=False with
 	// Conditions.EndpointMismatchReason and returns errEndpointsMismatch.
-	// Nil for kinds that have no such endpoints.
-	EndpointCheck func(cp ControlPlaneObject) error
+	// dp is passed so a kind can leave out the endpoints the DataPlane
+	// supplies itself. Nil for kinds that have no such endpoints.
+	EndpointCheck func(dp Object, cp ControlPlaneObject) error
 	// Conditions carries the control plane resolution condition types, reasons
 	// and messages for this kind.
 	Conditions ControlPlaneConditions
