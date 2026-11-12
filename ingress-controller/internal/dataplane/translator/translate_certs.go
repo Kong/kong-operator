@@ -147,7 +147,31 @@ func (t *Translator) getGatewayCerts(resolver *inheritedTagResolver) []certWrapp
 	return certs
 }
 
-func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
+// inheritedTagsForClientCertSecret returns the tags the Kong certificate translated from the Secret
+// inherits from the Services referencing it through konghq.com/client-cert: the Services' inherited
+// tags concatenated in service-name order, so that the result does not depend on the order in which
+// populateServices visited them.
+func inheritedTagsForClientCertSecret(clientCertSecretToServices map[string][]clientCertServiceTags, secretKey string) []string {
+	services, ok := clientCertSecretToServices[secretKey]
+	if !ok {
+		return nil
+	}
+	// Clone before sorting to leave the caller's slice untouched.
+	services = slices.Clone(services)
+	slices.SortFunc(services, func(a, b clientCertServiceTags) int {
+		return strings.Compare(a.ServiceName, b.ServiceName)
+	})
+	var tags []string
+	for _, service := range services {
+		tags = slices.Concat(tags, service.InheritedTags)
+	}
+	return tags
+}
+
+func (t *Translator) getCerts(
+	secretsToSNIs SecretNameToSNIs,
+	clientCertSecretToServices map[string][]clientCertServiceTags,
+) []certWrapper {
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs.secretToSNIs {
@@ -173,6 +197,10 @@ func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 			},
 			CreationTimestamp: secret.CreationTimestamp,
 			snis:              SNIs.Hosts(),
+			// A Secret referenced through a backend Service's konghq.com/client-cert annotation makes
+			// its certificate inherit the tags of the parent Gateways (and their GatewayClasses) of
+			// the Gateway API routes using that Service.
+			inheritedTags: inheritedTagsForClientCertSecret(clientCertSecretToServices, secretKey),
 		})
 	}
 

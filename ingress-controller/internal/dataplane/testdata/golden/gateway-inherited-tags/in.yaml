@@ -202,3 +202,103 @@ spec:
     - example.com
     - ingress-only.example.com
     secretName: tls-secret
+---
+# A backend Service with a client certificate. The Kong certificate translated from its Secret must
+# inherit the tags of the parent Gateway (and GatewayClass) of the routes using the Service.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: client-secret
+  namespace: default
+  uid: 8aade13c-1470-46bd-9849-9a74e349214f
+  annotations:
+    konghq.com/tags: client-secret-tag
+type: kubernetes.io/tls
+data:
+  tls.key: |
+    LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUNkd0lCQURBTkJna3Foa2lHOXcwQkFRRUZB
+    QVNDQW1Fd2dnSmRBZ0VBQW9HQkFMZzdDY1pBdmtGaHcvRkgKendZNjFGNXpPdllxdkZVYzh5bFpj
+    VktKdS81bDArRm0wKzd5eUcrcVZybGhpVjhEK3lGSG5DMGdCVThEQi9jYQpuZ2ZpSENNRGxVY2tj
+    RTdQTHdhOGZxelZ3VXU0QzhnTFduaG0xcHlwZmdQZVNpK1k1MmhCdms2OFRCcVdaVVVxCkl6bHJI
+    UDdCUDJMZmxxaHlmVUtpaXI0Q2hGTFJBZ01CQUFFQ2dZQkJKYWRzTXVMVWJnVURJbmlENUhQS3Zv
+    YkEKSEJhakpteWFWNldxSVVpWVNsdmxuaDRkcGo3WXRleWErM0cvWnNIOFg3MUxlOEpFMFhhVW5C
+    WDhCYW9hNGdXaQpXczZDVFg1eUhWTWloSjNJeGg1ZEd0NnBkS1BUQ2JCZ05mKzB5U1ZhdmJDRGhm
+    TGlzV1RNTnVONkt4SG14MEdXClBZODVSdXpSTGw2OCtoN1ZFUUpCQU5yUEpFMk1BeFRwWitRdzJy
+    MmpQRjV5ZjFuand1eWlJa1pObHF6N1ZtdnkKWkNYQlpmYWhVWFBjUjVrYTR4S09MZ2M3b0NhaCs0
+    M2dORG1xMHZEdEVQMENRUURYaTA5WEp5TGpuRDFScFZJaQp0L2NHNUppREJ2dHVTR2pJN3MvbUky
+    VHMwZnBvL1UzNVdVR2FqSGFnbWE5YzJxbFlNZVZaN2Z1cHhMTmFMRDZ6CjFNdGxBa0VBMWgvN3dM
+    K1JqSGRWS2VQOVM3TmdzblNOMStPaHIzeUMyaFczckJSUjRGVldWL1JJMmUvSUMvKzMKT1Vjc2k4
+    NERrU1J5ZHh2eFZrZmdFOGJ0b3NQNzZRSkFCak1XbEI0bkRiN25zSnA5czB2eFNmeDNPb1dQNDhz
+    bgpZR2dtQ0t1SjhwblRod09LSTVyaW5TeGZHUjF5Z3N3elJMc2lxcVNDc1k1YnprTXBob2lmVlFK
+    QkFJVW1yWFBqCjUxb2QzazVWcFdvMVMrTWc5SWl1ZnJucXRwRnUva0VFWGx1eENxcnNrYjFDN21X
+    TWtHcXkwYkhwQTAxNFNxdTIKN0lua2tSb0RuVHJVM1JvPQotLS0tLUVORCBQUklWQVRFIEtFWS0t
+    LS0tCg==
+  tls.crt: |
+    LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJvVENDQVFvQ0NRQ2pacTJsNklHQUFUQU5C
+    Z2txaGtpRzl3MEJBUXNGQURBVk1STXdFUVlEVlFRRERBcHIKYjI1bmFIRXVZMjl0TUI0WERUSXpN
+    RFl3TVRFM05UTXlNVm9YRFRJME1EVXpNVEUzTlRNeU1Wb3dGVEVUTUJFRwpBMVVFQXd3S2EyOXVa
+    Mmh4TG1OdmJUQ0JuekFOQmdrcWhraUc5dzBCQVFFRkFBT0JqUUF3Z1lrQ2dZRUF1RHNKCnhrQytR
+    V0hEOFVmUEJqclVYbk02OWlxOFZSenpLVmx4VW9tNy9tWFQ0V2JUN3ZMSWI2cFd1V0dKWHdQN0lV
+    ZWMKTFNBRlR3TUg5eHFlQitJY0l3T1ZSeVJ3VHM4dkJyeCtyTlhCUzdnTHlBdGFlR2JXbktsK0E5
+    NUtMNWpuYUVHKwpUcnhNR3BabFJTb2pPV3NjL3NFL1l0K1dxSEo5UXFLS3ZnS0VVdEVDQXdFQUFU
+    QU5CZ2txaGtpRzl3MEJBUXNGCkFBT0JnUUNlZVhHcUZpT3BQZTRFdUZFNE8veWR2T01tdW44YXAz
+    ZTBWTkd3V3U3eWxOMmJ4Z2dLM0l2WjVyTmYKMDNVYzhlMWVvS1dhMzBna3cxdHlRUTB1bzMzVmJ4
+    ekpWcmJNV1FHN3N5WU1vY2d0LzhDemc4clg0ZXpDT3N0SgpQWFhKUEdTLzNPN0pPQ1ViQlVaMmFK
+    N2VWSHpNTnluN0NpWmlxSTlrSnFFR2xVL0k4dz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin-tls
+  namespace: default
+  annotations:
+    konghq.com/protocol: https
+    konghq.com/client-cert: client-secret
+  labels:
+    app: httpbin
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: httpbin
+  type: ClusterIP
+---
+apiVersion: discovery.k8s.io/v1
+addressType: IPv4
+kind: EndpointSlice
+metadata:
+  namespace: default
+  labels:
+    kubernetes.io/service-name: httpbin-tls
+  name: httpbin-tls-n5g6g
+endpoints:
+- addresses:
+  - 10.244.0.6
+  conditions:
+    ready: true
+    serving: true
+    terminating: false
+ports:
+- name: ""
+  port: 443
+  protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-tls-backend
+  namespace: default
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /tls-backend
+    backendRefs:
+    - name: httpbin-tls
+      kind: Service
+      port: 443

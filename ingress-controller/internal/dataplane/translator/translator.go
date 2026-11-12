@@ -263,7 +263,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// generate Certificates and SNIs
-	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)
+	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs, ingressRules.ClientCertSecretToServices)
 	gatewayCerts := t.getGatewayCerts(inheritedTagResolver)
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	var certIDsSeen certIDToMergedCertID
