@@ -10,7 +10,7 @@ include:
   artifact: govulncheck-release-2.2.x
 - branch: release/2.3.x
   artifact: govulncheck-release-2.3.x
-- branch: release/2.4.0-rapid.1.x
-  artifact: govulncheck-release-2.4.0-rapid.1.x
 - branch: release/2.4.0-rapid.2.x
   artifact: govulncheck-release-2.4.0-rapid.2.x
+- branch: release/2.4.0-rapid.3.x
+  artifact: govulncheck-release-2.4.0-rapid.3.x
