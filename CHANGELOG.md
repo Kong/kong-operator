@@ -237,6 +237,14 @@
     cluster, so that a chain of the namespace of the virtual cluster can
     claim it.
   [#6582](https://github.com/Kong/kong-operator/pull/6582)
+- `KegDataPlane`: `konnectNamespacedRef` and `onpremNamespacedRef` can name a
+  gateway in another namespace, with a `KongReferenceGrant` in its namespace
+  allowing the `KegDataPlane`, and one allowing its
+  `EventGatewayDataPlaneCertificate`, to reference it. Without one, the
+  `KegDataPlane` reports `RefNotPermitted`, and has its
+  `EventGatewayDataPlaneCertificate`s removed, so that the gateway no longer
+  trusts it, until a `KongReferenceGrant` lets it in again.
+  [#6583](https://github.com/Kong/kong-operator/pull/6583)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`

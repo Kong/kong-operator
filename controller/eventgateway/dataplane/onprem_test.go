@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -2208,6 +2209,24 @@ func TestReleaseDeploymentFromGWAdmin(t *testing.T) {
 		reconcileDataPlane(t, cl, egdp)
 		labels, _ := labelsOf(t, cl, egdp)
 		require.Equal(t, gwAdminLabels, labels)
+	})
+
+	t.Run("a data plane of another namespace no KongReferenceGrant lets in any longer loses its certificates", func(t *testing.T) {
+		gateway, gw, bundle, ca := onPremFixture(t)
+		egdp := onPremDataPlane()
+		egdp.Namespace = "tenant"
+		egdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Namespace = new(gateway.Namespace)
+		cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{Name: "keg-cert", Namespace: egdp.Namespace}
+		require.NoError(t, controllerutil.SetControllerReference(egdp, cert, scheme))
+		other := &configurationv1alpha1.EventGatewayDataPlaneCertificate{Name: "not-its-own", Namespace: egdp.Namespace}
+		cl := fake.NewClientBuilder().WithScheme(scheme).
+			WithObjects(gateway, gw, bundle, ca, egdp, cert, other, labelledDeployment(t, egdp, egdp)).
+			WithStatusSubresource(egdp).Build()
+		reconcileDataPlane(t, cl, egdp)
+		require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(cert), cert)), "its certificate is removed")
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(other), other), "a certificate it doesn't control is left alone")
+		labels, _ := labelsOf(t, cl, egdp)
+		require.Equal(t, map[string]string{"app": "keg"}, labels)
 	})
 
 	t.Run("a Deployment the data plane doesn't control, or none, is left alone", func(t *testing.T) {

@@ -92,6 +92,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -1337,8 +1338,10 @@ type dataPlane struct {
 // dataPlanes returns the data plane Deployments of the GWAdmin, sorted by
 // namespace and name. Only those the owner of the GWAdmin allows count: in
 // its namespace, or in a namespace a KongReferenceGrant in its namespace
-// grants from OnPremEventGateway to GWAdmin. Anyone else's labelled
-// Deployment is ignored: it can't hold the rotations back.
+// grants from OnPremEventGateway to GWAdmin, or that of a KegDataPlane a
+// KongReferenceGrant lets reference one of its gateways (see
+// isGrantedDataPlane). Anyone else's labelled Deployment is ignored: it
+// can't hold the rotations back.
 func (r *Reconciler) dataPlanes(ctx context.Context, gw *operatorv1alpha1.GWAdmin) ([]dataPlane, error) {
 	list := &appsv1.DeploymentList{}
 	if err := r.List(ctx, list, client.MatchingLabels{
@@ -1355,13 +1358,66 @@ func (r *Reconciler) dataPlanes(ctx context.Context, gw *operatorv1alpha1.GWAdmi
 	for i := range list.Items {
 		d := &list.Items[i]
 		if d.Namespace != gw.Namespace && !granted[d.Namespace] {
-			continue
+			ok, err := r.isGrantedDataPlane(ctx, gw, d)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				continue
+			}
 		}
 		dps = append(dps, dataPlane{name: d.Namespace + "/" + d.Name, state: rolloutOf(d)})
 	}
 	slices.SortFunc(dps, func(a, b dataPlane) int { return strings.Compare(a.name, b.name) })
 	return dps, nil
 }
+
+// isGrantedDataPlane reports whether the Deployment is that of a KegDataPlane
+// of its namespace referencing an OnPremEventGateway of another namespace
+// that is allowed to use the GWAdmin, with a KongReferenceGrant in the
+// namespace of the gateway allowing the reference. Such a KegDataPlane runs
+// in a namespace the KongReferenceGrants of the GWAdmin needn't name.
+func (r *Reconciler) isGrantedDataPlane(ctx context.Context, gw *operatorv1alpha1.GWAdmin, d *appsv1.Deployment) (bool, error) {
+	owner := metav1.GetControllerOf(d)
+	if owner == nil || owner.Kind != kegDataPlaneGVK.Kind || owner.APIVersion != eventgatewayv1alpha1.SchemeGroupVersion.String() {
+		return false, nil
+	}
+	var dp eventgatewayv1alpha1.KegDataPlane
+	if err := r.Get(ctx, client.ObjectKey{Namespace: d.Namespace, Name: owner.Name}, &dp); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get the KegDataPlane %s/%s: %w", d.Namespace, owner.Name, err)
+	}
+	ref := dp.Spec.ControlPlaneRef.OnPremNamespacedRef
+	if dp.UID != owner.UID || ref == nil || ref.Namespace == nil || *ref.Namespace == dp.Namespace {
+		return false, nil
+	}
+	var gateway eventgatewayv1alpha1.OnPremEventGateway
+	if err := r.Get(ctx, client.ObjectKey{Namespace: *ref.Namespace, Name: ref.Name}, &gateway); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get the OnPremEventGateway %s/%s: %w", *ref.Namespace, ref.Name, err)
+	}
+	if gateway.GWAdminKey() != client.ObjectKeyFromObject(gw) {
+		return false, nil
+	}
+	if reason, err := gwadminref.NotAllowed(ctx, r.Client, &gateway); err != nil || reason != "" {
+		return false, err
+	}
+	err := crossnamespace.CheckKongReferenceGrantForResource(ctx, r.Client, dp.Namespace, gateway.Namespace, gateway.Name,
+		kegDataPlaneGVK, onPremEventGatewayGVK)
+	if crossnamespace.IsReferenceNotGranted(err) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+var (
+	kegDataPlaneGVK       = metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind("KegDataPlane"))
+	onPremEventGatewayGVK = metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind(eventgatewayv1alpha1.OnPremEventGatewayKind))
+)
 
 // grantedNamespaces returns the namespaces the KongReferenceGrants in the
 // namespace of the GWAdmin allow its data planes in: those of the

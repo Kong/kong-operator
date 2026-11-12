@@ -48261,6 +48261,10 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
+                      namespace:
+                        maxLength: 63
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -48268,6 +48272,10 @@ spec:
                     properties:
                       name:
                         maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 63
                         minLength: 1
                         type: string
                     required:
