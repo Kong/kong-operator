@@ -212,11 +212,10 @@
   configuration.
   [#6395](https://github.com/Kong/kong-operator/pull/6395)
 - Event Gateway entities can reference their parent, the entities they use
-  (schema registries, static keys, TLS trust bundles, parent policies) and the
-  Secrets they read in another namespace, with a `KongReferenceGrant` in its
-  namespace, on both `KonnectEventGateway`s and `OnPremEventGateway`s. The
-  virtual cluster a listener policy forwards to stays in the namespace of the
-  referrer, whatever the `KongReferenceGrant`s. A
+  (schema registries, static keys, TLS trust bundles, parent policies, the
+  virtual cluster a listener policy forwards to) and the Secrets they read in
+  another namespace, with a `KongReferenceGrant` in its namespace, on both
+  `KonnectEventGateway`s and `OnPremEventGateway`s. A
   `KongReferenceGrant` names these kinds under their own group,
   `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
   never matched, and is still accepted only so that existing grants stay
@@ -238,7 +237,7 @@
     deleted, and on an `OnPremEventGateway` one kept for the policies using
     it is sent as it was last, so that deleting a namespace with its
     `KongReferenceGrant`s doesn't stop the push that releases it.
-  [#6580](https://github.com/Kong/kong-operator/pull/6580)
+  [#6580](https://github.com/Kong/kong-operator/pull/6580), [#6626](https://github.com/Kong/kong-operator/pull/6626)
 - `EventGatewayVirtualClusterPolicyChain`s can reference their virtual
   cluster, and order policies, in another namespace, with a
   `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
