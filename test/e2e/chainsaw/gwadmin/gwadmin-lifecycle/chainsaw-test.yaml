@@ -4,7 +4,7 @@ metadata:
   name: gwadmin-lifecycle
 spec:
   description: |
-    Lifecycle test for GWAdmin with a zero-config spec:
+    Lifecycle test for GWAdmin with a license reference and otherwise default options:
     1. Creates a GWAdmin and asserts its certificates are provisioned and its
        status publishes the cp server URL and the trust material Secrets.
     2. Asserts the trust bundle and certificate Secrets in the GWAdmin
@@ -152,6 +152,10 @@ spec:
               metadata:
                 name: gw-admin-unnamed-port
               spec:
+                license:
+                  secretRef:
+                    name: gw-admin-license
+                    key: license
                 network:
                   cp:
                     ports:

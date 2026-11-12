@@ -53,6 +53,12 @@ const gwAdminSecretLabel = mgrconfig.DefaultSecretLabelSelector
 // conflict requeue (1m).
 const gwAdminRecoverWait = 90 * time.Second
 
+func gwAdminTestLicense() operatorv1alpha1.GWAdminLicense {
+	return operatorv1alpha1.GWAdminLicense{
+		SecretRef: operatorv1alpha1.GWAdminLicenseSecretRef{Name: "license", Key: "license"},
+	}
+}
+
 // startGWAdminReconciler starts the GWAdmin controller in a new envtest
 // environment, with a manager whose Secret cache only holds the Secrets
 // carrying the secret label selector and whose Pod cache only holds the
@@ -109,12 +115,12 @@ func TestGWAdminReconciler(t *testing.T) {
 		requireGWAdminCondition(ctx, t, cl, gw, conditionType, status, reason, wait)
 	}
 
-	t.Run("zero config provisions certificates, Services and the Deployment", func(t *testing.T) {
+	t.Run("license with default options provisions certificates, Services and the Deployment", func(t *testing.T) {
 		t.Parallel()
 
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: "gw-default", Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{Spec: corev1.PodSpec{Containers: []corev1.Container{{
 					Name: consts.GWAdminContainerName,
 					Env: []corev1.EnvVar{
@@ -289,7 +295,7 @@ func TestGWAdminReconciler(t *testing.T) {
 
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: "gw-hpa", Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
 				Scaling: &operatorv1alpha1.GWAdminScaling{HorizontalScaling: &commonv1alpha1.HorizontalScaling{
 					MinReplicas: new(int32(2)),
 					MaxReplicas: 4,
@@ -328,7 +334,7 @@ func TestGWAdminReconciler(t *testing.T) {
 
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: "gw-hpa-scaled", Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
 				Scaling: &operatorv1alpha1.GWAdminScaling{HorizontalScaling: &commonv1alpha1.HorizontalScaling{
 					MinReplicas: new(int32(2)),
 					MaxReplicas: 4,
@@ -373,7 +379,7 @@ func TestGWAdminReconciler(t *testing.T) {
 
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: "gw-hpa-nomin", Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
 				Scaling: &operatorv1alpha1.GWAdminScaling{HorizontalScaling: &commonv1alpha1.HorizontalScaling{
 					MaxReplicas: 3,
 				}},
@@ -438,7 +444,7 @@ func TestGWAdminReconciler(t *testing.T) {
 			StringData: map[string]string{"owner": "someone-else"},
 		}
 		require.NoError(t, cl.Create(ctx, foreign))
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-conflict", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-conflict", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
@@ -468,7 +474,7 @@ func TestGWAdminReconciler(t *testing.T) {
 			StringData: map[string]string{"owner": "someone-else"},
 		}
 		require.NoError(t, cl.Create(ctx, foreign, client.DisableReadYourWritesConsistency))
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-conflict-unlabeled", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-conflict-unlabeled", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
@@ -502,7 +508,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(foreign), &corev1.Service{}))
 		}, waitTime, tickTime)
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-svc-conflict", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-svc-conflict", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeReady,
@@ -535,7 +541,7 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("a Manual CA referencing a Secret managed by the operator is rejected", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-ca-self", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-ca-self", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, waitTime)
@@ -560,7 +566,7 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("moving from an Automatic to a Manual CA publishes it once the pods trust it", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-ca-switch", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-ca-switch", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 		automaticCA := gwadminref.CPClientCASecretName(gw)
 		// The pods run the Automatic CA.
@@ -640,7 +646,7 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("a controlled Secret stripped of the secret label gets it back without a conflict", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-relabel", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-relabel", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, waitTime)
@@ -708,7 +714,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: "gw-hpa-conflict", Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), Deployment: &operatorv1alpha1.GWAdminDeploymentOptions{
 				Scaling: &operatorv1alpha1.GWAdminScaling{HorizontalScaling: &commonv1alpha1.HorizontalScaling{
 					MinReplicas: new(int32(2)),
 					MaxReplicas: 3,
@@ -752,7 +758,7 @@ func TestGWAdminReconciler(t *testing.T) {
 
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: name, Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{TLS: &operatorv1alpha1.GWAdminTLS{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), TLS: &operatorv1alpha1.GWAdminTLS{
 				CP: &operatorv1alpha1.GWAdminServerCertificate{
 					Provisioning: operatorv1alpha1.GWAdminCertificateProvisioningManual,
 					SecretRef:    &operatorv1alpha1.GWAdminSecretRef{Name: userCP.Name},
@@ -825,7 +831,7 @@ func TestGWAdminReconciler(t *testing.T) {
 
 		gw := &operatorv1alpha1.GWAdmin{
 			Name: "gw-rotation", Namespace: namespace,
-			Spec: operatorv1alpha1.GWAdminSpec{TLS: &operatorv1alpha1.GWAdminTLS{
+			Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense(), TLS: &operatorv1alpha1.GWAdminTLS{
 				ClientCA: &operatorv1alpha1.GWAdminCertificateSecret{
 					Provisioning: operatorv1alpha1.GWAdminCertificateProvisioningManual,
 					SecretRef:    &operatorv1alpha1.GWAdminSecretRef{Name: userCA.Name},
@@ -952,7 +958,7 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("rotating the CAs moves the cp server certificate once the data planes run the new server bundle", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-rotate-server", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-rotate-server", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, waitTime)
@@ -1016,7 +1022,7 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("data planes count in a granted namespace only, and the skip annotation releases them", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-grants", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-grants", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, waitTime)
@@ -1092,7 +1098,7 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("a certificate authority written into a bundle Secret is never trusted", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-rogue", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-rogue", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, waitTime)
@@ -1123,9 +1129,9 @@ func TestGWAdminReconciler(t *testing.T) {
 	t.Run("deleting a GWAdmin deletes its Secrets in the operator namespace", func(t *testing.T) {
 		t.Parallel()
 
-		gw := &operatorv1alpha1.GWAdmin{Name: "gw-cleanup", Namespace: namespace}
+		gw := &operatorv1alpha1.GWAdmin{Name: "gw-cleanup", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, gw))
-		sibling := &operatorv1alpha1.GWAdmin{Name: "gw-cleanup-sibling", Namespace: namespace}
+		sibling := &operatorv1alpha1.GWAdmin{Name: "gw-cleanup-sibling", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 		require.NoError(t, cl.Create(ctx, sibling))
 		for _, g := range []*operatorv1alpha1.GWAdmin{gw, sibling} {
 			requireCondition(t, g, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
@@ -1169,7 +1175,7 @@ func TestGWAdminReconcilerCARotationBlocked(t *testing.T) {
 	now := func() time.Time { return time.Now().Add(time.Duration(offset.Load())) }
 	cl, reader, namespace, operatorNamespace := startGWAdminReconciler(t, ctx, now)
 
-	gw := &operatorv1alpha1.GWAdmin{Name: "gw-blocked", Namespace: namespace}
+	gw := &operatorv1alpha1.GWAdmin{Name: "gw-blocked", Namespace: namespace, Spec: operatorv1alpha1.GWAdminSpec{License: gwAdminTestLicense()}}
 	require.NoError(t, cl.Create(ctx, gw))
 	requireGWAdminCondition(ctx, t, cl, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 		metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, waitTime)

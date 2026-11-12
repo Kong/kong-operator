@@ -481,7 +481,12 @@ func (g *testGWAdmin) dial(ctx context.Context, network, addr string) (net.Conn,
 // createGWAdmin creates the GWAdmin, without its status.
 func (g *testGWAdmin) createGWAdmin(ctx context.Context) {
 	g.t.Helper()
-	g.gwAdmin = &operatorv1alpha1.GWAdmin{Name: testGWAdminName, Namespace: g.namespace}
+	g.gwAdmin = &operatorv1alpha1.GWAdmin{
+		Name: testGWAdminName, Namespace: g.namespace,
+		Spec: operatorv1alpha1.GWAdminSpec{License: operatorv1alpha1.GWAdminLicense{
+			SecretRef: operatorv1alpha1.GWAdminLicenseSecretRef{Name: "license", Key: "license"},
+		}},
+	}
 	require.NoError(g.t, g.cl.Create(ctx, g.gwAdmin))
 }
 

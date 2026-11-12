@@ -87,6 +87,12 @@
   `spec.deployment.podTemplateSpec` does not count as that override: move the
   value to `spec.config.konnect.domain` to keep the data plane reconciled.
   [#6107](https://github.com/Kong/kong-operator/issues/6107)
+- `GWAdmin` now requires `spec.license.secretRef.name` and
+  `spec.license.secretRef.key`, identifying the enveloped license in a Secret
+  in the same namespace. Existing manifests must include this reference;
+  an empty spec is no longer accepted. `spec.license.entitlements` defaults
+  to `[event_gateway]`, the only supported entitlement. This change defines
+  the API contract only; controller support follows separately.
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
   it keeps serving, but no spec, image or certificate change is applied until

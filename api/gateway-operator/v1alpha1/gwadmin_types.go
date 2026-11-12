@@ -96,7 +96,7 @@ type GWAdmin struct {
 
 	// Spec defines the desired state of GWAdmin.
 	//
-	// +optional
+	// +required
 	Spec GWAdminSpec `json:"spec,omitzero"`
 
 	// Status defines the observed state of GWAdmin.
@@ -118,6 +118,12 @@ type GWAdminList struct {
 
 // GWAdminSpec defines the desired state of GWAdmin.
 type GWAdminSpec struct {
+	// License configures the enveloped license required by gw-admin.
+	// gw-admin, not Kong Operator, validates the license.
+	//
+	// +required
+	License GWAdminLicense `json:"license,omitzero"`
+
 	// Deployment configures the gw-admin Deployment.
 	//
 	// +optional
@@ -135,6 +141,58 @@ type GWAdminSpec struct {
 	// +optional
 	TLS *GWAdminTLS `json:"tls,omitempty"`
 }
+
+// GWAdminLicense configures the license and entitlements of gw-admin.
+type GWAdminLicense struct {
+	// SecretRef references the Secret key holding the original enveloped
+	// license (a compact JWS), without additional encoding. The Secret must
+	// be in the namespace of the GWAdmin and carry the operator's secret
+	// label selector (default "konghq.com/secret: \"true\"").
+	//
+	// +required
+	SecretRef GWAdminLicenseSecretRef `json:"secretRef,omitzero"`
+
+	// Entitlements are the entitlements gw-admin requires the license to
+	// grant. Only event_gateway is currently supported.
+	//
+	// +optional
+	// +listType=set
+	// +kubebuilder:default={event_gateway}
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=1
+	Entitlements []GWAdminLicenseEntitlement `json:"entitlements,omitempty"`
+}
+
+// GWAdminLicenseSecretRef references a license key in a Secret in the
+// namespace of the GWAdmin.
+type GWAdminLicenseSecretRef struct {
+	// Name is the name of the referenced Secret.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Name string `json:"name,omitempty"`
+
+	// Key is the key in the Secret holding the enveloped license.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[-._a-zA-Z0-9]+$`
+	Key string `json:"key,omitempty"`
+}
+
+// GWAdminLicenseEntitlement is an entitlement gw-admin requires the license
+// to grant.
+//
+// +kubebuilder:validation:Enum=event_gateway
+type GWAdminLicenseEntitlement string
+
+const (
+	// GWAdminLicenseEntitlementEventGateway licenses the on-prem Event Gateway.
+	GWAdminLicenseEntitlementEventGateway GWAdminLicenseEntitlement = "event_gateway"
+)
 
 // GWAdminDeploymentOptions specifies options for the gw-admin Deployment.
 //
