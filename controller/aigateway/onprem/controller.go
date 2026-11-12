@@ -446,6 +446,9 @@ func (r *Reconciler) configFromSpec(
 	cfg := multiinstanceai.Config{
 		WatchNamespaces: watchNamespaces,
 	}
+	if minRuntimeVersion := onprem.Spec.MinRuntimeVersion; minRuntimeVersion != nil {
+		cfg.MinRuntimeVersion = *minRuntimeVersion
+	}
 	if dps := onprem.Spec.DataPlaneSync; dps != nil {
 		if dps.IntervalSeconds != nil {
 			cfg.SyncInterval = time.Duration(*dps.IntervalSeconds) * time.Second

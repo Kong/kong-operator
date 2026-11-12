@@ -46,9 +46,8 @@ var onPremAIGatewayGVK = metav1.GroupVersionKind(aigatewayv1alpha1.GroupVersion.
 
 // defaultMinRuntimeVersion is the minimum AI Gateway runtime version declared for
 // rendered configurations when the caller does not specify one: the oldest release
-// that must run the pushed output. Pinned to the converter README's example value;
-// TODO: derive it from the actual data plane version tag set on AIGatewayDataPlane
-// TODO: https://github.com/Kong/kong-operator/issues/6120
+// that must run the pushed output. Keep it unchanged to preserve the rendered
+// configuration of existing OnPremAIGateways that leave spec.minRuntimeVersion unset.
 const defaultMinRuntimeVersion = "2.1"
 
 // EntityStatus is the per-entity outcome of the document translation: Err is
@@ -385,6 +384,7 @@ func BuildDocument(
 	ctx context.Context,
 	cl client.Client,
 	gw types.NamespacedName,
+	opts convert.Options,
 ) (*aigw.Document, []EntityStatus, error) {
 	doc := &aigw.Document{}
 	var statuses []EntityStatus
@@ -765,7 +765,7 @@ func BuildDocument(
 			len(translatedModelCRs), len(doc.Models),
 		)
 	}
-	resolveModelAliasRouteConflicts(doc, statuses, translatedModelCRs)
+	resolveModelAliasRouteConflicts(doc, statuses, translatedModelCRs, opts)
 
 	return doc, statuses, nil
 }
@@ -846,6 +846,7 @@ func resolveModelAliasRouteConflicts(
 	doc *aigw.Document,
 	statuses []EntityStatus,
 	crs []*aiconfigurationv1alpha1.AIGatewayModel,
+	opts convert.Options,
 ) {
 	if len(doc.Models) < 2 {
 		return
@@ -859,7 +860,7 @@ func resolveModelAliasRouteConflicts(
 
 	for {
 		probe, idxByName := buildProbeDoc(doc)
-		_, issues, err := RenderDBLessYAML(probe, convert.Options{})
+		_, issues, err := RenderDBLessYAML(probe, opts)
 		if err != nil {
 			// The probe differs from doc only in model names, and no converter
 			// failure depends on a name, so the caller's render reports the

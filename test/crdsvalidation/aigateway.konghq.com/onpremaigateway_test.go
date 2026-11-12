@@ -33,6 +33,48 @@ func TestOnPremAIGateway(t *testing.T) {
 			{
 				Name:       "empty spec - valid",
 				TestObject: validOnPremAIGateway(ns.Name),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					require.Nil(t, obj.Spec.MinRuntimeVersion)
+				},
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("spec.minRuntimeVersion", func(t *testing.T) {
+		t.Parallel()
+
+		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
+			{
+				Name: "MAJOR.MINOR version - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.MinRuntimeVersion = new("2.2")
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					require.NotNil(t, obj.Spec.MinRuntimeVersion)
+					require.Equal(t, "2.2", *obj.Spec.MinRuntimeVersion)
+				},
+			},
+			{
+				Name: "latest tag - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.MinRuntimeVersion = new("latest")
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Invalid value"),
+			},
+			{
+				Name: "patch version - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.MinRuntimeVersion = new("2.3.0")
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Invalid value"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

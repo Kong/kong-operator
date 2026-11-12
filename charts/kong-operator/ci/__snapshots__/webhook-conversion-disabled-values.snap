@@ -36607,6 +36607,10 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
+              minRuntimeVersion:
+                maxLength: 32
+                pattern: ^\d+\.\d+$
+                type: string
               objectFilters:
                 properties:
                   secrets:

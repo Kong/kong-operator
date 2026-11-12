@@ -12,6 +12,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -132,6 +133,22 @@ func TestHash(t *testing.T) {
 		SyncTimeout:             30 * time.Second,
 	}), "a changed sync timeout must drift the hash so the instance restarts with it")
 
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		MinRuntimeVersion:       "2.2",
+	}), "a changed minimum runtime version must drift the hash so the instance restarts with it")
+
+	require.NotEqual(t, hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		MinRuntimeVersion:       "2.1",
+	}), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		MinRuntimeVersion:       "2.2",
+	}), "different minimum runtime versions must produce different hashes")
+
 	// The hash input is prefixed with a per-field discriminator: equal values on
 	// different fields must not collapse to the same hash.
 	require.NotEqual(t, hashOf(Config{
@@ -186,6 +203,114 @@ func testAIGatewayModel(name string) *aiconfigurationv1alpha1.AIGatewayModel {
 			},
 		},
 	}
+}
+
+// testConditionPolicy returns a policy gated by a field that needs runtime 2.1.
+func testConditionPolicy() *aiconfigurationv1alpha1.AIGatewayPolicy {
+	const name = "policy-conditioned"
+	return &aiconfigurationv1alpha1.AIGatewayPolicy{
+		Name:      name,
+		Namespace: testGatewayNamespace,
+		Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: testGatewayName,
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayPolicyAPISpec{
+				Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: name,
+				Type:        "response-transformer",
+				Enabled:     "Enabled",
+				Global:      "Enabled",
+				Condition:   new(`http.path.startsWith("/policy/chat")`),
+				Config: aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
+					Type: "inline",
+					Value: &apiextensionsv1.JSON{
+						Raw: []byte(`{"add":{"headers":["X-Test:value"]}}`),
+					},
+				},
+			},
+		},
+	}
+}
+
+func testAIGatewayDataPlane(name, image string) *aigatewayv1alpha1.AIGatewayDataPlane {
+	return &aigatewayv1alpha1.AIGatewayDataPlane{
+		Name:      name,
+		Namespace: testGatewayNamespace,
+		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+				Type: aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+				OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+					Name: testGatewayName,
+				},
+			},
+			Deployment: &aigatewayv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "aigw",
+								Image: image,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// TestSendConfigMinRuntimeVersion proves that the configured compatibility
+// version reaches the converter. DataPlane image tags must not affect it.
+func TestSendConfigMinRuntimeVersion(t *testing.T) {
+	ctx := context.Background()
+	gwNN := types.NamespacedName{
+		Namespace: testGatewayNamespace,
+		Name:      testGatewayName,
+	}
+	const endpoint = "https://10.0.0.1:8444"
+
+	send := func(t *testing.T, version string, objs ...client.Object) string {
+		t.Helper()
+		objs = append([]client.Object{adminClientCertSecret()}, objs...)
+		instance := testPushInstance(t, objs...)
+		instance.cfg.MinRuntimeVersion = version
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI(endpoint)))
+
+		require.NoError(t, instance.sendConfig(ctx, &gwNN))
+		require.Len(t, factory.clients[endpoint].payloads, 1)
+		return factory.clients[endpoint].payloads[0]
+	}
+
+	defaultPayload := send(t, "", testConditionPolicy())
+	explicit21Payload := send(t, "2.1", testConditionPolicy())
+	require.Equal(t, defaultPayload, explicit21Payload)
+	require.Contains(t, defaultPayload, "http.path.startsWith")
+
+	explicit20Payload := send(t, "2.0", testConditionPolicy())
+	require.NotEqual(t, defaultPayload, explicit20Payload)
+	require.NotContains(t, explicit20Payload, "http.path.startsWith")
+
+	newerFleetPayload := send(
+		t,
+		"2.2",
+		testConditionPolicy(),
+		testAIGatewayDataPlane("dp-23", "kong/kong-ai-gateway:2.3.0"),
+	)
+	mixedFleetPayload := send(
+		t,
+		"2.2",
+		testConditionPolicy(),
+		testAIGatewayDataPlane("dp-23", "kong/kong-ai-gateway:2.3.0"),
+		testAIGatewayDataPlane("dp-22", "kong/kong-ai-gateway:2.2.0"),
+	)
+	require.Equal(t, newerFleetPayload, mixedFleetPayload)
 }
 
 // TestSendConfig drives the sendConfig glue between translation, rendering, push and
