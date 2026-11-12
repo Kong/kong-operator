@@ -38,9 +38,8 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ResolveValidatedPolicyIDs(ctx 
 	}
 	parent := obj.Spec.EventGatewayVirtualClusterRef
 	if parent.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || parent.NamespacedRef == nil ||
-		parent.NamespacedRef.Name == "" ||
-		(parent.NamespacedRef.Namespace != nil && *parent.NamespacedRef.Namespace != "" && *parent.NamespacedRef.Namespace != obj.Namespace) {
-		return nil, PolicyChainInvalidError{Message: "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"}
+		parent.NamespacedRef.Name == "" {
+		return nil, PolicyChainInvalidError{Message: "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster"}
 	}
 
 	var errs []error
@@ -56,15 +55,12 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ResolveValidatedPolicyIDs(ctx 
 		if ns == "" {
 			ns = obj.Namespace
 		}
-		if ns != obj.Namespace {
-			errs = append(errs, commonv1alpha1.ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.Namespace})
-			continue
-		}
-		if _, duplicate := seen[ref.Name]; duplicate {
+		key := ns + "/" + ref.Name
+		if _, duplicate := seen[key]; duplicate {
 			errs = append(errs, PolicyChainInvalidError{Message: fmt.Sprintf("spec.apiSpec.policies[%d] duplicates policy %s/%s", i, ns, ref.Name)})
 			continue
 		}
-		seen[ref.Name] = struct{}{}
+		seen[key] = struct{}{}
 		var policy EventGatewayVirtualClusterPolicy
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &policy); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -99,11 +95,13 @@ func validatePolicyChainPolicy(
 	namespace, parentKind, parentID, policyParentID, gatewayID string,
 ) error {
 	ns, name := policy.GetNamespace(), policy.GetName()
+	// A policy not programmed yet has no gateway nor parent ID: it is
+	// reported as not programmed below, not as of another one.
 	if commonv1alpha1.ObjectRefsDiffer(parent, policy.GetParentRef(), namespace, ns) ||
-		(parentID != "" && policyParentID != parentID) {
+		(parentID != "" && policyParentID != "" && policyParentID != parentID) {
 		return commonv1alpha1.ReferenceDifferentParentError{Kind: kind, Namespace: ns, Name: name, ParentKind: parentKind}
 	}
-	if gatewayID != "" && policy.GetGatewayID() != gatewayID {
+	if gatewayID != "" && policy.GetGatewayID() != "" && policy.GetGatewayID() != gatewayID {
 		return commonv1alpha1.ReferenceDifferentGatewayError{
 			Kind: kind, Namespace: ns, Name: name,
 			ReferrerGatewayID: gatewayID, ReferencedGatewayID: policy.GetGatewayID(),

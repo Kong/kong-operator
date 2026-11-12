@@ -481,7 +481,7 @@ func TestPolicyChainDeletionRetriesParentErrors(t *testing.T) {
 	}
 }
 
-func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
+func TestPolicyChainCrossNamespaceGrantedLifecycle(t *testing.T) {
 	t.Parallel()
 	ctx := t.Context()
 	chain := testPolicyChain("chain")
@@ -506,7 +506,6 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 	parent.SetGatewayID("gateway-id")
 	parent.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
 	require.NoError(t, cl.Status().Update(ctx, parent))
-	// A grant must not override the chain's same-namespace parent requirement.
 	deploy.KongReferenceGrant(t, ctx, parentClient,
 		deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
 			Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
@@ -518,6 +517,15 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 		}),
 	)
 	factory := sdkmocks.NewMockSDKFactory(t)
+	policySDK := factory.SDK.EventGatewayVirtualClusterPoliciesSDK
+	policySDK.EXPECT().GetEventGatewayVirtualClusterClusterLevelPolicyChain(mock.Anything, "gateway-id", "vc-id").
+		Return(&sdkkonnectops.GetEventGatewayVirtualClusterClusterLevelPolicyChainResponse{
+			EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: []string{}},
+		}, nil)
+	policySDK.EXPECT().UpdateEventGatewayVirtualClusterClusterLevelPolicyChain(mock.Anything, mock.Anything).
+		Return(&sdkkonnectops.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainResponse{
+			EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: []string{}},
+		}, nil)
 	r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](
 		factory, logging.DevelopmentMode, cl,
 		WithMetricRecorder[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](&metricsmocks.MockRecorder{}),
@@ -528,26 +536,21 @@ func TestPolicyChainCrossNamespaceGrantedDeletion(t *testing.T) {
 		_, err := r.Reconcile(ctx, chain)
 		require.NoError(t, err)
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
-		if apimeta.IsStatusConditionFalse(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid()) {
+		if apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed") {
 			break
 		}
 	}
 	require.Contains(t, chain.Finalizers, KonnectCleanupFinalizer)
-	require.Nil(t, apimeta.FindStatusCondition(chain.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)))
-	parentRef := apimeta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid())
-	require.NotNil(t, parentRef)
-	require.Equal(t, chain.GetStatusConditionReasonParentRefInvalid(), parentRef.Reason)
-	require.Contains(t, parentRef.Message, "same namespace")
-	require.Empty(t, chain.GetVirtualClusterID())
-	require.Empty(t, chain.GetGatewayID())
-	require.True(t, apimeta.IsStatusConditionFalse(chain.Status.Conditions, "Programmed"))
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)))
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType))
+	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed"))
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
-	require.NotContains(t, parent.Annotations, policyChainOwnerAnnotation)
+	require.Equal(t, "default/chain/chain-uid", parent.Annotations[policyChainOwnerAnnotation], "the claim names the namespace of the chain")
 	require.NoError(t, cl.Delete(ctx, chain))
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
 	_, err := r.Reconcile(ctx, chain)
 	require.NoError(t, err)
 	require.True(t, apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(chain), chain)))
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
-	require.Empty(t, factory.SDK.EventGatewayVirtualClusterPoliciesSDK.Calls, "no Konnect chain operations during rejection or deletion")
+	require.NotContains(t, parent.Annotations, policyChainOwnerAnnotation, "deleting the chain releases its claim")
 }

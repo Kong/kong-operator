@@ -756,6 +756,16 @@ func (c *configuration) addExcluded(status entityStatus, reason kcfgconsts.Condi
 	c.excluded = append(c.excluded, excludedEntity{entityStatus: status, reason: reason, message: message, blocks: blocks})
 }
 
+// leftOutNotPermitted tells the object is left out of the configuration as it
+// doesn't belong to the gateway: no KongReferenceGrant lets it reference its
+// parent of another namespace (see leaveOutNotPermitted).
+func (c *configuration) leftOutNotPermitted(t reflect.Type, key client.ObjectKey) bool {
+	return slices.ContainsFunc(c.excluded, func(e excludedEntity) bool {
+		return !e.blocks && e.reason == eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason &&
+			reflect.TypeOf(e.obj) == t && client.ObjectKeyFromObject(e.obj) == key
+	})
+}
+
 // isExcluded tells the object is left out of the configuration.
 func (c *configuration) isExcluded(t reflect.Type, key client.ObjectKey) bool {
 	return slices.ContainsFunc(c.excluded, func(e excludedEntity) bool {

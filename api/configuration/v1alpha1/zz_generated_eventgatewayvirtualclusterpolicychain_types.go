@@ -59,10 +59,9 @@ type EventGatewayVirtualClusterPolicyChainSpec struct {
 type EventGatewayVirtualClusterPolicyChainAPISpec struct {
 	// Policies lists distinct EventGatewayVirtualClusterPolicy references in
 	// execution order.
-	// Each policy must belong to the referenced EventGatewayVirtualCluster and be
-	// in the same namespace as this chain.
-	// Namespace defaults to this chain's namespace and may be set explicitly to
-	// that same namespace; cross-namespace references are not supported.
+	// Each policy must belong to the referenced EventGatewayVirtualCluster.
+	// Namespace defaults to this chain's namespace; a policy in another namespace
+	// needs a KongReferenceGrant in its namespace.
 	// List every cluster-level policy exactly once.
 	// An explicit empty list is valid only when the remote chain has no policies;
 	// it does not clear an existing chain.

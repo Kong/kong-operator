@@ -201,9 +201,8 @@
   (schema registries, static keys, TLS trust bundles, parent policies) and the
   Secrets they read in another namespace, with a `KongReferenceGrant` in its
   namespace, on both `KonnectEventGateway`s and `OnPremEventGateway`s. The
-  virtual cluster a listener policy forwards to, and the virtual cluster and
-  policies of an `EventGatewayVirtualClusterPolicyChain`, stay in the
-  namespace of the referrer, whatever the `KongReferenceGrant`s. A
+  virtual cluster a listener policy forwards to stays in the namespace of the
+  referrer, whatever the `KongReferenceGrant`s. A
   `KongReferenceGrant` names these kinds under their own group,
   `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
   never matched, and is still accepted only so that existing grants stay
@@ -226,6 +225,18 @@
     it is sent as it was last, so that deleting a namespace with its
     `KongReferenceGrant`s doesn't stop the push that releases it.
   [#6580](https://github.com/Kong/kong-operator/pull/6580)
+- `EventGatewayVirtualClusterPolicyChain`s can reference their virtual
+  cluster, and order policies, in another namespace, with a
+  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
+  `OnPremEventGateway`s. The policies of a listener policy chain stay in the
+  namespace of the chain.
+  Without a `KongReferenceGrant`:
+  - a policy chain that can't order its policies reports
+    `ReferenceNotPermitted`, and doesn't claim its virtual cluster;
+  - a policy chain of another namespace loses its claim on its virtual
+    cluster, so that a chain of the namespace of the virtual cluster can
+    claim it.
+  [#6582](https://github.com/Kong/kong-operator/pull/6582)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`

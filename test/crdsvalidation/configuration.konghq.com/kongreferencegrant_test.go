@@ -254,6 +254,8 @@ func TestKongReferenceGrant(t *testing.T) {
 			{"EventGatewayListenerPolicy to EventGatewayTLSTrustBundle", "EventGatewayListenerPolicy", configurationGroup, "EventGatewayTLSTrustBundle"},
 			{"EventGatewayVirtualCluster to EventGatewayBackendCluster", "EventGatewayVirtualCluster", configurationGroup, "EventGatewayBackendCluster"},
 			{"EventGatewayVirtualClusterPolicy to EventGatewayVirtualCluster", "EventGatewayVirtualClusterPolicy", configurationGroup, "EventGatewayVirtualCluster"},
+			{"EventGatewayVirtualClusterPolicyChain to EventGatewayVirtualCluster", "EventGatewayVirtualClusterPolicyChain", configurationGroup, "EventGatewayVirtualCluster"},
+			{"EventGatewayVirtualClusterPolicyChain to EventGatewayVirtualClusterPolicy", "EventGatewayVirtualClusterPolicyChain", configurationGroup, "EventGatewayVirtualClusterPolicy"},
 			{"EventGatewayVirtualClusterConsumePolicy to EventGatewayVirtualCluster", "EventGatewayVirtualClusterConsumePolicy", configurationGroup, "EventGatewayVirtualCluster"},
 			{"EventGatewayVirtualClusterConsumePolicy to EventGatewayVirtualClusterConsumePolicy", "EventGatewayVirtualClusterConsumePolicy", configurationGroup, "EventGatewayVirtualClusterConsumePolicy"},
 			{"EventGatewayVirtualClusterConsumePolicy to EventGatewaySchemaRegistry", "EventGatewayVirtualClusterConsumePolicy", configurationGroup, "EventGatewaySchemaRegistry"},
@@ -274,32 +276,6 @@ func TestKongReferenceGrant(t *testing.T) {
 				}.RunWithConfig(t, cfg, scheme)
 			})
 		}
-
-		// A policy chain references its virtual cluster and its policies in its
-		// own namespace, and nothing references a cluster policy but a chain: a
-		// grant from a chain, or to a cluster policy, would allow nothing.
-		grant := func(fromKind, toKind string) *configurationv1alpha1.KongReferenceGrant {
-			return &configurationv1alpha1.KongReferenceGrant{
-				TypeMeta:   typeMeta,
-				ObjectMeta: common.CommonObjectMeta(ns.Name),
-				Spec: configurationv1alpha1.KongReferenceGrantSpec{
-					From: []configurationv1alpha1.ReferenceGrantFrom{{Namespace: "other", Group: configurationGroup, Kind: configurationv1alpha1.Kind(fromKind)}},
-					To:   []configurationv1alpha1.ReferenceGrantTo{{Group: configurationGroup, Kind: configurationv1alpha1.Kind(toKind)}},
-				},
-			}
-		}
-		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
-			{
-				Name:                 "from an EventGatewayVirtualClusterPolicyChain is rejected",
-				TestObject:           grant("EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster"),
-				ExpectedErrorMessage: new("Event Gateway entity kinds are supported for 'configuration.konghq.com' group"),
-			},
-			{
-				Name:                 "to an EventGatewayVirtualClusterPolicy is rejected",
-				TestObject:           grant("EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualClusterPolicy"),
-				ExpectedErrorMessage: new("entities reference are supported for 'configuration.konghq.com' group"),
-			},
-		}.RunWithConfig(t, cfg, scheme)
 	})
 
 	toKonnectCP := configurationv1alpha1.ReferenceGrantTo{
