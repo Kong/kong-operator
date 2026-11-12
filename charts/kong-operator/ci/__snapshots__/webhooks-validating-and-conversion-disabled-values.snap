@@ -5885,7 +5885,20 @@ spec:
                             type: array
                           caCertificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           cache:
                             properties:
@@ -5916,7 +5929,20 @@ spec:
                             type: object
                           certificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
@@ -6874,11 +6900,37 @@ spec:
                         properties:
                           caCertificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           certificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
@@ -8940,11 +8992,37 @@ spec:
                         properties:
                           caCertificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           certificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
@@ -9886,11 +9964,37 @@ spec:
                         properties:
                           caCertificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           certificates:
                             items:
-                              type: string
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:

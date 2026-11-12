@@ -19,6 +19,10 @@ const (
 	IndexFieldAIGatewayMCPServerOnAIGatewayMCPServerRef = "aiGatewayMCPServerOnAIGatewayMCPServerRef"
 	// IndexFieldAIGatewayMCPServerOnAIGatewayAuthStrategyRef is the index field for AIGatewayMCPServer -> AIGatewayAuthStrategy.
 	IndexFieldAIGatewayMCPServerOnAIGatewayAuthStrategyRef = "aiGatewayMCPServerOnAIGatewayAuthStrategyRef"
+	// IndexFieldAIGatewayMCPServerOnAIGatewayCACertificateRef is the index field for AIGatewayMCPServer -> AIGatewayCACertificate.
+	IndexFieldAIGatewayMCPServerOnAIGatewayCACertificateRef = "aiGatewayMCPServerOnAIGatewayCACertificateRef"
+	// IndexFieldAIGatewayMCPServerOnAIGatewayCertificateRef is the index field for AIGatewayMCPServer -> AIGatewayCertificate.
+	IndexFieldAIGatewayMCPServerOnAIGatewayCertificateRef = "aiGatewayMCPServerOnAIGatewayCertificateRef"
 	// IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef is the index field for AIGatewayMCPServer -> AIGatewayConsumerGroup.
 	IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef = "aiGatewayMCPServerOnAIGatewayConsumerGroupRef"
 	// IndexFieldAIGatewayMCPServerOnAIGatewayDatastoreRef is the index field for AIGatewayMCPServer -> AIGatewayDatastore.
@@ -54,6 +58,16 @@ func OptionsForAIGatewayMCPServer() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
 			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayAuthStrategyRef,
 			ExtractValueFn: aiGatewayMCPServerOnAIGatewayAuthStrategyRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
+			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayCACertificateRef,
+			ExtractValueFn: aiGatewayMCPServerOnAIGatewayCACertificateRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
+			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayCertificateRef,
+			ExtractValueFn: aiGatewayMCPServerOnAIGatewayCertificateRef,
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
@@ -252,6 +266,104 @@ func aiGatewayMCPServerOnAIGatewayAuthStrategyRef(object client.Object) []string
 	}
 	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAuthStrategies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayAuthStrategy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayMCPServerOnAIGatewayCACertificateRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerConfigCaCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCACertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionOnlyConfigCaCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCACertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerConfigCaCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCACertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerConfigCaCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCACertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayMCPServerOnAIGatewayCertificateRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerConfigCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionOnlyConfigCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerConfigCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCertificate" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerConfigCertificates(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCertificate" {
 			continue
 		}
 		ns := ref.Namespace

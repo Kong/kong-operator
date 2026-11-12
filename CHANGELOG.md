@@ -186,6 +186,18 @@
   objects. A manifest that sets `caCertificates: [my-ca]` must use
   `caCertificates: [{name: my-ca}]`.**
   [#5257](https://github.com/Kong/kong-operator/issues/5257)
+- AI Gateway: `AIGatewayMCPServer` now references TLS certificates as objects.
+  `spec.apiSpec.<variant>.config.caCertificates` and `certificates` name
+  `AIGatewayCACertificate` and `AIGatewayCertificate` objects, with `kind`,
+  `name` and `namespace`. The fields are on the `conversion-listener`,
+  `conversion-only`, `passthrough-listener` and `upstream-server` types. On
+  the Konnect path, a `KongReferenceGrant` can allow a reference in another
+  namespace. On an `OnPremAIGateway`, a reference must stay in the same
+  namespace.
+  **On upgrade, the field shape changes from a list of strings to a list of
+  objects. A manifest that sets `caCertificates: [my-ca]` must use
+  `caCertificates: [{name: my-ca}]`.**
+  [#5257](https://github.com/Kong/kong-operator/issues/5257)
 
 ### Fixed
 

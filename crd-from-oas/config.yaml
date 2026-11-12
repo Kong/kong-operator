@@ -547,6 +547,42 @@ apiGroupVersions:
           - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.authStrategies
             kinds: [AIGatewayAuthStrategy]
             resolvesTo: name
+          # The upstream's TLS trust store and client certificate. Konnect
+          # takes the certificate names, so the refs resolve to Konnect names.
+          # Only the variants that proxy to an upstream declare the fields: a
+          # listener terminates TLS itself and has neither.
+          - path: spec.apiSpec.conversion-listener.config.caCertificates
+            kinds: [AIGatewayCACertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-listener.config.certificates
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-only.config.caCertificates
+            kinds: [AIGatewayCACertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.conversion-only.config.certificates
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.config.caCertificates
+            kinds: [AIGatewayCACertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.passthrough-listener.config.certificates
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.config.caCertificates
+            kinds: [AIGatewayCACertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.config.certificates
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
           # Consumer group ACLs (by metadata.name, resolved to the consumer
           # group's Konnect name). Server-level `acls` is a oneOf union of
           # {allow}, {deny}, {allow_when}, {deny_when} variants, flattened onto
@@ -749,7 +785,28 @@ apiGroupVersions:
         cel:
           spec:
             apiSpec:
+              # The OAS describes plain certificate names on the same AI
+              # Gateway; the CR takes in-cluster object references. The fields
+              # are only on the variants that proxy to an upstream.
               conversion-only:
+                config:
+                  caCertificates:
+                    _description: &aigwMCPCACertificateDescription |-
+                      The CA certificates used to verify the TLS certificate of the
+                      upstream MCP server.
+                      Each entry references an AIGatewayCACertificate in the cluster.
+                      When `namespace` differs from the AIGatewayMCPServer's namespace,
+                      a KongReferenceGrant in the target namespace must permit the
+                      reference.
+                  certificates:
+                    _description: &aigwMCPCertificateDescription |-
+                      Client certificates used for mutual TLS (mTLS) authentication with
+                      the upstream MCP server.
+                      Each entry references an AIGatewayCertificate in the cluster.
+                      When `namespace` differs from the AIGatewayMCPServer's namespace,
+                      a KongReferenceGrant in the target namespace must permit the
+                      reference.
+                      At most one certificate may be configured.
                 tools:
                   requestBody:
                     _description: |-
@@ -766,6 +823,11 @@ apiGroupVersions:
                       Only one non-error (status code < 400) response is supported.
                       Note that `$ref` is not supported.
               conversion-listener:
+                config:
+                  caCertificates:
+                    _description: *aigwMCPCACertificateDescription
+                  certificates:
+                    _description: *aigwMCPCertificateDescription
                 tools:
                   requestBody:
                     _description: |-
@@ -781,6 +843,18 @@ apiGroupVersions:
                       See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details.
                       Only one non-error (status code < 400) response is supported.
                       Note that `$ref` is not supported.
+              passthrough-listener:
+                config:
+                  caCertificates:
+                    _description: *aigwMCPCACertificateDescription
+                  certificates:
+                    _description: *aigwMCPCertificateDescription
+              upstream-server:
+                config:
+                  caCertificates:
+                    _description: *aigwMCPCACertificateDescription
+                  certificates:
+                    _description: *aigwMCPCertificateDescription
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK

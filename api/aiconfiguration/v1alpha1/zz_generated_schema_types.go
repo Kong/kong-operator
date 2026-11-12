@@ -2991,10 +2991,6 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
 
-// AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-// same AI Gateway, by CA certificate name.
-type AIGatewayCACertificateReference string
-
 // AIGatewayCacheWriteCost is a type alias.
 type AIGatewayCacheWriteCost struct {
 	// Cost per 1M cache-write prompt tokens for this TTL.
@@ -3010,12 +3006,6 @@ type AIGatewayCacheWriteCost struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+\.?[0-9]*[hm]$`
 	Ttl string `json:"ttl,omitzero"`
 }
-
-// AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-// Gateway, by certificate name.
-// The certificate must have a valid private key to be presented as a client
-// certificate to an upstream.
-type AIGatewayCertificateReference string
 
 // AIGatewayContextWindowFactor is a type alias.
 type AIGatewayContextWindowFactor struct {
@@ -3644,23 +3634,15 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	AllowedVersions []string `json:"allowedVersions,omitempty"`
-	// CA certificates used to verify the TLS certificate of the upstream MCP
-	// server, referenced by
-	// name.
-	// Each entry must be the `name` of an existing AI CA Certificate on the same
-	// AI Gateway.
-	//
-	// The CA certificates build the trust store (`ca_certificates`) of the Kong
-	// Gateway Service
-	// generated for this MCP Server, which proxies requests to the upstream MCP
-	// server.
-	//
-	// If unset, the default trust store is used to verify the upstream's TLS
-	// certificate.
-	//
+	// The CA certificates used to verify the TLS certificate of the
+	// upstream MCP server.
+	// Each entry references an AIGatewayCACertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
 	//
 	// +optional
-	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
+	CaCertificates []AIGatewayCACertificateRef `json:"caCertificates,omitempty"`
 	// Cache hints Kong emits on the cacheable operations it serves.
 	// Only clients on a protocol
 	// revision that defines them receive them.
@@ -3669,26 +3651,17 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	Cache AIGatewayMCPServerConversionListenerConfigCache `json:"cache,omitzero"`
-	// Client certificates used for mutual TLS (mTLS) authentication with the
-	// upstream MCP server,
-	// referenced by name.
-	// Each entry must be the `name` of an existing AI Certificate on the same
-	// AI Gateway.
-	//
-	// The certificates are applied to the Kong Gateway Service generated for this
-	// MCP Server, which
-	// proxies requests to the upstream MCP server.
-	// The generated Service presents a single client
-	// certificate (`client_certificate`) during the TLS handshake with the
-	// upstream, so at most one
-	// certificate may be configured.
-	//
-	// If unset, no client certificate is presented to the upstream.
-	//
+	// Client certificates used for mutual TLS (mTLS) authentication with
+	// the upstream MCP server.
+	// Each entry references an AIGatewayCertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
+	// At most one certificate may be configured.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
+	Certificates []AIGatewayCertificateRef `json:"certificates,omitempty"`
 	//
 	//
 	// +optional
@@ -5369,43 +5342,26 @@ type AIGatewayMCPServerUpstreamServer struct {
 // AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
 // configuration for the MCP Server.
 type AIGatewayMCPServerUpstreamServerConfig struct {
-	// CA certificates used to verify the TLS certificate of the upstream MCP
-	// server, referenced by
-	// name.
-	// Each entry must be the `name` of an existing AI CA Certificate on the same
-	// AI Gateway.
-	//
-	// The CA certificates build the trust store (`ca_certificates`) of the Kong
-	// Gateway Service
-	// generated for this MCP Server, which proxies requests to the upstream MCP
-	// server.
-	//
-	// If unset, the default trust store is used to verify the upstream's TLS
-	// certificate.
-	//
+	// The CA certificates used to verify the TLS certificate of the
+	// upstream MCP server.
+	// Each entry references an AIGatewayCACertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
 	//
 	// +optional
-	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
-	// Client certificates used for mutual TLS (mTLS) authentication with the
-	// upstream MCP server,
-	// referenced by name.
-	// Each entry must be the `name` of an existing AI Certificate on the same
-	// AI Gateway.
-	//
-	// The certificates are applied to the Kong Gateway Service generated for this
-	// MCP Server, which
-	// proxies requests to the upstream MCP server.
-	// The generated Service presents a single client
-	// certificate (`client_certificate`) during the TLS handshake with the
-	// upstream, so at most one
-	// certificate may be configured.
-	//
-	// If unset, no client certificate is presented to the upstream.
-	//
+	CaCertificates []AIGatewayCACertificateRef `json:"caCertificates,omitempty"`
+	// Client certificates used for mutual TLS (mTLS) authentication with
+	// the upstream MCP server.
+	// Each entry references an AIGatewayCertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
+	// At most one certificate may be configured.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
+	Certificates []AIGatewayCertificateRef `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -5884,43 +5840,26 @@ type AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt struct {
 // AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
 // configuration for the MCP Server.
 type AIGatewayMCPServerWithUpstreamConfig struct {
-	// CA certificates used to verify the TLS certificate of the upstream MCP
-	// server, referenced by
-	// name.
-	// Each entry must be the `name` of an existing AI CA Certificate on the same
-	// AI Gateway.
-	//
-	// The CA certificates build the trust store (`ca_certificates`) of the Kong
-	// Gateway Service
-	// generated for this MCP Server, which proxies requests to the upstream MCP
-	// server.
-	//
-	// If unset, the default trust store is used to verify the upstream's TLS
-	// certificate.
-	//
+	// The CA certificates used to verify the TLS certificate of the
+	// upstream MCP server.
+	// Each entry references an AIGatewayCACertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
 	//
 	// +optional
-	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
-	// Client certificates used for mutual TLS (mTLS) authentication with the
-	// upstream MCP server,
-	// referenced by name.
-	// Each entry must be the `name` of an existing AI Certificate on the same
-	// AI Gateway.
-	//
-	// The certificates are applied to the Kong Gateway Service generated for this
-	// MCP Server, which
-	// proxies requests to the upstream MCP server.
-	// The generated Service presents a single client
-	// certificate (`client_certificate`) during the TLS handshake with the
-	// upstream, so at most one
-	// certificate may be configured.
-	//
-	// If unset, no client certificate is presented to the upstream.
-	//
+	CaCertificates []AIGatewayCACertificateRef `json:"caCertificates,omitempty"`
+	// Client certificates used for mutual TLS (mTLS) authentication with
+	// the upstream MCP server.
+	// Each entry references an AIGatewayCertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
+	// At most one certificate may be configured.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
+	Certificates []AIGatewayCertificateRef `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -6059,43 +5998,26 @@ type AIGatewayMCPServerWithUpstreamConfigServerSessionClient struct {
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
 // and request body size limits for the MCP Server.
 type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
-	// CA certificates used to verify the TLS certificate of the upstream MCP
-	// server, referenced by
-	// name.
-	// Each entry must be the `name` of an existing AI CA Certificate on the same
-	// AI Gateway.
-	//
-	// The CA certificates build the trust store (`ca_certificates`) of the Kong
-	// Gateway Service
-	// generated for this MCP Server, which proxies requests to the upstream MCP
-	// server.
-	//
-	// If unset, the default trust store is used to verify the upstream's TLS
-	// certificate.
-	//
+	// The CA certificates used to verify the TLS certificate of the
+	// upstream MCP server.
+	// Each entry references an AIGatewayCACertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
 	//
 	// +optional
-	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
-	// Client certificates used for mutual TLS (mTLS) authentication with the
-	// upstream MCP server,
-	// referenced by name.
-	// Each entry must be the `name` of an existing AI Certificate on the same
-	// AI Gateway.
-	//
-	// The certificates are applied to the Kong Gateway Service generated for this
-	// MCP Server, which
-	// proxies requests to the upstream MCP server.
-	// The generated Service presents a single client
-	// certificate (`client_certificate`) during the TLS handshake with the
-	// upstream, so at most one
-	// certificate may be configured.
-	//
-	// If unset, no client certificate is presented to the upstream.
-	//
+	CaCertificates []AIGatewayCACertificateRef `json:"caCertificates,omitempty"`
+	// Client certificates used for mutual TLS (mTLS) authentication with
+	// the upstream MCP server.
+	// Each entry references an AIGatewayCertificate in the cluster.
+	// When `namespace` differs from the AIGatewayMCPServer's namespace,
+	// a KongReferenceGrant in the target namespace must permit the
+	// reference.
+	// At most one certificate may be configured.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
+	Certificates []AIGatewayCertificateRef `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional

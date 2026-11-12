@@ -16,9 +16,10 @@ import (
 
 // ToAIGWMCPServer converts the AIGatewayMCPServer into ai-deck-converter's aigw.MCPServer,
 // resolving the spec's CR references (policies, the listener's sources, the access block's
-// ACL consumer groups and auth strategies, and every tool's access ACLs) to the referenced
-// entities' names, and the config's secretRefs (the session and token-vault Redis passwords
-// and the passthrough proxy's basic-auth password) to their Secret values.
+// ACL consumer groups and auth strategies, every tool's access ACLs, and the selected
+// variant's upstream CA certificates and client certificates) to the referenced entities'
+// names, and the config's secretRefs (the session and token-vault Redis passwords and the
+// passthrough proxy's basic-auth password) to their Secret values.
 func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
@@ -43,6 +44,8 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		acls            mcpServerACLRefs
 		defaultToolAcls AIGatewayMCPACLs
 		authStrategies  []AIGatewayAuthStrategyRef
+		caCertificates  []AIGatewayCACertificateRef
+		certificates    []AIGatewayCertificateRef
 	)
 	switch spec.Type {
 	case AIGatewayMCPServerConfigTypeConversionOnly:
@@ -50,12 +53,14 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 			return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: spec.apiSpec.conversion-only is required for type conversion-only", obj.Namespace, obj.Name)
 		}
 		policies, tools = spec.ConversionOnly.Policies, spec.ConversionOnly.Tools
+		caCertificates, certificates = spec.ConversionOnly.Config.CaCertificates, spec.ConversionOnly.Config.Certificates
 	case AIGatewayMCPServerConfigTypeConversionListener:
 		if spec.ConversionListener == nil {
 			return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: spec.apiSpec.conversion-listener is required for type conversion-listener", obj.Namespace, obj.Name)
 		}
 		policies, tools = spec.ConversionListener.Policies, spec.ConversionListener.Tools
 		acls, defaultToolAcls, authStrategies = mcpAccessRefs(spec.ConversionListener.Access)
+		caCertificates, certificates = spec.ConversionListener.Config.CaCertificates, spec.ConversionListener.Config.Certificates
 	case AIGatewayMCPServerConfigTypeListener:
 		if spec.Listener == nil {
 			return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: spec.apiSpec.listener is required for type listener", obj.Namespace, obj.Name)
@@ -69,11 +74,13 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		}
 		policies, tools = spec.PassthroughListener.Policies, spec.PassthroughListener.Tools
 		acls, defaultToolAcls, authStrategies = mcpAccessRefs(spec.PassthroughListener.Access)
+		caCertificates, certificates = spec.PassthroughListener.Config.CaCertificates, spec.PassthroughListener.Config.Certificates
 	case AIGatewayMCPServerConfigTypeUpstreamServer:
 		if spec.UpstreamServer == nil {
 			return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: spec.apiSpec.upstream-server is required for type upstream-server", obj.Namespace, obj.Name)
 		}
 		policies, tools = spec.UpstreamServer.Policies, spec.UpstreamServer.Tools
+		caCertificates, certificates = spec.UpstreamServer.Config.CaCertificates, spec.UpstreamServer.Config.Certificates
 	default:
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: unsupported spec.apiSpec.type %q", obj.Namespace, obj.Name, spec.Type)
 	}
@@ -98,6 +105,17 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 			return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s sources: %w", obj.Namespace, obj.Name, err)
 		}
 		mcp.Config.Sources = names
+	}
+
+	if mcp.Config.CACertificates, err = resolveEntityNames[AIGatewayCACertificate](
+		ctx, cl, obj.Namespace, caCertificateRefs(caCertificates),
+	); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s caCertificates: %w", obj.Namespace, obj.Name, err)
+	}
+	if mcp.Config.Certificates, err = resolveEntityNames[AIGatewayCertificate](
+		ctx, cl, obj.Namespace, certificateRefs(certificates),
+	); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s certificates: %w", obj.Namespace, obj.Name, err)
 	}
 
 	// The access union's reference surface. Resolved current-key refs come
@@ -263,10 +281,11 @@ func mcpServerRefs(refs []AIGatewayMCPServerRef) []namespacedRef {
 //
 //   - drops the Konnect-only managed_by bookkeeping,
 //   - strips the CR-reference keys (policies, sources, access.acls,
-//     access.default_tool_acls, access.auth_strategies, tools[].access.acls: they carry
-//     {kind,name} references, aigw wants plain resolved names, re-attached in
-//     ToAIGWMCPServer). The deprecated access.identity_providers is not supported: aigw
-//     rejects the key, so a CR carrying it fails translation,
+//     access.default_tool_acls, access.auth_strategies, tools[].access.acls,
+//     config.ca_certificates, config.certificates: they carry {kind,name} references,
+//     aigw wants plain resolved names, re-attached in ToAIGWMCPServer). The deprecated
+//     access.identity_providers is not supported: aigw rejects the key, so a CR carrying
+//     it fails translation,
 //   - moves the variant's config.url to the top-level upstream_url the aigw document
 //     carries it under (the listener variant has no config.url and needs no move),
 //   - drops config.cache and config.allowed_versions: they have no aigw slot, the on-prem
@@ -316,6 +335,8 @@ func (spec *AIGatewayMCPServerAPISpec) marshalAIGWMCPServerPayload() ([]byte, er
 		}
 		delete(c, "cache")
 		delete(c, "allowed_versions")
+		delete(c, "ca_certificates")
+		delete(c, "certificates")
 	}
 
 	return json.Marshal(cfg)
