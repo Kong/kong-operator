@@ -125,7 +125,7 @@ jobs:
     # fixed breaking change does not leave a stale comment behind. The body comes from a
     # script, so it can be reviewed locally before the workflow runs.
     - name: Comment CRD breaking changes
-      if: ${{ always() && matrix.name == 'crd-breaking-changes' && github.event_name == 'pull_request' && steps.app-token.outputs.token != '' }}
+      if: ${{ !cancelled() && matrix.name == 'crd-breaking-changes' && github.event_name == 'pull_request' && steps.app-token.outputs.token != '' }}
       # The comment is a convenience, so it must never change the result of the check.
       continue-on-error: true
       env:

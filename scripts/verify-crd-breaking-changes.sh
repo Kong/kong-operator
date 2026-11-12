@@ -156,6 +156,12 @@ if [[ ! -s "${union_basenames}" ]]; then
 	exit 1
 fi
 
+# The path can hold a report from an earlier run, so empty it here: report_breaking_change only
+# appends, and a second run with the same path would add to the first run's findings.
+if [[ -n "${CRD_BREAKING_CHANGES_REPORT}" ]]; then
+	: > "${CRD_BREAKING_CHANGES_REPORT}"
+fi
+
 status=0
 while IFS= read -r basename; do
 	[[ -n "${basename}" ]] || continue
