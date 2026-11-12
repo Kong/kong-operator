@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/container v1.56.1
 	dario.cat/mergo v1.0.2
 	github.com/Kong/ai-deck-converter v0.32.9
-	github.com/Kong/sdk-konnect-go v0.82.2
+	github.com/Kong/sdk-konnect-go v0.85.2
 	github.com/avast/retry-go/v5 v5.0.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cenkalti/backoff/v5 v5.0.3
