@@ -67,16 +67,22 @@ jobs:
 
     - name: Calculate GWAdmin license expiration
       id: gwadmin-license-expiration
-      if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem' }}
+      if: ${{ vars.GW_ADMIN_LICENSE_SOURCE == 'signing' && (matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem') }}
       run: |
         expiration_date="$(jq -nr 'now + (7 * 24 * 60 * 60) | strftime("%Y-%m-%d")')"
         printf 'date=%s\n' "$expiration_date" >> "$GITHUB_OUTPUT"
 
-    - name: Issue the required GWAdmin license
+    # static is an explicit temporary grace-period mode, never a signing fallback.
+    # Current JWS payload expiry: 2026-11-12, with team-confirmed 30-day grace.
+    # Replace/switch before the window ends; gw-admin owns its exact boundary.
+    # Keep the JWS/customer/key in secrets; this selector contains no license data.
+    - name: Acquire the required GWAdmin license
       id: gwadmin-license
       if: ${{ matrix.suite == 'gwadmin' || matrix.suite == 'onpremeventgateway' || matrix.suite == 'eventgateway-cross-namespace-onprem' }}
       uses: ./.github/actions/gwadmin-license
       with:
+        source: ${{ vars.GW_ADMIN_LICENSE_SOURCE }}
+        static-license: ${{ secrets.GW_ADMIN_LICENSE_JWS }}
         username: ${{ secrets.GW_ADMIN_LICENSE_SIGNING_USERNAME }}
         password: ${{ secrets.GW_ADMIN_LICENSE_SIGNING_PASSWORD }}
         customer: ${{ secrets.GW_ADMIN_LICENSE_CUSTOMER }}

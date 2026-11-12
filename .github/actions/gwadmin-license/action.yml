@@ -1,25 +1,34 @@
 name: GWAdmin enveloped license
 description: >
-  Request a new event_gateway enveloped JWS license from the authorized signing
-  service. All signing inputs are mandatory; failure never falls back to a legacy
-  license or an unlicensed run. Only a private file path is exposed as an output.
+  Acquire an enveloped JWS from an explicitly selected static secret or the
+  authorized signing service. Missing/unknown sources fail, with no automatic
+  fallback. Only a private file path is exposed as an output.
 
 inputs:
+  # Temporary static JWS: payload expiry 2026-11-12, team-confirmed 30-day grace.
+  # Replace it or switch to configured signing before that window ends.
+  # Exact enforcement belongs to gw-admin; acquisition never verifies expiry.
+  source:
+    description: Explicit source, static (temporary issued JWS) or signing (online acquisition).
+    required: true
+  static-license:
+    description: Raw compact JWS from a dedicated secret. Required only for source=static; not decoded or expiry-validated here.
+    required: false
   username:
-    description: Basic authentication username for the signing service.
-    required: true
+    description: Basic authentication username. Required only for source=signing.
+    required: false
   password:
-    description: Basic authentication password for the signing service.
-    required: true
+    description: Basic authentication password. Required only for source=signing.
+    required: false
   customer:
-    description: Authorized customer value for the license request.
-    required: true
+    description: Authorized customer value. Required only for source=signing.
+    required: false
   license-key:
-    description: Authorized license_key value for the license request.
-    required: true
+    description: Authorized license_key value. Required only for source=signing.
+    required: false
   expiration-date:
-    description: Explicit future UTC license_expiration_date (YYYY-MM-DD), with no default date or lifetime.
-    required: true
+    description: Explicit future UTC license_expiration_date (YYYY-MM-DD). Required only for source=signing.
+    required: false
 
 outputs:
   license-file:
@@ -29,14 +38,16 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Issue a GWAdmin license
+    - name: Acquire a GWAdmin license
       id: issue
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
-        GW_ADMIN_LICENSE_SIGNING_USERNAME: ${{ inputs.username }}
-        GW_ADMIN_LICENSE_SIGNING_PASSWORD: ${{ inputs.password }}
-        GW_ADMIN_LICENSE_CUSTOMER: ${{ inputs.customer }}
-        GW_ADMIN_LICENSE_KEY: ${{ inputs.license-key }}
-        GW_ADMIN_LICENSE_EXPIRATION_DATE: ${{ inputs.expiration-date }}
+        GW_ADMIN_LICENSE_SOURCE: ${{ inputs.source }}
+        GW_ADMIN_LICENSE_JWS: ${{ inputs.source == 'static' && inputs.static-license || '' }}
+        GW_ADMIN_LICENSE_SIGNING_USERNAME: ${{ inputs.source == 'signing' && inputs.username || '' }}
+        GW_ADMIN_LICENSE_SIGNING_PASSWORD: ${{ inputs.source == 'signing' && inputs.password || '' }}
+        GW_ADMIN_LICENSE_CUSTOMER: ${{ inputs.source == 'signing' && inputs.customer || '' }}
+        GW_ADMIN_LICENSE_KEY: ${{ inputs.source == 'signing' && inputs.license-key || '' }}
+        GW_ADMIN_LICENSE_EXPIRATION_DATE: ${{ inputs.source == 'signing' && inputs.expiration-date || '' }}
       run: bash "$ACTION_PATH/issue-license.sh" issue

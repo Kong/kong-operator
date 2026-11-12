@@ -59,20 +59,43 @@ an explicit error. Existing debug snapshots redact Secret payloads.
 its previous behavior unless `GW_ADMIN_LICENSE_REQUIRED=true`; supplied invalid
 input always fails. This optional local path is **not** the CI policy.
 
-### GWAdmin license signing in CI
+### GWAdmin license sources in CI
 
 The `gwadmin`, `onpremeventgateway`, and
 `eventgateway-cross-namespace-onprem` Chainsaw jobs use
 `.github/actions/gwadmin-license` immediately after checkout,
-before image downloads or cluster creation. The action requests an enveloped JWS
-at runtime from `POST https://license.api.konghq.tech/v1/license/enveloped`,
+before image downloads or cluster creation. Set the non-sensitive repository
+variable `GW_ADMIN_LICENSE_SOURCE` explicitly to `static` or `signing`.
+Missing/unknown sources fail; neither mode guesses a source or automatically
+falls back to the other.
+
+**Temporary static mode:** set `GW_ADMIN_LICENSE_SOURCE=static` and keep the
+original compact JWS only in repository secret `GW_ADMIN_LICENSE_JWS`. The action
+writes its original bytes to the private runner file and reuses the same
+preflight, namespace Secrets and cleanup. Signing credentials and the calculated
+signing expiration are not required or used. The input is checked only for JWS
+shape; Kong Operator does not decode or verify signature, expiry or entitlements.
+
+The currently supplied temporary license has a payload expiration date of
+**2026-11-12**. The user confirmed with the gw-admin team that its **30-day grace
+period still applies**. This is not a claim that the license is unexpired, that
+Kong Operator validated it, or that it can be used indefinitely. Replace the JWS
+or configure signing credentials and switch the variable to `signing` **before
+the grace window ends**, roughly before mid-December 2026. Exact enforcement and
+the window's boundary are owned by gw-admin, not this prerequisite action.
+Never put the JWS, its decoded payload or signature into source, logs, PR bodies
+or documentation.
+
+**Signing mode:** set `GW_ADMIN_LICENSE_SOURCE=signing`. The action requests an
+enveloped JWS at runtime from
+`POST https://license.api.konghq.tech/v1/license/enveloped`,
 using Basic authentication and the explicit `customer`, `license_key`,
 `license_expiration_date` fields with `entitlements: ["event_gateway"]`.
 The confirmed successful response is the original compact JWS text, not a JSON
 object wrapper. The action preserves its bytes without extracting a `.license`
 field or imposing a response Content-Type requirement.
 
-Configure the authorized signing inputs in the repository:
+Configure these authorized repository secrets only when enabling signing:
 
 | Setting | Kind | Action input |
 | --- | --- | --- |
@@ -86,23 +109,27 @@ current **UTC date plus 7 days**, formatted as `YYYY-MM-DD`, and passes it to th
 action's explicit `expiration-date` input as `license_expiration_date`. This is
 the fixed, approved policy, not a configurable TTL or fallback. No repository
 `GW_ADMIN_LICENSE_EXPIRATION_DATE` variable or manual date update is required.
-Actual authorized signing credentials and customer/key configuration are still
-required before live validation.
+Authorized signing credentials and customer/key configuration are still required
+for switching to online signing; they are not blockers for static acquisition.
+The static secret is not forwarded into the signing subprocess environment, and
+signing failures never fall back to it.
 
 CI sets `GW_ADMIN_LICENSE_REQUIRED=true` and passes only the issued file path to
-both suite preflight and per-namespace fixtures. Missing configuration, failed
-transport, non-success HTTP responses or a non-JWS response fail the job clearly,
-without printing the request/response body or credentials. There is **no**
-fork-specific skip or empty-license success: forks without repository signing
-secrets fail, consistent with the existing required Kong license E2E path.
+both suite preflight and per-namespace fixtures. Missing configuration, invalid
+static input, signing transport failures, non-success HTTP responses or a non-JWS
+response fail the job clearly, without printing the request/response body or
+credentials. There is **no**
+fork-specific skip or empty-license success: forks without their selected
+source's repository secret(s) fail, consistent with the existing required Kong
+license E2E path.
 The separate `eventgateway-cross-namespace-konnect` matrix entry preserves its
 directory and `gateway=konnect` selector without requiring a GWAdmin license.
 Unrelated suites and fake gw-admin contract tests do not invoke this action.
 The legacy `.github/actions/kong-license` action remains unchanged and separate.
 
-Basic auth, request and response files are owner-only in a dedicated directory
-under `RUNNER_TEMP`, never in the checkout or debug artifact directory. curl's
-default config, redirects and insecure TLS are disabled; requests are bounded
+The static JWS and signing auth/request/response files are owner-only in a
+dedicated directory under `RUNNER_TEMP`, never in the checkout or debug artifact
+directory. curl's default config, redirects and insecure TLS are disabled; requests are bounded
 and are not automatically retried. Temporary signing material is removed on
 success/failure; an `always()` workflow step removes the issued file and any
 remaining signing files on failure/cancellation too. The action output contains

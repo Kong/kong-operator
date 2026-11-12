@@ -61,6 +61,7 @@ printf '%s' "${MOCK_STATUS:-200}"
 	cmd.Env = append(cmd.Env,
 		"PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"MOCK_DIR="+dir, "RUNNER_TEMP="+dir, "GITHUB_OUTPUT="+filepath.Join(dir, "output"),
+		"GW_ADMIN_LICENSE_SOURCE=signing",
 		"GW_ADMIN_LICENSE_SIGNING_USERNAME=mock-user",
 		"GW_ADMIN_LICENSE_SIGNING_PASSWORD=mock-\"password\\with\nnewline",
 		"GW_ADMIN_LICENSE_CUSTOMER=mock-\"customer\\with\nnewline",
@@ -87,6 +88,8 @@ func assertSigningOutputSafe(t *testing.T, output []byte) {
 
 func TestGWAdminLicenseSigningInputs(t *testing.T) {
 	for _, tc := range []struct{ env, message string }{
+		{"GW_ADMIN_LICENSE_SOURCE=", "source must be explicitly set"},
+		{"GW_ADMIN_LICENSE_SOURCE=automatic", "source must be explicitly set"},
 		{"GW_ADMIN_LICENSE_SIGNING_USERNAME=", "missing required signing username"},
 		{"GW_ADMIN_LICENSE_SIGNING_PASSWORD=", "missing required signing password"},
 		{"GW_ADMIN_LICENSE_CUSTOMER= \n", "missing required customer"},
@@ -98,7 +101,7 @@ func TestGWAdminLicenseSigningInputs(t *testing.T) {
 		{"GITHUB_OUTPUT=/nonexistent/action-output", "writable action output file"},
 	} {
 		t.Run(strings.Split(tc.env, "=")[0]+"-"+tc.message, func(t *testing.T) {
-			cmd, dir := signingCommand(t, tc.env)
+			cmd, dir := signingCommand(t, tc.env, "GW_ADMIN_LICENSE_JWS="+testLicense)
 			output, err := cmd.CombinedOutput()
 			assertSigningOutputSafe(t, output)
 			if err == nil || !strings.Contains(string(output), tc.message) {
@@ -215,7 +218,7 @@ func TestGWAdminLicenseSigningFailures(t *testing.T) {
 		{"MOCK_RESPONSE=" + testLicense + "\n" + testLicense, "did not return a compact JWS"},
 	} {
 		t.Run(tc.message, func(t *testing.T) {
-			cmd, dir := signingCommand(t, tc.env)
+			cmd, dir := signingCommand(t, tc.env, "GW_ADMIN_LICENSE_JWS="+testLicense)
 			output, err := cmd.CombinedOutput()
 			assertSigningOutputSafe(t, output)
 			if err == nil || !strings.Contains(string(output), tc.message) {
@@ -229,6 +232,112 @@ func TestGWAdminLicenseSigningFailures(t *testing.T) {
 				t.Fatal("failed signing must remove credentials/request/response/license")
 			}
 		})
+	}
+}
+
+func TestGWAdminLicenseStatic(t *testing.T) {
+	pastDateJWS := "dGVzdA." + base64.RawURLEncoding.EncodeToString([]byte(`{"license_expiration_date":"2000-01-01"}`)) + ".dGVzdA"
+	for _, tc := range []struct{ name, input, message string }{
+		{"raw bytes", testLicense + "\n", ""},
+		{"opaque past payload date", pastDateJWS, ""},
+		{"missing", "", "missing required static-license"},
+		{"whitespace", " \n", "missing required static-license"},
+		{"legacy JSON", `{"license":"legacy"}`, "did not return a compact JWS"},
+		{"multiple JWS", testLicense + "\n" + testLicense, "did not return a compact JWS"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd, dir := signingCommand(t, "GW_ADMIN_LICENSE_SOURCE=static", "GW_ADMIN_LICENSE_JWS="+tc.input,
+				"GW_ADMIN_LICENSE_SIGNING_USERNAME=", "GW_ADMIN_LICENSE_SIGNING_PASSWORD=",
+				"GW_ADMIN_LICENSE_CUSTOMER=", "GW_ADMIN_LICENSE_KEY=", "GW_ADMIN_LICENSE_EXPIRATION_DATE=invalid",
+				"MOCK_CURL_FAIL=true")
+			output, err := cmd.CombinedOutput()
+			assertSigningOutputSafe(t, output)
+			if strings.TrimSpace(tc.input) != "" && strings.Contains(string(output), tc.input) {
+				t.Fatal("static license input leaked under shell tracing")
+			}
+			if _, err := os.Stat(filepath.Join(dir, "curl-args")); !os.IsNotExist(err) {
+				t.Fatal("static mode must not contact the signing service")
+			}
+			actionOutput, readErr := os.ReadFile(filepath.Join(dir, "output"))
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if tc.message != "" {
+				if err == nil || !strings.Contains(string(output), tc.message) || len(actionOutput) != 0 {
+					t.Fatalf("expected static input failure %q, got %v %s", tc.message, err, output)
+				}
+				if _, err := os.Stat(filepath.Join(dir, "gwadmin-license")); !os.IsNotExist(err) {
+					t.Fatal("invalid static input must not leave private files")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("static mode must succeed without signing inputs: %v %s", err, output)
+			}
+			path := filepath.Join(dir, "gwadmin-license", "license.jws")
+			data, err := os.ReadFile(path)
+			if err != nil || string(data) != tc.input {
+				t.Fatalf("static mode must preserve the exact original bytes: %v", err)
+			}
+			for path, mode := range map[string]os.FileMode{path: 0o600, filepath.Dir(path): 0o700} {
+				info, err := os.Stat(path)
+				if err != nil || info.Mode().Perm() != mode {
+					t.Fatalf("static license files must be owner-only: %v", err)
+				}
+			}
+			if string(actionOutput) != "license-file="+path+"\n" {
+				t.Fatal("static action must publish only the private file path")
+			}
+			files, err := os.ReadDir(filepath.Dir(path))
+			if err != nil || len(files) != 1 || files[0].Name() != "license.jws" {
+				t.Fatal("static mode must not create signing request/auth/response files")
+			}
+			cleanup := exec.Command("bash", "-x", signingScript, "cleanup")
+			cleanup.Env = cmd.Env
+			output, err = cleanup.CombinedOutput()
+			assertSigningOutputSafe(t, output)
+			if err != nil {
+				t.Fatalf("static cleanup failed: %v %s", err, output)
+			}
+			if _, err := os.Stat(filepath.Dir(path)); !os.IsNotExist(err) {
+				t.Fatal("common cleanup must remove static license files")
+			}
+		})
+	}
+}
+
+func TestGWAdminLicenseActionSourceInputs(t *testing.T) {
+	data, err := os.ReadFile("../../../../.github/actions/gwadmin-license/action.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var action struct {
+		Inputs map[string]struct{ Required bool }
+		Runs   struct {
+			Steps []struct{ Env map[string]string }
+		}
+	}
+	if err := yaml.Unmarshal(data, &action); err != nil {
+		t.Fatal(err)
+	}
+	if !action.Inputs["source"].Required {
+		t.Fatal("source must always be explicitly required")
+	}
+	for _, name := range []string{"static-license", "username", "password", "customer", "license-key", "expiration-date"} {
+		input, ok := action.Inputs[name]
+		if !ok || input.Required {
+			t.Fatal("source-specific inputs must be required conditionally by the acquisition script")
+		}
+	}
+	env := action.Runs.Steps[0].Env
+	if env["GW_ADMIN_LICENSE_JWS"] != "${{ inputs.source == 'static' && inputs.static-license || '' }}" ||
+		env["GW_ADMIN_LICENSE_SOURCE"] != "${{ inputs.source }}" {
+		t.Fatal("action must keep static JWS out of the signing environment")
+	}
+	for _, name := range []string{"GW_ADMIN_LICENSE_SIGNING_USERNAME", "GW_ADMIN_LICENSE_SIGNING_PASSWORD", "GW_ADMIN_LICENSE_CUSTOMER", "GW_ADMIN_LICENSE_KEY", "GW_ADMIN_LICENSE_EXPIRATION_DATE"} {
+		if !strings.HasPrefix(env[name], "${{ inputs.source == 'signing' && ") {
+			t.Fatal("action must keep signing inputs out of the static environment")
+		}
 	}
 }
 
@@ -356,8 +465,8 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 		switch {
 		case step.ID == "gwadmin-license-expiration":
 			expiration = i
-			if step.If != "${{ "+licensedSuites+" }}" || step.ContinueOnError {
-				t.Fatal("calculate the required expiration only for GWAdmin-producing suites")
+			if step.If != "${{ vars.GW_ADMIN_LICENSE_SOURCE == 'signing' && ("+licensedSuites+") }}" || step.ContinueOnError {
+				t.Fatal("calculate expiration only for signing in GWAdmin-producing suites")
 			}
 			for _, timezone := range []string{"Pacific/Kiritimati", "Etc/GMT+12"} {
 				t.Run("UTC-date-in-"+timezone, func(t *testing.T) {
@@ -388,11 +497,17 @@ func TestGWAdminLicenseSigningWorkflow(t *testing.T) {
 		case step.ID == "gwadmin-license":
 			issuer = i
 			if step.Uses != "./.github/actions/gwadmin-license" || step.If != "${{ "+licensedSuites+" }}" ||
-				strings.Contains(step.If, "fork") || step.ContinueOnError || len(step.With) != 5 {
+				strings.Contains(step.If, "fork") || step.ContinueOnError || len(step.With) != 7 {
 				t.Fatal("issuer must run for all GWAdmin suites, with all explicit inputs and no fork-specific skip")
 			}
 			if step.With["expiration-date"] != "${{ steps.gwadmin-license-expiration.outputs.date }}" {
 				t.Fatal("signing must receive the automatically computed date, not a repository variable")
+			}
+			if step.With["source"] != "${{ vars.GW_ADMIN_LICENSE_SOURCE }}" ||
+				step.With["static-license"] != "${{ secrets.GW_ADMIN_LICENSE_JWS }}" ||
+				step.With["customer"] != "${{ secrets.GW_ADMIN_LICENSE_CUSTOMER }}" ||
+				step.With["license-key"] != "${{ secrets.GW_ADMIN_LICENSE_KEY }}" {
+				t.Fatal("source must be explicit, with JWS/customer/license-key supplied only through dedicated secrets")
 			}
 		case step.Name == "Apply chainsaw suite prerequisites":
 			prerequisites = i
