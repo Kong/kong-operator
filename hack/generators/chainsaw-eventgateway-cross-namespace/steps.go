@@ -156,8 +156,8 @@ func (s *steps) ready(name, description string, o *object) {
 	switch {
 	case o.Kind == "KegDataPlane":
 		s.assertCondition(name, description, o, s.resolvedCondition(), "True", "")
-	case s.gw == konnect && o.Kind == "EventGatewayVirtualClusterPolicyChain":
-		// A cluster policy chain is a setting of its virtual cluster in
+	case s.gw == konnect && isPolicyChain(o.Kind):
+		// A policy chain is a setting of its virtual cluster or listener in
 		// Konnect, not an entity of its own: it has no Konnect ID.
 		s.assertCondition(name, description, o, "Programmed", "True", "")
 	case s.gw == konnect:
@@ -268,9 +268,9 @@ func (s *steps) assertGatewayNotHeldBack(name, description string) {
 func (s *steps) assertGatewayHeldBack(name, description string, o *object) {
 	s.heldBack = true
 	reason := "InvalidEntities"
-	if o.Kind == "EventGatewayVirtualClusterPolicyChain" {
+	if isPolicyChain(o.Kind) {
 		// A chain holds back the configuration as the owner of its virtual
-		// cluster, with a reason of its own.
+		// cluster or listener, with a reason of its own.
 		reason = ""
 	}
 	s.assertCondition(name, description, onPremGateway, "Programmed", "False", reason)
