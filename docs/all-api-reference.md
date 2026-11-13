@@ -1499,19 +1499,6 @@ object's Konnect name is used where the Konnect API accepts it.
 _Appears in:_
 
 - [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
-
-#### AIGatewayCACertificateReference
-
-_Underlying type:_ `string`
-
-AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-same AI Gateway, by CA certificate name.
-
-
-
-
-_Appears in:_
-
 - [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
 - [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
@@ -1623,26 +1610,11 @@ object's Konnect name is used where the Konnect API accepts it.
 _Appears in:_
 
 - [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
-- [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
-
-#### AIGatewayCertificateReference
-
-_Underlying type:_ `string`
-
-AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-Gateway, by certificate name.
-The certificate must have a valid private key to be presented as a client
-certificate to an upstream.
-
-
-
-
-_Appears in:_
-
 - [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
 - [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
 - [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
+- [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
 
 #### AIGatewayCertificateSpec
 
@@ -2615,9 +2587,9 @@ to modes where Kong answers as the MCP server.
 | Field | Description |
 | --- | --- |
 | `allowedVersions` _[]string_ | The MCP protocol revisions this server accepts. Leave unset to accept every revision Kong implements, which is the default. When set, `server/discover` advertises exactly this list and a request declaring anything else is rejected. Listing only per-request revisions refuses handshake clients.<br /><br />**Requires a minimum runtime version of `2.1`**. |
-| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
+| `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `cache` _[AIGatewayMCPServerConversionListenerConfigCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigcache)_ | Cache hints Kong emits on the cacheable operations it serves. Only clients on a protocol revision that defines them receive them.<br /><br />**Requires a minimum runtime version of `2.1`**. |
-| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
+| `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerConversionListenerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfiglogging)_ |  |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
@@ -3242,8 +3214,8 @@ configuration for the MCP Server.
 
 | Field | Description |
 | --- | --- |
-| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
-| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
+| `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
+| `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
@@ -3442,8 +3414,8 @@ configuration for the MCP Server.
 
 | Field | Description |
 | --- | --- |
-| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
-| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
+| `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
+| `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
@@ -3540,8 +3512,8 @@ and request body size limits for the MCP Server.
 
 | Field | Description |
 | --- | --- |
-| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
-| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
+| `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
+| `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |

@@ -3229,13 +3229,13 @@ func (in *AIGatewayMCPServerConversionListenerConfig) DeepCopyInto(out *AIGatewa
 	}
 	if in.CaCertificates != nil {
 		in, out := &in.CaCertificates, &out.CaCertificates
-		*out = make([]AIGatewayCACertificateReference, len(*in))
+		*out = make([]AIGatewayCACertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	out.Cache = in.Cache
 	if in.Certificates != nil {
 		in, out := &in.Certificates, &out.Certificates
-		*out = make([]AIGatewayCertificateReference, len(*in))
+		*out = make([]AIGatewayCertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
@@ -3998,12 +3998,12 @@ func (in *AIGatewayMCPServerUpstreamServerConfig) DeepCopyInto(out *AIGatewayMCP
 	*out = *in
 	if in.CaCertificates != nil {
 		in, out := &in.CaCertificates, &out.CaCertificates
-		*out = make([]AIGatewayCACertificateReference, len(*in))
+		*out = make([]AIGatewayCACertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Certificates != nil {
 		in, out := &in.Certificates, &out.Certificates
-		*out = make([]AIGatewayCertificateReference, len(*in))
+		*out = make([]AIGatewayCertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
@@ -4180,12 +4180,12 @@ func (in *AIGatewayMCPServerWithUpstreamConfig) DeepCopyInto(out *AIGatewayMCPSe
 	*out = *in
 	if in.CaCertificates != nil {
 		in, out := &in.CaCertificates, &out.CaCertificates
-		*out = make([]AIGatewayCACertificateReference, len(*in))
+		*out = make([]AIGatewayCACertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Certificates != nil {
 		in, out := &in.Certificates, &out.Certificates
-		*out = make([]AIGatewayCertificateReference, len(*in))
+		*out = make([]AIGatewayCertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
@@ -4278,12 +4278,12 @@ func (in *AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig) DeepCopyInt
 	*out = *in
 	if in.CaCertificates != nil {
 		in, out := &in.CaCertificates, &out.CaCertificates
-		*out = make([]AIGatewayCACertificateReference, len(*in))
+		*out = make([]AIGatewayCACertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	if in.Certificates != nil {
 		in, out := &in.Certificates, &out.Certificates
-		*out = make([]AIGatewayCertificateReference, len(*in))
+		*out = make([]AIGatewayCertificateRef, len(*in))
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
