@@ -569,8 +569,8 @@ type pluginReference struct {
 // pluginInheritedTags holds the tags inherited by plugins bound to Kong routes and services, keyed
 // by the route's and service's name respectively (which are the identifiers used in plugin relations).
 type pluginInheritedTags struct {
-	routes   map[string][]string
-	services map[string][]string
+	routes   map[string]util.InheritedTags
+	services map[string]util.InheritedTags
 }
 
 // inheritedTagsForPlugins collects the tags the Kong routes and services inherit from the parent
@@ -578,15 +578,15 @@ type pluginInheritedTags struct {
 // plugins bound to them inherit them too.
 func (ks *KongState) inheritedTagsForPlugins() pluginInheritedTags {
 	inherited := pluginInheritedTags{
-		routes:   map[string][]string{},
-		services: map[string][]string{},
+		routes:   map[string]util.InheritedTags{},
+		services: map[string]util.InheritedTags{},
 	}
 	for i := range ks.Services {
-		if svc := ks.Services[i]; svc.Name != nil && len(svc.InheritedTags) > 0 {
+		if svc := ks.Services[i]; svc.Name != nil && !svc.InheritedTags.IsEmpty() {
 			inherited.services[*svc.Name] = svc.InheritedTags
 		}
 		for j := range ks.Services[i].Routes {
-			if route := ks.Services[i].Routes[j]; route.Name != nil && len(route.InheritedTags) > 0 {
+			if route := ks.Services[i].Routes[j]; route.Name != nil && !route.InheritedTags.IsEmpty() {
 				inherited.routes[*route.Name] = route.InheritedTags
 			}
 		}
@@ -650,7 +650,7 @@ func buildPlugins(
 			var toHash bytes.Buffer
 
 			// ID is populated because that is read by decK and in_memory translator too
-			var routeInheritedTags, serviceInheritedTags []string
+			var routeInheritedTags, serviceInheritedTags util.InheritedTags
 			if !rel.Service.IsEmpty() {
 				relSvc := rel.Service.Identifier
 				plugin.Service = &kong.Service{ID: new(relSvc)}
@@ -667,8 +667,12 @@ func buildPlugins(
 			}
 			// A plugin bound to a route or service translated from a Gateway API route inherits the tags
 			// of the route's parent Gateways (and their GatewayClasses), after the KongPlugin's own tags.
-			if len(routeInheritedTags) > 0 || len(serviceInheritedTags) > 0 {
-				plugin.Tags = util.MergeTags(plugin.Tags, routeInheritedTags, serviceInheritedTags)
+			if !routeInheritedTags.IsEmpty() || !serviceInheritedTags.IsEmpty() {
+				// Every Gateway's tags (the bound route's, then the bound service's) come before every
+				// GatewayClass's tags.
+				plugin.Tags = util.MergeTags(plugin.Tags,
+					routeInheritedTags.Gateway, serviceInheritedTags.Gateway,
+					routeInheritedTags.GatewayClass, serviceInheritedTags.GatewayClass)
 			}
 			if !rel.Consumer.IsEmpty() {
 				relConsumer := rel.Consumer.Identifier

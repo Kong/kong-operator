@@ -143,16 +143,16 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 
 	index := tr.buildInheritedTagIndex(newInheritedTagResolver(logr.Discard(), s))
 
-	gw1Tags := inheritedTags{gateway: []string{"gw-1-tag", "shared"}, gatewayClass: []string{"gwc-tag", "shared"}}
+	gw1Tags := util.InheritedTags{Gateway: []string{"gw-1-tag", "shared"}, GatewayClass: []string{"gwc-tag", "shared"}}
 	assert.Equal(t, inheritedTagIndex{
 		"HTTPRoute/default/single-parent": gw1Tags,
 		"HTTPRoute/default/two-parents": {
-			gateway:      []string{"gw-1-tag", "shared", "gw-2-tag"},
-			gatewayClass: []string{"gwc-tag", "shared"},
+			Gateway:      []string{"gw-1-tag", "shared", "gw-2-tag"},
+			GatewayClass: []string{"gwc-tag", "shared"},
 		},
-		"HTTPRoute/default/class-tags-only":                   {gatewayClass: []string{"gwc-tag", "shared"}},
-		"HTTPRoute/default/gateway-of-other-controller-class": {gateway: []string{"gw-other-class-tag"}},
-		"HTTPRoute/default/gateway-with-missing-class":        {gateway: []string{"gw-missing-class-tag"}},
+		"HTTPRoute/default/class-tags-only":                   {GatewayClass: []string{"gwc-tag", "shared"}},
+		"HTTPRoute/default/gateway-of-other-controller-class": {Gateway: []string{"gw-other-class-tag"}},
+		"HTTPRoute/default/gateway-with-missing-class":        {Gateway: []string{"gw-missing-class-tag"}},
 		"HTTPRoute/default/explicit-gateway-group-and-kind":   gw1Tags,
 		"GRPCRoute/default/grpc":                              gw1Tags,
 		"TCPRoute/default/tcp":                                gw1Tags,
@@ -161,7 +161,7 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 	}, index)
 
 	t.Run("all returns gateway tags, then gateway class tags, deduplicated", func(t *testing.T) {
-		assert.Equal(t, []string{"gw-1-tag", "shared", "gw-2-tag", "gwc-tag"}, index["HTTPRoute/default/two-parents"].all())
+		assert.Equal(t, []string{"gw-1-tag", "shared", "gw-2-tag", "gwc-tag"}, index["HTTPRoute/default/two-parents"].All())
 	})
 }
 
@@ -170,8 +170,8 @@ func TestApplyInheritedTags(t *testing.T) {
 	ingressGVK := schema.GroupVersionKind{Group: "networking.k8s.io", Version: "v1", Kind: "Ingress"}
 
 	index := inheritedTagIndex{
-		"HTTPRoute/default/route-a": {gateway: []string{"gw-a"}, gatewayClass: []string{"gwc"}},
-		"HTTPRoute/default/route-b": {gateway: []string{"gw-b"}, gatewayClass: []string{"gwc"}},
+		"HTTPRoute/default/route-a": {Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}},
+		"HTTPRoute/default/route-b": {Gateway: []string{"gw-b"}, GatewayClass: []string{"gwc"}},
 	}
 
 	newRoute := func(name string, gvk schema.GroupVersionKind, objName string) kongstate.Route {
@@ -195,8 +195,8 @@ func TestApplyInheritedTags(t *testing.T) {
 		tr := mustNewTranslator(t, mustNewEmptyFakeStore(t))
 		tr.applyInheritedTags(&ir, inheritedTagIndex{})
 		svc := ir.ServiceNameToServices["svc"]
-		assert.Nil(t, svc.InheritedTags)
-		assert.Nil(t, svc.Routes[0].InheritedTags)
+		assert.True(t, svc.InheritedTags.IsEmpty())
+		assert.True(t, svc.Routes[0].InheritedTags.IsEmpty())
 		assert.Equal(t, kong.StringSlice("k8s-name:route-a", "own"), svc.Routes[0].Tags)
 	})
 
@@ -221,24 +221,24 @@ func TestApplyInheritedTags(t *testing.T) {
 		tr.applyInheritedTags(&ir, index)
 
 		combined := ir.ServiceNameToServices["combined"]
-		assert.Equal(t, []string{"gw-a", "gw-b", "gwc"}, combined.InheritedTags)
+		assert.Equal(t, util.InheritedTags{Gateway: []string{"gw-a", "gw-b"}, GatewayClass: []string{"gwc"}}, combined.InheritedTags)
 		assert.Equal(t, kong.StringSlice("gw-a", "gw-b", "gwc"), combined.Plugins[0].Tags)
 
 		rb := combined.Routes[0]
-		assert.Equal(t, []string{"gw-b", "gwc"}, rb.InheritedTags)
+		assert.Equal(t, util.InheritedTags{Gateway: []string{"gw-b"}, GatewayClass: []string{"gwc"}}, rb.InheritedTags)
 		assert.Equal(t, kong.StringSlice("k8s-name:route-b", "own", "gw-b", "gwc"), rb.Tags)
 		assert.Equal(t, kong.StringSlice("k8s-name:route-b", "own", "gw-b", "gwc"), rb.Plugins[0].Tags)
 		// The route's and its plugins' tags must not alias each other anymore.
 		require.NotSame(t, &rb.Tags[0], &rb.Plugins[0].Tags[0])
 
 		ra := combined.Routes[1]
-		assert.Equal(t, []string{"gw-a", "gwc"}, ra.InheritedTags)
+		assert.Equal(t, util.InheritedTags{Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}}, ra.InheritedTags)
 		assert.Equal(t, kong.StringSlice("k8s-name:route-a", "own", "gw-a", "gwc"), ra.Tags)
 
 		// Entities translated from an Ingress with the same name do not inherit anything.
 		ingress := ir.ServiceNameToServices["ingress"]
-		assert.Nil(t, ingress.InheritedTags)
-		assert.Nil(t, ingress.Routes[0].InheritedTags)
+		assert.True(t, ingress.InheritedTags.IsEmpty())
+		assert.True(t, ingress.Routes[0].InheritedTags.IsEmpty())
 		assert.Equal(t, kong.StringSlice("k8s-name:route-a", "own"), ingress.Routes[0].Tags)
 	})
 
@@ -250,7 +250,7 @@ func TestApplyInheritedTags(t *testing.T) {
 		}
 		tr := mustNewTranslator(t, mustNewEmptyFakeStore(t))
 		tr.applyInheritedTags(&ir, index)
-		assert.Equal(t, []string{"gw-a", "gwc"}, ir.ServiceNameToServices["svc"].InheritedTags)
+		assert.Equal(t, util.InheritedTags{Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}}, ir.ServiceNameToServices["svc"].InheritedTags)
 	})
 }
 
@@ -274,7 +274,7 @@ func TestGenerateKongServiceTagsWithInheritedTags(t *testing.T) {
 
 	ir := newIngressRules()
 	ir.ServiceNameToParent["multi"] = route
-	inherited := []string{"gw", "shared", "gwc"}
+	inherited := util.InheritedTags{Gateway: []string{"gw", "shared"}, GatewayClass: []string{"gwc"}}
 
 	testCases := []struct {
 		name        string
@@ -349,15 +349,15 @@ func TestClientCertificateInheritsInheritedTags(t *testing.T) {
 		},
 	}
 
-	newKongService := func(name string, inherited []string) kongstate.Service {
+	newKongService := func(name string, inherited util.InheritedTags) kongstate.Service {
 		return kongstate.Service{
 			Name: new(name), Protocol: new("https"),
 			InheritedTags: inherited,
 		}
 	}
-	svcA := newKongService("svc-a", []string{"gw-a", "gwc"})
-	svcB := newKongService("svc-b", []string{"gw-b", "gwc"})
-	plain := newKongService("svc-plain", nil)
+	svcA := newKongService("svc-a", util.InheritedTags{Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}})
+	svcB := newKongService("svc-b", util.InheritedTags{Gateway: []string{"gw-b"}, GatewayClass: []string{"gwc"}})
+	plain := newKongService("svc-plain", util.InheritedTags{})
 
 	failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 	ir := newIngressRules()
@@ -372,8 +372,8 @@ func TestClientCertificateInheritsInheritedTags(t *testing.T) {
 
 	assert.Equal(t, map[string][]clientCertServiceTags{
 		"default/client-cert": {
-			{ServiceName: "svc-b", InheritedTags: []string{"gw-b", "gwc"}},
-			{ServiceName: "svc-a", InheritedTags: []string{"gw-a", "gwc"}},
+			{ServiceName: "svc-b", InheritedTags: util.InheritedTags{Gateway: []string{"gw-b"}, GatewayClass: []string{"gwc"}}},
+			{ServiceName: "svc-a", InheritedTags: util.InheritedTags{Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}}},
 		},
 	}, ir.ClientCertSecretToServices)
 
@@ -384,7 +384,8 @@ func TestClientCertificateInheritsInheritedTags(t *testing.T) {
 	assert.Equal(t, kong.StringSlice(
 		"k8s-name:client-cert", "k8s-namespace:default", "k8s-kind:Secret", "k8s-uid:client-cert-uid", "k8s-version:v1",
 		"secret-tag",
-		// The Services' inherited tags follow the Secret's own tags, in service-name order, deduplicated.
-		"gw-a", "gwc", "gw-b",
+		// The Services' inherited tags follow the Secret's own tags: all Gateways' tags (in
+		// service-name order), then the GatewayClasses' tags, deduplicated.
+		"gw-a", "gw-b", "gwc",
 	), merged[0].Tags)
 }

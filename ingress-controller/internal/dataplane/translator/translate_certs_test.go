@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -325,7 +326,7 @@ func TestMergeCerts(t *testing.T) {
 						Tags: kong.StringSlice("secret-2-tag"),
 					},
 					snis:          []string{"a.com"},
-					inheritedTags: []string{"gw-a", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}},
 				},
 				{
 					identifier: string(crt1) + string(key1),
@@ -337,7 +338,7 @@ func TestMergeCerts(t *testing.T) {
 					},
 					// a.com is also requested by gw-a's listener on the same certificate, so it inherits both.
 					snis:          []string{"a.com", "b.com"},
-					inheritedTags: []string{"gw-b", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw-b"}, GatewayClass: []string{"gwc"}},
 				},
 			},
 			mergedCerts: []kongstate.Certificate{
@@ -345,10 +346,10 @@ func TestMergeCerts(t *testing.T) {
 					ID:   new("certificate-1"),
 					Cert: new(string(crt1)),
 					Key:  new(string(key1)),
-					Tags: kong.StringSlice("secret-1-tag", "gw-a", "gwc", "gw-b"),
+					Tags: kong.StringSlice("secret-1-tag", "gw-a", "gw-b", "gwc"),
 					SNIs: kong.StringSlice("a.com", "b.com", "ingress.com"),
 					SNITags: map[string][]*string{
-						"a.com": kong.StringSlice("gw-a", "gwc", "gw-b"),
+						"a.com": kong.StringSlice("gw-a", "gw-b", "gwc"),
 						"b.com": kong.StringSlice("gw-b", "gwc"),
 					},
 				},
@@ -381,7 +382,7 @@ func TestMergeCerts(t *testing.T) {
 						Tags: kong.StringSlice("gateway-secret-tag"),
 					},
 					snis:          []string{"example.com"},
-					inheritedTags: []string{"gw", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw"}, GatewayClass: []string{"gwc"}},
 				},
 			},
 			mergedCerts: []kongstate.Certificate{
@@ -425,7 +426,7 @@ func TestMergeCerts(t *testing.T) {
 						Tags: kong.StringSlice("gateway-secret-tag"),
 					},
 					snis:          []string{"example.com"},
-					inheritedTags: []string{"gw", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw"}, GatewayClass: []string{"gwc"}},
 				},
 			},
 			mergedCerts: []kongstate.Certificate{
@@ -454,7 +455,7 @@ func TestMergeCerts(t *testing.T) {
 						Key:  new(string(key1)),
 					},
 					snis:          []string{"example.com"},
-					inheritedTags: []string{"gw-a", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw-a"}, GatewayClass: []string{"gwc"}},
 				},
 				{
 					identifier: string(crt1) + string(key1),
@@ -464,7 +465,7 @@ func TestMergeCerts(t *testing.T) {
 						Key:  new(string(key1)),
 					},
 					snis:          []string{"example.com"},
-					inheritedTags: []string{"gw-b", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw-b"}, GatewayClass: []string{"gwc"}},
 				},
 			},
 			mergedCerts: []kongstate.Certificate{
@@ -472,9 +473,9 @@ func TestMergeCerts(t *testing.T) {
 					ID:      new("certificate-1"),
 					Cert:    new(string(crt1)),
 					Key:     new(string(key1)),
-					Tags:    kong.StringSlice("gw-a", "gwc", "gw-b"),
+					Tags:    kong.StringSlice("gw-a", "gw-b", "gwc"),
 					SNIs:    kong.StringSlice("example.com"),
-					SNITags: map[string][]*string{"example.com": kong.StringSlice("gw-a", "gwc", "gw-b")},
+					SNITags: map[string][]*string{"example.com": kong.StringSlice("gw-a", "gw-b", "gwc")},
 				},
 			},
 			idToMergedID: certIDToMergedCertID{
@@ -505,7 +506,7 @@ func TestMergeCerts(t *testing.T) {
 						Tags: kong.StringSlice("gateway-secret-tag"),
 					},
 					snis:          []string{"example.com"},
-					inheritedTags: []string{"gw", "gwc"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw"}, GatewayClass: []string{"gwc"}},
 				},
 			},
 			mergedCerts: []kongstate.Certificate{
@@ -528,6 +529,46 @@ func TestMergeCerts(t *testing.T) {
 				"certificate-2": "certificate-2",
 			},
 			sniConflictLogs: 1,
+		},
+		{
+			// The tags of several Gateways come before the tags of their GatewayClasses, regardless of
+			// which GatewayClass each Gateway belongs to.
+			name: "certificate requested by Gateways of different GatewayClasses inherits all Gateways' tags first",
+			certs: []certWrapper{
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+					},
+					snis:          []string{"example.com"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw-1"}, GatewayClass: []string{"gwc-a"}},
+				},
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+					},
+					snis:          []string{"example.com"},
+					inheritedTags: util.InheritedTags{Gateway: []string{"gw-2"}, GatewayClass: []string{"gwc-b"}},
+				},
+			},
+			mergedCerts: []kongstate.Certificate{
+				{
+					ID:      new("certificate-1"),
+					Cert:    new(string(crt1)),
+					Key:     new(string(key1)),
+					Tags:    kong.StringSlice("gw-1", "gw-2", "gwc-a", "gwc-b"),
+					SNIs:    kong.StringSlice("example.com"),
+					SNITags: map[string][]*string{"example.com": kong.StringSlice("gw-1", "gw-2", "gwc-a", "gwc-b")},
+				},
+			},
+			idToMergedID: certIDToMergedCertID{
+				"certificate-1": "certificate-1",
+			},
 		},
 	}
 	for _, tc := range testCases {

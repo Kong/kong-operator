@@ -360,10 +360,12 @@
   `konghq.com/client-cert` annotation inherits the tags of the Gateways (and
   their GatewayClasses) of the routes that use the Service; when several
   Services share one Secret, the tags are the union over those Services.
-  Inherited tags are appended after the entity's own tags (the Gateway's first,
-  then the GatewayClass's) and the result is deduplicated. Only `Gateway`s
-  reconciled by this controller, and only `GatewayClass`es it controls,
-  contribute tags.
+  Inherited tags are appended after the entity's own tags: when several
+  `Gateway`s contribute, all `Gateway`s' tags come first (ordered by namespace
+  and name), then all their `GatewayClass`es' tags, regardless of how many
+  sources (listeners, routes, Services) contribute, and the result is
+  deduplicated. Only `Gateway`s reconciled by this controller, and only
+  `GatewayClass`es it controls, contribute tags.
   [#6539](https://github.com/Kong/kong-operator/pull/6539)
 
 ### Changed

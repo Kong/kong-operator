@@ -134,9 +134,10 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 			// Targets carry no tags of their own, but inherit the tags of the parent Gateways (and their
 			// GatewayClasses) of the Gateway API routes the Service was translated from.
 			targets := lo.Values(targetMap)
-			if len(service.InheritedTags) > 0 {
+			if !service.InheritedTags.IsEmpty() {
 				for i := range targets {
-					targets[i].Tags = util.MergeTags(targets[i].Tags, service.InheritedTags)
+					targets[i].Tags = util.MergeTags(targets[i].Tags,
+						service.InheritedTags.Gateway, service.InheritedTags.GatewayClass)
 				}
 			}
 
