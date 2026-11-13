@@ -12,7 +12,9 @@ env:
 
 jobs:
   conformance-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
+    # Keep 30m above CONFORMANCE_TEST_TIMEOUT (90m in the Makefile) for
+    # tool installation, cluster setup, the race build and artifact uploads.
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 120) }}
     runs-on: ubuntu-latest
     name: ${{ matrix.gateway-type }} ${{ matrix.router-flavor }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }}
     env:
