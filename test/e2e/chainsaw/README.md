@@ -55,9 +55,11 @@ or put it in assertion files, command arguments, debug output, or artifacts.
 The helper suppresses potentially payload-bearing kubectl diagnostics but returns
 an explicit error. Existing debug snapshots redact Secret payloads.
 
-**Local development:** without an input file, the existing dev-image path retains
-its previous behavior unless `GW_ADMIN_LICENSE_REQUIRED=true`; supplied invalid
-input always fails. This optional local path is **not** the CI policy.
+**Local development:** without an input file, and unless
+`GW_ADMIN_LICENSE_REQUIRED=true`, no license Secret is provisioned: gw-admin,
+which requires a license, doesn't start, so only the tests that don't need it
+running can pass. Supplied invalid input always fails. This local path is
+**not** the CI policy.
 
 ### GWAdmin license sources in CI
 
@@ -135,12 +137,6 @@ success/failure; an `always()` workflow step removes the issued file and any
 remaining signing files on failure/cancellation too. The action output contains
 only `license-file`, never the license or authentication data.
 
-**Intermediate layer:** controller mounting and licensed runtime checks are not
-implemented here; the pinned dev image is unchanged. Acquiring a JWS and
-provisioning its Secret alone do not demonstrate licensed operation or complete
-#6568. Live validation needs authorized credentials/input and, for licensed
-workload behavior, the next controller layer and a licensing-capable image.
-
 ### Real gw-admin contract tests
 
 Without `GW_ADMIN_CONTRACT_URL`, `TestGWAdminContract` uses the fake gw-admin and
@@ -154,8 +150,7 @@ For a dedicated real server, first run the license preflight above. Supply the
 original file to the server as `GW_ADMIN_ONPREM_LICENSE_FILE`, with
 `GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS=event_gateway`; for a container, these refer
 to its read-only mounted file, not the host path. A licensing-capable image is
-`kong/kong-gw-admin-cp:1.0.0-rc.1`. Do not replace the existing suites' dev image
-until controller mounting is implemented. The preflight is input preparation,
+`kong/kong-gw-admin-cp:1.0.0-rc.1`. The preflight is input preparation,
 not a check that a remote server actually mounted or accepted that license.
 
 Set `GW_ADMIN_CONTRACT_URL` (including `/v1`),

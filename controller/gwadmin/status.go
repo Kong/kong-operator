@@ -45,6 +45,13 @@ func setReadyCondition(gw *operatorv1alpha1.GWAdmin, ready bool, reason, message
 	), gw)
 }
 
+// conditionMessage returns the message of the condition of the GWAdmin of
+// the given type.
+func conditionMessage(gw *operatorv1alpha1.GWAdmin, conditionType string) string {
+	c, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(conditionType), gw)
+	return c.Message
+}
+
 // cpHost returns the in-cluster host name of the cp Service.
 func cpHost(gw *operatorv1alpha1.GWAdmin, clusterDomain string) string {
 	host := cpServiceName(gw) + "." + gw.Namespace + ".svc"
