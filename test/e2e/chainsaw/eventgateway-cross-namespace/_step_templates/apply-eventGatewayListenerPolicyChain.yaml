@@ -1,0 +1,31 @@
+# Template for creating an EventGatewayListenerPolicyChain ordering the single
+# policy of its listener.
+#
+# Required bindings:
+#   - chain_name, chain_namespace: The chain.
+#   - listener_name, listener_namespace: Its listener.
+#   - policy_name, policy_namespace: The listener policy.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-listener-policy-chain
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayListenerPolicyChain
+          metadata:
+            name: ($chain_name)
+            namespace: ($chain_namespace)
+          spec:
+            eventGatewayListenerRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($listener_name)
+                namespace: ($listener_namespace)
+            apiSpec:
+              policies:
+                - kind: EventGatewayListenerPolicy
+                  name: ($policy_name)
+                  namespace: ($policy_namespace)

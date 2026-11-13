@@ -91,8 +91,22 @@
   `spec.license.secretRef.key`, identifying the enveloped license in a Secret
   in the same namespace. Existing manifests must include this reference;
   an empty spec is no longer accepted. `spec.license.entitlements` defaults
-  to `[event_gateway]`, the only supported entitlement. This change defines
-  the API contract only; controller support follows separately.
+  to `[event_gateway]`, the only supported entitlement. Kong Operator mounts
+  the Secret key in the gw-admin pods and points gw-admin at it with
+  `GW_ADMIN_ONPREM_LICENSE_FILE` and `GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS`;
+  a pod template overlay can't replace this volume, mount another one at its
+  path, or set these env vars.
+  The kubelet updates the mounted file when the Secret changes, and gw-admin
+  reads it again on each of its periodic license checks, so a renewed license
+  reaches the running pods without a restart. The new `LicenseProvisioned`
+  condition reports a missing Secret, or a missing or empty key, and keeps
+  `Ready` False. The Deployment is applied anyway: gw-admin refuses to start
+  without a valid license. While a `GWAdmin` references the license Secret, the
+  `gateway-operator.konghq.com/gwadmin-license-in-use` finalizer delays its
+  deletion until no `GWAdmin` references it; update a license in place rather
+  than deleting and creating its Secret again. gw-admin, not Kong Operator,
+  validates the license.
+  [#6567](https://github.com/Kong/kong-operator/issues/6567)
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
   it keeps serving, but no spec, image or certificate change is applied until
@@ -217,6 +231,11 @@
   description and enabled flag to avoid repeatedly pushing an unchanged
   configuration.
   [#6395](https://github.com/Kong/kong-operator/pull/6395)
+- `EventGatewayListenerPolicyChain` now orders the policies of the listeners of
+  an `OnPremEventGateway` too, as `EventGatewayVirtualClusterPolicyChain` does
+  those of its virtual clusters: an invalid owning chain pauses the gateway's
+  configuration updates, and deleting it restores the default policy order.
+  [#6630](https://github.com/Kong/kong-operator/pull/6630)
 - Event Gateway entities can reference their parent, the entities they use
   (schema registries, static keys, TLS trust bundles, parent policies) and the
   Secrets they read in another namespace, with a `KongReferenceGrant` in its
@@ -248,15 +267,16 @@
 - `EventGatewayVirtualClusterPolicyChain`s can reference their virtual
   cluster, and order policies, in another namespace, with a
   `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
-  `OnPremEventGateway`s. The policies of a listener policy chain stay in the
-  namespace of the chain.
+  `OnPremEventGateway`s, and so can `EventGatewayListenerPolicyChain`s their
+  listener and policies.
   Without a `KongReferenceGrant`:
   - a policy chain that can't order its policies reports
-    `ReferenceNotPermitted`, and doesn't claim its virtual cluster;
+    `ReferenceNotPermitted`, and doesn't claim its virtual cluster or
+    listener;
   - a policy chain of another namespace loses its claim on its virtual
-    cluster, so that a chain of the namespace of the virtual cluster can
+    cluster or listener, so that a chain of the namespace of that one can
     claim it.
-  [#6582](https://github.com/Kong/kong-operator/pull/6582)
+  [#6582](https://github.com/Kong/kong-operator/pull/6582), [#6631](https://github.com/Kong/kong-operator/pull/6631)
 - `KegDataPlane`: `konnectNamespacedRef` and `onpremNamespacedRef` can name a
   gateway in another namespace, with a `KongReferenceGrant` in its namespace
   allowing the `KegDataPlane`, and one allowing its
@@ -347,6 +367,16 @@
   the reported hash differs from the hash recorded after the last successful
   push, the sync pushes the configuration again.
   [#6518](https://github.com/Kong/kong-operator/pull/6518)
+- DataPlane: make the hardened security context OpenShift compatible.
+  Operand containers built with the hardened security context now set
+  `seccompProfile: RuntimeDefault` and, on OpenShift, no longer pin
+  `runAsUser`/`runAsGroup` to a fixed UID, because the `restricted-v2` SCC
+  rejects a UID outside the namespace range and assigns one instead. The
+  affected workloads are DataPlanes with `hardened: enabled`, and the AI
+  Gateway, Event Gateway, GWAdmin and MCP Server containers, which harden
+  unconditionally. The platform is detected by default and can be overridden
+  with the new `--platform` flag (`auto`, `openshift`, `kubernetes`).
+  [#6562](https://github.com/Kong/kong-operator/pull/6562)
 - `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
   from being issued.

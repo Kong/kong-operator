@@ -117,8 +117,7 @@ type scenarios struct {
 // are checked once: by type of reference, to the gateway or to an entity,
 // and by kind for those resolving their references with code of their own.
 func wrongClass(res resource, t refType, target *object) string {
-	switch res.kind {
-	case "KegDataPlane", "EventGatewayVirtualClusterPolicyChain":
+	if res.kind == "KegDataPlane" || isPolicyChain(res.kind) {
 		return res.kind
 	}
 	if target.isGateway() {
@@ -475,11 +474,11 @@ func (o *object) inNamespace(ns string) *object {
 func (sc *scenarios) scenarioN(a axis) {
 	tag := a.name + "-n"
 	sc.phase("N", "its name")
-	chain := sc.res.dir == "policychain"
+	chain := isPolicyChain(sc.res.kind)
 	p := placement{nsGateway, nsGateway, nsGateway}
 	if chain {
-		// The owner of the virtual cluster in another namespace than the
-		// gateway: the other chain names it with its namespace.
+		// The owner of the virtual cluster or listener in another namespace
+		// than the gateway: the other chain names it with its namespace.
 		p = placement{nsReferrer, nsGateway, nsGateway}
 	}
 	b := a.build(tag, p, sc.ports)
@@ -504,7 +503,7 @@ func (sc *scenarios) scenarioN(a axis) {
 	sc.create(dup)
 	switch {
 	case chain:
-		sc.assertMessage("assert-"+tag+"-conflicting", "Another chain of the virtual cluster can't claim it: it names the owner with its namespace.",
+		sc.assertMessage("assert-"+tag+"-conflicting", "Another chain of the "+chainParent(sc.res.kind)+" can't claim it: it names the owner with its namespace.",
 			dup, condition{"PolicyChainOwnerValid", "False", "ConflictingChain"}, "(join('/', [$referrer_namespace, '"+b.referrer.Name+"']))")
 	case sc.gw == onprem:
 		sc.assertMessage("assert-"+tag+"-conflicting", "The "+sc.res.kind+" of another namespace named the same can't take the name.",
@@ -648,10 +647,11 @@ func describe(r resource, gw gatewayType, axes []axis, wrongAxes []string) strin
 			lines = append(lines, "     "+t)
 		}
 	}
-	hasC, hasS := false, false
+	hasC, hasS, named := false, false, false
 	refs := make([]string, 0, len(axes))
 	for _, a := range axes {
 		b := a.build("probe", placement{nsReferrer, nsTarget, nsThird}, &ports{})
+		named = b.referrer.Named
 		letters := []string{"B"}
 		if slices.Contains(wrongAxes, a.name) {
 			letters = append(letters, "W")
@@ -684,7 +684,8 @@ func describe(r resource, gw gatewayType, axes []axis, wrongAxes []string) strin
 			"namespace needs no grant; pointed back, it needs it again.")
 	}
 	e := []string{"Delete: the object can be deleted while its grant is revoked."}
-	if gw == konnect {
+	// Only an object named in the gateway's API is created again (see scenarioB).
+	if gw == konnect && named {
 		e = append(e, "Created again with its name, it is programmed: its entity left Konnect.")
 	}
 	scenario("E", e...)

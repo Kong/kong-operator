@@ -426,6 +426,64 @@ func TestGWAdminContract(t *testing.T) {
 		assert.Equal(t, vcID, destination["id"], "the name is resolved to the id of the virtual cluster")
 	})
 
+	t.Run("listener policy order survives an entities round trip", func(t *testing.T) {
+		gwAdmin := contractGWAdmin(t)
+		ctx := t.Context()
+		id := registerContractGateway(t, gwAdmin)
+		bcID, vcID, listenerID := uuid.NewString(), uuid.NewString(), uuid.NewString()
+		// Creation times sort opposite to the submitted order, and the IDs
+		// opposite to it on one revision out of two: neither may override it.
+		policyIDs := []string{"00000000-0000-4000-8000-000000000012", "00000000-0000-4000-8000-000000000011"}
+		doc := func(revision int, ids []string) string {
+			policies := make([]string, 0, len(ids))
+			for i, policyID := range ids {
+				policies = append(policies, fmt.Sprintf(`{
+					"id": %q, "created_at": "2026-10-19T10:0%d:00Z", "type": "forward_to_virtual_cluster", "name": "forward-%d",
+					"config": {"type": "port_mapping", "advertised_host": "localhost", "bootstrap_port": "at_start", "destination": {"id": %q}}
+				}`, policyID, len(ids)-i, i, vcID))
+			}
+			return fmt.Sprintf(`{"config_version": {"data_version": %d, "operator_version": "1.0.0", "feature_bitmap": 0}, "entities": {
+				"backend_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "bc",
+					"bootstrap_servers": ["kafka:9092"], "authentication": {"type": "anonymous"}, "tls": {"enabled": false},
+					"insecure_allow_anonymous_virtual_cluster_auth": true
+				}],
+				"virtual_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+					"destination": {"id": %q}, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+					"cluster_policies": [], "consume_policies": [], "produce_policies": []
+				}],
+				"listeners": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "listener",
+					"addresses": ["0.0.0.0"], "ports": ["19092-19095"], "policies": [%s]
+				}],
+				"schema_registries": [], "static_keys": [], "tls_trust_bundles": []
+			}}`, revision, bcID, vcID, bcID, listenerID, strings.Join(policies, ","))
+		}
+		read := func() []string {
+			t.Helper()
+			resp, err := gwAdmin.GetEventGatewayEntities(ctx, id)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+			require.NoError(t, err)
+			require.NotNil(t, parsed.JSON200, "%s: %s", resp.Status, parsed.Body)
+			require.Len(t, parsed.JSON200.Entities.Listeners, 1)
+			got := make([]string, 0, 2)
+			for _, p := range parsed.JSON200.Entities.Listeners[0].Policies {
+				got = append(got, p.Id.String())
+			}
+			return got
+		}
+		for revision := range 3 {
+			slices.Reverse(policyIDs)
+			require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntitiesWithBody(ctx, id, "application/json", strings.NewReader(doc(revision+1, policyIDs)))), 300)
+			for range 3 {
+				require.Equal(t, policyIDs, read(), "listener policies must retain their submitted order on every read")
+			}
+		}
+	})
+
 	t.Run("created_at must be whole seconds in UTC", func(t *testing.T) {
 		for name, createdAt := range map[string]time.Time{
 			"fractional seconds": time.Date(2026, 10, 19, 10, 0, 0, 500_000_000, time.UTC),

@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -44,31 +45,90 @@ func testPolicyChain(name string) *configurationv1alpha1.EventGatewayVirtualClus
 	}
 }
 
+// TestPolicyChainOnPremReconciliationIsLocal checks the Konnect reconciler
+// leaves a chain whose parent belongs to an OnPremEventGateway alone, its
+// status written by the OnPremEventGateway controller only, a chain of
+// another namespace than its listener included: the two controllers would
+// otherwise rewrite each other's conditions without end.
 func TestPolicyChainOnPremReconciliationIsLocal(t *testing.T) {
 	t.Parallel()
-	chain := testPolicyChain("chain")
-	chain.Status.Conditions = []metav1.Condition{
-		{Type: "Programmed", Status: metav1.ConditionTrue, Reason: "Programmed",
-			Message: "In the configuration of the OnPremEventGateway default/onprem-gw, pushed to its gw-admin pods"},
-		{Type: "PolicyChainOwnerValid", Status: metav1.ConditionTrue, Reason: "Owner"},
+	conditions := func() []metav1.Condition {
+		return []metav1.Condition{
+			{Type: "Programmed", Status: metav1.ConditionTrue, Reason: "Programmed",
+				Message: "In the configuration of the OnPremEventGateway default/onprem-gw, pushed to its gw-admin pods"},
+			{Type: "PolicyChainOwnerValid", Status: metav1.ConditionTrue, Reason: "Owner"},
+		}
 	}
-	backend := newTestOnPremEventGatewayBackendCluster(chain.Namespace, "backend", "onprem-gw")
-	parent := newTestEventGatewayVirtualCluster(chain.Namespace, "vc", backend.Name)
-	cl := newFakeClientBuilder(scheme.Get()).WithStatusSubresource(chain).
-		WithObjects(backend, parent, chain).Build()
-	r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl)
-	for range 3 {
-		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
-		res, err := r.Reconcile(t.Context(), chain)
-		require.NoError(t, err, "on-prem chains must not use a Konnect SDK factory or authentication")
-		require.True(t, res.IsZero())
+	for _, tc := range []struct {
+		name      string
+		objects   func() (policyChain, []client.Object)
+		reconcile func(context.Context, client.Client, policyChain) (ctrl.Result, error)
+	}{
+		{
+			name: "cluster policy chain",
+			objects: func() (policyChain, []client.Object) {
+				chain := testPolicyChain("chain")
+				chain.Status.Conditions = conditions()
+				backend := newTestOnPremEventGatewayBackendCluster(chain.Namespace, "backend", "onprem-gw")
+				return chain, []client.Object{backend, newTestEventGatewayVirtualCluster(chain.Namespace, "vc", backend.Name), chain}
+			},
+			reconcile: func(ctx context.Context, cl client.Client, chain policyChain) (ctrl.Result, error) {
+				return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl).
+					Reconcile(ctx, chain.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain))
+			},
+		},
+		{
+			name: "listener policy chain",
+			objects: func() (policyChain, []client.Object) {
+				chain := testListenerPolicyChain("chain")
+				chain.Status.Conditions = conditions()
+				return chain, []client.Object{onPremListener(chain.Namespace), chain}
+			},
+			reconcile: reconcileListenerPolicyChain,
+		},
+		{
+			name: "listener policy chain of another namespace",
+			objects: func() (policyChain, []client.Object) {
+				chain := testListenerPolicyChain("chain")
+				chain.Namespace = "other"
+				chain.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new("default")
+				chain.Status.Conditions = conditions()
+				return chain, []client.Object{onPremListener("default"), chain}
+			},
+			reconcile: reconcileListenerPolicyChain,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			chain, objects := tc.objects()
+			cl := newFakeClientBuilder(scheme.Get()).WithStatusSubresource(chain).WithObjects(objects...).Build()
+			for range 3 {
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+				res, err := tc.reconcile(t.Context(), cl, chain)
+				require.NoError(t, err, "on-prem chains must not use a Konnect SDK factory or authentication")
+				require.True(t, res.IsZero())
+			}
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+			require.Empty(t, chain.GetFinalizers())
+			require.Empty(t, chain.(interface{ GetKonnectID() string }).GetKonnectID())
+			require.True(t, apimeta.IsStatusConditionTrue(chain.GetConditions(), "Programmed"))
+			require.True(t, apimeta.IsStatusConditionTrue(chain.GetConditions(), "PolicyChainOwnerValid"))
+			require.Len(t, chain.GetConditions(), 2, "Konnect must not race the on-prem status writer")
+		})
 	}
-	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
-	require.Empty(t, chain.Finalizers)
-	require.Empty(t, chain.GetKonnectID())
-	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "Programmed"))
-	require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "PolicyChainOwnerValid"))
-	require.Len(t, chain.Status.Conditions, 2, "Konnect must not race the on-prem status writer")
+}
+
+// onPremListener returns the listener of an OnPremEventGateway.
+func onPremListener(namespace string) *configurationv1alpha1.EventGatewayListener {
+	return &configurationv1alpha1.EventGatewayListener{
+		Name: "listener", Namespace: namespace,
+		Spec: configurationv1alpha1.EventGatewayListenerSpec{ParentRef: onPremEventGatewayParentRef("onprem-gw")},
+	}
+}
+
+func reconcileListenerPolicyChain(ctx context.Context, cl client.Client, chain policyChain) (ctrl.Result, error) {
+	return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayListenerPolicyChain](nil, logging.DevelopmentMode, cl).
+		Reconcile(ctx, chain.(*configurationv1alpha1.EventGatewayListenerPolicyChain))
 }
 
 func TestPolicyChainReconcileResolvesReferencesOnce(t *testing.T) {

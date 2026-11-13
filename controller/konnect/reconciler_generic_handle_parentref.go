@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -23,7 +22,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
-	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -108,6 +106,15 @@ func ensureKongReferenceGrantForParentRef[
 				TypeName:  parentTypeName,
 			}
 		}
+		// A listener policy chain of another namespace than its listener was
+		// rejected with an invalid parent reference before it could have one:
+		// without a KongReferenceGrant, the parent isn't read, so nothing tells
+		// that condition is stale but its removal here.
+		if _, isChain := any(ent).(policyChain); isChain {
+			if res, errStatus := patch.StatusWithoutCondition(ctx, cl, ent, ent.GetStatusConditionTypeParentRefValid()); errStatus != nil || !res.IsZero() {
+				return res, errStatus
+			}
+		}
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
@@ -185,41 +192,6 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 	parentType := constraints.EntityTypeName[p]()
 
 	parentRef := obj.GetParentRef()
-
-	// A listener policy chain must be in the namespace of its listener. A
-	// cluster policy chain may reference a virtual cluster of another
-	// namespace, with a KongReferenceGrant, checked below as for any parent.
-	if chain, isChain := obj.(policyChain); isChain && !policychain.CrossNamespaceAllowed(chain) &&
-		parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef &&
-		parentRef.NamespacedRef != nil && parentRef.NamespacedRef.Namespace != nil &&
-		*parentRef.NamespacedRef.Namespace != "" && *parentRef.NamespacedRef.Namespace != obj.GetNamespace() {
-		err := ReferencedObjectIsInvalidError{
-			Reference: *parentRef.NamespacedRef.Namespace + "/" + parentRef.NamespacedRef.Name,
-			Msg:       fmt.Sprintf("listener policy chains require a %s in the same namespace as the chain (%s); cross-namespace parents are not supported", parentType, obj.GetNamespace()),
-		}
-		old := obj.DeepCopyObject().(client.Object)
-		// Older reconciliations could adopt parent IDs and grant conditions
-		// before rejecting the chain's unsupported cross-namespace parent.
-		if status := konnectEntityStatusOf(obj); status != nil {
-			*status = konnectv1alpha2.KonnectEntityStatus{}
-		}
-		k8sutils.RemoveCondition(consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs), obj)
-		patch.SetStatusWithConditionIfDifferent(obj,
-			consts.ConditionType(obj.GetStatusConditionTypeParentRefValid()),
-			metav1.ConditionFalse,
-			consts.ConditionReason(obj.GetStatusConditionReasonParentRefInvalid()),
-			err.Error(),
-		)
-		if !equality.Semantic.DeepEqual(old, obj) {
-			if patchErr := cl.Status().Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); patchErr != nil {
-				if apierrors.IsConflict(patchErr) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("rejecting cross-namespace policy chain parent: %w", patchErr)
-			}
-		}
-		return ctrl.Result{}, err
-	}
 
 	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
 	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not

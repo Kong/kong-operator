@@ -116,8 +116,8 @@ spec:
           schemaSource:
             type: reference
             reference:
-              subject: orders-value
-              version: latest
+              subject: "'orders-value'"
+              version: "'latest'"
               schemaRefDestination:
                 type: none
                 none: {}
@@ -186,8 +186,8 @@ spec:
           schemaSource:
             type: reference
             reference:
-              subject: orders-value
-              version: latest
+              subject: "'orders-value'"
+              version: "'latest'"
               schemaRefDestination:
                 type: none
                 none: {}

@@ -104,7 +104,7 @@ func TestHolder(t *testing.T) {
 	// referencing another one.
 	otherParent := chain(parent.Namespace)
 	otherParent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name = "other"
-	// A listener policy chain may only claim a listener of its namespace.
+	// A listener policy chain, on a listener of the same name.
 	listenerChain := func(namespace string) *configurationv1alpha1.EventGatewayListenerPolicyChain {
 		return &configurationv1alpha1.EventGatewayListenerPolicyChain{
 			Namespace: namespace, Name: "chain", UID: "uid",
@@ -123,6 +123,13 @@ func TestHolder(t *testing.T) {
 			To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualCluster"}},
 		},
 	}
+	listenerGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "listener-chains", Namespace: parent.Namespace,
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain", Namespace: "chains"}},
+			To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: "EventGatewayListener"}},
+		},
+	}
 	for name, tc := range map[string]struct {
 		objs     []client.Object
 		claim    string
@@ -136,7 +143,8 @@ func TestHolder(t *testing.T) {
 		"a chain that is gone":                           {claim: "chain/uid"},
 		"a malformed claim":                              {claim: "chain"},
 		"a chain referencing another virtual cluster":    {objs: []client.Object{otherParent}, claim: "chain/uid"},
-		"a listener chain of another namespace":          {listener: true, objs: []client.Object{listenerChain("chains"), grant.DeepCopy()}, claim: "chains/chain/uid"},
+		"a granted listener chain of another namespace":  {listener: true, objs: []client.Object{listenerChain("chains"), listenerGrant.DeepCopy()}, claim: "chains/chain/uid", holds: true},
+		"a listener chain granted as a cluster chain":    {listener: true, objs: []client.Object{listenerChain("chains"), grant.DeepCopy()}, claim: "chains/chain/uid"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

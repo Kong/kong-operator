@@ -12402,7 +12402,7 @@ EventGatewayListenerPolicyChainAPISpec defines the API spec fields for EventGate
 
 | Field | Description |
 | --- | --- |
-| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener. Namespace defaults to this chain's namespace; a policy in another namespace needs a KongReferenceGrant in its namespace. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
 
 _Appears in:_
 
@@ -12492,7 +12492,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -19156,7 +19156,7 @@ GWAdminSpec defines the desired state of GWAdmin.
 
 | Field | Description |
 | --- | --- |
-| `license` _[GWAdminLicense](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicense)_ | License configures the enveloped license required by gw-admin. gw-admin, not Kong Operator, validates the license. |
+| `license` _[GWAdminLicense](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicense)_ | License configures the enveloped license required by gw-admin. gw-admin, not Kong Operator, validates the license.<br /><br />Kong Operator mounts the referenced Secret key in the gw-admin pods and points gw-admin at it: a pod template overlay can't replace the license volume, mount a volume at its path, or set its env vars. A change to the Secret does not restart the pods: the kubelet updates the mounted file, and gw-admin reads it again on each of its periodic license checks. gw-admin refuses to start, or stops, without a valid license. The LicenseProvisioned condition reports a missing Secret, or a missing or empty key. While a GWAdmin references the Secret, the gateway-operator.konghq.com/gwadmin-license-in-use finalizer delays its deletion until no GWAdmin references it: update a license in place rather than deleting and creating its Secret again. |
 | `deployment` _[GWAdminDeploymentOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadmindeploymentoptions)_ | Deployment configures the gw-admin Deployment. |
 | `network` _[GWAdminNetworkOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminnetworkoptions)_ | Network configures the Services in front of gw-admin. |
 | `tls` _[GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)_ | TLS configures the certificates of gw-admin. By default Kong Operator creates a certificate authority for this GWAdmin and issues and rotates every certificate from it, so nothing has to be configured. |

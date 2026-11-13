@@ -94,9 +94,8 @@ type EventGatewayListenerPolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`

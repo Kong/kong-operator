@@ -9713,6 +9713,17 @@ spec:
                 description: |-
                   License configures the enveloped license required by gw-admin.
                   gw-admin, not Kong Operator, validates the license.
+
+                  Kong Operator mounts the referenced Secret key in the gw-admin pods
+                  and points gw-admin at it: a pod template overlay can't replace the
+                  license volume, mount a volume at its path, or set its env vars. A change to the Secret does not restart the
+                  pods: the kubelet updates the mounted file, and gw-admin reads it again
+                  on each of its periodic license checks. gw-admin refuses to start, or
+                  stops, without a valid license. The LicenseProvisioned condition reports
+                  a missing Secret, or a missing or empty key. While a GWAdmin references
+                  the Secret, the gateway-operator.konghq.com/gwadmin-license-in-use
+                  finalizer delays its deletion until no GWAdmin references it: update a
+                  license in place rather than deleting and creating its Secret again.
                 properties:
                   entitlements:
                     default:

@@ -13,14 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -28,27 +26,18 @@ import (
 
 func TestPolicyChainParentNamespace(t *testing.T) {
 	t.Parallel()
+	// A chain of another namespace than its parent needs a KongReferenceGrant
+	// (see TestPolicyChainCrossNamespaceGrantedLifecycle and
+	// TestListenerPolicyChainCrossNamespaceGrantedLifecycle).
 	for _, kind := range []string{"listener", "virtual cluster"} {
 		for _, tc := range []struct {
 			name      string
 			namespace *string
-			grant     bool
-			stale     bool
 		}{
 			{name: "omitted"},
 			{name: "empty", namespace: new("")},
 			{name: "same", namespace: new("default")},
-			{name: "different without grant", namespace: new("other")},
-			{name: "different with grant", namespace: new("other"), grant: true},
-			{name: "different with stale status", namespace: new("other"), grant: true, stale: true},
 		} {
-			crossNamespace := tc.namespace != nil && *tc.namespace == "other"
-			if kind == "virtual cluster" && crossNamespace {
-				// A cluster policy chain may reference a virtual cluster of
-				// another namespace, with a KongReferenceGrant (see
-				// TestPolicyChainCrossNamespaceGrantedLifecycle).
-				continue
-			}
 			t.Run(kind+"/"+tc.name, func(t *testing.T) {
 				var chain objectWithParentRef
 				var parent objectWithParentRef
@@ -74,93 +63,32 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 				chain.GetParentRef().NamespacedRef.Namespace = tc.namespace
 				chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(chain.GetParentGVK().Kind + "PolicyChain"))
 				chain.SetFinalizers([]string{KonnectCleanupFinalizer})
-				if crossNamespace {
-					parent.SetNamespace("other")
-				}
 				konnectEntityStatusOf(parent).ID = "parent-id"
 				parent.(interface{ SetGatewayID(string) }).SetGatewayID("gateway-id")
 				parent.SetConditions([]metav1.Condition{{
 					Type: string(konnectv1alpha1.KonnectEntityProgrammedConditionType), Status: metav1.ConditionTrue, Reason: "Programmed",
 				}})
-				if tc.stale {
-					chain.SetParentID("previous-parent-id")
-					chain.(objectAcceptingAncestorIDs).SetAncestorID("KonnectEventGateway", "previous-gateway-id")
-					chain.SetConditions([]metav1.Condition{
-						{Type: chain.GetStatusConditionTypeParentRefValid(), Status: metav1.ConditionTrue, Reason: chain.GetStatusConditionReasonParentRefValid()},
-						{Type: configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, Status: metav1.ConditionTrue, Reason: string(configurationv1alpha1.KongReferenceGrantReasonResolvedRefs)},
-					})
-				}
-				objects := []client.Object{chain, parent}
-				if tc.grant {
-					objects = append(objects, &configurationv1alpha1.KongReferenceGrant{
-						Name: "allow-chain", Namespace: parent.GetNamespace(),
-						Spec: configurationv1alpha1.KongReferenceGrantSpec{
-							From: []configurationv1alpha1.ReferenceGrantFrom{{
-								Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
-								Kind:  configurationv1alpha1.Kind(chain.GetObjectKind().GroupVersionKind().Kind), Namespace: "default",
-							}},
-							To: []configurationv1alpha1.ReferenceGrantTo{{
-								Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
-								Kind:  configurationv1alpha1.Kind(chain.GetParentGVK().Kind),
-							}},
-						},
-					})
-				}
-				forbidReads := crossNamespace
-				cl := newFakeClientBuilder(scheme.Get()).
-					WithObjects(objects...).WithStatusSubresource(chain).
-					WithInterceptorFuncs(interceptor.Funcs{
-						Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-							if forbidReads {
-								t.Errorf("invalid chain must stop before looking up %T %s", obj, key)
-							}
-							return cl.Get(ctx, key, obj, opts...)
-						},
-						List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-							if forbidReads {
-								t.Errorf("invalid chain must stop before checking grants: %T", list)
-							}
-							return cl.List(ctx, list, opts...)
-						},
-					}).Build()
-				if crossNamespace {
-					res, err := reconcile(t.Context(), cl)
-					require.NoError(t, err)
-					require.True(t, res.IsZero())
-					require.Equal(t, konnectv1alpha2.KonnectEntityStatus{}, *konnectEntityStatusOf(chain))
-					require.True(t, meta.IsStatusConditionFalse(chain.GetConditions(), string(konnectv1alpha1.KonnectEntityProgrammedConditionType)))
-					require.Contains(t, chain.GetFinalizers(), KonnectCleanupFinalizer)
-				} else {
-					res, err := handleParent(t.Context(), cl, chain)
-					require.NoError(t, err)
-					require.True(t, res.IsZero())
-					require.Equal(t, "gateway-id", chain.(objectExposingAncestorIDs).GetAncestorIDs()["KonnectEventGateway"])
-				}
+				cl := newFakeClientBuilder(scheme.Get()).WithObjects(chain, parent).WithStatusSubresource(chain).Build()
+				res, err := handleParent(t.Context(), cl, chain)
+				require.NoError(t, err)
+				require.True(t, res.IsZero())
+				require.Equal(t, "gateway-id", chain.(objectExposingAncestorIDs).GetAncestorIDs()["KonnectEventGateway"])
 				condition := meta.FindStatusCondition(chain.GetConditions(), chain.GetStatusConditionTypeParentRefValid())
 				require.NotNil(t, condition)
-				if crossNamespace {
-					require.Equal(t, metav1.ConditionFalse, condition.Status)
-					require.Equal(t, chain.GetStatusConditionReasonParentRefInvalid(), condition.Reason)
-					require.Contains(t, condition.Message, "same namespace")
-				} else {
-					require.Equal(t, metav1.ConditionTrue, condition.Status)
-					require.Equal(t, chain.GetStatusConditionReasonParentRefValid(), condition.Reason)
-				}
+				require.Equal(t, metav1.ConditionTrue, condition.Status)
+				require.Equal(t, chain.GetStatusConditionReasonParentRefValid(), condition.Reason)
 				require.Nil(t, meta.FindStatusCondition(chain.GetConditions(), configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
-				require.Empty(t, parent.GetAnnotations(), "invalid parents must never acquire chain ownership")
-				forbidReads = false
+				require.Empty(t, parent.GetAnnotations(), "resolving the parent doesn't claim it")
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
 				persistedCondition := meta.FindStatusCondition(chain.GetConditions(), chain.GetStatusConditionTypeParentRefValid())
 				require.Equal(t, condition, persistedCondition)
 				require.Nil(t, meta.FindStatusCondition(chain.GetConditions(), configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
-				// Deletion must still remove the finalizer without auth or parent lookup.
+				// Deletion must still remove the finalizer without auth.
 				require.NoError(t, cl.Delete(t.Context(), chain))
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
-				forbidReads = crossNamespace
-				res, err := reconcile(t.Context(), cl)
+				res, err = reconcile(t.Context(), cl)
 				require.NoError(t, err)
 				require.True(t, res.IsZero())
-				forbidReads = false
 				require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain)))
 			})
 		}

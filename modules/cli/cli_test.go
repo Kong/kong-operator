@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/platform"
 )
 
 func TestSetFlagFromEnvVar(t *testing.T) {
@@ -281,6 +282,17 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name: "platform argument is set to openshift",
+			args: []string{
+				"--platform=openshift",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.Platform = platform.Openshift
+				return cfg
+			},
+		},
+		{
 			name: "cluster domain argument is set",
 			args: []string{
 				"--cluster-domain=foo.bar",
@@ -513,6 +525,7 @@ func expectedDefaultCfg() manager.Config {
 		ConversionWebhookEnabled:                 true,
 		ValidatingWebhookEnabled:                 true,
 		ValidatingWebhookCertDir:                 validationconsts.DefaultAdmissionWebhookCertDir,
+		Platform:                                 platform.Auto,
 		FQDNModeEnabled:                          false,
 		CertTTL:                                  consts.DefaultCertTTL,
 		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,

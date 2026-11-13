@@ -129,3 +129,32 @@ func TestComparisonAccountsForClusterPolicyDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, string(original), string(unchanged), "default normalization must not mutate the desired document")
 }
+
+func TestComparisonPreservesOnlyExplicitListenerPolicyOrder(t *testing.T) {
+	var entities gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"listeners":[
+			{"id":"00000000-0000-4000-8000-000000000003","policies":[
+				{"id":"00000000-0000-4000-8000-000000000051","type":"tls_server"},
+				{"id":"00000000-0000-4000-8000-000000000052","type":"tls_server"}]},
+			{"id":"00000000-0000-4000-8000-000000000004","policies":[
+				{"id":"00000000-0000-4000-8000-000000000061","type":"tls_server"},
+				{"id":"00000000-0000-4000-8000-000000000062","type":"tls_server"}]}]
+	}`), &entities))
+	listenerID := entities.Listeners[0].Id
+	encoded, err := json.Marshal(entities)
+	require.NoError(t, err)
+	var held gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal(encoded, &held))
+	slices.Reverse(held.Listeners[1].Policies)
+	key, err := comparisonKey(entities, listenerID)
+	require.NoError(t, err)
+	same, err := sameEntities(held, key, listenerID)
+	require.NoError(t, err)
+	require.True(t, same, "the order of the policies of a listener without a chain is insignificant")
+
+	slices.Reverse(held.Listeners[0].Policies)
+	same, err = sameEntities(held, key, listenerID)
+	require.NoError(t, err)
+	require.False(t, same, "remote reordering of the policies a chain orders is drift")
+}
