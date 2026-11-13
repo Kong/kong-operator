@@ -389,12 +389,27 @@ type KegDataPlaneConfiguration struct {
 	// ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
 	// Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL.
 	//
+	// Deprecated: keg 1.3.0 removed this setting: it long-polls its configuration.
+	// It is passed only to a keg older than 1.3.0, read from the tag of its image,
+	// and ignored otherwise, with a Warning Event on the KegDataPlane.
+	// An image without a version tag, e.g. pinned by digest only or tagged main,
+	// counts as 1.3.0 or later; the tag of a custom image is read as the keg
+	// version.
+	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	ConfigPollIntervalSeconds *int32 `json:"configPollIntervalSeconds,omitempty"`
 
 	// EnableDebugEndpoints enables the /debug/pprof/allocs endpoint.
 	// Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
+	//
+	// Deprecated: keg 1.3.0 removed this setting: it serves its debug endpoints on
+	// a listener of its own. It is passed only to a keg older than 1.3.0, read from
+	// the tag of its image, and ignored otherwise, with a Warning Event on the
+	// KegDataPlane.
+	// An image without a version tag, e.g. pinned by digest only or tagged main,
+	// counts as 1.3.0 or later; the tag of a custom image is read as the keg
+	// version.
 	//
 	// +optional
 	EnableDebugEndpoints *DebugEndpointsState `json:"enableDebugEndpoints,omitempty"`

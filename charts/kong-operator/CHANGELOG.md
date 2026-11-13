@@ -12,6 +12,11 @@
   to `[Deny]` to reject such objects instead. Changes made through the
   `DataPlane` scale subresource (e.g. `kubectl scale`) are not validated.
   [#6490](https://github.com/Kong/kong-operator/pull/6490)
+- Add a `ValidatingAdmissionPolicy` warning when a `KegDataPlane` sets
+  `spec.config.configPollIntervalSeconds` or `spec.config.enableDebugEndpoints`,
+  which keg 1.3.0 removed. Disable it with the chart value
+  `global.validatingPolicies.kegDataPlaneDeprecatedSettings.enabled`.
+  [#6637](https://github.com/Kong/kong-operator/pull/6637)
 
 ## 1.5.0-rapid.3.1
 

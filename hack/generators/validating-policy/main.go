@@ -55,6 +55,11 @@ func main() {
 			chartValidatingPolicyFileName: "validation-policy-konnect.yaml",
 			helmValueName:                 "konnectDataplaneAutoscale",
 		},
+		{
+			validatingPoliciesSubPath:     "eventgateway",
+			chartValidatingPolicyFileName: "validation-policy-eventgateway.yaml",
+			helmValueName:                 "kegDataPlaneDeprecatedSettings",
+		},
 	}
 	for _, param := range validatingPolicyGroups {
 		chartsValidatingPolicyTemplateFilePath := path.Join(chartsTemplatePathPrefix, param.chartValidatingPolicyFileName)
