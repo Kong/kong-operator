@@ -29,6 +29,7 @@ resources:
   - configuration.konghq.com_eventgatewaystatickeys.yaml
   - configuration.konghq.com_eventgatewaytlstrustbundles.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicychains.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterpolicies.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterpolicychains.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml
