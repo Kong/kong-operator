@@ -106,18 +106,21 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 						},
 					})
 				}
-				forbidReads := crossNamespace
+				// An invalid chain looks up its parent, to leave a chain of an
+				// on-prem listener to the OnPremEventGateway controller, but
+				// stops before checking grants; its deletion reads neither.
+				forbidLookups, forbidGrants := false, crossNamespace
 				cl := newFakeClientBuilder(scheme.Get()).
 					WithObjects(objects...).WithStatusSubresource(chain).
 					WithInterceptorFuncs(interceptor.Funcs{
 						Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-							if forbidReads {
-								t.Errorf("invalid chain must stop before looking up %T %s", obj, key)
+							if forbidLookups {
+								t.Errorf("a deleted invalid chain must not look up %T %s", obj, key)
 							}
 							return cl.Get(ctx, key, obj, opts...)
 						},
 						List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-							if forbidReads {
+							if forbidGrants {
 								t.Errorf("invalid chain must stop before checking grants: %T", list)
 							}
 							return cl.List(ctx, list, opts...)
@@ -148,7 +151,7 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 				}
 				require.Nil(t, meta.FindStatusCondition(chain.GetConditions(), configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
 				require.Empty(t, parent.GetAnnotations(), "invalid parents must never acquire chain ownership")
-				forbidReads = false
+				forbidGrants = false
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
 				persistedCondition := meta.FindStatusCondition(chain.GetConditions(), chain.GetStatusConditionTypeParentRefValid())
 				require.Equal(t, condition, persistedCondition)
@@ -156,11 +159,11 @@ func TestPolicyChainParentNamespace(t *testing.T) {
 				// Deletion must still remove the finalizer without auth or parent lookup.
 				require.NoError(t, cl.Delete(t.Context(), chain))
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
-				forbidReads = crossNamespace
+				forbidLookups, forbidGrants = crossNamespace, crossNamespace
 				res, err := reconcile(t.Context(), cl)
 				require.NoError(t, err)
 				require.True(t, res.IsZero())
-				forbidReads = false
+				forbidLookups, forbidGrants = false, false
 				require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain)))
 			})
 		}

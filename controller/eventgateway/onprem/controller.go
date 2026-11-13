@@ -143,15 +143,17 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	// its finalizers, e.g. one the gateway couldn't hold or release as it
 	// changed since it was read, its status, e.g. one someone else set, which
 	// the reconcile sets back, and the parent policy-chain ownership of a
-	// virtual cluster. The status the reconcile writes on its entities triggers
-	// it once more, writing nothing.
+	// virtual cluster or of a listener. The status the reconcile writes on its
+	// entities triggers it once more, writing nothing.
 	mapToGateway := handler.EnqueueRequestsFromMapFunc(mapEntityToOnPremEventGateway(mgr.GetClient()))
 	for _, entity := range entityTypes() {
 		b = b.Watches(entity, mapToGateway)
 	}
-	b = b.Watches(&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
-		handler.EnqueueRequestsFromMapFunc(mapClusterPolicyToChainGateways(mgr.GetClient())),
-		builder.WithPredicates(entityChanged()))
+	for _, policy := range []client.Object{&configurationv1alpha1.EventGatewayVirtualClusterPolicy{}, &configurationv1alpha1.EventGatewayListenerPolicy{}} {
+		b = b.Watches(policy,
+			handler.EnqueueRequestsFromMapFunc(mapPolicyToChainGateways(mgr.GetClient())),
+			builder.WithPredicates(entityChanged()))
+	}
 
 	// A change to the GWAdmin of a gateway, to its Secrets or to its gw-admin
 	// pods triggers it, and so does a change to a KongReferenceGrant allowing

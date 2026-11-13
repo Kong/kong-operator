@@ -35,7 +35,7 @@ func TestBuildClusterPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, string(policies[1].UID), cfg.entities.VirtualClusters[0].ClusterPolicies[0].Id.String())
 	require.Equal(t, "EventGatewayVirtualClusterPolicy "+ns+"/z-second", cfg.objects["virtual_clusters.0.cluster_policies.0"])
 	require.Equal(t, "EventGatewayVirtualClusterPolicy "+ns+"/a-first", cfg.objects["virtual_clusters.0.cluster_policies.1"])
-	require.Len(t, cfg.orderedClusterPolicies, 1)
+	require.Len(t, cfg.orderedPolicies, 1)
 
 	competitor := chain.DeepCopy()
 	competitor.Name, competitor.UID, competitor.ResourceVersion = "competitor", types.UID(uuid.NewString()), ""
@@ -68,7 +68,7 @@ func TestBuildClusterPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, policychain.ClaimValue(recreated), parent.Annotations[policychain.OwnerAnnotation], "a recreated chain must acquire its own UID-bound claim")
 	require.NoError(t, cl.Delete(t.Context(), recreated))
 	cfg = build()
-	require.Empty(t, cfg.orderedClusterPolicies)
+	require.Empty(t, cfg.orderedPolicies)
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(parent), parent))
 	require.NotContains(t, parent.Annotations, policychain.OwnerAnnotation)
 	require.Len(t, cfg.entities.VirtualClusters[0].ClusterPolicies, 2, "deleting chains must never delete policy entities")
@@ -118,7 +118,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, cfg.entities.VirtualClusters, 1)
 			require.Equal(t, string(validParent.UID), cfg.entities.VirtualClusters[0].Id.String())
-			require.Empty(t, cfg.orderedClusterPolicies)
+			require.Empty(t, cfg.orderedPolicies)
 			if tt.blocked {
 				require.Equal(t, []string{client.ObjectKeyFromObject(chain).String() + ": its EventGatewayVirtualCluster " +
 					client.ObjectKeyFromObject(parent).String() + " isn't in the configuration"}, cfg.invalidChains,
@@ -432,7 +432,7 @@ func TestClusterPolicyOrderValidation(t *testing.T) {
 			cl := newFakeClient(t, objects...)
 			cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 			require.NoError(t, err)
-			ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+			ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 			require.NoError(t, err)
 			if tt.problem != "" {
 				require.Contains(t, problem, tt.problem)
@@ -497,7 +497,7 @@ spec:
 		)...)
 		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.NoError(t, err)
-		ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+		ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 		require.NoError(t, err)
 		require.Empty(t, problem)
 		require.Len(t, ordered, 3)
@@ -513,7 +513,7 @@ spec:
 		)...)
 		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.NoError(t, err)
-		_, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+		_, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 		require.NoError(t, err)
 		require.Contains(t, problem, "policy "+other+"/m-other is missing")
 	})
@@ -523,7 +523,7 @@ spec:
 		cl := newFakeClient(t, append(objects, otherPolicy(t))...)
 		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.NoError(t, err)
-		ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+		ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 		require.NoError(t, err)
 		require.Empty(t, problem)
 		require.Len(t, ordered, 2)
@@ -544,7 +544,7 @@ spec:
 		require.NoError(t, err)
 		require.NoError(t, cfg.blocked())
 		require.Empty(t, cfg.invalidChains)
-		require.Len(t, cfg.orderedClusterPolicies, 1)
+		require.Len(t, cfg.orderedPolicies, 1)
 		var vc configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
 		require.Equal(t, other+"/chain/"+string(chain.UID), vc.Annotations[policychain.OwnerAnnotation])
@@ -597,7 +597,7 @@ spec:
 		require.NoError(t, err)
 		require.NoError(t, cfg.blocked())
 		require.Empty(t, cfg.invalidChains)
-		require.Len(t, cfg.orderedClusterPolicies, 1)
+		require.Len(t, cfg.orderedPolicies, 1)
 		var vc configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
 		require.Equal(t, "chain/"+string(chain.UID), vc.Annotations[policychain.OwnerAnnotation])
@@ -616,7 +616,7 @@ spec:
 		require.NoError(t, err)
 		require.NoError(t, cfg.blocked())
 		require.Empty(t, cfg.invalidChains)
-		require.Len(t, cfg.orderedClusterPolicies, 1, "the chain of the namespace of the virtual cluster orders it")
+		require.Len(t, cfg.orderedPolicies, 1, "the chain of the namespace of the virtual cluster orders it")
 		var got configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(vc), &got))
 		require.Equal(t, "chain/"+string(chain.UID), got.Annotations[policychain.OwnerAnnotation])
@@ -634,7 +634,7 @@ spec:
 		)...)
 		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.NoError(t, err)
-		require.Empty(t, cfg.orderedClusterPolicies)
+		require.Empty(t, cfg.orderedPolicies)
 		require.Equal(t, []string{
 			other + "/chain: no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterPolicy " + ns + "/z-second",
 		}, cfg.invalidChains, "the owner's policies would keep their default order")
@@ -671,7 +671,7 @@ spec:
 		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.NoError(t, err)
 		require.NoError(t, cfg.blocked())
-		require.Empty(t, cfg.orderedClusterPolicies)
+		require.Empty(t, cfg.orderedPolicies)
 		var vc configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
 		require.NotContains(t, vc.Annotations, policychain.OwnerAnnotation)
@@ -728,7 +728,7 @@ func TestClusterPolicyChainUsesAssembledParentPolicies(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, cfg.invalidChains, 1)
 			require.Contains(t, cfg.invalidChains[0], "policy set changed during configuration assembly")
-			require.Empty(t, cfg.orderedClusterPolicies)
+			require.Empty(t, cfg.orderedPolicies)
 		})
 	}
 }
@@ -742,7 +742,7 @@ func TestClusterPolicyOrderEmptyAndReadErrors(t *testing.T) {
 	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayVirtualClusterPolicyRef{}
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
-	ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+	ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 	require.NoError(t, err)
 	require.Empty(t, problem)
 	require.NotNil(t, ordered)
@@ -764,7 +764,7 @@ func TestClusterPolicyOrderEmptyAndReadErrors(t *testing.T) {
 				},
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error { return failure },
 			}, objects...)
-			ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), broken, chain)
+			ordered, problem, err := policyOrder(t.Context(), &cfg, broken, chain, clusterPolicyChains)
 			require.ErrorIs(t, err, failure)
 			require.Empty(t, problem, "API failures must be retried, not mistaken for invalid or empty configuration")
 			require.Nil(t, ordered)

@@ -70,9 +70,10 @@ type configuration struct {
 	// pushedKey is entities as they are compared with the entities gw-admin
 	// holds (see sameEntities), encoded once for every gw-admin pod.
 	pushedKey []byte
-	// orderedClusterPolicies are the virtual clusters whose explicit chain
-	// order must also be compared when checking gw-admin for drift.
-	orderedClusterPolicies []uuid.UUID
+	// orderedPolicies are the virtual clusters and listeners whose policies
+	// a chain orders: their order must also be compared when checking
+	// gw-admin for drift.
+	orderedPolicies []uuid.UUID
 	// invalidChains prevent pushing a partial document or falling back to
 	// implicit ordering while an owning declaration cannot be fulfilled.
 	invalidChains []string
@@ -236,14 +237,18 @@ func buildConfiguration(
 	if err := cfg.addClusterPolicyChains(ctx, cl, virtualClusters); err != nil {
 		return configuration{}, err
 	}
-	if err := cfg.addListeners(ctx, resolver, gateway, targets); err != nil {
+	listeners, err := cfg.addListeners(ctx, resolver, gateway, targets)
+	if err != nil {
+		return configuration{}, err
+	}
+	if err := cfg.addListenerPolicyChains(ctx, cl, listeners); err != nil {
 		return configuration{}, err
 	}
 	cfg.entitiesInUse = entitiesInUse(cfg.included, cfg.built)
 	if err := cfg.addCertificates(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
-	key, err := comparisonKey(withGWAdminDefaults(cfg.entities), cfg.orderedClusterPolicies...)
+	key, err := comparisonKey(withGWAdminDefaults(cfg.entities), cfg.orderedPolicies...)
 	if err != nil {
 		return configuration{}, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
 	}
