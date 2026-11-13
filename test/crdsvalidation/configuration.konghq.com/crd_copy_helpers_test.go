@@ -45,6 +45,20 @@ func installCRDCopy(
 	drop func(apiextensionsv1.ValidationRule) bool,
 ) *crdCopy {
 	t.Helper()
+	return installCRDCopyAt(t, cfg, file, group, nil, drop)
+}
+
+// installCRDCopyAt is installCRDCopy dropping the rules of the schema at path
+// instead of the root one: path names properties, and "items" the schema of
+// the items of an array, e.g. spec, to, items.
+func installCRDCopyAt(
+	t *testing.T,
+	cfg *rest.Config,
+	file, group string,
+	path []string,
+	drop func(apiextensionsv1.ValidationRule) bool,
+) *crdCopy {
+	t.Helper()
 	ctx := t.Context()
 
 	s := runtime.NewScheme()
@@ -63,12 +77,9 @@ func installCRDCopy(
 	withoutRules := withRules.DeepCopy()
 	removed := 0
 	for i := range withoutRules.Spec.Versions {
-		schema := withoutRules.Spec.Versions[i].Schema.OpenAPIV3Schema
-		before := len(schema.XValidations)
-		schema.XValidations = slices.DeleteFunc(schema.XValidations, drop)
-		removed += before - len(schema.XValidations)
+		removed += dropRulesAt(withoutRules.Spec.Versions[i].Schema.OpenAPIV3Schema, path, drop)
 	}
-	require.Positive(t, removed, "no validation rule of %s matches", file)
+	require.Positive(t, removed, "no validation rule of %s at %v matches", file, path)
 
 	require.NoError(t, cl.Create(ctx, withoutRules))
 	t.Cleanup(func() {
@@ -98,6 +109,30 @@ func installCRDCopy(
 		Kind:       withRules.Spec.Names.Kind,
 		withRules:  withRules,
 	}
+}
+
+// dropRulesAt removes the validation rules for which drop returns true from
+// the schema at path under schema (see installCRDCopyAt), and returns how
+// many it removed: none when the path doesn't exist.
+func dropRulesAt(schema *apiextensionsv1.JSONSchemaProps, path []string, drop func(apiextensionsv1.ValidationRule) bool) int {
+	if len(path) == 0 {
+		before := len(schema.XValidations)
+		schema.XValidations = slices.DeleteFunc(schema.XValidations, drop)
+		return before - len(schema.XValidations)
+	}
+	if path[0] == "items" {
+		if schema.Items == nil || schema.Items.Schema == nil {
+			return 0
+		}
+		return dropRulesAt(schema.Items.Schema, path[1:], drop)
+	}
+	child, ok := schema.Properties[path[0]]
+	if !ok {
+		return 0
+	}
+	removed := dropRulesAt(&child, path[1:], drop)
+	schema.Properties[path[0]] = child
+	return removed
 }
 
 // AddRules adds the dropped rules back to the copy. The API server may take

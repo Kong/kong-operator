@@ -126,7 +126,7 @@ const (
 	// KonnectAIGateway exists but is not yet Programmed on Konnect.
 	KonnectAIGatewayNotProgrammedReason consts.ConditionReason = "NotProgrammed"
 	// KonnectAIGatewayEndpointMismatchReason indicates the referenced
-	// KonnectAIGateway returns an endpoint the serverURL cannot reach, or one carrying a path with no rendering yet.
+	// KonnectAIGateway returns an endpoint the serverURL cannot reach.
 	KonnectAIGatewayEndpointMismatchReason consts.ConditionReason = "EndpointMismatch"
 	// OnPremAIGatewayNotReadyReason indicates the referenced
 	// OnPremAIGateway exists but is not yet Ready.
