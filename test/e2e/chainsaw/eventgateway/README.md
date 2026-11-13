@@ -44,9 +44,9 @@ and handover, and deletion without authentication or valid references. Successfu
 chains must have every prerequisite condition `True` at the current generation
 and no independent `status.id`.
 
-Every observation requires a JSON object with an explicit `policies` array equal
-to the exact expected ID sequence, then repeats backend and Kubernetes identity
-checks for longer than a full sync period. The unready-policy scenario deliberately
+Every observation waits for a JSON object with an explicit `policies` array equal
+to the exact expected ID sequence, then checks backend and Kubernetes identities
+once. The unready-policy scenario deliberately
 uses another test policy's Konnect name; recovery assigns its own unique name,
 without adopting or deleting the original policy.
 The no-auth scenario removes only its credential Secret's token key, waits for
@@ -61,30 +61,12 @@ make test.e2e.chainsaw \
   CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/listenerpolicychain-lifecycle
 ```
 
-The defaults are `KONNECT_SYNC_PERIOD_SECONDS=60`, `WINDOW_SECONDS=75`, and
-`CHECK_INTERVAL=5`. Set the first value to the running operator's actual
-`--konnect-sync-period` in integer seconds; the script rejects an observation
-window that does not exceed it. For an isolated operator configured with
-`--konnect-sync-period=5s`, a shorter bounded run is:
-
-```bash
-KONNECT_SYNC_PERIOD_SECONDS=5 WINDOW_SECONDS=8 CHECK_INTERVAL=1 \
-  make test.e2e.chainsaw \
-    CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/listenerpolicychain-lifecycle
-```
-
-CI keeps the operator's default 60-second sync period and the 75-second observation
-windows. The listener lifecycle has 19 sequential observation windows, requiring
-at least 23 minutes 45 seconds before resource convergence, drift repair, and
-cleanup. The mutation/recovery checks run sequentially against the same resources;
-shortening their windows below the sync period would no longer verify stability
-across periodic reconciliation.
-In [a passing CI run](https://github.com/Kong/kong-operator/actions/runs/43178413365/job/131049655973),
-the listener scenario took 27 minutes 10 seconds, the full Chainsaw suite took
-28 minutes 39 seconds, and the whole job including cluster/operator setup took
-31 minutes 58 seconds. The workflow therefore allows 45 minutes for `eventgateway`
-only, with headroom for API/runner latency and cleanup; other suites retain their
-30-minute default and `GHA_EXTENDED_TIMEOUT_MINUTES` still overrides both.
+The drift and extra-policy scenarios wait for the operator's periodic Konnect
+sync (60 seconds by default) to notice changes no watched resource reports.
+After the chain is deleted, the retained order and identities are checked for
+`WINDOW_SECONDS` (default 75, longer than the sync period), every
+`CHECK_INTERVAL` seconds (default 5): nothing reconciles a deleted chain, but the
+listener and the policies keep reconciling and could still change the order.
 
 Cleanup is registered before resource creation and targets only this namespace's
 named probe resources and the exact-name, test-labeled remote gateway. It restores
