@@ -289,13 +289,19 @@ func TestClearOutOfScopeEntityStatus_Credential(t *testing.T) {
 
 	outOfScope := programmedCredential("consumer", "team-b")
 	otherGateway := programmedCredential("other-consumer", "team-b")
+	// Its own namespace stays watched; the consumer's left the set, so nothing renders it.
+	crossNamespace := programmedCredential("cross-consumer", "default")
+	crossNamespace.Name = "cross-ns-cred"
+	crossNamespace.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = new("team-b")
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(
 			outOfScope,
 			otherGateway,
+			crossNamespace,
 			consumer("consumer", "team-b", "default"),
 			consumer("other-consumer", "team-b", "team-a"),
+			consumer("cross-consumer", "team-b", "default"),
 		).
 		WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayConsumerCredential{}).
 		Build()
@@ -318,4 +324,5 @@ func TestClearOutOfScopeEntityStatus_Credential(t *testing.T) {
 
 	require.Equal(t, metav1.ConditionFalse, programmed(t, client.ObjectKeyFromObject(outOfScope)))
 	require.Equal(t, metav1.ConditionTrue, programmed(t, client.ObjectKeyFromObject(otherGateway)))
+	require.Equal(t, metav1.ConditionFalse, programmed(t, client.ObjectKeyFromObject(crossNamespace)))
 }

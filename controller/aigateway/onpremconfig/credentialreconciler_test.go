@@ -130,11 +130,6 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			konnectID: true,
 		},
 		{
-			name: "cross-namespace consumer reference",
-			ref:  &commonv1alpha1.NamespacedRef{Name: "consumer", Namespace: new("other")},
-			objs: []client.Object{consumerTargeting("consumer", "other", "gw", false)},
-		},
-		{
 			name: "reference without a namespacedRef",
 			ref:  nil,
 		},
@@ -254,4 +249,42 @@ func TestCredentialReconcilerIgnoresDeletedCredentials(t *testing.T) {
 		Name:      "gone",
 	})
 	require.NoError(t, err)
+}
+
+// TestCredentialReconcilerWritesCrossNamespaceConsumerRefCondition pins that a credential
+// referencing a consumer of another namespace belongs to the on-prem machinery, and that the
+// ResolvedRefs condition follows the KongReferenceGrant there.
+func TestCredentialReconcilerWritesCrossNamespaceConsumerRefCondition(t *testing.T) {
+	t.Parallel()
+
+	cred := credentialReferencing("cred", "default", &commonv1alpha1.NamespacedRef{Name: "consumer", Namespace: new("other")})
+	cl := newCredentialReconcilerClient(t, cred, consumerTargeting("consumer", "other", "gw", false))
+	rec := &AIGatewayConsumerCredentialReconciler{
+		Client:       cl,
+		Log:          logr.Discard(),
+		StatusClient: &stubStatusClient{configStatus: status.ConfigurationStatusSucceeded, enableState: true},
+	}
+	reconcile := func() *metav1.Condition {
+		t.Helper()
+		_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
+		require.NoError(t, err)
+		stored := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(cred), stored))
+		require.NotNil(t, credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred)))
+		return resolvedRefsCondition(stored.Status.Conditions)
+	}
+
+	cond := reconcile()
+	require.NotNil(t, cond)
+	require.Equal(t, metav1.ConditionFalse, cond.Status)
+	require.Equal(t, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted, cond.Reason)
+
+	require.NoError(t, cl.Create(t.Context(), referenceGrant("other", "default", "AIGatewayConsumerCredential", configurationv1alpha1.ReferenceGrantTo{
+		Group: "aiconfiguration.konghq.com",
+		Kind:  "AIGatewayConsumer",
+	})))
+	cond = reconcile()
+	require.NotNil(t, cond)
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, configurationv1alpha1.KongReferenceGrantReasonResolvedRefs, cond.Reason)
 }

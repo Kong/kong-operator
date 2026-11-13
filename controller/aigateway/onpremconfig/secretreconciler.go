@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -166,55 +165,40 @@ func notifyConsumersForCredentialSecrets(
 	}
 	for i := range list.Items {
 		cred := &list.Items[i]
-		consumerRef := cred.Spec.AIGatewayConsumerRef
-		if consumerRef.NamespacedRef == nil {
-			continue
-		}
-		// The translation only renders credentials living in the consumer's namespace
-		// (aigwCredentials lists via the index in the consumer's namespace), so a
-		// credential pointing at a consumer in another namespace never becomes part of
-		// that consumer's document: notifying it would only waste a fetch and a
-		// notification.
-		if refNS := consumerRef.NamespacedRef.Namespace; refNS != nil && *refNS != "" && *refNS != cred.GetNamespace() {
-			continue
-		}
 		for _, secretRef := range cred.GetSensitiveDataSecretRefs() {
 			if !match(cred.GetNamespace(), secretRef) {
 				continue
 			}
-			consumerNN := types.NamespacedName{
-				Namespace: cred.GetNamespace(),
-				Name:      consumerRef.NamespacedRef.Name,
-			}
-			if consumerRef.NamespacedRef.Namespace != nil && *consumerRef.NamespacedRef.Namespace != "" {
-				consumerNN.Namespace = *consumerRef.NamespacedRef.Namespace
-			}
-			var consumer aiconfigurationv1alpha1.AIGatewayConsumer
-			if err := cl.Get(ctx, consumerNN, &consumer); err != nil {
-				// The consumer is gone: nothing to notify.
-				if apierrors.IsNotFound(err) {
-					break
-				}
-				log.Error(err, "Failed to fetch AIGatewayConsumer referenced by an AIGatewayConsumerCredential",
-					"consumerNamespace", consumerNN.Namespace, "consumerName", consumerNN.Name)
-				return err
-			}
-			ref := consumer.GetAIGatewayRef()
-			if ref.NamespacedRef == nil || !ref.TargetsOnPremAIGateway() {
-				break
-			}
-			parent := types.NamespacedName{
-				Namespace: consumer.GetNamespace(),
-				Name:      ref.NamespacedRef.Name,
-			}
-			if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
-				parent.Namespace = *ref.NamespacedRef.Namespace
-			}
-			cn.NotifyChange(ctx, &parent, &consumer)
+			notifyConsumerGateway(ctx, cl, cred, cn)
 			break
 		}
 	}
 	return nil
+}
+
+// notifyConsumerGateway notifies the ChangeNotifier for the OnPremAIGateway that
+// renders the consumer the credential references. A consumer that is gone, that
+// the cache does not serve, or that targets a KonnectAIGateway has no on-prem
+// gateway to notify.
+func notifyConsumerGateway(
+	ctx context.Context,
+	cl client.Client,
+	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
+	cn *changenotifier.ChangeNotifier,
+) {
+	consumer := credentialConsumer(ctx, cl, cred)
+	if consumer == nil || !consumerTargetsOnPremAIGateway(consumer) {
+		return
+	}
+	ref := consumer.GetAIGatewayRef()
+	parent := types.NamespacedName{
+		Namespace: consumer.GetNamespace(),
+		Name:      ref.NamespacedRef.Name,
+	}
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		parent.Namespace = *ref.NamespacedRef.Namespace
+	}
+	cn.NotifyChange(ctx, &parent, consumer)
 }
 
 // notifyEntitiesForSecret lists the entities of one kind and notifies the ChangeNotifier
