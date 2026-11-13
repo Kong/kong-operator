@@ -255,3 +255,35 @@ func TestConsumePolicyChainRejectsForeignOrganizationBeforeSDK(t *testing.T) {
 		})
 	}
 }
+
+func TestConsumePolicyChainSnapshotCannotCrossReconcileIdentity(t *testing.T) {
+	t.Parallel()
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{
+		Name: "chain", Namespace: "default", UID: "original", Generation: 1,
+	}
+	chain.SetGatewayID("gateway-id")
+	chain.SetVirtualClusterID("vc-id")
+	ids := []string{"parent", "child"}
+	ctx := WithResolvedPolicyChainIDs(t.Context(), chain, ids)
+	ids[0] = "changed"
+	for _, change := range []func(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain){
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain) { c.UID = "recreated" },
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain) { c.Generation++ },
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain) { c.Name = "other" },
+		func(c *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain) { c.Namespace = "other" },
+	} {
+		current := chain.DeepCopy()
+		change(current)
+		_, err := applyEventGatewayVirtualClusterConsumePolicyChain(ctx, fake.NewClientBuilder().Build(),
+			sdkmocks.NewMockSDKWrapperWithT(t).GetEventGatewayVirtualClusterConsumePoliciesSDK(), current, UpdateOp)
+		require.ErrorContains(t, err, "supplied explicitly", "a stale snapshot must be re-resolved, not PUT")
+	}
+	produce := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
+		Name: chain.Name, Namespace: chain.Namespace, UID: chain.UID, Generation: chain.Generation,
+	}
+	_, ok := resolvedPolicyChainIDsFromContext(ctx, produce)
+	require.False(t, ok, "Consume IDs cannot leak into a different singleton scope")
+	resolved, ok := resolvedPolicyChainIDsFromContext(ctx, chain.DeepCopy())
+	require.True(t, ok)
+	require.Equal(t, []string{"parent", "child"}, resolved, "snapshot must not alias the caller's slice")
+}

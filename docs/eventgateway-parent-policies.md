@@ -665,3 +665,30 @@ reference and `namespacedRef` form, and absence of an independent ID. It cannot
 resolve other resources, enforce same-namespace or distinct-reference semantics,
 verify parent groups, or check the remote complete set. Those checks belong to
 the subsequent controller layer; this API-only layer does not apply the declaration.
+
+### Consume controller and lifecycle coverage
+
+The runtime layer above that API change registers Konnect Consume-chain
+reconciliation. It resolves every declared policy once at its latest observed
+generation, validates its virtual-cluster/gateway ancestry and contiguous parent
+group, and reuses the full ordered snapshot for GET-before-PUT complete-set
+checks. A malformed response, unresolved reference or incomplete set cannot
+produce a reduced successful chain. An already matching order requires no PUT.
+
+Ownership uses `gateway-operator.konghq.com/consume-policy-chain-owner`, bound to
+the chain's name and UID and independent of cluster and Produce claims on the
+same virtual cluster. Resource-version guarded claims and live owner reads
+protect competing declarations even when the informer cache lags. Deleting a
+declaration releases only its own claim and retains the remote order and policy
+entities, without requiring working authentication or valid references.
+
+The [Consume lifecycle scenario](../test/e2e/chainsaw/eventgateway/README.md#consume-policy-chain-lifecycle)
+covers two real parent groups, exact full ordering and parent IDs, drift,
+reference/set blocking, recreation, ownership handover and retained deletion.
+Local helper and API-server regressions are not a substitute for running this
+scenario against an authorized dedicated Konnect scope. Until that acceptance
+run is recorded, no full Operator lifecycle acceptance is implied by the earlier
+backend contract probes. `maskFields` and `transcode` retain typed/admission and
+mocked-controller coverage only; this scenario does not establish their live
+backend contract. The Konnect-only, direct-child and non-atomic GET/PUT boundaries
+remain unchanged.

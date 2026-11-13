@@ -1,4 +1,4 @@
-package konnectother
+package konnecteventgateway
 
 import (
 	"context"
@@ -138,6 +138,21 @@ func TestEventGatewayVirtualClusterConsumePolicyChainNestedRecovery(t *testing.T
 		p.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(p.Generation)}
 		require.NoError(t, cl.Status().Update(ctx, p))
 	}
+	registry := objectFromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, ns.Name, `
+metadata: {name: orders}
+spec:
+  gatewayRef: {type: namespacedRef, namespacedRef: {name: `+gateway.Name+`}}
+  apiSpec:
+    type: confluent
+    confluent:
+      name: orders
+      config: {endpoint: "https://registry.example.com", schemaType: avro}
+`)
+	require.NoError(t, cl.Create(ctx, registry))
+	registry.SetKonnectID("registry-id")
+	registry.SetGatewayID("gateway-id")
+	registry.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(registry.Generation)}
+	require.NoError(t, cl.Status().Update(ctx, registry))
 	parent := createPolicy("parent", `type: schemaValidation
 schemaValidation: {name: parent, config: {type: json, json: {valueValidationAction: skip}}}`)
 	mask := createPolicy("mask", `type: maskFields
@@ -157,12 +172,13 @@ transcode:
           subject: orders-value
           version: latest
           schemaRefDestination: {type: none, none: {}}
-          schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}`)
+          schemaRegistry: {name: orders}`)
 	root := createPolicy("root", `type: skipRecord
 skipRecord: {name: root}`)
 	for _, p := range []*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{parent, mask, transcode, root} {
 		programPolicy(p)
 	}
+	require.NoError(t, transcode.ResolveKonnectReferences(ctx, cl))
 	chain := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{Name: "chain", Namespace: ns.Name,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainSpec{
 			EventGatewayVirtualClusterRef: parent.GetParentRef(),
@@ -189,6 +205,35 @@ skipRecord: {name: skip}`)
 	require.Equal(t, policychain.ClaimValue(cluster), vc.Annotations[policychain.OwnerAnnotation])
 
 	before := len(remote.writes())
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+	parent.Spec.APISpec.ConsumeSchemaValidationPolicy.Name = "renamed-parent"
+	require.NoError(t, cl.Update(ctx, parent))
+	waitForConsumeChainCondition(t, cl, chain, "KonnectReferencesResolved", metav1.ConditionFalse, "ReferenceNotProgrammed")
+	assertNoChainWrites(t, remote, before)
+	programPolicy(parent)
+	waitForConsumeChainCondition(t, cl, chain, "Programmed", metav1.ConditionTrue, "Programmed")
+	assertNoChainWrites(t, remote, before)
+	for _, invalid := range [][]string{
+		{"mask", "parent", "transcode", "skip", "root"},
+		{"parent", "mask", "root", "transcode", "skip"},
+		{"parent", "transcode", "skip", "root", "mask"},
+	} {
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+		chain.Spec.APISpec.Policies = nil
+		for _, name := range invalid {
+			chain.Spec.APISpec.Policies = append(chain.Spec.APISpec.Policies, configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{Name: name})
+		}
+		require.NoError(t, cl.Update(ctx, chain))
+		waitForConsumeChainCondition(t, cl, chain, "KonnectReferencesResolved", metav1.ConditionFalse, "ReferenceInvalid")
+		assertNoChainWrites(t, remote, before)
+	}
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{
+		{Name: "parent"}, {Name: "transcode"}, {Name: "skip"}, {Name: "mask"}, {Name: "root"},
+	}
+	require.NoError(t, cl.Update(ctx, chain))
+	waitForConsumeChainCondition(t, cl, chain, "Programmed", metav1.ConditionTrue, "Programmed")
+	assertNoChainWrites(t, remote, before)
 	contender := chain.DeepCopy()
 	contender.ObjectMeta = metav1.ObjectMeta{Name: "contender", Namespace: ns.Name}
 	contender.Status = configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainStatus{}
@@ -211,6 +256,10 @@ skipRecord: {name: extra}`)
 	assertChainWrites(t, remote, before, want)
 
 	before = len(remote.writes())
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{{Name: "missing"}}
+	require.NoError(t, cl.Update(ctx, chain))
+	waitForConsumeChainCondition(t, cl, chain, "KonnectReferencesResolved", metav1.ConditionFalse, "ReferenceNotFound")
 	require.NoError(t, cl.Delete(ctx, auth))
 	require.NoError(t, cl.Delete(ctx, chain))
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
