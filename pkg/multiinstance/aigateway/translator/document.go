@@ -630,6 +630,8 @@ func BuildDocument(
 					checkTranslatedACLs(outcomes, mcpServer.Access.ACLs),
 					checkTranslatedACLs(outcomes, mcpServer.Access.DefaultToolACLs),
 					checkTranslatedRefs(outcomes, "AIGatewayAuthStrategy", mcpServer.Access.AuthStrategies),
+					checkTranslatedRefs(outcomes, "AIGatewayCACertificate", mcpServer.Config.CACertificates),
+					checkTranslatedRefs(outcomes, "AIGatewayCertificate", mcpServer.Config.Certificates),
 					checkTranslatedDatastores(outcomes, aiconfigurationv1alpha1.AIGatewayMCPServerRefsToAIGatewayDatastore(s)),
 				); err != nil {
 					return nil, err
