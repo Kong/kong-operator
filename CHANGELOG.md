@@ -191,7 +191,7 @@
   `SettingIgnored` Warning Event on the `KegDataPlane`. An image without a
   version tag, e.g. pinned by digest only, counts as keg 1.3.0 or later, so a
   keg 1.2 pinned that way loses both settings. Both fields are deprecated.
-  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
+  [#6637](https://github.com/Kong/kong-operator/pull/6637)
 - `KonnectConfigStoreSync` now accepts entry values up to 8192 Unicode
   characters, matching the increased Konnect Config Store limit instead of
   rejecting values above 5120 bytes. This allows larger TLS certificate/key
