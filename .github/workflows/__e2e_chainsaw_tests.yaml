@@ -45,7 +45,11 @@ env:
 
 jobs:
   e2e-tests-chainsaw:
-    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
+    # Listener-chain lifecycle has 19 sequential 75s observation windows (>60s
+    # default sync period): at least 23m45s before convergence, setup, and cleanup.
+    # The full eventgateway job takes ~32m; allow headroom without shortening
+    # drift/retention checks. See test/e2e/chainsaw/eventgateway/README.md.
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || (matrix.suite == 'eventgateway' && '45' || '30')) }}
     runs-on: ubuntu-latest
     name: ${{ matrix.suite }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }} - ${{ inputs.node_image_version }}
     env:

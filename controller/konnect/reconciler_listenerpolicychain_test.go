@@ -576,3 +576,52 @@ func TestListenerPolicyChainPoliciesOfTheSameNameInTwoNamespaces(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"other-id", chain.Namespace + "-id"}, ids)
 }
+
+func TestListenerPolicyChainOwnershipReadErrors(t *testing.T) {
+	t.Parallel()
+	for _, failingName := range []string{"chain", "listener", "owner"} {
+		t.Run(failingName, func(t *testing.T) {
+			chain, owner := testListenerPolicyChain("chain"), testListenerPolicyChain("owner")
+			parent := &configurationv1alpha1.EventGatewayListener{
+				Name: "listener", Namespace: chain.Namespace,
+				Annotations: map[string]string{listenerPolicyChainOwnerAnnotation: policyChainOwnerClaim(owner)},
+			}
+			readErr := errors.New("live reader unavailable")
+			cl := newFakeClientBuilder(scheme.Get()).WithStatusSubresource(chain).WithObjects(chain, owner, parent).Build()
+			live := interceptor.NewClient(cl, interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if key.Name == failingName {
+						return readErr
+					}
+					return cl.Get(ctx, key, obj, opts...)
+				},
+			})
+			owned, res, err := claimPolicyChain(t.Context(), policyChainLiveGetClient{Client: cl, apiReader: live}, chain, consts.DefaultKonnectSyncPeriod)
+			require.ErrorIs(t, err, readErr)
+			require.False(t, owned)
+			require.True(t, res.IsZero())
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(parent), parent))
+			require.Equal(t, policyChainOwnerClaim(owner), parent.Annotations[listenerPolicyChainOwnerAnnotation])
+		})
+	}
+}
+
+func TestListenerPolicyChainDeletionKeepsDifferentUIDClaim(t *testing.T) {
+	t.Parallel()
+	chain := testListenerPolicyChain("chain")
+	chain.Finalizers = []string{KonnectCleanupFinalizer}
+	parent := &configurationv1alpha1.EventGatewayListener{
+		Name: "listener", Namespace: chain.Namespace,
+		Annotations: map[string]string{listenerPolicyChainOwnerAnnotation: chain.Name + "/another-uid"},
+	}
+	cl := newFakeClientBuilder(scheme.Get()).WithObjects(chain, parent).Build()
+	require.NoError(t, cl.Delete(t.Context(), chain))
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+	r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayListenerPolicyChain](nil, logging.DevelopmentMode, cl)
+	res, err := r.Reconcile(t.Context(), chain)
+	require.NoError(t, err)
+	require.True(t, res.IsZero())
+	require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain)))
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(parent), parent))
+	require.Equal(t, chain.Name+"/another-uid", parent.Annotations[listenerPolicyChainOwnerAnnotation])
+}
