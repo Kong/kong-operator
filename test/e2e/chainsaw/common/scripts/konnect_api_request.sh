@@ -70,8 +70,8 @@ fail() {
 }
 
 # Without --fail, --retry-all-errors resends on transport errors and on 408,
-# 429, 500, 502, 503 and 504 only: a response failing the checks below is not
-# resent here.
+# 429, 500, 502, 503 and 504 only, whatever EXPECTED_STATUS accepts.
+# EXPECTED_STATUS and EXPECTED_JQ only judge the final response.
 CURL_ARGS=(-s -o "${RESPONSE_FILE}" -w '%{http_code}' -X "${METHOD}"
   --connect-timeout "${CONNECT_TIMEOUT}" --max-time "${MAX_TIME}"
   --retry "${CURL_RETRIES}" --retry-all-errors --retry-delay 1
