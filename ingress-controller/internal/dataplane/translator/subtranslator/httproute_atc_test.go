@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
@@ -307,11 +308,134 @@ func TestSplitHTTPRoutes(t *testing.T) {
 		return backendRefs
 	}
 
+	gateway := func(name string, listeners ...gatewayapi.Listener) *gatewayapi.Gateway {
+		return &gatewayapi.Gateway{
+			Namespace: "ns1",
+			Name:      name,
+			Spec:      gatewayapi.GatewaySpec{Listeners: listeners},
+		}
+	}
+	listener := func(name string, protocol gatewayapi.ProtocolType, port gatewayapi.PortNumber) gatewayapi.Listener {
+		return gatewayapi.Listener{
+			Name:     gatewayapi.SectionName(name),
+			Protocol: protocol,
+			Port:     port,
+		}
+	}
+	gatewayWithHTTPHTTPSAndTCP := gateway("gw",
+		listener("http", gatewayapi.HTTPProtocolType, 80),
+		listener("https", gatewayapi.HTTPSProtocolType, 443),
+		listener("tcp", gatewayapi.TCPProtocolType, 9000),
+	)
+	routeWithParentRefs := func(parentRefs ...gatewayapi.ParentReference) *gatewayapi.HTTPRoute {
+		return &gatewayapi.HTTPRoute{
+			Namespace: "ns1",
+			Name:      "httproute-ports",
+			Spec: gatewayapi.HTTPRouteSpec{
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{ParentRefs: parentRefs},
+				Rules: []gatewayapi.HTTPRouteRule{
+					{
+						Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
+						BackendRefs: namesToBackendRefs([]string{"svc1"}),
+					},
+				},
+			},
+		}
+	}
+	splitMatchWithPorts := func(ports ...int32) []SplitHTTPRouteMatch {
+		return []SplitHTTPRouteMatch{
+			{
+				Source:     &gatewayapi.HTTPRoute{Namespace: "ns1", Name: "httproute-ports"},
+				Match:      builder.NewHTTPRouteMatch().WithPathExact("/").Build(),
+				RuleIndex:  0,
+				MatchIndex: 0,
+				Ports:      ports,
+			},
+		}
+	}
+
 	testCases := []struct {
 		name                 string
 		httpRoute            *gatewayapi.HTTPRoute
+		gateways             []*gatewayapi.Gateway
 		expectedSplitMatches []SplitHTTPRouteMatch
 	}{
+		{
+			name: "parent Gateway's HTTP and HTTPS listener ports are used",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name: "gw",
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(80, 443),
+		},
+		{
+			name: "parentRef's sectionName narrows down the ports",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name:        "gw",
+				SectionName: new(gatewayapi.SectionName("https")),
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(443),
+		},
+		{
+			name: "parentRef's port narrows down the ports",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name: "gw",
+				Port: new(gatewayapi.PortNumber(80)),
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(80),
+		},
+		{
+			name: "parentRef's sectionName pointing to a non-HTTP listener yields no ports",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name:        "gw",
+				SectionName: new(gatewayapi.SectionName("tcp")),
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(),
+		},
+		{
+			name: "ports from multiple parent Gateways are merged, deduplicated and sorted",
+			httpRoute: routeWithParentRefs(
+				gatewayapi.ParentReference{Name: "gw-2"},
+				gatewayapi.ParentReference{Name: "gw"},
+			),
+			gateways: []*gatewayapi.Gateway{
+				gatewayWithHTTPHTTPSAndTCP,
+				gateway("gw-2",
+					listener("http", gatewayapi.HTTPProtocolType, 8080),
+					listener("https", gatewayapi.HTTPSProtocolType, 443),
+				),
+			},
+			expectedSplitMatches: splitMatchWithPorts(80, 443, 8080),
+		},
+		{
+			name: "parentRef's namespace is respected",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name:      "gw",
+				Namespace: new(gatewayapi.Namespace("other")),
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(),
+		},
+		{
+			name: "parent Gateway not found yields no ports",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name: "missing",
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(),
+		},
+		{
+			name: "non-Gateway parentRef is ignored",
+			httpRoute: routeWithParentRefs(gatewayapi.ParentReference{
+				Name: "gw",
+				Kind: new(gatewayapi.Kind("Service")),
+			}),
+			gateways:             []*gatewayapi.Gateway{gatewayWithHTTPHTTPSAndTCP},
+			expectedSplitMatches: splitMatchWithPorts(),
+		},
 		{
 			name: "no hostname and only one match",
 			httpRoute: &gatewayapi.HTTPRoute{
@@ -454,7 +578,10 @@ func TestSplitHTTPRoutes(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
-			splitHTTPRouteMatches := SplitHTTPRoute(tc.httpRoute)
+			storer, err := store.NewFakeStore(store.FakeObjects{Gateways: tc.gateways})
+			require.NoError(t, err)
+
+			splitHTTPRouteMatches := SplitHTTPRoute(storer, tc.httpRoute)
 			require.Len(t, splitHTTPRouteMatches, len(tc.expectedSplitMatches), "should have same number of split matched with expected")
 			for i, expectedMatch := range tc.expectedSplitMatches {
 				assert.Equal(t, expectedMatch.Source.Name, splitHTTPRouteMatches[i].Source.Name)
@@ -462,6 +589,11 @@ func TestSplitHTTPRoutes(t *testing.T) {
 				assert.Equal(t, expectedMatch.Hostname, splitHTTPRouteMatches[i].Hostname)
 				assert.Equal(t, expectedMatch.RuleIndex, splitHTTPRouteMatches[i].RuleIndex)
 				assert.Equal(t, expectedMatch.MatchIndex, splitHTTPRouteMatches[i].MatchIndex)
+				if len(expectedMatch.Ports) == 0 {
+					assert.Empty(t, splitHTTPRouteMatches[i].Ports)
+				} else {
+					assert.Equal(t, expectedMatch.Ports, splitHTTPRouteMatches[i].Ports)
+				}
 			}
 		})
 	}
@@ -986,7 +1118,7 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			rulesToMatchesWithPriorities := groupHTTPRouteMatchesWithPrioritiesByRule(logr.Discard(), tc.routes)
+			rulesToMatchesWithPriorities := groupHTTPRouteMatchesWithPrioritiesByRule(logr.Discard(), store.NewFakeStoreEmpty(), tc.routes)
 			require.Len(t, rulesToMatchesWithPriorities, len(tc.expectedSplitMatches))
 			for _, route := range tc.routes {
 				for ruleIndex := range route.Spec.Rules {
@@ -1022,6 +1154,23 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 }
 
 func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
+	exactPathMatchRoute := &gatewayapi.HTTPRoute{
+		Namespace: "default",
+		Name:      "exact-path-match",
+		Spec: gatewayapi.HTTPRouteSpec{
+			Rules: []gatewayapi.HTTPRouteRule{
+				{
+					Matches:     builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
+					BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+				},
+			},
+		},
+	}
+	exactPathMatchRouteTags := []string{
+		"k8s-name:exact-path-match",
+		"k8s-namespace:default",
+	}
+
 	testCases := []struct {
 		name                  string
 		httproute             *gatewayapi.HTTPRoute
@@ -1031,12 +1180,31 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 		namedRouteRule        string
 		priority              RoutePriorityType
 		supportRedirectPlugin bool
+		ports                 []int32
 
 		hasError        bool
 		routeName       string
 		routeExpression string
 		tags            []string
 	}{
+		{
+			name:            "exact path match with a single listener port",
+			httproute:       exactPathMatchRoute,
+			priority:        RoutePriorityType(1024),
+			ports:           []int32{80},
+			routeName:       "httproute.default.exact-path-match._.0.0",
+			routeExpression: `(http.path == "/foo") && (net.dst.port == 80)`,
+			tags:            exactPathMatchRouteTags,
+		},
+		{
+			name:            "exact path match with multiple listener ports",
+			httproute:       exactPathMatchRoute,
+			priority:        RoutePriorityType(1024),
+			ports:           []int32{80, 443},
+			routeName:       "httproute.default.exact-path-match._.0.0",
+			routeExpression: `(http.path == "/foo") && ((net.dst.port == 80) || (net.dst.port == 443))`,
+			tags:            exactPathMatchRouteTags,
+		},
 		{
 			name: "exact path match without hostname",
 			httproute: &gatewayapi.HTTPRoute{
@@ -1168,6 +1336,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 					OptionalNamedRouteRule: tc.namedRouteRule,
 					RuleIndex:              tc.ruleIndex,
 					MatchIndex:             tc.matchIndex,
+					Ports:                  tc.ports,
 				},
 				Priority: tc.priority,
 			}
