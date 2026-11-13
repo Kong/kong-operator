@@ -1,11 +1,11 @@
 package translator
 
 import (
+	"cmp"
 	"maps"
 	"slices"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -28,26 +28,9 @@ const (
 	kindTLSRoute  = "TLSRoute"
 )
 
-// inheritedTags holds the konghq.com/tags an entity inherits, keeping the Gateway tags apart from
-// the GatewayClass tags so that an aggregation over several sources can emit every Gateway tag
-// before any GatewayClass tag.
-type inheritedTags struct {
-	gateway      []string
-	gatewayClass []string
-}
-
-// all returns the Gateway tags followed by the GatewayClass tags, deduplicated.
-func (it inheritedTags) all() []string {
-	return lo.FromSlicePtr(util.MergeTags(nil, it.gateway, it.gatewayClass))
-}
-
-func (it inheritedTags) isEmpty() bool {
-	return len(it.gateway) == 0 && len(it.gatewayClass) == 0
-}
-
 // inheritedTagIndex maps the key of a Gateway API route (see routeKey) to the tags its translated
 // Kong entities inherit. Routes that inherit no tags are not present.
-type inheritedTagIndex map[string]inheritedTags
+type inheritedTagIndex map[string]util.InheritedTags
 
 func routeKey(kind, namespace, name string) string {
 	return kind + "/" + namespace + "/" + name
@@ -97,26 +80,26 @@ func routeKeyForObject(obj client.Object) (string, bool) {
 type inheritedTagResolver struct {
 	logger   logr.Logger
 	storer   store.Storer
-	gateways map[k8stypes.NamespacedName]inheritedTags
+	gateways map[k8stypes.NamespacedName]util.InheritedTags
 }
 
 func newInheritedTagResolver(logger logr.Logger, storer store.Storer) *inheritedTagResolver {
 	return &inheritedTagResolver{
 		logger:   logger,
 		storer:   storer,
-		gateways: map[k8stypes.NamespacedName]inheritedTags{},
+		gateways: map[k8stypes.NamespacedName]util.InheritedTags{},
 	}
 }
 
 // forGateway returns the tags of gw followed by the tags of its GatewayClass.
-func (r *inheritedTagResolver) forGateway(gw *gatewayapi.Gateway) inheritedTags {
+func (r *inheritedTagResolver) forGateway(gw *gatewayapi.Gateway) util.InheritedTags {
 	nn := k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}
 	if tags, ok := r.gateways[nn]; ok {
 		return tags
 	}
 
-	tags := inheritedTags{
-		gateway: annotations.ExtractUserTags(gw.Annotations),
+	tags := util.InheritedTags{
+		Gateway: annotations.ExtractUserTags(gw.Annotations),
 	}
 	gwc, err := r.storer.GetGatewayClass(string(gw.Spec.GatewayClassName))
 	switch {
@@ -126,7 +109,7 @@ func (r *inheritedTagResolver) forGateway(gw *gatewayapi.Gateway) inheritedTags 
 	case !gatewayapi.GatewayClassControlledBy(gwc, mgrconsts.GetControllerName()):
 		// Not ours, its tags must not leak onto our entities.
 	default:
-		tags.gatewayClass = annotations.ExtractUserTags(gwc.Annotations)
+		tags.GatewayClass = annotations.ExtractUserTags(gwc.Annotations)
 	}
 
 	r.gateways[nn] = tags
@@ -135,11 +118,11 @@ func (r *inheritedTagResolver) forGateway(gw *gatewayapi.Gateway) inheritedTags 
 
 // forParentRefs returns the tags inherited from every Gateway the parentRefs of a route in
 // routeNamespace point to: all the Gateways' tags, followed by all their GatewayClasses' tags.
-func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs []gatewayapi.ParentReference) inheritedTags {
-	var (
-		tags inheritedTags
-		seen = map[k8stypes.NamespacedName]struct{}{}
-	)
+// The Gateways are ordered by namespace and name, so the result does not depend on the order of
+// the parentRefs in the route's spec.
+func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs []gatewayapi.ParentReference) util.InheritedTags {
+	gatewayNNs := make([]k8stypes.NamespacedName, 0, len(parentRefs))
+	seen := map[k8stypes.NamespacedName]struct{}{}
 	for _, pr := range parentRefs {
 		// Only Gateways contribute tags.
 		if pr.Group != nil && *pr.Group != gatewayapi.V1Group {
@@ -154,7 +137,14 @@ func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs [
 			continue
 		}
 		seen[nn] = struct{}{}
+		gatewayNNs = append(gatewayNNs, nn)
+	}
+	slices.SortFunc(gatewayNNs, func(a, b k8stypes.NamespacedName) int {
+		return cmp.Or(cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Name, b.Name))
+	})
 
+	var tags util.InheritedTags
+	for _, nn := range gatewayNNs {
 		// The store only holds Gateways reconciled by this controller, so a Gateway owned by another
 		// implementation is not found here and contributes no tags.
 		gw, err := r.storer.GetGateway(nn.Namespace, nn.Name)
@@ -163,9 +153,7 @@ func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs [
 				"gateway", nn, "error", err)
 			continue
 		}
-		gwTags := r.forGateway(gw)
-		tags.gateway = append(tags.gateway, gwTags.gateway...)
-		tags.gatewayClass = append(tags.gatewayClass, gwTags.gatewayClass...)
+		tags.Append(r.forGateway(gw))
 	}
 	return tags
 }
@@ -175,7 +163,7 @@ func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs [
 func (t *Translator) buildInheritedTagIndex(resolver *inheritedTagResolver) inheritedTagIndex {
 	index := inheritedTagIndex{}
 	add := func(kind string, route client.Object, parentRefs []gatewayapi.ParentReference) {
-		if tags := resolver.forParentRefs(route.GetNamespace(), parentRefs); !tags.isEmpty() {
+		if tags := resolver.forParentRefs(route.GetNamespace(), parentRefs); !tags.IsEmpty() {
 			index[routeKey(kind, route.GetNamespace(), route.GetName())] = tags
 		}
 	}
@@ -241,7 +229,7 @@ func (t *Translator) applyInheritedTags(ir *ingressRules, index inheritedTagInde
 	}
 
 	for name, service := range ir.ServiceNameToServices {
-		contributing := map[string]inheritedTags{}
+		contributing := map[string]util.InheritedTags{}
 		if service.Parent != nil {
 			if key, ok := routeKeyForObject(service.Parent); ok {
 				if tags, ok := index[key]; ok {
@@ -261,33 +249,33 @@ func (t *Translator) applyInheritedTags(ir *ingressRules, index inheritedTagInde
 				continue
 			}
 			contributing[key] = tags
-			applyInheritedTagsToRoute(route, tags.all())
+			applyInheritedTagsToRoute(route, tags)
 		}
 
 		if len(contributing) == 0 {
 			continue
 		}
 
-		var aggregated inheritedTags
+		var aggregated util.InheritedTags
 		for _, key := range slices.Sorted(maps.Keys(contributing)) {
-			aggregated.gateway = append(aggregated.gateway, contributing[key].gateway...)
-			aggregated.gatewayClass = append(aggregated.gatewayClass, contributing[key].gatewayClass...)
+			aggregated.Append(contributing[key])
 		}
-		service.InheritedTags = aggregated.all()
+		service.InheritedTags = aggregated
 		for i := range service.Plugins {
-			service.Plugins[i].Tags = util.MergeTags(service.Plugins[i].Tags, service.InheritedTags)
+			service.Plugins[i].Tags = util.MergeTags(service.Plugins[i].Tags,
+				aggregated.Gateway, aggregated.GatewayClass)
 		}
 
 		ir.ServiceNameToServices[name] = service
 	}
 }
 
-func applyInheritedTagsToRoute(route *kongstate.Route, tags []string) {
+func applyInheritedTagsToRoute(route *kongstate.Route, tags util.InheritedTags) {
 	route.InheritedTags = tags
 	// MergeTags always allocates, so this also breaks the aliasing between the route's tags and the
 	// tags of the plugins generated from its filters.
-	route.Tags = util.MergeTags(route.Tags, tags)
+	route.Tags = util.MergeTags(route.Tags, tags.Gateway, tags.GatewayClass)
 	for i := range route.Plugins {
-		route.Plugins[i].Tags = util.MergeTags(route.Plugins[i].Tags, tags)
+		route.Plugins[i].Tags = util.MergeTags(route.Plugins[i].Tags, tags.Gateway, tags.GatewayClass)
 	}
 }

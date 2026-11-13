@@ -2116,9 +2116,9 @@ func TestKongState_BuildPluginsInheritedTags(t *testing.T) {
 		Services: []Service{
 			{
 				Name:          new("gateway-api-service"),
-				InheritedTags: []string{"svc-gw", "gwc"},
+				InheritedTags: util.InheritedTags{Gateway: []string{"svc-gw"}, GatewayClass: []string{"gwc"}},
 				Routes: []Route{
-					{Name: new("gateway-api-route"), InheritedTags: []string{"route-gw", "gwc"}},
+					{Name: new("gateway-api-route"), InheritedTags: util.InheritedTags{Gateway: []string{"route-gw"}, GatewayClass: []string{"gwc"}}},
 					{Name: new("other-route")},
 				},
 			},
@@ -2130,8 +2130,8 @@ func TestKongState_BuildPluginsInheritedTags(t *testing.T) {
 	}
 	inherited := ks.inheritedTagsForPlugins()
 	require.Equal(t, pluginInheritedTags{
-		routes:   map[string][]string{"gateway-api-route": {"route-gw", "gwc"}},
-		services: map[string][]string{"gateway-api-service": {"svc-gw", "gwc"}},
+		routes:   map[string]util.InheritedTags{"gateway-api-route": {Gateway: []string{"route-gw"}, GatewayClass: []string{"gwc"}}},
+		services: map[string]util.InheritedTags{"gateway-api-service": {Gateway: []string{"svc-gw"}, GatewayClass: []string{"gwc"}}},
 	}, inherited)
 
 	s, err := store.NewFakeStore(store.FakeObjects{

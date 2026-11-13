@@ -64,7 +64,7 @@ type Service struct {
 	// GatewayClasses) that the Gateway API routes it was translated from are attached to.
 	// They are appended to the Service's own tags and propagated to its Upstream, Targets and
 	// the plugins bound to it.
-	InheritedTags []string
+	InheritedTags util.InheritedTags
 }
 
 func (s *Service) overridePath(anns map[string]string) {

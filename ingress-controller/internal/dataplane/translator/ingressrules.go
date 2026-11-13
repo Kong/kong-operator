@@ -36,7 +36,7 @@ const (
 // Gateway API routes using it.
 type clientCertServiceTags struct {
 	ServiceName   string
-	InheritedTags []string
+	InheritedTags util.InheritedTags
 }
 
 type ingressRules struct {
@@ -239,7 +239,7 @@ func (ir *ingressRules) handleServiceClientCertificates(
 		// The Kong certificate translated from the Secret inherits the tags of every Service
 		// referencing it, so record this one (a Service with several backends referencing the same
 		// Secret reaches this point once per backend).
-		if service.Name != nil && len(service.InheritedTags) > 0 {
+		if service.Name != nil && !service.InheritedTags.IsEmpty() {
 			name := *service.Name
 			alreadyRecorded := lo.ContainsBy(ir.ClientCertSecretToServices[secretKey], func(existing clientCertServiceTags) bool {
 				return existing.ServiceName == name
@@ -348,10 +348,11 @@ func (ir *ingressRules) generateKongServiceTags(
 	// Tags inherited from the parent Gateways (and their GatewayClasses) of the Gateway API routes
 	// this Service was translated from come after the Service's own tags.
 	tags := ir.generateKongServiceOwnTags(k8sServices, service, logger)
-	if len(service.InheritedTags) == 0 {
+	if service.InheritedTags.IsEmpty() {
 		return tags
 	}
-	return util.MergeTags(tags, service.InheritedTags)
+	// Every Gateway's tags come before every GatewayClass's tags.
+	return util.MergeTags(tags, service.InheritedTags.Gateway, service.InheritedTags.GatewayClass)
 }
 
 func (ir *ingressRules) generateKongServiceOwnTags(
