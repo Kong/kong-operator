@@ -9709,6 +9709,66 @@ spec:
                 x-kubernetes-validations:
                 - message: Using both replicas and scaling fields is not allowed.
                   rule: '!(has(self.scaling) && has(self.replicas))'
+              license:
+                description: |-
+                  License configures the enveloped license required by gw-admin.
+                  gw-admin, not Kong Operator, validates the license.
+
+                  Kong Operator mounts the referenced Secret key in the gw-admin pods
+                  and points gw-admin at it: a pod template overlay can't replace the
+                  license volume, mount a volume at its path, or set its env vars. A change to the Secret does not restart the
+                  pods: the kubelet updates the mounted file, and gw-admin reads it again
+                  on each of its periodic license checks. gw-admin refuses to start, or
+                  stops, without a valid license. The LicenseProvisioned condition reports
+                  a missing Secret, or a missing or empty key. While a GWAdmin references
+                  the Secret, the gateway-operator.konghq.com/gwadmin-license-in-use
+                  finalizer delays its deletion until no GWAdmin references it: update a
+                  license in place rather than deleting and creating its Secret again.
+                properties:
+                  entitlements:
+                    default:
+                    - event_gateway
+                    description: |-
+                      Entitlements are the entitlements gw-admin requires the license to
+                      grant. Only event_gateway is currently supported.
+                    items:
+                      description: |-
+                        GWAdminLicenseEntitlement is an entitlement gw-admin requires the license
+                        to grant.
+                      enum:
+                      - event_gateway
+                      type: string
+                    maxItems: 1
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-type: set
+                  secretRef:
+                    description: |-
+                      SecretRef references the Secret key holding the original enveloped
+                      license (a compact JWS), without additional encoding. The Secret must
+                      be in the namespace of the GWAdmin and carry the operator's secret
+                      label selector (default "konghq.com/secret: \"true\"").
+                    properties:
+                      key:
+                        description: Key is the key in the Secret holding the enveloped
+                          license.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[-._a-zA-Z0-9]+$
+                        type: string
+                      name:
+                        description: Name is the name of the referenced Secret.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                required:
+                - secretRef
+                type: object
               network:
                 description: Network configures the Services in front of gw-admin.
                 properties:
@@ -9909,6 +9969,8 @@ spec:
                       rule: 'self.provisioning == ''Manual'' ? has(self.secretRef)
                         : !has(self.secretRef)'
                 type: object
+            required:
+            - license
             type: object
           status:
             description: Status defines the observed state of GWAdmin.
@@ -10044,6 +10106,8 @@ spec:
                     type: string
                 type: object
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: name must be a valid DNS-1035 label of at most 59 characters, so

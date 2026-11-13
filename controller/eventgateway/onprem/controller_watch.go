@@ -56,7 +56,8 @@ func entityChanged() predicate.Predicate {
 			// A terminating policy or chain is unusable before its finalizers
 			// are removed. A claim is metadata, not a generation change.
 			switch e.ObjectNew.(type) {
-			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+				*configurationv1alpha1.EventGatewayListenerPolicy, *configurationv1alpha1.EventGatewayListenerPolicyChain:
 				return !e.ObjectOld.GetDeletionTimestamp().Equal(e.ObjectNew.GetDeletionTimestamp())
 			case *configurationv1alpha1.EventGatewayVirtualCluster:
 				return e.ObjectOld.GetAnnotations()[policychain.OwnerAnnotation] != e.ObjectNew.GetAnnotations()[policychain.OwnerAnnotation]
@@ -97,21 +98,36 @@ func mapEntityToOnPremEventGateway(cl client.Client) handler.MapFunc {
 	}
 }
 
-// mapClusterPolicyToChainGateways also rebuilds gateways referencing a policy
-// with a different parent, including a policy deleted and recreated there.
-func mapClusterPolicyToChainGateways(cl client.Client) handler.MapFunc {
+// mapPolicyToChainGateways also rebuilds gateways of the chains referencing a
+// cluster or listener policy, which may have a different parent, including a
+// policy deleted and recreated there.
+func mapPolicyToChainGateways(cl client.Client) handler.MapFunc {
 	toGateway := mapEntityToOnPremEventGateway(cl)
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		var chains configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
-		if err := cl.List(ctx, &chains, client.MatchingFields{
-			index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterPolicyRef: client.ObjectKeyFromObject(obj).String(),
-		}); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list cluster policy chains referencing a policy", "policy", client.ObjectKeyFromObject(obj))
+		var (
+			chains []client.Object
+			err    error
+		)
+		key := client.ObjectKeyFromObject(obj).String()
+		switch obj.(type) {
+		case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
+			var list configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterPolicyRef, key)
+		case *configurationv1alpha1.EventGatewayListenerPolicy:
+			var list configurationv1alpha1.EventGatewayListenerPolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayListenerPolicyChainOnEventGatewayListenerPolicyRef, key)
+		default:
+			return nil
+		}
+		if err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list policy chains referencing a policy", "policy", key)
 			return onPremEventGatewaysIn(ctx, cl, obj.GetNamespace())
 		}
 		var requests []reconcile.Request
-		for i := range chains.Items {
-			for _, req := range toGateway(ctx, &chains.Items[i]) {
+		for _, chain := range chains {
+			for _, req := range toGateway(ctx, chain) {
 				if !slices.Contains(requests, req) {
 					requests = append(requests, req)
 				}
@@ -119,6 +135,22 @@ func mapClusterPolicyToChainGateways(cl client.Client) handler.MapFunc {
 		}
 		return requests
 	}
+}
+
+// listObjects lists into list, whose items are items, the objects whose index
+// field is key.
+func listObjects[T any, PT interface {
+	*T
+	client.Object
+}](ctx context.Context, cl client.Client, list client.ObjectList, items *[]T, field, key string) ([]client.Object, error) {
+	if err := cl.List(ctx, list, client.MatchingFields{field: key}); err != nil {
+		return nil, err
+	}
+	objs := make([]client.Object, 0, len(*items))
+	for i := range *items {
+		objs = append(objs, PT(&(*items)[i]))
+	}
+	return objs, nil
 }
 
 // onPremEventGatewayOf returns the OnPremEventGateway obj belongs to,

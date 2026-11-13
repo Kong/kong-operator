@@ -385,6 +385,33 @@ func policyChain(name, ns string, v, p *object) *object {
 	}
 }
 
+// isPolicyChain tells the kind is a policy chain: it orders the policies of
+// its virtual cluster or listener, with code of its own.
+func isPolicyChain(kind string) bool {
+	return kind == "EventGatewayVirtualClusterPolicyChain" || kind == "EventGatewayListenerPolicyChain"
+}
+
+// chainParent names the parent of a policy chain of the kind.
+func chainParent(kind string) string {
+	if kind == "EventGatewayListenerPolicyChain" {
+		return "listener"
+	}
+	return "virtual cluster"
+}
+
+// listenerPolicyChain orders the single policy of its listener.
+func listenerPolicyChain(name, ns string, l, p *object) *object {
+	return &object{
+		Kind: "EventGatewayListenerPolicyChain", Name: name, NS: ns, Group: groupConfiguration,
+		Template: "apply-eventGatewayListenerPolicyChain.yaml",
+		Own:      own("chain_name", name, "chain_namespace", ns),
+		Refs: []ref{
+			{Type: refParent, Target: l, NameKey: "listener_name", NSKey: "listener_namespace"},
+			{Type: refSibling, Target: p, NameKey: "policy_name", NSKey: "policy_namespace"},
+		},
+	}
+}
+
 func kegDataPlane(name, ns string) *object {
 	return &object{
 		Kind: "KegDataPlane", Name: name, NS: ns, Group: groupEventGateway,

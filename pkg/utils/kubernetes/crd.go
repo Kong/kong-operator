@@ -19,7 +19,13 @@ func CRDExists(r meta.RESTMapper, gvr schema.GroupVersionResource) (bool, error)
 	}
 
 	if errD, ok := errors.AsType[*discovery.ErrGroupDiscoveryFailed](err); ok {
-		for _, e := range errD.Groups {
+		// Only the errors of the requested group decide the answer: the
+		// discovery of an unrelated group failing (e.g. a broken aggregated
+		// apiserver elsewhere on the cluster) says nothing about this group.
+		for gv, e := range errD.Groups {
+			if gv != gvr.GroupVersion() {
+				continue
+			}
 
 			// If this is an API StatusError:
 			if errS, ok := errors.AsType[*apierrors.StatusError](e); ok {
@@ -39,7 +45,8 @@ func CRDExists(r meta.RESTMapper, gvr schema.GroupVersionResource) (bool, error)
 			}
 		}
 
-		// Otherwise it's a different error, report a missing CRD.
+		// The requested group is not among the failed ones, or failed with an
+		// error of an unexpected type: whether the group is served is unknown.
 		return false, err
 	}
 

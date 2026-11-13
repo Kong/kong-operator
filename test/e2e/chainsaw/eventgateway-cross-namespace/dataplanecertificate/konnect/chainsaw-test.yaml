@@ -28,7 +28,6 @@ spec:
       S  Switch: the reference pointed at an object of the same name in its own
          namespace needs no grant; pointed back, it needs it again.
       E  Delete: the object can be deleted while its grant is revoked.
-         Created again with its name, it is programmed: its entity left Konnect.
       N  Name clash: an object of another namespace with the same name doesn't
          take its name, which the gateway keeps unique.
 

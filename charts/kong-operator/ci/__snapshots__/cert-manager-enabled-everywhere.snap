@@ -46145,7 +46145,7 @@ spec:
                   type: object
                   x-kubernetes-validations:
                   - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding, KongSNI and Event Gateway entity kinds are supported for 'configuration.konghq.com' group
-                    rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI', 'EventGatewayBackendCluster', 'EventGatewayDataPlaneCertificate', 'EventGatewayListener', 'EventGatewayListenerPolicy', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterPolicyChain', 'EventGatewayVirtualClusterProducePolicy']
+                    rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI', 'EventGatewayBackendCluster', 'EventGatewayDataPlaneCertificate', 'EventGatewayListener', 'EventGatewayListenerPolicy', 'EventGatewayListenerPolicyChain', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterPolicyChain', 'EventGatewayVirtualClusterProducePolicy']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com' group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind in [ 'GatewayConfiguration' ]
                   - message: namespace must be empty for KongVault and non-empty for other kinds
@@ -46181,7 +46181,7 @@ spec:
                   - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore' and 'KonnectAIGateway' kinds are supported for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore', 'KonnectAIGateway']
                   - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream' and Event Gateway entity kinds other policies and entities reference are supported for 'configuration.konghq.com' group
-                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterProducePolicy']
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayListenerPolicy', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterProducePolicy']
                   - message: Only 'AIGatewayConsumerGroup' kind is supported for 'aiconfiguration.konghq.com' group
                     rule: .self.group != 'aiconfiguration.konghq.com' || .self.kind in ['AIGatewayConsumerGroup']
                 maxItems: 16
@@ -62524,6 +62524,38 @@ spec:
                 x-kubernetes-validations:
                 - message: Using both replicas and scaling fields is not allowed.
                   rule: '!(has(self.scaling) && has(self.replicas))'
+              license:
+                properties:
+                  entitlements:
+                    default:
+                    - event_gateway
+                    items:
+                      enum:
+                      - event_gateway
+                      type: string
+                    maxItems: 1
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-type: set
+                  secretRef:
+                    properties:
+                      key:
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[-._a-zA-Z0-9]+$
+                        type: string
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                    required:
+                    - key
+                    - name
+                    type: object
+                required:
+                - secretRef
+                type: object
               network:
                 properties:
                   cp:
@@ -62621,6 +62653,8 @@ spec:
                     - message: secretRef must be set when provisioning is Manual and only then
                       rule: 'self.provisioning == ''Manual'' ? has(self.secretRef) : !has(self.secretRef)'
                 type: object
+            required:
+            - license
             type: object
           status:
             properties:
@@ -62712,6 +62746,8 @@ spec:
                     type: string
                 type: object
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: name must be a valid DNS-1035 label of at most 59 characters, so that the names of its Services are valid

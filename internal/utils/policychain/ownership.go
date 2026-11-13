@@ -3,6 +3,7 @@ package policychain
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,22 +40,15 @@ func Scope(chain Chain) (parent client.Object, owner Chain, annotation string, e
 	}
 }
 
-// crossNamespaceKinds returns the kinds of a chain allowed to reference its
-// parent in another namespace, with a KongReferenceGrant, and of its parent:
-// only a cluster policy chain is. A listener policy chain stays in the
-// namespace of its listener.
-func crossNamespaceKinds(chain Chain) (chainKind, parentKind string, ok bool) {
-	if _, cluster := chain.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); cluster {
-		return "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster", true
+// kinds returns the kinds of the chain and of its parent (see Scope), which a
+// KongReferenceGrant names to let a chain of another namespace reference the
+// parent: those of their Go types.
+func kinds(chain Chain) (chainKind, parentKind string, err error) {
+	parent, _, _, err := Scope(chain)
+	if err != nil {
+		return "", "", err
 	}
-	return "", "", false
-}
-
-// CrossNamespaceAllowed tells the chain may reference a parent of another
-// namespace, with a KongReferenceGrant (see crossNamespaceKinds).
-func CrossNamespaceAllowed(chain Chain) bool {
-	_, _, ok := crossNamespaceKinds(chain)
-	return ok
+	return reflect.TypeOf(chain).Elem().Name(), reflect.TypeOf(parent).Elem().Name(), nil
 }
 
 // ParentKey returns the key of the parent the chain references, in the
@@ -74,16 +68,13 @@ func ParentKey(chain Chain) (client.ObjectKey, bool) {
 }
 
 // ClaimParentKey returns the key of the parent the chain may claim, or a
-// PolicyChainInvalidError: the chain must reference its parent by name, in
-// its namespace unless it is a cluster policy chain (see crossNamespaceKinds).
-// Whether a KongReferenceGrant lets it is up to the caller.
+// PolicyChainInvalidError: the chain must reference its parent by name.
+// Whether a KongReferenceGrant lets a chain of another namespace claim it is
+// up to the caller.
 func ClaimParentKey(chain Chain) (client.ObjectKey, error) {
 	key, ok := ParentKey(chain)
 	if !ok {
 		return client.ObjectKey{}, configurationv1alpha1.PolicyChainInvalidError{Message: "policy-chain ownership requires a parent reference"}
-	}
-	if !CrossNamespaceAllowed(chain) && key.Namespace != chain.GetNamespace() {
-		return client.ObjectKey{}, configurationv1alpha1.PolicyChainInvalidError{Message: "policy-chain ownership requires a same-namespace parent reference"}
 	}
 	return key, nil
 }
@@ -135,10 +126,6 @@ func Holder(ctx context.Context, cl client.Client, owner Chain, parentKey client
 	if !valid {
 		return nil, nil
 	}
-	chainKind, parentKind, crossNamespace := crossNamespaceKinds(owner)
-	if ownerKey.Namespace != parentKey.Namespace && !crossNamespace {
-		return nil, nil
-	}
 	if err := cl.Get(ctx, ownerKey, owner); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
@@ -152,7 +139,11 @@ func Holder(ctx context.Context, cl client.Client, owner Chain, parentKey client
 		return nil, nil
 	}
 	if ownerKey.Namespace != parentKey.Namespace {
-		err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, ownerKey.Namespace, parentKey.Namespace, parentKey.Name,
+		chainKind, parentKind, err := kinds(owner)
+		if err != nil {
+			return nil, err
+		}
+		err = crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, ownerKey.Namespace, parentKey.Namespace, parentKey.Name,
 			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(chainKind)),
 			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(parentKind)))
 		if crossnamespace.IsReferenceNotGranted(err) {

@@ -11,6 +11,11 @@ metadata:
   name: apply-onprem-event-gateway
 spec:
   try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+        content: bash ../../../fixtures/gwadmin-license.sh install
     - apply:
         resource:
           apiVersion: gateway-operator.konghq.com/v1alpha1
@@ -19,6 +24,10 @@ spec:
             name: ($gwadmin_name)
             namespace: ($namespace)
           spec:
+            license:
+              secretRef:
+                name: gw-admin-license
+                key: license
             deployment:
               podTemplateSpec:
                 spec:

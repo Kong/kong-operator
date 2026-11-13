@@ -264,6 +264,8 @@ func TestKongReferenceGrant(t *testing.T) {
 			{"EventGatewayListenerPolicy to EventGatewayListener", "EventGatewayListenerPolicy", configurationGroup, "EventGatewayListener"},
 			{"EventGatewayListenerPolicy to EventGatewayTLSTrustBundle", "EventGatewayListenerPolicy", configurationGroup, "EventGatewayTLSTrustBundle"},
 			{"EventGatewayVirtualCluster to EventGatewayBackendCluster", "EventGatewayVirtualCluster", configurationGroup, "EventGatewayBackendCluster"},
+			{"EventGatewayListenerPolicyChain to EventGatewayListener", "EventGatewayListenerPolicyChain", configurationGroup, "EventGatewayListener"},
+			{"EventGatewayListenerPolicyChain to EventGatewayListenerPolicy", "EventGatewayListenerPolicyChain", configurationGroup, "EventGatewayListenerPolicy"},
 			{"EventGatewayVirtualClusterPolicy to EventGatewayVirtualCluster", "EventGatewayVirtualClusterPolicy", configurationGroup, "EventGatewayVirtualCluster"},
 			{"EventGatewayVirtualClusterPolicyChain to EventGatewayVirtualCluster", "EventGatewayVirtualClusterPolicyChain", configurationGroup, "EventGatewayVirtualCluster"},
 			{"EventGatewayVirtualClusterPolicyChain to EventGatewayVirtualClusterPolicy", "EventGatewayVirtualClusterPolicyChain", configurationGroup, "EventGatewayVirtualClusterPolicy"},

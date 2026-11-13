@@ -194,6 +194,12 @@ type DeploymentConfig[T Object] struct {
 	// the certificate checksum annotation is re-asserted after it. Leave it
 	// empty for DataPlanes that inject no such env vars.
 	ReassertEnvVars []string
+	// ReassertVolumes lists names of volumes the operator mounts in the
+	// DataPlane container that a user pod template overlay must not replace:
+	// the overlay's volumes of the same names, its mounts of them, and its
+	// mounts at their mount paths in the DataPlane container are dropped
+	// before the merge. Only the volumes the operator actually added are.
+	ReassertVolumes []string
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)

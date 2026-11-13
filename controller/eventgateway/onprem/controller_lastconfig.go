@@ -55,16 +55,16 @@ type lastGoodConfig struct {
 	// inUse are the entities its policies use (see entitiesInUse): they stay
 	// held while it is pushed in place of the current configuration.
 	inUse map[reportedEntity][]reportedEntity
-	// orderedClusterPolicies are the virtual clusters whose cluster policies
-	// it orders explicitly (see configuration.orderedClusterPolicies): what
+	// orderedPolicies are the virtual clusters and listeners whose policies
+	// it orders explicitly (see configuration.orderedPolicies): what
 	// gw-admin holds is compared with it in that order, which the current
 	// configuration may no longer have.
-	orderedClusterPolicies []uuid.UUID
+	orderedPolicies []uuid.UUID
 }
 
 // rememberConfig remembers the configuration of the gateway, recorded with
 // its current revision, built as cfg, the entities its policies use and the
-// virtual clusters whose cluster policies it orders.
+// virtual clusters and listeners whose policies it orders.
 func (r *Reconciler) rememberConfig(
 	gateway *eventgatewayv1alpha1.OnPremEventGateway, config gatewayConfig, cfg configuration,
 ) error {
@@ -74,7 +74,7 @@ func (r *Reconciler) rememberConfig(
 	}
 	r.lastConfigs.Store(gateway.UID, &lastGoodConfig{
 		revision: gateway.Status.ConfigRevision, hash: hash, config: config, inUse: cfg.entitiesInUse,
-		orderedClusterPolicies: slices.Clone(cfg.orderedClusterPolicies),
+		orderedPolicies: slices.Clone(cfg.orderedPolicies),
 	})
 	return nil
 }
@@ -160,8 +160,9 @@ func (r *Reconciler) recoverLastConfig(
 		config:   gatewayConfig{Gateway: deriveConfig(gateway, cfg).Gateway, Entities: entities},
 		inUse:    entitiesInUseBySent(entities, cfg),
 		// The entities are as the pod returns them: whatever the virtual
-		// clusters taken as ordered, a pod holding them compares the same.
-		orderedClusterPolicies: slices.Clone(cfg.orderedClusterPolicies),
+		// clusters and listeners taken as ordered, a pod holding them
+		// compares the same.
+		orderedPolicies: slices.Clone(cfg.orderedPolicies),
 	}
 	r.lastConfigs.Store(gateway.UID, last)
 	return last, nil
@@ -235,19 +236,19 @@ func entitiesInUseBySent(sent gwadminapi.GatewayEntitySet, cfg configuration) ma
 // revision, and the configuration pushing it: the current one, for its data
 // plane certificates, which a stopped push still makes current, e.g. to stop
 // trusting a certificate deleted, with the key of the last entities, and
-// their cluster policies compared in the order they were pushed in.
+// the policies chains order compared in the order they were pushed in.
 func (last *lastGoodConfig) pushedAs(cfg configuration) (gatewayConfig, configuration, error) {
 	config := gatewayConfig{Gateway: last.config.Gateway, Entities: last.config.Entities}
 	config.Version = configVersion(&eventgatewayv1alpha1.OnPremEventGateway{
 		Status: eventgatewayv1alpha1.OnPremEventGatewayStatus{ConfigRevision: last.revision},
 	})
-	key, err := comparisonKey(withGWAdminDefaults(last.config.Entities), last.orderedClusterPolicies...)
+	key, err := comparisonKey(withGWAdminDefaults(last.config.Entities), last.orderedPolicies...)
 	if err != nil {
 		return gatewayConfig{}, configuration{}, fmt.Errorf("failed to encode the last entities of the gateway: %w", err)
 	}
 	pushing := cfg
 	pushing.pushedKey = key
-	pushing.orderedClusterPolicies = last.orderedClusterPolicies
+	pushing.orderedPolicies = last.orderedPolicies
 	// The paths gw-admin reports name the last entities, not those of the
 	// current objects.
 	pushing.objects = map[string]string{}

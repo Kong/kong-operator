@@ -11,6 +11,10 @@ metadata:
   name: ($gwadmin_name)
   namespace: ($admin_namespace)
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   # Readiness probed every second, so the pod turns Ready without waiting for
   # the default 10s period, and unready after 30s of failures, as by default.
   deployment:

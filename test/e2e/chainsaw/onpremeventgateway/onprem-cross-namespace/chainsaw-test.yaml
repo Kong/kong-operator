@@ -47,6 +47,13 @@ spec:
       value: header_value
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+        with:
+          bindings:
+            - name: gwadmin_license_namespace
+              value: ($admin_namespace)
     - name: 1-Data-plane-of-a-gwadmin-in-another-namespace
       try:
         - apply:

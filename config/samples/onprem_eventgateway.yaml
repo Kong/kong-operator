@@ -6,12 +6,20 @@
 # controller (--enable-controller-gwadmin) deploys, over mutual TLS. The
 # KegDataPlane pulls it from there, with a client certificate issued from the
 # cp client CA of the GWAdmin and registered on the gateway.
+#
+# Create gw-admin-license separately in the default namespace, with the
+# konghq.com/secret: "true" label and the original enveloped license in
+# its license key.
 apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: GWAdmin
 metadata:
   name: gw-admin
   namespace: default
-spec: {}
+spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
 ---
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
