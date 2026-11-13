@@ -3469,6 +3469,16 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 			},
 			expected: commonv1alpha1.Tags{"team-a", "gw-tag", "class-tag"},
 		},
+		{
+			name: "tags with reserved prefixes on the service are dropped",
+			backendRefs: []gatewayv1.HTTPBackendRef{
+				{Name: "reserved-svc", Port: &port80},
+			},
+			backendServices: []corev1.Service{
+				{Name: "reserved-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a,k8s-uid:1234,managed-by:someone-else"}},
+			},
+			expected: commonv1alpha1.Tags{"team-a", "gw-tag", "class-tag"},
+		},
 	}
 
 	for _, tt := range tests {
