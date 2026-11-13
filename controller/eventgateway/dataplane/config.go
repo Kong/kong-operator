@@ -494,11 +494,11 @@ func commonKEGEnvVars(egdp *eventgatewayv1alpha1.KegDataPlane, image string) []c
 	}
 
 	if kegReadsRemovedSettings(image) {
-		if cfg.ConfigPollIntervalSeconds != nil {
-			envVars = append(envVars, corev1.EnvVar{Name: EnvConfigPollInterval, Value: fmt.Sprintf("%ds", *cfg.ConfigPollIntervalSeconds)})
+		if cfg.ConfigPollIntervalSeconds != nil { //nolint:staticcheck // still passed to a keg older than 1.3.0
+			envVars = append(envVars, corev1.EnvVar{Name: EnvConfigPollInterval, Value: fmt.Sprintf("%ds", *cfg.ConfigPollIntervalSeconds)}) //nolint:staticcheck // still passed to a keg older than 1.3.0
 		}
-		if cfg.EnableDebugEndpoints != nil {
-			envVars = append(envVars, corev1.EnvVar{Name: EnvEnableDebugEndpoints, Value: strconv.FormatBool(*cfg.EnableDebugEndpoints == eventgatewayv1alpha1.DebugEndpointsStateEnabled)})
+		if cfg.EnableDebugEndpoints != nil { //nolint:staticcheck // still passed to a keg older than 1.3.0
+			envVars = append(envVars, corev1.EnvVar{Name: EnvEnableDebugEndpoints, Value: strconv.FormatBool(*cfg.EnableDebugEndpoints == eventgatewayv1alpha1.DebugEndpointsStateEnabled)}) //nolint:staticcheck // still passed to a keg older than 1.3.0
 		}
 	}
 

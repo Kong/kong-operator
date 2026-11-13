@@ -37,8 +37,8 @@ func TestRemovedKEGSettings(t *testing.T) {
 	egdp := &eventgatewayv1alpha1.KegDataPlane{
 		Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 			Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-				ConfigPollIntervalSeconds: new(int32(30)),
-				EnableDebugEndpoints:      new(eventgatewayv1alpha1.DebugEndpointsStateEnabled),
+				ConfigPollIntervalSeconds: new(int32(30)),                                       //nolint:staticcheck // testing deprecated field
+				EnableDebugEndpoints:      new(eventgatewayv1alpha1.DebugEndpointsStateEnabled), //nolint:staticcheck // testing deprecated field
 			},
 		},
 	}
@@ -110,8 +110,8 @@ func TestBuildContainerRemovedKEGSettings(t *testing.T) {
 	}}
 	withSettings := func(egdp *eventgatewayv1alpha1.KegDataPlane, image string) *eventgatewayv1alpha1.KegDataPlane {
 		egdp.Spec.Config = &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-			ConfigPollIntervalSeconds: new(int32(30)),
-			EnableDebugEndpoints:      new(eventgatewayv1alpha1.DebugEndpointsStateEnabled),
+			ConfigPollIntervalSeconds: new(int32(30)),                                       //nolint:staticcheck // testing deprecated field
+			EnableDebugEndpoints:      new(eventgatewayv1alpha1.DebugEndpointsStateEnabled), //nolint:staticcheck // testing deprecated field
 		}
 		if image != "" {
 			egdp.Spec.Deployment = &eventgatewayv1alpha1.DeploymentOptions{PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -156,8 +156,8 @@ func TestKEGConfigReportsIgnoredSettings(t *testing.T) {
 	require.NotNil(t, config.Deployment.IgnoredSettings)
 	egdp := newReconcileEGDP()
 	egdp.Spec.Config = &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-		ConfigPollIntervalSeconds: new(int32(30)),
-		EnableDebugEndpoints:      new(eventgatewayv1alpha1.DebugEndpointsStateEnabled),
+		ConfigPollIntervalSeconds: new(int32(30)),                                       //nolint:staticcheck // testing deprecated field
+		EnableDebugEndpoints:      new(eventgatewayv1alpha1.DebugEndpointsStateEnabled), //nolint:staticcheck // testing deprecated field
 	}
 	assert.Len(t, config.Deployment.IgnoredSettings(egdp, consts.DefaultKEGImage), 2)
 }

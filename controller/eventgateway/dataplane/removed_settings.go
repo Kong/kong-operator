@@ -54,10 +54,10 @@ func ignoredKEGSettings(egdp *eventgatewayv1alpha1.KegDataPlane, image string) [
 		keg = fmt.Sprintf("the image %s has no version tag, so its keg is taken for %s or later, which", image, kegRemovedSettingsVersion)
 	}
 	var ignored []string
-	if cfg.ConfigPollIntervalSeconds != nil {
+	if cfg.ConfigPollIntervalSeconds != nil { //nolint:staticcheck // reports the deprecated setting as ignored
 		ignored = append(ignored, "spec.config.configPollIntervalSeconds is ignored: "+keg+" polls its configuration on its own")
 	}
-	if cfg.EnableDebugEndpoints != nil {
+	if cfg.EnableDebugEndpoints != nil { //nolint:staticcheck // reports the deprecated setting as ignored
 		ignored = append(ignored, "spec.config.enableDebugEndpoints is ignored: "+keg+" serves its debug endpoints on a listener of its own")
 	}
 	return ignored
