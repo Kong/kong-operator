@@ -1,0 +1,97 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-producepolicychain-lifecycle
+spec:
+  description: |
+    Exercise complete Konnect produce ordering with two schema-validation groups,
+    sibling modifyHeaders policies, an encryptFields/static-key child and a root.
+    Verify exact IDs, unchanged parent relationships, reference/set blocking,
+    recreation, drift repair, independent cluster-chain ownership, contender
+    handover, empty scope and unauthenticated deletion retaining remote entities.
+    This is management-plane coverage, not Kafka or on-prem execution coverage.
+  timeouts:
+    exec: 900s
+    cleanup: 300s
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [$test_name, 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [$test_name, 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [$test_name, 'keg']))
+    - name: backend_cluster_name
+      value: chain-backend
+    - name: virtual_cluster_name
+      value: chain-vc
+    - name: dns_label
+      value: producechainvc
+  steps:
+    - name: Register-scoped-cleanup-before-creation
+      try:
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+            content: |
+              test -n "${KONNECT_TOKEN:?KONNECT_TOKEN must be set}"
+      cleanup:
+        - script:
+            env: &chain_env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($keg_cp_name)
+              - name: TEST_NAME
+                value: ($test_name)
+              - name: AUTH_NAME
+                value: ($konnect_auth_name)
+              - name: AUTH_SECRET_NAME
+                value: ($auth_secret_name)
+              - name: VIRTUAL_CLUSTER_NAME
+                value: ($virtual_cluster_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash scripts/cleanup.sh
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-dedicated-gateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: Create-virtual-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: Create-empty-virtual-cluster
+      bindings:
+        - name: virtual_cluster_name
+          value: empty-vc
+        - name: dns_label
+          value: emptyproducevc
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: Complete-nested-ordering-and-lifecycle
+      try:
+        - script:
+            env: *chain_env
+            content: |
+              bash scripts/chain.sh
