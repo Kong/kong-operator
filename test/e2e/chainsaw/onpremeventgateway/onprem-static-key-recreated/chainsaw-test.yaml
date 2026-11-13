@@ -1,0 +1,188 @@
+# A static key of an OnPremEventGateway recreated with the same value still
+# decrypts the records it encrypted: keg names the key of a record by its id,
+# which is hashed from the group, kind, namespace and name of the key, not the UID of
+# its object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-static-key-recreated
+spec:
+  description: |
+    1. An OnPremEventGateway encrypting with a static key from a Secret.
+    2. A record produced through keg is encrypted, its kong/enc header naming
+       the id of the static key, other than the UID of its object, and keg hands
+       it back.
+    3. The static key is deleted and created again from the same Secret: its
+       UID changes.
+    4. A new record, on another topic, names the same key id, and is handed
+       back.
+    5. The first record is still handed back.
+    6. The value of the key changes: keg refuses the first record, which no
+       longer decrypts, while a new record names the same key id, and is handed
+       back.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+
+    - name: 1-Encrypting
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-policies/01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            resource: &key-programmed
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: encryption-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource: &encrypt-programmed
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: encrypt
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+      cleanup:
+        - script:
+            env:
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: ../onprem-shared/onprem.sh remove-dir "$WORK_DIR"
+
+    - name: 2-Record-names-the-key-id
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: ../onprem-shared/onprem.sh save-uid eventgatewaystatickey encryption-key "$WORK_DIR/key-uid"
+        # Programmed tells gw-admin has the configuration, not keg.
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh wait-encrypts "$KEG_DP" probe-before-recreation 120
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-produce "$KEG_DP" before-recreation before-recreation-value
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" before-recreation before-recreation-value 120
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh save-record-key-id before-recreation "$WORK_DIR/key-id"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh ids-differ "$WORK_DIR/key-id" "$WORK_DIR/key-uid"
+
+    - name: 3-Key-recreated-from-the-same-Secret
+      try:
+        # The encrypt policy holds the key: it goes first.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: encrypt
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              name: encryption-key
+        - apply:
+            file: ../onprem-policies/01-entities.yaml
+        - assert:
+            resource: *key-programmed
+        - assert:
+            resource: *encrypt-programmed
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh uid-changed eventgatewaystatickey encryption-key "$WORK_DIR/key-uid"
+
+    - name: 4-New-record-names-the-same-key-id
+      try:
+        # keg may still run the configuration without the key, from while it
+        # was deleted.
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh wait-encrypts "$KEG_DP" probe-after-recreation 120 "$WORK_DIR/key-id"
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-produce "$KEG_DP" after-recreation after-recreation-value
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" after-recreation after-recreation-value 120
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-key-id-is after-recreation "$WORK_DIR/key-id"
+
+    - name: 5-First-record-still-decrypted
+      try:
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" before-recreation before-recreation-value 120
+
+    - name: 6-Changed-value-keeps-the-key-id
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy12MiE=
+        # Once keg has the new value, the decrypt policy, with failureMode
+        # error, fails on the first record: keg refuses it rather than handing
+        # it back decrypted with the wrong value. The error is the one keg
+        # 1.3.0 answers.
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-refused "$KEG_DP" before-recreation 'failed the validation' 120
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-produce "$KEG_DP" after-value-change after-value-change-value
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" after-value-change after-value-change-value 120
+        # The id tells nothing of the value: it stays.
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-key-id-is after-value-change "$WORK_DIR/key-id"
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
