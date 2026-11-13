@@ -383,8 +383,7 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
 		// Produce policy chains are Konnect-only.
-		switch obj.(type) {
-		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain); ok {
 			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
 			continue
 		}
