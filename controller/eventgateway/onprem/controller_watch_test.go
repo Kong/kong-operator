@@ -110,11 +110,6 @@ func TestListenerPolicyChainNotifications(t *testing.T) {
 	newChain := chain.DeepCopy()
 	newChain.DeletionTimestamp = new(metav1.Now())
 	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}), "a terminating chain releases its claim")
-	newParent := parent.DeepCopy()
-	newParent.Annotations = map[string]string{policychain.OwnerAnnotation: "chain/uid"}
-	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}), "a cluster chain claim isn't one on a listener")
-	newParent.Annotations = map[string]string{policychain.ListenerOwnerAnnotation: "chain/uid"}
-	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}), "claims are metadata-only updates")
 }
 
 func onPremGatewayRef(name string) *commonv1alpha1.GatewayRef {

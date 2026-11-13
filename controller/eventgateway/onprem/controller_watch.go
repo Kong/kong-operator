@@ -61,8 +61,6 @@ func entityChanged() predicate.Predicate {
 				return !e.ObjectOld.GetDeletionTimestamp().Equal(e.ObjectNew.GetDeletionTimestamp())
 			case *configurationv1alpha1.EventGatewayVirtualCluster:
 				return e.ObjectOld.GetAnnotations()[policychain.OwnerAnnotation] != e.ObjectNew.GetAnnotations()[policychain.OwnerAnnotation]
-			case *configurationv1alpha1.EventGatewayListener:
-				return e.ObjectOld.GetAnnotations()[policychain.ListenerOwnerAnnotation] != e.ObjectNew.GetAnnotations()[policychain.ListenerOwnerAnnotation]
 			}
 			return false
 		},
