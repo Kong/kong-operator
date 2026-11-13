@@ -420,6 +420,17 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 		for _, obj := range []client.Object{bundle, registry, key} {
 			require.NoError(t, cl.Create(ctx, obj))
 		}
+		// staticKeyIDs returns the ids of the static keys each pod holds.
+		staticKeyIDs := func(ct *assert.CollectT) []string {
+			var ids []string
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				if g, ok, _ := pod.state(gatewayID(ct, gateway)); assert.True(ct, ok) && assert.Len(ct, g.entities.StaticKeys, 1) {
+					ids = append(ids, g.entities.StaticKeys[0].Id.String())
+				}
+			}
+			return ids
+		}
+		var keyID string
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
 				g, ok, _ := pod.state(gatewayID(ct, gateway))
@@ -430,9 +441,13 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 					assert.Equal(ct, string(bundle.UID), g.entities.TlsTrustBundles[0].Id.String())
 				}
 				assert.Len(ct, g.entities.SchemaRegistries, 1)
-				if assert.Len(ct, g.entities.StaticKeys, 1) {
-					assert.Equal(ct, string(key.UID), g.entities.StaticKeys[0].Id.String())
-				}
+			}
+			ids := staticKeyIDs(ct)
+			if assert.Len(ct, ids, 2) && assert.Equal(ct, ids[0], ids[1]) {
+				keyID = ids[0]
+				// A static key isn't under the UID of its object: its id
+				// is hashed from its group, kind, namespace and name.
+				assert.NotEqual(ct, string(key.UID), keyID)
 			}
 		}, waitTime, tickTime)
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -444,6 +459,25 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 					assert.True(ct, apimeta.IsStatusConditionTrue(obj.GetConditions(), "Programmed"), "%T %s", obj, obj.GetName())
 				}
 			}
+		}, waitTime, tickTime)
+
+		// Recreated, e.g. by a GitOps tool, the static key gets another UID
+		// but keeps its id, which the records it encrypted name.
+		oldUID := key.UID
+		require.NoError(t, cl.Delete(ctx, key))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(key), &configurationv1alpha1.EventGatewayStaticKey{})
+			assert.True(ct, apierrors.IsNotFound(err), "the static key must be gone: %v", err)
+		}, waitTime, tickTime)
+		key = key.DeepCopy()
+		key.ResourceVersion, key.UID, key.Finalizers, key.Status = "", "", nil, configurationv1alpha1.EventGatewayStaticKeyStatus{}
+		require.NoError(t, cl.Create(ctx, key))
+		require.NotEqual(t, oldUID, key.UID)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(key), key)) {
+				assert.True(ct, apimeta.IsStatusConditionTrue(key.GetConditions(), "Programmed"))
+			}
+			assert.Equal(ct, []string{keyID, keyID}, staticKeyIDs(ct))
 		}, waitTime, tickTime)
 	})
 

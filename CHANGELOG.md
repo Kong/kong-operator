@@ -232,9 +232,23 @@
   refused with `no such key: status` by the rule keeping its parent reference
   once Programmed.
   [#6550](https://github.com/Kong/kong-operator/pull/6550)
+- `OnPremEventGateway`: a static key keeps decrypting the records it encrypted
+  when its `EventGatewayStaticKey` is deleted and created again with the same
+  value, e.g. by a GitOps tool or a restore from a backup. The id the records
+  name the key by is now hashed from the group, kind, namespace and name of
+  the key, instead of being the UID of its object. `OnPremEventGateway` has
+  only shipped in rapid channel builds, which carry unfinished features, so
+  this is not a breaking change: records a rapid build encrypted name the key
+  by its UID and are no longer decrypted.
+  [#6644](https://github.com/Kong/kong-operator/pull/6644)
 
 ### Added
 
+- Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
+  Helm installation artifacts, to declare Konnect produce-policy ordering with
+  Kubernetes references to the complete set of root and nested policies.
+  This API-only layer does not yet reconcile ordering; on-prem support is not included.
+  [#6534](https://github.com/Kong/kong-operator/pull/6534)
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.

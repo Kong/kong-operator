@@ -32,43 +32,44 @@ import (
 // registry or static key of a policy of a virtual cluster, the TLS trust
 // bundles of a listener policy. The conversions, written for
 // Konnect, resolve such a reference to the Konnect ID or to the name of the
-// entity. Converted through uidResolver, both are the UID of its object, which
-// is its id in the configuration, and the reference is then checked to be to
-// an entity of the configuration of the gateway (see resolveReferences).
+// entity. Converted through uidResolver, both are the id of the entity in the
+// configuration, the UID of its object but for a static key (see entityIDOf),
+// and the reference is then checked to be to an entity of the configuration of
+// the gateway (see resolveReferences).
 
-// uidResolver reads the entities the policies reference with their UID as
-// their Konnect ID and as their name. It records the objects it reads by UID,
-// to name them in messages.
+// uidResolver reads the entities the policies reference with their id in the
+// configuration as their Konnect ID and as their name. It records the objects
+// it reads by id, to name them in messages.
 type uidResolver struct {
 	client.Client
 
 	read map[uuid.UUID]client.ObjectKey
 }
 
-// Get reads the object, with its UID as its Konnect ID and as its name, when
-// it has them. The parent reference of an entity attached to an
+// Get reads the object, with its id in the configuration as its Konnect ID and
+// as its name, when it has them. The parent reference of an entity attached to an
 // OnPremEventGateway is hidden: the conversions refuse a reference to such an
 // entity.
 func (r uidResolver) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	if err := r.Client.Get(ctx, key, obj, opts...); err != nil {
 		return err
 	}
-	uid := string(obj.GetUID())
-	if id, err := uuid.Parse(uid); err == nil {
-		r.read[id] = key
+	id := entityIDKey(obj)
+	if parsed, err := uuid.Parse(id); err == nil {
+		r.read[parsed] = key
 	}
 	if e, ok := obj.(interface{ SetKonnectID(string) }); ok {
-		e.SetKonnectID(uid)
+		e.SetKonnectID(id)
 	}
 	switch e := obj.(type) {
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		e.Spec.ParentRef = withoutOnPremParent(e.Spec.ParentRef)
 		if config := e.Spec.APISpec.EventGatewaySchemaRegistryConfig; config != nil && config.SchemaRegistryConfluent != nil {
-			config.SchemaRegistryConfluent.Name = uid
+			config.SchemaRegistryConfluent.Name = id
 		}
 	case *configurationv1alpha1.EventGatewayStaticKey:
 		e.Spec.ParentRef = withoutOnPremParent(e.Spec.ParentRef)
-		e.Spec.APISpec.Name = uid
+		e.Spec.APISpec.Name = id
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		e.Spec.ParentRef = withoutOnPremParent(e.Spec.ParentRef)
 	}
@@ -101,7 +102,7 @@ type referenceTargets struct {
 	staticKeys       entityIDs
 	tlsTrustBundles  entityIDs
 	virtualClusters  entityIDs
-	// read names the objects uidResolver read, by UID.
+	// read names the objects uidResolver read, by id.
 	read map[uuid.UUID]client.ObjectKey
 }
 
@@ -132,8 +133,8 @@ func referenceTargetsOf(c *configuration, read map[uuid.UUID]client.ObjectKey) r
 
 // resolve replaces a reference with a reference by id to an entity of the
 // configuration, with its name when withName is set. The reference holds the
-// UID of the object of the entity, as its id or as its name (see
-// uidResolver).
+// id of the entity, the UID of its object but for a static key, as its id or as
+// its name (see uidResolver).
 func (t referenceTargets) resolve(ids entityIDs, ref map[string]any) error {
 	s, _ := ref["id"].(string)
 	if s == "" {

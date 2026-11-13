@@ -151,10 +151,10 @@ func noNewUserOfDeletedEntities(ctx context.Context, cl client.Client, policy en
 // what that configuration references, which its spec may no longer name: built
 // holds the entities sent, by the UID of their object.
 func entitiesInUse(included []entityStatus, built map[types.UID]any) map[reportedEntity][]reportedEntity {
-	byUID := map[string]reportedEntity{}
+	byID := map[string]reportedEntity{}
 	for _, e := range included {
 		if t := reflect.TypeOf(e.obj); isHeldKind(t) {
-			byUID[string(e.obj.GetUID())] = reportedEntity{typ: t, key: client.ObjectKeyFromObject(e.obj)}
+			byID[entityIDKey(e.obj)] = reportedEntity{typ: t, key: client.ObjectKeyFromObject(e.obj)}
 		}
 	}
 	inUse := map[reportedEntity][]reportedEntity{}
@@ -162,7 +162,7 @@ func entitiesInUse(included []entityStatus, built map[types.UID]any) map[reporte
 		policy := reportedEntity{typ: reflect.TypeOf(e.obj), key: client.ObjectKeyFromObject(e.obj)}
 		refs := heldReferencesOf(e.obj)
 		if e.kept {
-			refs = append(refs, sentReferences(built[e.obj.GetUID()], byUID, policy)...)
+			refs = append(refs, sentReferences(built[e.obj.GetUID()], byID, policy)...)
 		}
 		for _, ref := range refs {
 			if !slices.Contains(inUse[ref], policy) {
@@ -192,10 +192,10 @@ func entitiesInUse(included []entityStatus, built map[types.UID]any) map[reporte
 	return inUse
 }
 
-// sentReferences returns the held entities, of byUID, the entity sent
-// references: the ids it holds, which are the UIDs of their objects, other than
+// sentReferences returns the held entities, of byID, the entity sent
+// references: the ids it holds, of their entities (see entityIDOf), other than
 // its own.
-func sentReferences(sent any, byUID map[string]reportedEntity, self reportedEntity) []reportedEntity {
+func sentReferences(sent any, byID map[string]reportedEntity, self reportedEntity) []reportedEntity {
 	value, err := jsonValue(sent)
 	if err != nil {
 		return nil
@@ -213,7 +213,7 @@ func sentReferences(sent any, byUID map[string]reportedEntity, self reportedEnti
 				walk(child)
 			}
 		case string:
-			if ref, ok := byUID[v]; ok && ref != self {
+			if ref, ok := byID[v]; ok && ref != self {
 				refs = append(refs, ref)
 			}
 		}

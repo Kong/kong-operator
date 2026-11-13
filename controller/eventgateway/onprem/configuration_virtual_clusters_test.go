@@ -275,7 +275,8 @@ spec:
 	assert.Equal(t, map[string]any{"id": string(registry.UID)}, registryRef, "a schema registry is referenced by its UID")
 	require.Len(t, gotVC.ProducePolicies, 1)
 	keyRef := gotVC.ProducePolicies[0]["config"].(map[string]any)["encryption_key"].(map[string]any)["key"]
-	assert.Equal(t, map[string]any{"id": string(staticKey.UID), "name": "key"}, keyRef, "a static key is referenced by its UID, with its name as gw-admin returns it")
+	assert.Equal(t, map[string]any{"id": staticKeyID(client.ObjectKeyFromObject(staticKey)).String(), "name": "key"}, keyRef,
+		"a static key is referenced by its id (see staticKeyID), with its name as gw-admin returns it")
 
 	assert.Equal(t, "EventGatewayVirtualClusterConsumePolicy "+client.ObjectKeyFromObject(child).String()+" (virtual_clusters.0.consume_policies.2.config)",
 		cfg.describeField("virtual_clusters.0.consume_policies.2.config"))

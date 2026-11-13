@@ -1,0 +1,178 @@
+# Replace the placeholder token and Kafka bootstrap address before applying.
+# Anonymous authentication and disabled TLS are for demonstration only.
+# This file includes all Kubernetes prerequisites and has no TLS/sample dependency.
+# Konnect-only API layer: Produce chain reconciliation is not registered yet.
+# The complete order includes the schema-validation parent, both nested children,
+# and the separate root. Siblings may reorder, but their group stays contiguous.
+# Ordering preserves parentPolicyRef; it cannot reparent a child policy.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: produce-chain-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: eu.api.konghq.com
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: produce-chain-gateway
+  namespace: default
+spec:
+  apiSpec:
+    name: produce-chain-gateway
+  konnect:
+    authRef:
+      name: produce-chain-auth
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: produce-chain-backend
+  namespace: default
+spec:
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: produce-chain-gateway
+  apiSpec:
+    name: produce-chain-backend
+    bootstrapServers:
+      - kafka:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: produce-chain-virtual-cluster
+  namespace: default
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: produce-chain-backend
+  apiSpec:
+    name: produce-chain-virtual-cluster
+    dnsLabel: produce-chain-example
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+        anonymous: {}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: produce-chain-parse
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: produce-chain-virtual-cluster
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: produce-chain-parse
+      enabled: Enabled
+      config:
+        type: json
+        json:
+          valueValidationAction: reject
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: produce-chain-child-first
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: produce-chain-virtual-cluster
+  apiSpec:
+    type: modifyHeaders
+    parentPolicyRef:
+      name: produce-chain-parse
+    modifyHeaders:
+      name: produce-chain-child-first
+      enabled: Enabled
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-produce-stage
+              value: first
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: produce-chain-child-second
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: produce-chain-virtual-cluster
+  apiSpec:
+    type: modifyHeaders
+    parentPolicyRef:
+      name: produce-chain-parse
+    modifyHeaders:
+      name: produce-chain-child-second
+      enabled: Enabled
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-produce-stage
+              value: second
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: produce-chain-root
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: produce-chain-virtual-cluster
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: produce-chain-root
+      enabled: Enabled
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-produce-root
+              value: example
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicyChain
+metadata:
+  name: produce-chain-example
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: produce-chain-virtual-cluster
+  apiSpec:
+    # List every root and nested child exactly once. Parent precedes children.
+    # Swapping these two siblings is valid; interleaving the root is not.
+    # Update this list when policies are created or deleted.
+    # [] is valid only for an already-empty scope; it does not delete policies.
+    policies:
+      - name: produce-chain-parse
+      - name: produce-chain-child-second
+      - name: produce-chain-child-first
+      - name: produce-chain-root
