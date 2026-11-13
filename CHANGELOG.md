@@ -210,7 +210,10 @@
   when its `EventGatewayStaticKey` is deleted and created again with the same
   value, e.g. by a GitOps tool or a restore from a backup. The id the records
   name the key by is now hashed from the group, kind, namespace and name of
-  the key, instead of being the UID of its object.
+  the key, instead of being the UID of its object. `OnPremEventGateway` has
+  only shipped in rapid channel builds, which carry unfinished features, so
+  this is not a breaking change: records a rapid build encrypted name the key
+  by its UID and are no longer decrypted.
   [#6644](https://github.com/Kong/kong-operator/pull/6644)
 
 ### Added
