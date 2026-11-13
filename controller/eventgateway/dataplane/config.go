@@ -173,6 +173,7 @@ var config = shareddataplane.Config[
 		// another namespace: its certificates are removed, against Konnect
 		// as against an OnPremEventGateway, so that it no longer connects.
 		ControlPlaneNotPermitted: revokeCertificates,
+		IgnoredSettings:          ignoredKEGSettings,
 
 		TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 	},
@@ -357,7 +358,7 @@ func buildContainer(
 	var extraVolumes []corev1.Volume
 	var envVars []corev1.EnvVar
 	if deps := onPremDependenciesOf(cp); deps != nil {
-		envVars = append(onPremEnvVars(deps), commonKEGEnvVars(egdp)...)
+		envVars = append(onPremEnvVars(deps), commonKEGEnvVars(egdp, image)...)
 		volume, mount := onPremVolume(egdp, deps)
 		extraVolumes = append(extraVolumes, volume)
 		volumeMounts = append(volumeMounts, mount)
@@ -371,7 +372,7 @@ func buildContainer(
 			return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved control plane", egdp.Namespace, egdp.Name)
 		}
 		var err error
-		envVars, err = buildKEGEnvVars(egdp, keg)
+		envVars, err = buildKEGEnvVars(egdp, keg, image)
 		if err != nil {
 			return corev1.Container{}, nil, err
 		}
@@ -402,10 +403,12 @@ func buildContainer(
 }
 
 // buildKEGEnvVars builds the full list of keg environment variables from
-// KonnectEventGateway status and DataPlane spec.config.
+// KonnectEventGateway status and DataPlane spec.config, for the keg of the
+// image.
 func buildKEGEnvVars(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	keg *konnectv1alpha1.KonnectEventGateway,
+	image string,
 ) ([]corev1.EnvVar, error) {
 	srv, err := server.NewServer[konnectv1alpha1.KonnectEventGateway](keg.Status.ServerURL)
 	if err != nil {
@@ -424,7 +427,7 @@ func buildKEGEnvVars(
 		{Name: EnvKonnectClientKeyPath, Value: KonnectCertMountPath + "tls.key"},
 		{Name: EnvKonnectDomain, Value: domain},
 	}
-	return append(envVars, commonKEGEnvVars(egdp)...), nil
+	return append(envVars, commonKEGEnvVars(egdp, image)...), nil
 }
 
 // checkKonnectEventGatewayEndpoints reports whether the data plane can reach the
@@ -462,8 +465,10 @@ func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddatap
 }
 
 // commonKEGEnvVars builds the keg environment variables that don't depend on
-// the kind of the control plane, from DataPlane spec.config.
-func commonKEGEnvVars(egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.EnvVar {
+// the kind of the control plane, from DataPlane spec.config, for the keg of
+// the image: the settings keg 1.3.0 removed only for an older keg (see
+// kegReadsRemovedSettings).
+func commonKEGEnvVars(egdp *eventgatewayv1alpha1.KegDataPlane, image string) []corev1.EnvVar {
 	healthAddr := fmt.Sprintf("0.0.0.0:%d", DefaultHealthPort)
 	cfg := egdp.Spec.Config
 	if cfg != nil && cfg.Runtime != nil && cfg.Runtime.HealthListenerAddressPort != nil {
@@ -488,12 +493,13 @@ func commonKEGEnvVars(egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.EnvVar {
 		}
 	}
 
-	if cfg.ConfigPollIntervalSeconds != nil {
-		envVars = append(envVars, corev1.EnvVar{Name: EnvConfigPollInterval, Value: fmt.Sprintf("%ds", *cfg.ConfigPollIntervalSeconds)})
-	}
-
-	if cfg.EnableDebugEndpoints != nil {
-		envVars = append(envVars, corev1.EnvVar{Name: EnvEnableDebugEndpoints, Value: strconv.FormatBool(*cfg.EnableDebugEndpoints == eventgatewayv1alpha1.DebugEndpointsStateEnabled)})
+	if kegReadsRemovedSettings(image) {
+		if cfg.ConfigPollIntervalSeconds != nil { //nolint:staticcheck // still passed to a keg older than 1.3.0
+			envVars = append(envVars, corev1.EnvVar{Name: EnvConfigPollInterval, Value: fmt.Sprintf("%ds", *cfg.ConfigPollIntervalSeconds)}) //nolint:staticcheck // still passed to a keg older than 1.3.0
+		}
+		if cfg.EnableDebugEndpoints != nil { //nolint:staticcheck // still passed to a keg older than 1.3.0
+			envVars = append(envVars, corev1.EnvVar{Name: EnvEnableDebugEndpoints, Value: strconv.FormatBool(*cfg.EnableDebugEndpoints == eventgatewayv1alpha1.DebugEndpointsStateEnabled)}) //nolint:staticcheck // still passed to a keg older than 1.3.0
+		}
 	}
 
 	if obs := cfg.Observability; obs != nil { //nolint:gocritic
