@@ -19,7 +19,8 @@ import (
 // ACL consumer groups and auth strategies, every tool's access ACLs, and the selected
 // variant's upstream CA certificates and client certificates) to the referenced entities'
 // names, and the config's secretRefs (the session and token-vault Redis passwords and the
-// passthrough proxy's basic-auth password) to their Secret values.
+// passthrough proxy's basic-auth password) to their Secret values. The config certificate
+// references must target the server's own OnPremAIGateway.
 func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
@@ -107,13 +108,13 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		mcp.Config.Sources = names
 	}
 
-	if mcp.Config.CACertificates, err = resolveEntityNames[AIGatewayCACertificate](
-		ctx, cl, obj.Namespace, caCertificateRefs(caCertificates),
+	if mcp.Config.CACertificates, err = resolveEntityNamesTargeting[AIGatewayCACertificate](
+		ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, caCertificateRefs(caCertificates),
 	); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s caCertificates: %w", obj.Namespace, obj.Name, err)
 	}
-	if mcp.Config.Certificates, err = resolveEntityNames[AIGatewayCertificate](
-		ctx, cl, obj.Namespace, certificateRefs(certificates),
+	if mcp.Config.Certificates, err = resolveEntityNamesTargeting[AIGatewayCertificate](
+		ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, certificateRefs(certificates),
 	); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s certificates: %w", obj.Namespace, obj.Name, err)
 	}
