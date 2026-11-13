@@ -666,9 +666,11 @@ TEST_DIR ?= $(PROJECT_DIR)
 ENVTEST_GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: _test.envtest
-_test.envtest: gotestsum setup-envtest
+_test.envtest: gotestsum setup-envtest ensure.go.pkg.downloaded.gateway-api
 	$(MAKE) use-setup-envtest CLUSTER_VERSION=$(CLUSTER_VERSION)
 	cd $(TEST_DIR) && \
+	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+	TEST_GATEWAY_API_CRDS_CHANNEL=$(TEST_GATEWAY_API_CRDS_CHANNEL) \
 	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
 	GOTESTSUM_FORMAT=$(ENVTEST_GOTESTSUM_FORMAT) \
@@ -729,7 +731,9 @@ test.api: gotestsum
 	./api/test/...
 
 .PHONY: _test.integration
-_test.integration: gotestsum download.telepresence download.helm
+_test.integration: gotestsum download.telepresence download.helm ensure.go.pkg.downloaded.gateway-api
+	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+	TEST_GATEWAY_API_CRDS_CHANNEL=$(TEST_GATEWAY_API_CRDS_CHANNEL) \
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
@@ -886,6 +890,10 @@ CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
 # CHAINSAW_SELECTOR, when set, runs only the tests whose labels match it, e.g.
 # gateway=onprem.
 CHAINSAW_SELECTOR ?=
+# Extra flags passed to `chainsaw test` (e.g. --exclude-test-regex to skip
+# tests requiring route CRDs absent from the cluster, as on standard-channel
+# Gateway API installs).
+CHAINSAW_TEST_FLAGS ?=
 
 .PHONY: test.e2e.chainsaw.gwadmin-license
 test.e2e.chainsaw.gwadmin-license: ## Check GW_ADMIN_LICENSE_FILE without contacting Kubernetes.
@@ -910,7 +918,7 @@ test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	KEG_DP_IMAGE=$(shell $(YQ) -r '.chainsaw.keg-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
 	GW_ADMIN_IMAGE=$(or $(GW_ADMIN_IMAGE),$(shell $(YQ) -r '.chainsaw.gw-admin | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE))) \
 	GRPCURL_BIN=$(GRPCURL) \
-		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR) \
+		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR) $(CHAINSAW_TEST_FLAGS) \
 		$(if $(CHAINSAW_SELECTOR),--selector '$(CHAINSAW_SELECTOR)')
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
@@ -1046,6 +1054,10 @@ GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACK
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_CRDS_KUSTOMIZE_STANDARD_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/
 GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental
+# Channel of Gateway API CRDs installed by tests (experimental|standard).
+# Standard matches clusters that don't install the experimental channel.
+# Exported to tests, which read it via the same-named env (kcfg.GatewayAPICRDsPath).
+TEST_GATEWAY_API_CRDS_CHANNEL ?= experimental
 
 
 # NOTE: we also need --server-side because some CRDs exceed the size limit for annotations:

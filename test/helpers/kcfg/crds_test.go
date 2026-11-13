@@ -8,6 +8,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGatewayAPIVersion(t *testing.T) {
+	t.Run("defaults to the go.mod pinned version", func(t *testing.T) {
+		version, err := gatewayAPIVersion()
+		require.NoError(t, err)
+		require.NotEmpty(t, version)
+	})
+
+	t.Run("env override takes precedence", func(t *testing.T) {
+		t.Setenv(envGatewayAPIVersionOverride, "v1.2.1")
+		version, err := gatewayAPIVersion()
+		require.NoError(t, err)
+		require.Equal(t, "v1.2.1", version)
+	})
+
+	t.Run("env override must start with 'v'", func(t *testing.T) {
+		t.Setenv(envGatewayAPIVersionOverride, "1.2.1")
+		_, err := gatewayAPIVersion()
+		require.ErrorContains(t, err, "must start with 'v'")
+	})
+}
+
+func TestGatewayAPICRDsPath(t *testing.T) {
+	t.Run("defaults to the experimental channel", func(t *testing.T) {
+		t.Setenv(envGatewayAPICRDsChannel, "experimental")
+		require.Equal(t, GatewayAPIExperimentalCRDsPath(), GatewayAPICRDsPath())
+	})
+
+	t.Run("standard channel", func(t *testing.T) {
+		t.Setenv(envGatewayAPICRDsChannel, "standard")
+		require.Equal(t, GatewayAPIStandardCRDsPath(), GatewayAPICRDsPath())
+	})
+}
+
 func TestConstructModulePath(t *testing.T) {
 	tests := []struct {
 		name       string

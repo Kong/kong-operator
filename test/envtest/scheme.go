@@ -52,6 +52,8 @@ func Scheme(t *testing.T, opts ...SchemeOption) *k8sruntime.Scheme {
 
 // ReferenceGrantVersion is the ReferenceGrant API version that envtest-based tests
 // hand to the reconcilers they construct directly. envtest installs the Gateway API
-// CRDs pinned by GATEWAY_API_VERSION (resolved from go.mod), which serve ReferenceGrant
-// at both v1 and v1beta1. Thus for now use in test suite v1.
+// CRDs pinned by GATEWAY_API_VERSION (env override, defaulting to go.mod), which
+// serve ReferenceGrant at both v1 and v1beta1 only for versions v1.5.0 and later;
+// older versions serve only v1beta1. Thus for now use in test suite v1, which
+// requires the installed CRDs to serve v1.
 var ReferenceGrantVersion = schema.GroupVersion(gatewayv1.GroupVersion)
