@@ -647,10 +647,11 @@ func describe(r resource, gw gatewayType, axes []axis, wrongAxes []string) strin
 			lines = append(lines, "     "+t)
 		}
 	}
-	hasC, hasS := false, false
+	hasC, hasS, named := false, false, false
 	refs := make([]string, 0, len(axes))
 	for _, a := range axes {
 		b := a.build("probe", placement{nsReferrer, nsTarget, nsThird}, &ports{})
+		named = b.referrer.Named
 		letters := []string{"B"}
 		if slices.Contains(wrongAxes, a.name) {
 			letters = append(letters, "W")
@@ -683,7 +684,8 @@ func describe(r resource, gw gatewayType, axes []axis, wrongAxes []string) strin
 			"namespace needs no grant; pointed back, it needs it again.")
 	}
 	e := []string{"Delete: the object can be deleted while its grant is revoked."}
-	if gw == konnect {
+	// Only an object named in the gateway's API is created again (see scenarioB).
+	if gw == konnect && named {
 		e = append(e, "Created again with its name, it is programmed: its entity left Konnect.")
 	}
 	scenario("E", e...)

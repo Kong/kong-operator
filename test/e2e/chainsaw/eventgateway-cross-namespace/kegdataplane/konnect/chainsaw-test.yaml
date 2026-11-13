@@ -29,7 +29,6 @@ spec:
       D  Revoked: deleting the grant reports the missing grant again; creating it
          again restores the object.
       E  Delete: the object can be deleted while its grant is revoked.
-         Created again with its name, it is programmed: its entity left Konnect.
       N  Name clash: an object of another namespace with the same name doesn't
          take its name, which the gateway keeps unique.
 
