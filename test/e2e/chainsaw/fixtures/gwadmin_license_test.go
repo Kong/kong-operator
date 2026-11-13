@@ -33,6 +33,10 @@ case "$1" in
     ;;
   apply)
     cat >"$MOCK_DIR/secret.json"
+    if [[ "${MOCK_FAIL:-}" == apply-once && ! -e "$MOCK_DIR/apply-failed" ]]; then
+      touch "$MOCK_DIR/apply-failed"
+      exit 1
+    fi
     if [[ "${MOCK_FAIL:-}" == apply ]]; then
       cat "$MOCK_DIR/secret.json" >&2
       exit 1
@@ -59,7 +63,9 @@ esac
 		}
 		cmd.Env = append(cmd.Env, entry)
 	}
-	cmd.Env = append(cmd.Env, "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"), "MOCK_DIR="+dir, "NAMESPACE=test-admin")
+	cmd.Env = append(cmd.Env, "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"), "MOCK_DIR="+dir, "NAMESPACE=test-admin",
+		// Bound the install retry budget so failing installs don't retry for minutes.
+		"MAX_RETRIES=2", "RETRY_DELAY=0")
 	if input != "" {
 		file := filepath.Join(dir, "license file.jws")
 		if err := os.WriteFile(file, []byte(input), 0o600); err != nil {
@@ -117,7 +123,7 @@ func TestGWAdminLicenseInput(t *testing.T) {
 	t.Run("install without input provisions nothing and requires no credentials", func(t *testing.T) {
 		cmd, dir := licenseCommand(t, "gwadmin-license.sh", "install", "")
 		output, err := cmd.CombinedOutput()
-		if err != nil || !strings.Contains(string(output), `{"license_input":"not-configured"}`) {
+		if err != nil || !strings.Contains(string(output), `"license_input":"not-configured"`) {
 			t.Fatalf("optional install failed: %v %s", err, output)
 		}
 		if _, err := os.Stat(filepath.Join(dir, "commands")); !os.IsNotExist(err) {
@@ -127,14 +133,15 @@ func TestGWAdminLicenseInput(t *testing.T) {
 }
 
 func TestGWAdminLicenseSecret(t *testing.T) {
-	for _, failure := range []string{"", "create", "apply"} {
+	// apply-once fails the first apply only, as an unreachable webhook would: the retry must recover.
+	for _, failure := range []string{"", "apply-once", "create", "apply"} {
 		t.Run("kubectl-"+failure, func(t *testing.T) {
 			cmd, dir := licenseCommand(t, "gwadmin-license.sh", "install", testLicense+"\n", "MOCK_FAIL="+failure)
 			output, err := cmd.CombinedOutput()
 			if strings.Contains(string(output), testLicense) || strings.Contains(string(output), base64.StdEncoding.EncodeToString([]byte(testLicense+"\n"))) {
 				t.Fatal("raw or encoded license leaked from kubectl output")
 			}
-			if failure != "" {
+			if failure == "create" || failure == "apply" {
 				if err == nil || !strings.Contains(string(output), "could not provision") {
 					t.Fatalf("expected explicit kubectl failure, got %v %s", err, output)
 				}
