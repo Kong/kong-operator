@@ -1,4 +1,4 @@
-package konnectother
+package konnecteventgateway
 
 import (
 	"encoding/json"

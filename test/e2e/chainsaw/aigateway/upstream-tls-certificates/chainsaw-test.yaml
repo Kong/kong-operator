@@ -159,9 +159,9 @@ spec:
                   conversion-only:
                     config:
                       caCertificates:
-                        - ($ca_cert_name)
+                        - name: ($ca_cert_name)
                       certificates:
-                        - ($client_cert_name)
+                        - name: ($client_cert_name)
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
@@ -178,9 +178,9 @@ spec:
                   conversion-listener:
                     config:
                       caCertificates:
-                        - ($ca_cert_name)
+                        - name: ($ca_cert_name)
                       certificates:
-                        - ($client_cert_name)
+                        - name: ($client_cert_name)
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
@@ -197,9 +197,9 @@ spec:
                   upstream-server:
                     config:
                       caCertificates:
-                        - ($ca_cert_name)
+                        - name: ($ca_cert_name)
                       certificates:
-                        - ($client_cert_name)
+                        - name: ($client_cert_name)
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
@@ -216,9 +216,9 @@ spec:
                   passthrough-listener:
                     config:
                       caCertificates:
-                        - ($ca_cert_name)
+                        - name: ($ca_cert_name)
                       certificates:
-                        - ($client_cert_name)
+                        - name: ($client_cert_name)
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'

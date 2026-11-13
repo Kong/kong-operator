@@ -1921,6 +1921,49 @@ func TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails(t *testing
 	require.NoError(t, findStatusByName(t, statuses, "mcp-healthy").Err)
 }
 
+// TestBuildDocument_MCPServerFailsWhenReferencedCertificateFails pins the translated-
+// reference check for the MCP server config certificate surface: an MCP server whose
+// config references an AIGatewayCACertificate that failed its own translation must be
+// excluded with a per-entity error, like the agent and SNI certificate references.
+func TestBuildDocument_MCPServerFailsWhenReferencedCertificateFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// An invalid PEM fails its own translation while keeping its entity name intact.
+	brokenCert := aiGatewayCACertificateFixture("ca-cert-broken", "not a certificate")
+	healthyCert := aiGatewayCACertificateFixture("ca-cert-healthy", genCACertPEM(t))
+	healthyPolicy := aiGatewayPolicyFixture("policy-healthy")
+
+	withCA := func(s *aiconfigurationv1alpha1.AIGatewayMCPServer, ca string) *aiconfigurationv1alpha1.AIGatewayMCPServer {
+		// The fixture auto-references policy-<last char of name>; point it at the healthy
+		// policy instead so only the CA certificate reference varies.
+		s.Spec.APISpec.PassthroughListener.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
+		s.Spec.APISpec.PassthroughListener.Config.CaCertificates = []aiconfigurationv1alpha1.AIGatewayCACertificateRef{{Name: ca}}
+		return s
+	}
+	mcpBroken := withCA(aiGatewayMCPServerFixture("mcp-broken"), "ca-cert-broken")
+	mcpHealthy := withCA(aiGatewayMCPServerFixture("mcp-healthy"), "ca-cert-healthy")
+
+	cl := newTestBuilder(scheme, gw, brokenCert, healthyCert, healthyPolicy, mcpBroken, mcpHealthy).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+	require.NoError(t, err)
+
+	require.Len(t, doc.CACertificates, 1)
+	require.Equal(t, "ca-cert-healthy", doc.CACertificates[0].Name)
+	require.Len(t, doc.MCPServers, 1)
+	require.Equal(t, "mcp-healthy", doc.MCPServers[0].Name)
+	require.Equal(t, []string{"ca-cert-healthy"}, doc.MCPServers[0].Config.CACertificates)
+
+	require.Contains(t, findStatusByName(t, statuses, "mcp-broken").Err.Error(),
+		`referenced AIGatewayCACertificate "ca-cert-broken" was excluded from the document`)
+	require.NoError(t, findStatusByName(t, statuses, "mcp-healthy").Err)
+}
+
 // aiGatewayMCPServerConversionOnlyFixture returns a healthy conversion-only MCP server (a
 // valid same-kind source for listeners), and aiGatewayMCPServerListenerFixture a listener
 // exposing the given sources' tools.

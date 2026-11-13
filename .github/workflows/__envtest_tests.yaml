@@ -25,6 +25,7 @@ jobs:
       matrix:
         include:
           - testcase: konnect-other
+          - testcase: konnect-eventgateway
           - testcase: konnect-api-gw
           - testcase: gateway-api
           - testcase: aigateway
