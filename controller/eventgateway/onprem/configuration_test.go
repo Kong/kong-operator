@@ -446,7 +446,7 @@ spec:
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
 
-	t.Run("each kind is converted, under the UID of its object", func(t *testing.T) {
+	t.Run("each kind is converted, under the UID of its object, but a static key", func(t *testing.T) {
 		require.Len(t, cfg.entities.TlsTrustBundles, 1)
 		assert.Equal(t, string(bundle.UID), cfg.entities.TlsTrustBundles[0].Id.String())
 		assert.Equal(t, "bundle", cfg.entities.TlsTrustBundles[0].Name)
@@ -459,7 +459,10 @@ spec:
 		assert.Contains(t, string(got), `"endpoint":"https://registry.example.com"`)
 
 		require.Len(t, cfg.entities.StaticKeys, 1)
-		assert.Equal(t, string(key.UID), cfg.entities.StaticKeys[0].Id.String())
+		// A static key is under an id hashed from its group, kind, namespace and
+		// name, which recreating its object keeps (see staticKeyID).
+		assert.Equal(t, staticKeyID(client.ObjectKeyFromObject(key)), cfg.entities.StaticKeys[0].Id)
+		assert.NotEqual(t, string(key.UID), cfg.entities.StaticKeys[0].Id.String())
 		assert.Equal(t, "key", cfg.entities.StaticKeys[0].Name)
 
 		assert.Equal(t, map[string]string{

@@ -263,6 +263,56 @@ gwadmin_entities_match() {
   printf '%s' "$got" | jq -se ".[0] | $2" >/dev/null || { echo "gw-admin serves $(printf '%s' "$got" | jq -sc '.[0].entities | map_values(length)'), not matching: $2" >&2; return 1; }
 }
 
+# kafka_headers topic: the records of the topic as Kafka holds them, encrypted,
+# with their headers, read straight from Kafka, not through a data plane.
+kafka_headers() {
+  local inner='cat >/tmp/k.yml <<EOF
+contexts:
+  kafka:
+    brokers: ["$KAFKA_DIRECT"]
+EOF
+kafkactl -C /tmp/k.yml --context kafka consume "$KAFKA_TOPIC" --from-beginning --exit --print-headers'
+  bounded 120 env kubectl run -n "$(ns)" "kafka-headers-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="KAFKA_DIRECT=kafka-bootstrap.kafka-shared.svc:9092" --env="KAFKA_TOPIC=$(ns)_$1" \
+    --command -- sh -c "$inner"
+}
+
+# record_key_id topic: the id of the static key the first record of the topic
+# names, in its kong/enc header.
+record_key_id() {
+  local records id
+  records=$(kafka_headers "$1") || return 1
+  id=$(grep -m 1 -aoE 'static://[0-9a-f-]{36}' <<<"$records" || true)
+  [ -n "$id" ] || { echo "the records of $1 name no static key: $records" >&2; return 1; }
+  # -o prints every match of the first matching line: the first counts.
+  id=${id%%$'\n'*}
+  echo "${id#static://}"
+}
+
+# saved_id file: the id saved in the file, failing when the file holds none.
+saved_id() {
+  local id
+  id=$(cat "$1" 2>/dev/null) || { echo "no id saved in $1" >&2; return 1; }
+  [[ "$id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || { echo "$1 holds no id: $id" >&2; return 1; }
+  echo "$id"
+}
+
+# record_refused dp topic error: consuming the topic through the data plane
+# fails with the error, e.g. as the data plane can't decrypt a record.
+record_refused() {
+  local got inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+EOF
+kafkactl -C /tmp/k.yml --context keg consume "$TOPIC" --from-beginning --exit 2>&1 || true'
+  got=$(bounded 60 env kubectl run -n "$(ns)" "record-refused-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" \
+    --command -- sh -c "$inner") || return 1
+  grep -qF "$3" <<<"$got" || { echo "consuming $2 doesn't fail with \"$3\", the data plane answers: $got" >&2; return 1; }
+}
+
 cmd=$1
 shift
 case $cmd in
@@ -532,14 +582,14 @@ EOF
 i=0
 until kafkactl -C /tmp/k.yml --context keg create topic "$TOPIC" >/dev/null 2>&1 ||
   kafkactl -C /tmp/k.yml --context keg describe topic "$TOPIC" >/dev/null 2>&1; do
-  i=$((i + 1)); [ "$i" -ge 180 ] && { echo "creating the topic through keg fails" >&2; exit 1; }; sleep 1
+  i=$((i + 1)); [ "$i" -ge 60 ] && { echo "creating the topic through keg fails" >&2; exit 1; }; sleep 1
 done
 i=0
 until kafkactl -C /tmp/k.yml --context keg produce "$TOPIC" --value "$VALUE" >/tmp/out 2>&1; do
-  i=$((i + 1)); [ "$i" -ge 180 ] && { echo "producing through keg fails: $(cat /tmp/out)" >&2; exit 1; }; sleep 1
+  i=$((i + 1)); [ "$i" -ge 60 ] && { echo "producing through keg fails: $(cat /tmp/out)" >&2; exit 1; }; sleep 1
 done
 echo "ok: produced"'
-  output=$(bounded 300 env kubectl run -n "$(ns)" "record-produce-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+  output=$(bounded 180 env kubectl run -n "$(ns)" "record-produce-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
     --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" --env="VALUE=$3" \
     --command -- sh -c "$inner")
   result data_plane "$1" topic "$2" kubectl_output "$output"
@@ -562,19 +612,69 @@ echo "ok: keg hands back $VALUE"'
     --command -- sh -c "$inner")
   result data_plane "$1" topic "$2" kubectl_output "$output"
   ;;
-record-key-id-is) # topic id: the records of the topic in Kafka name the encryption key by the id, in their kong/enc header
+record-refused) # dp topic error timeout: waits for consuming the topic through the data plane to fail with the error, e.g. once the static key it decrypts with has another value
+  until_true "$4" "consuming $2 through $1 fails with \"$3\"" record_refused "$1" "$2" "$3"
+  until_result data_plane "$1" topic "$2" error "$3"
+  ;;
+wait-encrypts) # dp probe_topic timeout [file]: waits for a record produced through the data plane to the probe topic to reach Kafka encrypted with the static key of the id saved in the file, or any, e.g. once the data plane has a new configuration
+  id=""
+  pattern='[0-9a-f-]{36}'
+  [ -z "${4:-}" ] || { id=$(saved_id "$4"); pattern=$id; }
   inner='cat >/tmp/k.yml <<EOF
 contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
   kafka:
     brokers: ["$KAFKA_DIRECT"]
 EOF
-got=$(kafkactl -C /tmp/k.yml --context kafka consume "$KAFKA_TOPIC" --from-beginning --exit --print-headers 2>&1)
-echo "$got" | grep -aq "static://$ID" || { echo "the records of $KAFKA_TOPIC do not name the key $ID: $got" >&2; exit 1; }
-echo "ok: the records name the key $ID"'
-  output=$(bounded 120 env kubectl run -n "$(ns)" "record-key-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
-    --env="KAFKA_DIRECT=kafka-bootstrap.kafka-shared.svc:9092" --env="KAFKA_TOPIC=$(ns)_$1" --env="ID=$2" \
+start=$(date +%s)
+until kafkactl -C /tmp/k.yml --context keg create topic "$TOPIC" >/dev/null 2>&1; kafkactl -C /tmp/k.yml --context keg produce "$TOPIC" --value probe >/dev/null 2>&1 &&
+  kafkactl -C /tmp/k.yml --context kafka consume "$KAFKA_TOPIC" --from-beginning --exit --print-headers 2>/dev/null | grep -aqE "static://$ID"; do
+  [ $(($(date +%s) - start)) -ge "$LIMIT" ] && { echo "records keg produces to $TOPIC name no static key $ID after ${LIMIT}s" >&2; exit 1; }
+  sleep 2
+done
+echo "ok: encrypted with $ID"'
+  output=$(bounded "$(($3 + 60))" env kubectl run -n "$(ns)" "wait-encrypts-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="KAFKA_DIRECT=kafka-bootstrap.kafka-shared.svc:9092" \
+    --env="TOPIC=$2" --env="KAFKA_TOPIC=$(ns)_$2" --env="ID=$pattern" --env="LIMIT=$3" \
     --command -- sh -c "$inner")
-  result topic "$1" id "$2" kubectl_output "$output"
+  result data_plane "$1" topic "$2" id "${id:-any}" kubectl_output "$output"
+  ;;
+remove-dir) # dir: removes the directory, e.g. the work dir of a test holding client keys
+  rm -rf "$1"
+  result removed "$1"
+  ;;
+save-record-key-id) # topic file: saves to the file the id of the static key the first record of the topic names, in its kong/enc header
+  id=$(record_key_id "$1")
+  mkdir -p "$(dirname "$2")"
+  echo "$id" >"$2"
+  result topic "$1" id "$id" file "$2"
+  ;;
+record-key-id-is) # topic file: the records of the topic in Kafka name the static key by the id saved in the file, in their kong/enc header
+  id=$(saved_id "$2")
+  records=$(kafka_headers "$1")
+  grep -aqF "static://$id" <<<"$records" || { echo "the records of $1 do not name the key $id: $records" >&2; exit 1; }
+  result topic "$1" id "$id"
+  ;;
+save-uid) # kind name file: saves the UID of the object to the file
+  uid=$(kubectl get "$1" -n "$(ns)" "$2" -o jsonpath='{.metadata.uid}')
+  [ -n "$uid" ] || { echo "$1 $2 has no UID" >&2; exit 1; }
+  mkdir -p "$(dirname "$3")"
+  echo "$uid" >"$3"
+  result kind "$1" name "$2" uid "$uid" file "$3"
+  ;;
+uid-changed) # kind name file: the UID of the object is not the one saved in the file, e.g. once it was created again
+  saved=$(saved_id "$3")
+  uid=$(kubectl get "$1" -n "$(ns)" "$2" -o jsonpath='{.metadata.uid}')
+  [ -n "$uid" ] && [ "$uid" != "$saved" ] || { echo "the UID of $1 $2 is still $saved" >&2; exit 1; }
+  result kind "$1" name "$2" saved_uid "$saved" uid "$uid"
+  ;;
+ids-differ) # file other_file: the ids saved in the files differ, e.g. the id of a static key and the UID of its object
+  a=$(saved_id "$1")
+  b=$(saved_id "$2")
+  [ "$a" != "$b" ] || { echo "$1 and $2 both hold $a" >&2; exit 1; }
+  result id "$a" other_id "$b"
   ;;
 wait-operator-idle) # timeout: waits for the Kong Operator to finish what it has to do for data planes and gateways, e.g. after a change or a restart
   until_true "$1" "the Kong Operator is idle" operator_settled

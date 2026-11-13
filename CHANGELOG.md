@@ -192,6 +192,12 @@
   refused with `no such key: status` by the rule keeping its parent reference
   once Programmed.
   [#6550](https://github.com/Kong/kong-operator/pull/6550)
+- `OnPremEventGateway`: a static key keeps decrypting the records it encrypted
+  when its `EventGatewayStaticKey` is deleted and created again with the same
+  value, e.g. by a GitOps tool or a restore from a backup. The id the records
+  name the key by is now hashed from the group, kind, namespace and name of
+  the key, instead of being the UID of its object.
+  [#6644](https://github.com/Kong/kong-operator/pull/6644)
 
 ### Added
 

@@ -177,9 +177,12 @@ func entitiesInUseBySent(sent gwadminapi.GatewayEntitySet, cfg configuration) ma
 	objects := map[string]reportedEntity{}
 	for _, obj := range cfg.allObjects() {
 		e := reportedEntity{typ: reflect.TypeOf(obj), key: client.ObjectKeyFromObject(obj)}
-		objects[string(obj.GetUID())] = e
+		// The entities sent are under the id of their entity (see
+		// entityIDOf), whether the object is in the configuration or not.
+		id := entityIDKey(obj)
+		objects[id] = e
 		if isHeldKind(e.typ) {
-			held[string(obj.GetUID())] = e
+			held[id] = e
 		}
 	}
 	inUse := map[reportedEntity][]reportedEntity{}

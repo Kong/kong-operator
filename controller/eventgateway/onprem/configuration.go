@@ -829,10 +829,10 @@ func asEntities(v any) map[types.UID]any {
 	return entities
 }
 
-// entityID returns the id of the entity in gw-admin, its UID, or why the
-// entity is left out: its UID is not a version 4 UUID.
+// entityID returns the id of the entity in gw-admin (see entityIDOf), or why
+// the entity is left out: its UID, its id, is not a version 4 UUID.
 func (c *configuration) entityID(obj client.Object) (uuid.UUID, string) {
-	id, ok := uidV4(obj)
+	id, ok := entityIDOf(obj)
 	if !ok {
 		return uuid.UUID{}, fmt.Sprintf("its UID %q is not a version 4 UUID", obj.GetUID())
 	}
