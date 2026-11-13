@@ -149,7 +149,11 @@ func (r *Reconciler) clearOutOfScopeEntityStatus(
 		}
 		for _, item := range items {
 			ent, ok := item.(outOfScopeEntity)
-			if !ok || slices.Contains(watchNamespaces, ent.GetNamespace()) {
+			if !ok {
+				continue
+			}
+			outOfScopeNS, outOfScope := entityOutOfWatchSetNamespace(ent, watchNamespaces)
+			if !outOfScope {
 				continue
 			}
 			targets, err := r.entityTargetsOnPremAIGateway(ctx, ent, gwNN)
@@ -159,7 +163,7 @@ func (r *Reconciler) clearOutOfScopeEntityStatus(
 			if !targets {
 				continue
 			}
-			if err := r.markEntityOutOfScope(ctx, ent, gwNN); err != nil {
+			if err := r.markEntityOutOfScope(ctx, ent, gwNN, outOfScopeNS); err != nil {
 				return err
 			}
 		}
@@ -167,12 +171,32 @@ func (r *Reconciler) clearOutOfScopeEntityStatus(
 	return nil
 }
 
+// entityOutOfWatchSetNamespace returns the namespace the watch set leaves out for
+// the entity, and whether there is one. A credential renders only through the
+// consumer whose document embeds it, so it needs both its own namespace and the
+// consumer's watched.
+func entityOutOfWatchSetNamespace(ent outOfScopeEntity, watchNamespaces []string) (string, bool) {
+	if !slices.Contains(watchNamespaces, ent.GetNamespace()) {
+		return ent.GetNamespace(), true
+	}
+	cred, ok := ent.(*aiconfigurationv1alpha1.AIGatewayConsumerCredential)
+	if !ok {
+		return "", false
+	}
+	consumerNN, ok := cred.ConsumerNamespacedName()
+	if !ok || slices.Contains(watchNamespaces, consumerNN.Namespace) {
+		return "", false
+	}
+	return consumerNN.Namespace, true
+}
+
 // markEntityOutOfScope sets the entity's Programmed condition to False, unless
-// it already reports it.
+// it already reports it. The namespace is the one the watch set leaves out.
 func (r *Reconciler) markEntityOutOfScope(
 	ctx context.Context,
 	ent outOfScopeEntity,
 	gwNN k8stypes.NamespacedName,
+	namespace string,
 ) error {
 	conditions := slices.Clone(ent.GetConditions())
 	changed := meta.SetStatusCondition(&conditions, metav1.Condition{
@@ -182,7 +206,7 @@ func (r *Reconciler) markEntityOutOfScope(
 		Reason:             string(configurationv1.ReasonInvalid),
 		Message: fmt.Sprintf(
 			"Its namespace %s is not watched by the OnPremAIGateway %s: the entity is not part of the pushed configuration",
-			ent.GetNamespace(), gwNN,
+			namespace, gwNN,
 		),
 	})
 	if !changed {
@@ -202,9 +226,8 @@ func (r *Reconciler) markEntityOutOfScope(
 }
 
 // entityTargetsOnPremAIGateway reports whether the entity belongs to the given
-// gateway. A credential is resolved through the consumer it references, whose
-// reference the on-prem translation requires to live in the credential's own
-// namespace.
+// gateway. A credential is resolved through the consumer it references, which may
+// live in another namespace.
 func (r *Reconciler) entityTargetsOnPremAIGateway(
 	ctx context.Context,
 	ent outOfScopeEntity,

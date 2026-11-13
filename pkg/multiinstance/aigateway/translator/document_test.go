@@ -1330,6 +1330,117 @@ func TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant(t *testing.
 	require.ErrorContains(t, credentialStatus.Err, "KongReferenceGrant")
 }
 
+// TestBuildDocument_CrossNamespaceCredentialNeedsKongReferenceGrant pins that a credential
+// of another namespace renders inside its consumer's document only when a KongReferenceGrant
+// in the consumer's namespace allows the reference. A denied credential fails on itself and
+// the consumer still renders without it.
+func TestBuildDocument_CrossNamespaceCredentialNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumer := aiGatewayConsumerFixture("consumer-a")
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred", Namespace: "other",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name:      consumer.Name,
+					Namespace: new("default"),
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Name:        "cred",
+				DisplayName: "cred",
+				Type:        "api-key",
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+						Name: "consumer-api-key",
+						Key:  "key",
+					},
+				},
+			},
+		},
+	}
+	secret := &corev1.Secret{
+		Name: "consumer-api-key", Namespace: "other",
+		Data: map[string][]byte{"key": []byte("s3cr3t")},
+	}
+	grant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cred", Namespace: "default",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      "AIGatewayConsumerCredential",
+				Namespace: "other",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aiconfiguration.konghq.com",
+				Kind:  "AIGatewayConsumer",
+			}},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		grants       []client.Object
+		wantRendered bool
+	}{
+		{
+			name: "no grant",
+		},
+		{
+			name:         "grant for the credential kind and the consumer kind",
+			grants:       []client.Object{grant},
+			wantRendered: true,
+		},
+		{
+			name: "grant for another kind",
+			grants: []client.Object{&configurationv1alpha1.KongReferenceGrant{
+				Name: "allow-other", Namespace: "default",
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: grant.Spec.From,
+					To: []configurationv1alpha1.ReferenceGrantTo{{
+						Group: "aiconfiguration.konghq.com",
+						Kind:  "AIGatewayConsumerGroup",
+					}},
+				},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			scheme := runtime.NewScheme()
+			require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+			require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+			require.NoError(t, corev1.AddToScheme(scheme))
+
+			objs := []client.Object{gw.DeepCopy(), consumer.DeepCopy(), credential.DeepCopy(), secret.DeepCopy()}
+			objs = append(objs, tt.grants...)
+			cl := newTestBuilder(scheme, objs...).Build()
+
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+			require.NoError(t, err)
+			require.NoError(t, findStatusByName(t, statuses, consumer.Name).Err)
+
+			credStatus := findStatusByName(t, statuses, credential.Name)
+			require.Len(t, doc.Consumers, 1)
+			if !tt.wantRendered {
+				require.ErrorContains(t, credStatus.Err, "KongReferenceGrant")
+				require.Empty(t, doc.Consumers[0].Credentials)
+				return
+			}
+			require.NoError(t, credStatus.Err)
+			require.Len(t, doc.Consumers[0].Credentials, 1)
+			require.Equal(t, "s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
+		})
+	}
+}
+
 // TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the
 // rendered consumer embeds its credentials' secret-resolved api keys, so a change to the
 // backing Secret changes the rendered document (and, in production, the payload hash that
