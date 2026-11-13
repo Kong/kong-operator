@@ -401,6 +401,49 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					},
 				},
 			},
+			{
+				Name: "update setting fallbackConfiguration.useLastValidConfig to enabled without FallbackConfiguration feature gate is rejected",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+								},
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.ControlPlaneOptions.Translation.FallbackConfiguration.UseLastValidConfig = new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
+				},
+				ExpectedUpdateErrorMessage: new("fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled"),
+			},
+			{
+				Name: "update setting fallbackConfiguration.useLastValidConfig to enabled with FallbackConfiguration feature gate enabled is allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+								},
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.ControlPlaneOptions.FeatureGates = []operatorv2beta1.ControlPlaneFeatureGate{
+						{
+							Name:  "FallbackConfiguration",
+							State: operatorv2beta1.FeatureGateStateEnabled,
+						},
+					}
+					gc.Spec.ControlPlaneOptions.Translation.FallbackConfiguration.UseLastValidConfig = new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

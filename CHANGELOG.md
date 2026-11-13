@@ -331,7 +331,11 @@
   `useLastValidConfig` no longer defaults to `enabled`, which made the
   ControlPlane manager fail to start while the `FallbackConfiguration` feature
   gate is disabled: setting it to `enabled` now requires that feature gate,
-  enforced by a CEL rule.
+  enforced by a CEL rule. Existing objects that carry
+  `translation.fallbackConfiguration` kept the old `enabled` value: after the
+  upgrade, an update that keeps `useLastValidConfig: enabled` without the
+  `FallbackConfiguration` feature gate is refused; set the field to `disabled`
+  or add the feature gate to update them.
   [#3104](https://github.com/Kong/kong-operator/pull/3104)
 
 ### Fixes

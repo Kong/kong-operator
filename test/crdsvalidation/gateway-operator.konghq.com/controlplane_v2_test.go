@@ -573,6 +573,53 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 				},
 				{
+					Name: "update setting useLastValidConfig to enabled without FallbackConfiguration feature gate is rejected",
+					TestObject: &operatorv2beta1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: operatorv2beta1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								IngressClass: new("kong"),
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+									},
+								},
+							},
+						},
+					},
+					Update: func(cp *operatorv2beta1.ControlPlane) {
+						cp.Spec.Translation.FallbackConfiguration.UseLastValidConfig = new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
+					},
+					ExpectedUpdateErrorMessage: new("fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled"),
+				},
+				{
+					Name: "update setting useLastValidConfig to enabled with FallbackConfiguration feature gate enabled is allowed",
+					TestObject: &operatorv2beta1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: operatorv2beta1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								IngressClass: new("kong"),
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+									},
+								},
+							},
+						},
+					},
+					Update: func(cp *operatorv2beta1.ControlPlane) {
+						cp.Spec.FeatureGates = []operatorv2beta1.ControlPlaneFeatureGate{
+							{
+								Name:  "FallbackConfiguration",
+								State: operatorv2beta1.FeatureGateStateEnabled,
+							},
+						}
+						cp.Spec.Translation.FallbackConfiguration.UseLastValidConfig = new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
+					},
+				},
+				{
 					Name: "fallbackConfiguration.useLastValidConfig set to disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta(ns.Name),
