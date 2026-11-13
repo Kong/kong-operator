@@ -1420,9 +1420,7 @@ func TestBuildDocument_CrossNamespaceCredentialNeedsKongReferenceGrant(t *testin
 			require.NoError(t, corev1.AddToScheme(scheme))
 
 			objs := []client.Object{gw.DeepCopy(), consumer.DeepCopy(), credential.DeepCopy(), secret.DeepCopy()}
-			for _, grant := range tt.grants {
-				objs = append(objs, grant)
-			}
+			objs = append(objs, tt.grants...)
 			cl := newTestBuilder(scheme, objs...).Build()
 
 			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
