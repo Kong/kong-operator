@@ -2,8 +2,10 @@ package translator
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/tls"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -43,9 +45,13 @@ type certWrapper struct {
 	cert              kong.Certificate
 	snis              []string
 	CreationTimestamp metav1.Time
+	// inheritedTags are the tags inherited from the Gateways (and their GatewayClasses) that
+	// requested the certificate. They are appended to the certificate's own tags and set as the
+	// tags of the SNIs the requesters asked for.
+	inheritedTags util.InheritedTags
 }
 
-func (t *Translator) getGatewayCerts() []certWrapper {
+func (t *Translator) getGatewayCerts(resolver *inheritedTagResolver) []certWrapper {
 	logger := t.logger
 	s := t.storer
 	certs := []certWrapper{}
@@ -54,7 +60,13 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 		logger.Error(err, "Failed to list Gateways")
 		return certs
 	}
+	// Sort Gateways to make the result, and thereby the merged certificates' inherited tags and the
+	// SNI assignment, independent of the store's ordering.
+	slices.SortFunc(gateways, func(a, b *gatewayapi.Gateway) int {
+		return cmp.Or(cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Name, b.Name))
+	})
 	for _, gateway := range gateways {
+		gatewayInheritedTags := resolver.forGateway(gateway)
 		statuses := make(map[gatewayapi.SectionName]gatewayapi.ListenerStatus, len(gateway.Status.Listeners))
 		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
@@ -126,6 +138,7 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 						},
 						CreationTimestamp: secret.CreationTimestamp,
 						snis:              []string{hostname},
+						inheritedTags:     gatewayInheritedTags,
 					})
 				}
 			}
@@ -134,7 +147,31 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 	return certs
 }
 
-func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
+// inheritedTagsForClientCertSecret returns the tags the Kong certificate translated from the Secret
+// inherits from the Services referencing it through konghq.com/client-cert: all the Services'
+// Gateway tags (in service-name order), followed by all their GatewayClasses' tags, so that the
+// result does not depend on the order in which populateServices visited them.
+func inheritedTagsForClientCertSecret(clientCertSecretToServices map[string][]clientCertServiceTags, secretKey string) util.InheritedTags {
+	services, ok := clientCertSecretToServices[secretKey]
+	if !ok {
+		return util.InheritedTags{}
+	}
+	// Clone before sorting to leave the caller's slice untouched.
+	services = slices.Clone(services)
+	slices.SortFunc(services, func(a, b clientCertServiceTags) int {
+		return strings.Compare(a.ServiceName, b.ServiceName)
+	})
+	var tags util.InheritedTags
+	for _, service := range services {
+		tags.Append(service.InheritedTags)
+	}
+	return tags
+}
+
+func (t *Translator) getCerts(
+	secretsToSNIs SecretNameToSNIs,
+	clientCertSecretToServices map[string][]clientCertServiceTags,
+) []certWrapper {
 	certs := []certWrapper{}
 
 	for secretKey, SNIs := range secretsToSNIs.secretToSNIs {
@@ -160,6 +197,10 @@ func (t *Translator) getCerts(secretsToSNIs SecretNameToSNIs) []certWrapper {
 			},
 			CreationTimestamp: secret.CreationTimestamp,
 			snis:              SNIs.Hosts(),
+			// A Secret referenced through a backend Service's konghq.com/client-cert annotation makes
+			// its certificate inherit the tags of the parent Gateways (and their GatewayClasses) of
+			// the Gateway API routes using that Service.
+			inheritedTags: inheritedTagsForClientCertSecret(clientCertSecretToServices, secretKey),
 		})
 	}
 
@@ -174,9 +215,13 @@ type identicalCertIDSet struct {
 }
 
 func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Certificate, certIDToMergedCertID) {
+	// snisSeen maps every SNI to the identifier (cert+key) of the certificate serving it. The identifier, unlike
+	// the ID, does not change when certificates with identical content are merged.
 	snisSeen := make(map[string]string)
 	certsSeen := make(map[string]certWrapper)
 	certIDSets := make(map[string]identicalCertIDSet)
+	// sniTags holds the inherited tags of every SNI, keyed by certificate identifier and SNI name.
+	sniTags := make(map[string]map[string]util.InheritedTags)
 
 	for _, cl := range certLists {
 		for _, cw := range cl {
@@ -184,6 +229,9 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 			if !ok {
 				current = cw
 			} else {
+				// The Kong certificate is shared by every requester, so it inherits the tags of all of them.
+				current.inheritedTags.Append(cw.inheritedTags)
+
 				// multiple Secrets that contain identical certificates are collapsed, because we only create one
 				// Kong resource for a given cert+key pair. however, because we reuse the Secret ID, creation time,
 				// and tags for the Kong resource equivalents, the selection of those needs to be deterministic to
@@ -203,18 +251,32 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 			// have already been vetted by some previous iteration and /are/ in the seen list, but they're in the seen
 			// list because the current we retrieved from certsSeen added them
 			for _, sni := range cw.snis {
-				if seen, ok := snisSeen[sni]; !ok {
-					snisSeen[sni] = *current.cert.ID
+				seen, ok := snisSeen[sni]
+				switch {
+				case !ok:
+					snisSeen[sni] = current.identifier
 					current.cert.SNIs = append(current.cert.SNIs, new(sni))
-				} else if seen != *current.cert.ID {
+				case seen != current.identifier:
 					// TODO this should really log information about the requesting Listener or Ingress-like, which is
 					// what binds the SNI to a given Secret. Knowing the Secret ID isn't of great use beyond knowing
 					// what cert will be served. however, the secretToSNIs input to getCerts does not provide this info
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/2605
 					logger.Error(nil, "Same SNI requested for multiple certs, can only serve one cert",
-						"served_secret_cert", seen,
+						"served_secret_cert", *certsSeen[seen].cert.ID,
 						"requested_secret_cert", *current.cert.ID,
 						"sni", sni)
+					continue
+				}
+				// The SNI is served by this certificate, either newly assigned above or already requested by
+				// another requester of the same certificate (e.g. an Ingress and a Gateway listener sharing a
+				// hostname). It inherits the tags of every requester (e.g. Gateway listener) asking for it.
+				if !cw.inheritedTags.IsEmpty() {
+					if sniTags[current.identifier] == nil {
+						sniTags[current.identifier] = make(map[string]util.InheritedTags)
+					}
+					tags := sniTags[current.identifier][sni]
+					tags.Append(cw.inheritedTags)
+					sniTags[current.identifier][sni] = tags
 				}
 			}
 			certsSeen[current.identifier] = current
@@ -231,8 +293,20 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 		sort.SliceStable(cw.cert.SNIs, func(i, j int) bool {
 			return strings.Compare(*cw.cert.SNIs[i], *cw.cert.SNIs[j]) < 0
 		})
+		if !cw.inheritedTags.IsEmpty() {
+			// Every Gateway's tags come before every GatewayClass's tags.
+			cw.cert.Tags = util.MergeTags(cw.cert.Tags, cw.inheritedTags.Gateway, cw.inheritedTags.GatewayClass)
+		}
+		var snisTags map[string][]*string
+		for sni, tags := range sniTags[cw.identifier] {
+			if snisTags == nil {
+				snisTags = make(map[string][]*string)
+			}
+			snisTags[sni] = tags.TagPointers()
+		}
 		res = append(res, kongstate.Certificate{
 			Certificate: cw.cert,
+			SNITags:     snisTags,
 		})
 	}
 
