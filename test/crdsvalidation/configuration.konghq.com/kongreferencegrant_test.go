@@ -239,6 +239,17 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("PortalPage to Portal reference", func(t *testing.T) {
+		toPortal := configurationv1alpha1.ReferenceGrantTo{
+			Group: "konnect.konghq.com",
+			Kind:  "Portal",
+		}
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", "konnect.konghq.com", "PortalPage", toPortal),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "other", "konnect.konghq.com", "PortalPage", toPortal),
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("Event Gateway entity references", func(t *testing.T) {
 		const configurationGroup = "configuration.konghq.com"
 		testCases := []struct {
