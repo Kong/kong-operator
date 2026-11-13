@@ -84,6 +84,12 @@ func NewUpdateStrategyDBModeKonnect(
 }
 
 func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent ContentWithHash) (mo.Option[int], error) {
+	// Sync stats are only collected when requested by the caller (currently the Konnect config synchronizer).
+	syncStats, collectSyncStats := SyncStatsFromContext(ctx)
+	if collectSyncStats {
+		syncStats.Attempted = true
+	}
+
 	cs, err := s.currentState(ctx)
 	if err != nil {
 		return mo.None[int](), fmt.Errorf("failed getting current state for %s: %w", s.client.BaseRootURL(), err)
@@ -120,8 +126,13 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 	ctx, cancel := context.WithCancel(ctx)
 	go s.HandleEvents(ctx, syncer.GetResultChan(), s.diagnostic, fmt.Sprintf("%x", targetContent.Hash))
 
-	_, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
+	solveStats, errs, _ := syncer.Solve(ctx, s.concurrency, false, false)
 	cancel()
+	if collectSyncStats {
+		syncStats.CreateOps = int(solveStats.CreateOps.Count())
+		syncStats.UpdateOps = int(solveStats.UpdateOps.Count())
+		syncStats.DeleteOps = int(solveStats.DeleteOps.Count())
+	}
 	s.resourceErrorLock.Lock()
 	defer s.resourceErrorLock.Unlock()
 	resourceFailures := resourceErrorsToResourceFailures(s.resourceErrors, s.logger)

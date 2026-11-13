@@ -405,6 +405,20 @@
   running, and a cluster policy chain competing for a virtual cluster another
   chain owns.
   [#6495](https://github.com/Kong/kong-operator/pull/6495)
+- OnPrem gateway: added Prometheus metrics for rounds of configuration
+  synchronization with Konnect ("KIC in Konnect" mode). Rounds skipped because
+  nothing changed are not recorded.
+  - `ingress_controller_konnect_configuration_sync_duration_milliseconds`
+    records the duration of each round.
+  - `ingress_controller_konnect_configuration_sync_entity_count` records the
+    number of entities in the uploaded configuration.
+  - `ingress_controller_konnect_configuration_sync_operation_count` counts
+    the entities created, updated and deleted in Konnect (`operation` label).
+
+The metrics are labelled with `success`, `status_code` (the HTTP status
+code that made the round fail), `concurrency`, `server_url` (base URL of
+the Konnect API) and `instance_id`.
+[#6343](https://github.com/Kong/kong-operator/pull/6343)
 
 ### Changed
 

@@ -234,6 +234,7 @@ func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context
 
 	// Get the latest configuration copy to upload to Konnect. We don't want to hold the lock for a long time to prevent
 	// blocking the update of the configuration.
+	roundStart := time.Now()
 	targetCfg, ok := s.currentContent(ctx)
 	if !ok {
 		logger.Info("No configuration received yet, skipping Konnect configuration synchronization")
@@ -241,26 +242,29 @@ func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context
 	}
 
 	// Upload the configuration to Konnect.
-	if err := s.uploadConfig(ctx, logger, s.konnectAdminClient, targetCfg); err != nil {
+	if err := s.uploadConfig(ctx, logger, s.konnectAdminClient, targetCfg, roundStart); err != nil {
 		logger.Error(err, "Failed to upload configuration to Konnect")
 		logKonnectErrors(logger, err)
 	}
 }
 
-// uploadConfig sends the given configuration to Konnect.
+// uploadConfig sends the given configuration to Konnect. roundStart is the time when the synchronization round started
+// and is used to record its duration.
 func (s *ConfigSynchronizer) uploadConfig(
 	ctx context.Context,
 	logger logr.Logger,
 	client *adminapi.KonnectClient,
 	targetContent TargetContent,
+	roundStart time.Time,
 ) error {
 	// Remove consumers in target content if consumer sync is disabled.
 	if client.ConsumersSyncDisabled() {
 		targetContent.Consumers = []file.FConsumer{}
 	}
 
+	syncStats := &sendconfig.SyncStats{}
 	newSHA, err := sendconfig.PerformUpdate(
-		ctx,
+		sendconfig.ContextWithSyncStats(ctx, syncStats),
 		logger,
 		client,
 		s.kongConfig,
@@ -273,6 +277,11 @@ func (s *ConfigSynchronizer) uploadConfig(
 		nil,
 		targetContent.IsFallback,
 	)
+	// Only record the round when the DB-mode update was attempted, i.e. not when it was
+	// skipped because of no configuration change or because of the backoff strategy.
+	if syncStats.Attempted {
+		s.recordSyncRound(client, targetContent, syncStats, time.Since(roundStart), err)
+	}
 	noConfigAcceptedYet := newSHA == nil
 	s.configStatusNotifier.NotifyKonnectConfigStatus(ctx, clients.KonnectConfigUploadStatus{
 		Failed: err != nil || noConfigAcceptedYet,
@@ -283,6 +292,30 @@ func (s *ConfigSynchronizer) uploadConfig(
 
 	client.SetLastConfigSHA(newSHA)
 	return nil
+}
+
+// recordSyncRound records metrics of a single round of configuration synchronization with Konnect.
+func (s *ConfigSynchronizer) recordSyncRound(
+	client *adminapi.KonnectClient,
+	targetContent TargetContent,
+	syncStats *sendconfig.SyncStats,
+	duration time.Duration,
+	err error,
+) {
+	syncRound := metrics.KonnectConfigSync{
+		ServerURL:   client.BaseRootURL(),
+		Concurrency: s.kongConfig.KonnectConcurrency,
+		Duration:    duration,
+		EntityCount: countEntities(targetContent.Content),
+		CreateOps:   syncStats.CreateOps,
+		UpdateOps:   syncStats.UpdateOps,
+		DeleteOps:   syncStats.DeleteOps,
+	}
+	if err != nil {
+		s.metricsRecorder.RecordKonnectConfigSyncFailure(syncRound, err)
+		return
+	}
+	s.metricsRecorder.RecordKonnectConfigSyncSuccess(syncRound)
 }
 
 // logKonnectErrors logs details of each error response returned from Konnect API.
