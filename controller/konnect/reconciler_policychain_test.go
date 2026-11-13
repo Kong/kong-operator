@@ -47,10 +47,9 @@ func testPolicyChain(name string) *configurationv1alpha1.EventGatewayVirtualClus
 
 // TestPolicyChainOnPremReconciliationIsLocal checks the Konnect reconciler
 // leaves a chain whose parent belongs to an OnPremEventGateway alone, its
-// status written by the OnPremEventGateway controller only: including a
-// listener policy chain of another namespace than its listener, which it
-// would otherwise reject, the two controllers then rewriting each other's
-// conditions without end.
+// status written by the OnPremEventGateway controller only, a chain of
+// another namespace than its listener included: the two controllers would
+// otherwise rewrite each other's conditions without end.
 func TestPolicyChainOnPremReconciliationIsLocal(t *testing.T) {
 	t.Parallel()
 	conditions := func() []metav1.Condition {

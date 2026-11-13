@@ -247,15 +247,16 @@
 - `EventGatewayVirtualClusterPolicyChain`s can reference their virtual
   cluster, and order policies, in another namespace, with a
   `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
-  `OnPremEventGateway`s. The policies of a listener policy chain stay in the
-  namespace of the chain.
+  `OnPremEventGateway`s, and so can `EventGatewayListenerPolicyChain`s their
+  listener and policies.
   Without a `KongReferenceGrant`:
   - a policy chain that can't order its policies reports
-    `ReferenceNotPermitted`, and doesn't claim its virtual cluster;
+    `ReferenceNotPermitted`, and doesn't claim its virtual cluster or
+    listener;
   - a policy chain of another namespace loses its claim on its virtual
-    cluster, so that a chain of the namespace of the virtual cluster can
+    cluster or listener, so that a chain of the namespace of that one can
     claim it.
-  [#6582](https://github.com/Kong/kong-operator/pull/6582)
+  [#6582](https://github.com/Kong/kong-operator/pull/6582), [#6631](https://github.com/Kong/kong-operator/pull/6631)
 - `KegDataPlane`: `konnectNamespacedRef` and `onpremNamespacedRef` can name a
   gateway in another namespace, with a `KongReferenceGrant` in its namespace
   allowing the `KegDataPlane`, and one allowing its

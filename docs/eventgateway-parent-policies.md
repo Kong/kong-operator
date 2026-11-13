@@ -354,10 +354,9 @@ singleton configuration for a listener of a `KonnectEventGateway`, the on-prem
 Event Gateway controller for a listener of an `OnPremEventGateway` (see
 [On-prem listener-chain reconciliation](#on-prem-listener-chain-reconciliation)).
 
-`spec.eventGatewayListenerRef` must use `namespacedRef` to reference a listener
-in the same namespace, even when a `KongReferenceGrant` permits cross-namespace
-access. Unsupported cross-namespace parents report an invalid parent-reference
-condition before parent IDs are adopted. The parent reference is immutable from
+`spec.eventGatewayListenerRef` must use `namespacedRef`. A listener of another
+namespace needs a `KongReferenceGrant` there allowing the
+`EventGatewayListenerPolicyChain` to reference it. The parent reference is immutable from
 creation, even before programming; create a new chain CR to manage a different listener.
 The chain configures its parent rather than creating an independent Konnect
 entity, so `status.id` must remain unset. The shared status structure provides
@@ -367,10 +366,10 @@ Supply `spec`, `spec.apiSpec`, and `spec.apiSpec.policies` explicitly. `policies
 is an atomic ordered list of Kubernetes references, not Konnect IDs. Each entry
 has a required `name`, an optional `kind` defaulting to
 `EventGatewayListenerPolicy`, and an optional `namespace` defaulting to the
-chain's namespace. An explicit namespace must be the same as the chain's;
-cross-namespace references are not supported. Every policy must belong to the
-referenced listener. List order, not resource names or YAML document order,
-declares execution order. See the
+chain's namespace. A policy of another namespace needs a `KongReferenceGrant`
+there allowing the `EventGatewayListenerPolicyChain` to reference it. Every
+policy must belong to the referenced listener. List order, not resource names
+or YAML document order, declares execution order. See the
 [listener-chain example](../config/samples/konnect_eventgateway_listener_policy_chain.yaml).
 It includes API authentication, the gateway, listener, backend, virtual cluster,
 forwarding policy, and chain in one file. Replace the token and Kafka/data-plane
@@ -398,10 +397,14 @@ no SDK upgrade is required for this API.
 
 Each reference must resolve to a distinct policy on the same listener and gateway,
 with a nonempty Konnect ID and `Programmed=True` at its current generation.
-Missing, deleting, unready, wrong-kind, wrong-parent, cross-namespace, and duplicate
-references block programming with an actionable `KonnectReferencesResolved=False`
-condition. The controller reads each policy once per reconciliation and reuses
-that snapshot's ordered IDs for the apply operation; it resolves references anew
+Missing, deleting, unready, wrong-kind, wrong-parent and duplicate references
+block programming with an actionable `KonnectReferencesResolved=False`
+condition, and so does a policy of another namespace no `KongReferenceGrant`
+allows, with reason `ReferenceNotPermitted`. Without a `KongReferenceGrant` for
+a listener of another namespace, the chain reports `ResolvedRefs=False` with
+reason `RefNotPermitted`, doesn't claim the listener, and isn't applied. The
+controller reads each policy once per reconciliation and reuses that snapshot's
+ordered IDs for the apply operation; it resolves references anew
 on the next reconciliation. It never silently skips an invalid policy.
 
 Before applying, the controller GETs the listener chain and requires the declared
@@ -441,10 +444,12 @@ its references resolve to the policies' Kubernetes UIDs, without Konnect, and
 `status.id` remains unset.
 
 List every live policy of the listener exactly once. Missing, terminating,
-duplicate, wrong-kind, wrong-parent and cross-namespace references, and a
-policy left out of the configuration, are invalid. The chain and the listener
-must be in the same namespace: a chain of another namespace is left out
-without holding back the gateway.
+duplicate, wrong-kind and wrong-parent references, and a policy left out of
+the configuration, are invalid. A listener or policy of another namespace needs
+a `KongReferenceGrant` there: without one for its listener, a chain is left
+out without holding back the gateway; without one for a policy, it reports
+`ReferenceNotPermitted` and, when no other chain owns the listener, holds back
+the gateway, as it would keep the default order of the policies.
 
 Ownership uses the same annotation as Konnect,
 `gateway-operator.konghq.com/listener-policy-chain-owner`, independent of
