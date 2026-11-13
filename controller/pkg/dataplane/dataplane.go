@@ -225,6 +225,11 @@ type DeploymentConfig[T Object] struct {
 	// trust, e.g. to disconnect the data plane. Implementations must be
 	// idempotent and tolerate a missing Deployment.
 	ControlPlaneNotPermitted func(ctx context.Context, cl client.Client, dp T) error
+	// IgnoredSettings, when non-nil, returns, for each setting of the
+	// DataPlane its container of the image doesn't read, why it is ignored:
+	// each is reported as a Warning Event on the DataPlane when its
+	// Deployment is built.
+	IgnoredSettings func(dp T, image string) []string
 	// Customize, when non-nil, adjusts the operator base Deployment for the
 	// resolved control plane, after the user Deployment labels and
 	// annotations are applied and before the user PodTemplateSpec overlay is

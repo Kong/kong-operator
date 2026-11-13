@@ -237,7 +237,8 @@ func Test_buildKEGEnvVars(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			envs, err := buildKEGEnvVars(tc.egdp, tc.keg)
+			// A keg older than 1.3.0, which reads every setting.
+			envs, err := buildKEGEnvVars(tc.egdp, tc.keg, "kong/kong-event-gateway:1.2.0")
 			if tc.wantErr {
 				require.Error(t, err)
 				return

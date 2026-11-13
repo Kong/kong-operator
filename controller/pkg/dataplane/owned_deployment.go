@@ -52,6 +52,11 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 	certChecksum string,
 ) error {
 	image := ResolveImage(dp, r.Config.Deployment)
+	if r.Config.Deployment.IgnoredSettings != nil {
+		for _, ignored := range r.Config.Deployment.IgnoredSettings(dp, image) {
+			r.EventRecorder.Eventf(dp, nil, corev1.EventTypeWarning, "SettingIgnored", "BuildDeployment", "%s", ignored)
+		}
+	}
 	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config.Deployment, r.Config.Certificate.ChecksumAnnotation)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",

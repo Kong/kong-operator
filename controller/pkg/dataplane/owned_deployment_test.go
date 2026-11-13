@@ -962,3 +962,28 @@ func Test_dropReassertedVolumes(t *testing.T) {
 	assert.Equal(t, []corev1.VolumeMount{{Name: "other", MountPath: "/etc/license"}}, overlay.Containers[1].VolumeMounts,
 		"other containers are left alone")
 }
+
+func Test_ensureDeployment_IgnoredSettings(t *testing.T) {
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{Namespace: "test-ns", Name: "my-dp"}
+	cfg := testConfig
+	var gotImage string
+	cfg.Deployment.IgnoredSettings = func(_ *aigatewayv1alpha1.AIGatewayDataPlane, image string) []string {
+		gotImage = image
+		return []string{"spec.first is ignored", "spec.second is ignored"}
+	}
+	recorder := events.NewFakeRecorder(10)
+	r := &testReconciler{
+		Config:        cfg,
+		Client:        fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build(),
+		TypeConverter: managedfields.NewDeducedTypeConverter(),
+		EventRecorder: recorder,
+	}
+	require.NoError(t, r.ensureDeployment(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(testKonnectAIGateway()), "cert-secret", "", ""))
+	assert.Equal(t, ResolveImage(aigwdp, cfg.Deployment), gotImage, "the settings are checked against the image the Deployment runs")
+	for _, want := range []string{"spec.first is ignored", "spec.second is ignored"} {
+		event := <-recorder.Events
+		assert.Contains(t, event, "Warning SettingIgnored")
+		assert.Contains(t, event, want)
+	}
+	assert.Contains(t, <-recorder.Events, "DeploymentCreated")
+}
