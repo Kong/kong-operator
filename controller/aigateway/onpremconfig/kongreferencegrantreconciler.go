@@ -37,20 +37,23 @@ import (
 // KongReferenceGrantReconciler watches the KongReferenceGrants and feeds the
 // ChangeNotifier when they change, because the translation reads the grants on
 // each render: without this watcher a new or revoked grant has no effect until an
-// unrelated entity event arrives. A grant matters in two ways:
+// unrelated entity event arrives. A grant matters in three ways:
 //
 //   - one in the namespace of a Secret referenced from another namespace decides
 //     whether a secretRef resolves, so the entities carrying that secretRef must
 //     re-render;
+//   - one in the namespace of a consumer referenced from another namespace decides
+//     whether the credential's consumer ref resolves, so the consumer's document
+//     must re-render;
 //   - one in the gateway's own namespace decides whether an entity of another
 //     namespace may reference that gateway at all, so the gateway's configuration
 //     must re-render.
 //
 // The reconciler runs on the instance's own manager, whose KongReferenceGrant cache
 // holds the grants of the gateway's watch namespaces (see
-// pkg/multiinstance/aigateway's cacheOpts): that covers both cases, since the
-// gateway's namespace is always watched and a cross-namespace secretRef can only
-// resolve against a Secret of a watched namespace.
+// pkg/multiinstance/aigateway's cacheOpts): that covers all three cases, since the
+// gateway's namespace is always watched and a cross-namespace reference can only
+// resolve against an object of a watched namespace.
 type KongReferenceGrantReconciler struct {
 	client.Client
 
@@ -67,13 +70,15 @@ func (r *KongReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error 
 }
 
 // Reconcile notifies the ChangeNotifier for every on-prem gateway of the grant's
-// namespace, and for every configuration entity with a cross-namespace secretRef
-// into the grant's namespace. The grant itself is not read: on deletion its spec is
+// namespace, for every configuration entity with a cross-namespace secretRef into
+// the grant's namespace, and for every consumer that a credential of another
+// namespace references there. The grant itself is not read: on deletion its spec is
 // gone, and the translation decides access anyway.
 func (r *KongReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	return ctrl.Result{}, errors.Join(
 		r.notifyGateways(ctx, req.Namespace),
 		notifySecretRefEntities(ctx, r.Client, crossNamespaceSecretRefInto(req.Namespace), r.ChangeNotifier, r.Log),
+		notifyConsumersForCredentialConsumerRefs(ctx, r.Client, req.Namespace, r.ChangeNotifier, r.Log),
 	)
 }
 
@@ -108,4 +113,33 @@ func crossNamespaceSecretRefInto(namespace string) secretRefMatcher {
 	return func(entityNamespace string, ref aiconfigurationv1alpha1.SensitiveDataSecretRef) bool {
 		return entityNamespace != namespace && secretRefNamespace(entityNamespace, ref) == namespace
 	}
+}
+
+// notifyConsumersForCredentialConsumerRefs notifies the ChangeNotifier for the gateway
+// that renders every consumer in namespace that a credential of another namespace
+// references: a grant there decides whether the credential's consumer ref resolves, and
+// the consumer's document embeds its credentials.
+func notifyConsumersForCredentialConsumerRefs(
+	ctx context.Context,
+	cl client.Client,
+	namespace string,
+	cn *changenotifier.ChangeNotifier,
+	log logr.Logger,
+) error {
+	if cn == nil {
+		return nil
+	}
+	var list aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
+	if err := cl.List(ctx, &list); err != nil {
+		log.Error(err, "Failed to list AIGatewayConsumerCredentials referencing an AIGatewayConsumer", "namespace", namespace)
+		return err
+	}
+	for i := range list.Items {
+		cred := &list.Items[i]
+		if !cred.HasCrossNamespaceConsumerRefInto(namespace) {
+			continue
+		}
+		notifyConsumerGateway(ctx, cl, cred, cn)
+	}
+	return nil
 }

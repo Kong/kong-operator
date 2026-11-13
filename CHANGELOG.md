@@ -405,6 +405,13 @@
   running, and a cluster policy chain competing for a virtual cluster another
   chain owns.
   [#6495](https://github.com/Kong/kong-operator/pull/6495)
+- On-prem AI Gateway: an `AIGatewayConsumerCredential` of one namespace can
+  reference an `AIGatewayConsumer` of another namespace, as on a
+  `KonnectAIGateway`. A `KongReferenceGrant` in the consumer's namespace must
+  permit the reference, or the credential reports `RefNotPermitted`. The
+  credential renders inside that consumer's document, and a change to its
+  Secret or to the grant re-renders the consumer.
+  [#6648](https://github.com/Kong/kong-operator/pull/6648)
 
 ### Changed
 
