@@ -29,7 +29,6 @@ spec:
       D  Revoked: deleting the grant reports the missing grant again; creating it
          again restores the object.
       E  Delete: the object can be deleted while its grant is revoked.
-         Created again with its name, it is programmed: its entity left Konnect.
       C  Chain: the target, in a second namespace, references an object of a
          third: the object needs both grants, and revoking the second one breaks
          it again.

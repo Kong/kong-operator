@@ -262,6 +262,25 @@ func resources() []resource {
 		}},
 	}})
 
+	res = append(res, resource{dir: "listenerpolicychain", kind: "EventGatewayListenerPolicyChain", tls: true, axes: []axis{
+		{name: "lst", what: "its listener", build: func(tag string, p placement, pt *ports) built {
+			// The policy beside the chain: the policy axis checks the
+			// reference of the chain to a policy of another namespace.
+			l, tb, pol := listenerPolicyObjects(tag, p.rns, p.tns, p.rns, p.rns, p.rns, pt)
+			o := listenerPolicyChain("chain-"+tag, p.rns, l, pol)
+			return built{objs: []*object{l, tb, pol, o}, referrer: o, target: l, hop2: hop2Of(l, 0, p)}
+		}},
+		{name: "pol", what: "the listener policy it orders", build: func(tag string, p placement, pt *ports) built {
+			lns := nsGateway
+			if p.tns != nsGateway {
+				lns = p.zns
+			}
+			l, tb, pol := listenerPolicyObjects(tag, p.tns, lns, p.tns, p.tns, p.tns, pt)
+			o := listenerPolicyChain("chain-"+tag, p.rns, l, pol)
+			return built{objs: []*object{l, tb, pol, o}, referrer: o, target: pol, hop2: hop2Of(pol, 0, p)}
+		}},
+	}})
+
 	statickey := gatewayChildResource("statickey", "EventGatewayStaticKey", "key", staticKey, false)
 	// eventgateway/statickey-secretref-cross-namespace covers the Secret of a
 	// static key against Konnect.
