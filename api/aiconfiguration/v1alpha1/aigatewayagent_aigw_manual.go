@@ -18,7 +18,8 @@ import (
 // ToAIGWAgent converts the AIGatewayAgent into ai-deck-converter's aigw.Agent, resolving
 // spec.apiSpec.policies, spec.apiSpec.access (ACL consumer groups and auth strategies) and
 // spec.apiSpec.config.caCertificates/certificates references to the referenced entities'
-// names, and the proxy's basic-auth password secretRef to its Secret value.
+// names, and the proxy's basic-auth password secretRef to its Secret value. The config
+// certificate references must target the agent's own OnPremAIGateway.
 func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*aigw.Agent, error) {
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
@@ -49,13 +50,13 @@ func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*
 		return nil, err
 	}
 
-	if agent.Config.CACertificates, err = resolveEntityNames[AIGatewayCACertificate](
-		ctx, cl, obj.Namespace, caCertificateRefs(obj.Spec.APISpec.Config.CaCertificates),
+	if agent.Config.CACertificates, err = resolveEntityNamesTargeting[AIGatewayCACertificate](
+		ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, caCertificateRefs(obj.Spec.APISpec.Config.CaCertificates),
 	); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayAgent %s/%s caCertificates: %w", obj.Namespace, obj.Name, err)
 	}
-	if agent.Config.Certificates, err = resolveEntityNames[AIGatewayCertificate](
-		ctx, cl, obj.Namespace, certificateRefs(obj.Spec.APISpec.Config.Certificates),
+	if agent.Config.Certificates, err = resolveEntityNamesTargeting[AIGatewayCertificate](
+		ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, certificateRefs(obj.Spec.APISpec.Config.Certificates),
 	); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayAgent %s/%s certificates: %w", obj.Namespace, obj.Name, err)
 	}

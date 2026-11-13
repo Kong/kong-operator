@@ -10,7 +10,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
+
+// onPremGatewayRef returns the parent reference every on-prem AI Gateway entity carries.
+func onPremGatewayRef(name string) AIGatewayRef {
+	return AIGatewayRef{
+		Group:         AIGatewayRefGroupOnPrem,
+		Kind:          AIGatewayRefKindOnPrem,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: name},
+	}
+}
 
 // newAgentACLsFixture returns the allow-ACLs referencing the consumer group fixture below.
 func newAgentACLsFixture() *AIGatewayAgentAccessAcls {
@@ -28,11 +39,13 @@ func newAgentDenyACLsFixture() *AIGatewayAgentAccessAcls {
 	}
 }
 
-// TestAIGatewayAgent_ToAIGWAgent covers the policies, ACL consumer group and auth strategy
-// reference resolution — deliberately without any SetKonnectID on the referenced entities,
-// pinning that the on-prem translation uses the name-only resolver, unlike the generated
-// Konnect resolver — plus the Enabled/Disabled boolean normalization. (The managed_by drop
-// is pinned by the strict round-trip test below, the only decode that can see the key.)
+// TestAIGatewayAgent_ToAIGWAgent covers the policies, ACL consumer group, auth strategy and
+// config certificate reference resolution — deliberately without any SetKonnectID on the
+// referenced entities, pinning that the on-prem translation uses the name-only resolver,
+// unlike the generated Konnect resolver — the same-OnPremAIGateway membership check on the
+// referenced config certificates, plus the Enabled/Disabled boolean normalization. (The
+// managed_by drop is pinned by the strict round-trip test below, the only decode that can see
+// the key.)
 //
 // aigw/doc.go doesn't alias AgentAccessConfig, AccessConfig or AgentConfig, so the want
 // values set their fields through assignment on the zero values (same pattern as
@@ -72,6 +85,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 		return &AIGatewayCACertificate{
 			Name: "ai-gw-ca-cert", Namespace: "default",
 			Spec: AIGatewayCACertificateSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
 				APISpec: AIGatewayCACertificateAPISpec{
 					Name: "aigw-ca-cert",
 				},
@@ -82,6 +96,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 		return &AIGatewayCertificate{
 			Name: "ai-gw-cert", Namespace: "default",
 			Spec: AIGatewayCertificateSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
 				APISpec: AIGatewayCertificateAPISpec{
 					Name: "aigw-cert",
 				},
@@ -237,6 +252,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-certs", Namespace: "default",
 				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayAgentAPISpec{
 						Name: "certs-agent",
 						Type: "http",
@@ -332,6 +348,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-cross-ns-cert", Namespace: "default",
 				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayAgentAPISpec{
 						Name: "cross-ns-cert-agent",
 						Type: "http",
@@ -344,6 +361,33 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			},
 			objects: []runtime.Object{newReferencedCertificate()},
 			wantErr: "certificates",
+		},
+		{
+			name: "certificate targeting a different OnPremAIGateway rejected",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-other-gw-cert", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "other-gw-cert-agent",
+						Type: "http",
+						Config: AIGatewayAgentConfig{
+							URL:          "http://upstream:8080",
+							Certificates: []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{
+				&AIGatewayCertificate{
+					Name: "ai-gw-cert", Namespace: "default",
+					Spec: AIGatewayCertificateSpec{
+						AIGatewayRef: onPremGatewayRef("other-gw"),
+						APISpec:      AIGatewayCertificateAPISpec{Name: "aigw-cert"},
+					},
+				},
+			},
+			wantErr: "does not target the referencing entity's OnPremAIGateway",
 		},
 		{
 			name: "cross-namespace policy reference rejected",

@@ -40,6 +40,7 @@ package v1alpha1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -423,17 +424,85 @@ func resolveEntityName[T any, PT interface {
 	client.Object
 	GetKonnectName() string
 }](ctx context.Context, cl client.Client, defaultNamespace, refNamespace, refName string) (string, error) {
+	p, err := getReferencedEntity[T, PT](ctx, cl, defaultNamespace, refNamespace, refName)
+	if err != nil {
+		return "", err
+	}
+	return p.GetKonnectName(), nil
+}
+
+// resolveEntityNamesTargeting is resolveEntityNames plus the gateway-membership check of
+// resolveEntityNameTargeting.
+func resolveEntityNamesTargeting[T any, PT interface {
+	*T
+	client.Object
+	GetKonnectName() string
+	GetAIGatewayRef() AIGatewayRef
+}](ctx context.Context, cl client.Client, defaultNamespace string, gatewayRef AIGatewayRef, refs []namespacedRef) ([]string, error) {
+	if len(refs) == 0 {
+		return nil, nil
+	}
+	gatewayKey, ok := onPremAIGatewayRefKey(defaultNamespace, gatewayRef)
+	if !ok {
+		return nil, errors.New("the referencing entity does not target an OnPremAIGateway")
+	}
+	names := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		name, err := resolveEntityNameTargeting[T, PT](ctx, cl, defaultNamespace, gatewayKey, ref.Namespace, ref.Name)
+		if err != nil {
+			return nil, err
+		}
+		names = append(names, name)
+	}
+	return names, nil
+}
+
+// resolveEntityNameTargeting is resolveEntityName plus a check that the referenced entity
+// targets the OnPremAIGateway with the given ns/name key (see onPremAIGatewayRefKey). The
+// translator lists only the entities of the gateway being translated into its document, so a
+// reference to a same-named entity on another gateway would otherwise resolve to that
+// gateway's entity name and the reference would report success.
+func resolveEntityNameTargeting[T any, PT interface {
+	*T
+	client.Object
+	GetKonnectName() string
+	GetAIGatewayRef() AIGatewayRef
+}](ctx context.Context, cl client.Client, defaultNamespace, gatewayKey, refNamespace, refName string) (string, error) {
+	p, err := getReferencedEntity[T, PT](ctx, cl, defaultNamespace, refNamespace, refName)
+	if err != nil {
+		return "", err
+	}
+	ns := refNamespace
+	if ns == "" {
+		ns = defaultNamespace
+	}
+	key, ok := onPremAIGatewayRefKey(ns, p.GetAIGatewayRef())
+	if !ok || key != gatewayKey {
+		return "", fmt.Errorf(
+			"referenced %T %s/%s does not target the referencing entity's OnPremAIGateway %s",
+			*p, ns, refName, gatewayKey,
+		)
+	}
+	return p.GetKonnectName(), nil
+}
+
+// getReferencedEntity loads the sibling AI Gateway entity a reference points at, rejecting
+// cross-namespace references.
+func getReferencedEntity[T any, PT interface {
+	*T
+	client.Object
+}](ctx context.Context, cl client.Client, defaultNamespace, refNamespace, refName string) (PT, error) {
 	ns := refNamespace
 	if ns == "" {
 		ns = defaultNamespace
 	}
 	if ns != defaultNamespace {
-		return "", fmt.Errorf("cross-namespace reference to %s/%s is not supported", ns, refName)
+		return nil, fmt.Errorf("cross-namespace reference to %s/%s is not supported", ns, refName)
 	}
 	var obj T
 	p := PT(&obj)
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: refName}, p); err != nil {
-		return "", fmt.Errorf("getting referenced %T %s/%s: %w", obj, ns, refName, err)
+		return nil, fmt.Errorf("getting referenced %T %s/%s: %w", obj, ns, refName, err)
 	}
-	return p.GetKonnectName(), nil
+	return p, nil
 }
