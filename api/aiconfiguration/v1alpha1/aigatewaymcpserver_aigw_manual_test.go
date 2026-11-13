@@ -105,11 +105,36 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 			},
 		}
 	}
+	newReferencedCACertificate := func() *AIGatewayCACertificate {
+		return &AIGatewayCACertificate{
+			Name: "ai-gw-ca-cert", Namespace: "default",
+			Spec: AIGatewayCACertificateSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
+				APISpec: AIGatewayCACertificateAPISpec{
+					Name: "aigw-ca-cert",
+				},
+			},
+		}
+	}
+	newReferencedCertificate := func() *AIGatewayCertificate {
+		return &AIGatewayCertificate{
+			Name: "ai-gw-cert", Namespace: "default",
+			Spec: AIGatewayCertificateSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
+				APISpec: AIGatewayCertificateAPISpec{
+					Name: "aigw-cert",
+				},
+			},
+		}
+	}
 
 	newMCPServer := func(config *AIGatewayMCPServerConfig) *AIGatewayMCPServer {
 		return &AIGatewayMCPServer{
 			Name: "sample-ai-gw-mcp-server", Namespace: "default",
-			Spec: AIGatewayMCPServerSpec{APISpec: AIGatewayMCPServerAPISpec{AIGatewayMCPServerConfig: config}},
+			Spec: AIGatewayMCPServerSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
+				APISpec:      AIGatewayMCPServerAPISpec{AIGatewayMCPServerConfig: config},
+			},
 		}
 	}
 
@@ -138,6 +163,8 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 							Payloads: "Disabled",
 						},
 						MaxRequestBodySize: 1024,
+						CaCertificates:     []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
+						Certificates:       []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
 					},
 					Tools: []AIGatewayMCPConversionTool{{
 						Name:        "search_flights",
@@ -159,7 +186,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 					}},
 				},
 			}),
-			objects: []runtime.Object{newReferencedPolicy(), newReferencedConsumerGroup()},
+			objects: []runtime.Object{newReferencedPolicy(), newReferencedConsumerGroup(), newReferencedCACertificate(), newReferencedCertificate()},
 			want: `
 type: conversion-only
 name: flights
@@ -175,6 +202,8 @@ config:
   logging:
     payloads: false
   max_request_body_size: 1024
+  ca_certificates: [aigw-ca-cert]
+  certificates: [aigw-cert]
 tools:
 - name: search_flights
   description: Search flights
@@ -430,6 +459,63 @@ tools:
 			}),
 			objects: []runtime.Object{newReferencedSourceMCPServer()},
 			wantErr: "cross-namespace reference",
+		},
+		{
+			name: "cross-namespace certificate reference rejected on-prem",
+			obj: newMCPServer(&AIGatewayMCPServerConfig{
+				Type: AIGatewayMCPServerConfigTypeConversionOnly,
+				ConversionOnly: &AIGatewayMCPServerConversionOnly{
+					Name: "flights",
+					Config: AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{
+						URL:          "http://upstream:8080",
+						Certificates: []AIGatewayCertificateRef{{Name: "ai-gw-cert", Namespace: "other-namespace"}},
+					},
+				},
+			}),
+			objects: []runtime.Object{newReferencedCertificate()},
+			wantErr: "certificates",
+		},
+		{
+			name: "certificate targeting a different OnPremAIGateway rejected",
+			obj: newMCPServer(&AIGatewayMCPServerConfig{
+				Type: AIGatewayMCPServerConfigTypeConversionOnly,
+				ConversionOnly: &AIGatewayMCPServerConversionOnly{
+					Name: "flights",
+					Config: AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{
+						URL:          "http://upstream:8080",
+						Certificates: []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
+					},
+				},
+			}),
+			objects: []runtime.Object{&AIGatewayCertificate{
+				Name: "ai-gw-cert", Namespace: "default",
+				Spec: AIGatewayCertificateSpec{
+					AIGatewayRef: onPremGatewayRef("other-gw"),
+					APISpec:      AIGatewayCertificateAPISpec{Name: "aigw-cert"},
+				},
+			}},
+			wantErr: "does not target the referencing entity's OnPremAIGateway",
+		},
+		{
+			name: "CA certificate targeting a different OnPremAIGateway rejected",
+			obj: newMCPServer(&AIGatewayMCPServerConfig{
+				Type: AIGatewayMCPServerConfigTypeConversionOnly,
+				ConversionOnly: &AIGatewayMCPServerConversionOnly{
+					Name: "flights",
+					Config: AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{
+						URL:            "http://upstream:8080",
+						CaCertificates: []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
+					},
+				},
+			}),
+			objects: []runtime.Object{&AIGatewayCACertificate{
+				Name: "ai-gw-ca-cert", Namespace: "default",
+				Spec: AIGatewayCACertificateSpec{
+					AIGatewayRef: onPremGatewayRef("other-gw"),
+					APISpec:      AIGatewayCACertificateAPISpec{Name: "aigw-ca-cert"},
+				},
+			}},
+			wantErr: "does not target the referencing entity's OnPremAIGateway",
 		},
 		{
 			name: "dangling access ACL consumer group reference",

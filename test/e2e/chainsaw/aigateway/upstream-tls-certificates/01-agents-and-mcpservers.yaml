@@ -78,9 +78,9 @@ spec:
       config:
         url: https://flights-api.upstream-tls.example/openapi.json
         caCertificates:
-          - ($ca_cert_name)
+          - name: ($ca_cert_name)
         certificates:
-          - ($client_cert_name)
+          - name: ($client_cert_name)
         route:
           paths:
             - /mcp/upstream-tls-conversion-only
@@ -110,9 +110,9 @@ spec:
       config:
         url: https://flights-api.upstream-tls.example/openapi.json
         caCertificates:
-          - ($ca_cert_name)
+          - name: ($ca_cert_name)
         certificates:
-          - ($client_cert_name)
+          - name: ($client_cert_name)
         route:
           paths:
             - /mcp/upstream-tls-conversion-listener
@@ -140,9 +140,9 @@ spec:
       config:
         url: https://flights-mcp.upstream-tls.example
         caCertificates:
-          - ($ca_cert_name)
+          - name: ($ca_cert_name)
         certificates:
-          - ($client_cert_name)
+          - name: ($client_cert_name)
         route:
           paths:
             - /mcp/upstream-tls-upstream-server
@@ -170,9 +170,9 @@ spec:
       config:
         url: https://flights-mcp.upstream-tls.example
         caCertificates:
-          - ($ca_cert_name)
+          - name: ($ca_cert_name)
         certificates:
-          - ($client_cert_name)
+          - name: ($client_cert_name)
         route:
           hosts:
             - upstream-tls-passthrough.mcp.example.com

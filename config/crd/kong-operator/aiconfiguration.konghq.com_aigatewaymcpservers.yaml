@@ -747,24 +747,37 @@ spec:
                             type: array
                           caCertificates:
                             description: |-
-                              CA certificates used to verify the TLS certificate of the upstream MCP
-                              server, referenced by
-                              name.
-                              Each entry must be the `name` of an existing AI CA Certificate on the same
-                              AI Gateway.
-
-                              The CA certificates build the trust store (`ca_certificates`) of the Kong
-                              Gateway Service
-                              generated for this MCP Server, which proxies requests to the upstream MCP
-                              server.
-
-                              If unset, the default trust store is used to verify the upstream's TLS
-                              certificate.
+                              The CA certificates used to verify the TLS certificate of the
+                              upstream MCP server.
+                              Each entry references an AIGatewayCACertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
                             items:
                               description: |-
-                                AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-                                same AI Gateway, by CA certificate name.
-                              type: string
+                                AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           cache:
                             description: |-
@@ -821,28 +834,38 @@ spec:
                             type: object
                           certificates:
                             description: |-
-                              Client certificates used for mutual TLS (mTLS) authentication with the
-                              upstream MCP server,
-                              referenced by name.
-                              Each entry must be the `name` of an existing AI Certificate on the same
-                              AI Gateway.
-
-                              The certificates are applied to the Kong Gateway Service generated for this
-                              MCP Server, which
-                              proxies requests to the upstream MCP server.
-                              The generated Service presents a single client
-                              certificate (`client_certificate`) during the TLS handshake with the
-                              upstream, so at most one
-                              certificate may be configured.
-
-                              If unset, no client certificate is presented to the upstream.
+                              Client certificates used for mutual TLS (mTLS) authentication with
+                              the upstream MCP server.
+                              Each entry references an AIGatewayCertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
+                              At most one certificate may be configured.
                             items:
                               description: |-
-                                AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-                                Gateway, by certificate name.
-                                The certificate must have a valid private key to be presented as a client
-                                certificate to an upstream.
-                              type: string
+                                AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
@@ -2657,49 +2680,72 @@ spec:
                         properties:
                           caCertificates:
                             description: |-
-                              CA certificates used to verify the TLS certificate of the upstream MCP
-                              server, referenced by
-                              name.
-                              Each entry must be the `name` of an existing AI CA Certificate on the same
-                              AI Gateway.
-
-                              The CA certificates build the trust store (`ca_certificates`) of the Kong
-                              Gateway Service
-                              generated for this MCP Server, which proxies requests to the upstream MCP
-                              server.
-
-                              If unset, the default trust store is used to verify the upstream's TLS
-                              certificate.
+                              The CA certificates used to verify the TLS certificate of the
+                              upstream MCP server.
+                              Each entry references an AIGatewayCACertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
                             items:
                               description: |-
-                                AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-                                same AI Gateway, by CA certificate name.
-                              type: string
+                                AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           certificates:
                             description: |-
-                              Client certificates used for mutual TLS (mTLS) authentication with the
-                              upstream MCP server,
-                              referenced by name.
-                              Each entry must be the `name` of an existing AI Certificate on the same
-                              AI Gateway.
-
-                              The certificates are applied to the Kong Gateway Service generated for this
-                              MCP Server, which
-                              proxies requests to the upstream MCP server.
-                              The generated Service presents a single client
-                              certificate (`client_certificate`) during the TLS handshake with the
-                              upstream, so at most one
-                              certificate may be configured.
-
-                              If unset, no client certificate is presented to the upstream.
+                              Client certificates used for mutual TLS (mTLS) authentication with
+                              the upstream MCP server.
+                              Each entry references an AIGatewayCertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
+                              At most one certificate may be configured.
                             items:
                               description: |-
-                                AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-                                Gateway, by certificate name.
-                                The certificate must have a valid private key to be presented as a client
-                                certificate to an upstream.
-                              type: string
+                                AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
@@ -6600,49 +6646,72 @@ spec:
                         properties:
                           caCertificates:
                             description: |-
-                              CA certificates used to verify the TLS certificate of the upstream MCP
-                              server, referenced by
-                              name.
-                              Each entry must be the `name` of an existing AI CA Certificate on the same
-                              AI Gateway.
-
-                              The CA certificates build the trust store (`ca_certificates`) of the Kong
-                              Gateway Service
-                              generated for this MCP Server, which proxies requests to the upstream MCP
-                              server.
-
-                              If unset, the default trust store is used to verify the upstream's TLS
-                              certificate.
+                              The CA certificates used to verify the TLS certificate of the
+                              upstream MCP server.
+                              Each entry references an AIGatewayCACertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
                             items:
                               description: |-
-                                AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-                                same AI Gateway, by CA certificate name.
-                              type: string
+                                AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           certificates:
                             description: |-
-                              Client certificates used for mutual TLS (mTLS) authentication with the
-                              upstream MCP server,
-                              referenced by name.
-                              Each entry must be the `name` of an existing AI Certificate on the same
-                              AI Gateway.
-
-                              The certificates are applied to the Kong Gateway Service generated for this
-                              MCP Server, which
-                              proxies requests to the upstream MCP server.
-                              The generated Service presents a single client
-                              certificate (`client_certificate`) during the TLS handshake with the
-                              upstream, so at most one
-                              certificate may be configured.
-
-                              If unset, no client certificate is presented to the upstream.
+                              Client certificates used for mutual TLS (mTLS) authentication with
+                              the upstream MCP server.
+                              Each entry references an AIGatewayCertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
+                              At most one certificate may be configured.
                             items:
                               description: |-
-                                AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-                                Gateway, by certificate name.
-                                The certificate must have a valid private key to be presented as a client
-                                certificate to an upstream.
-                              type: string
+                                AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
@@ -8412,49 +8481,72 @@ spec:
                         properties:
                           caCertificates:
                             description: |-
-                              CA certificates used to verify the TLS certificate of the upstream MCP
-                              server, referenced by
-                              name.
-                              Each entry must be the `name` of an existing AI CA Certificate on the same
-                              AI Gateway.
-
-                              The CA certificates build the trust store (`ca_certificates`) of the Kong
-                              Gateway Service
-                              generated for this MCP Server, which proxies requests to the upstream MCP
-                              server.
-
-                              If unset, the default trust store is used to verify the upstream's TLS
-                              certificate.
+                              The CA certificates used to verify the TLS certificate of the
+                              upstream MCP server.
+                              Each entry references an AIGatewayCACertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
                             items:
                               description: |-
-                                AIGatewayCACertificateReference A reference to an AI CA Certificate on the
-                                same AI Gateway, by CA certificate name.
-                              type: string
+                                AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCACertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCACertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             type: array
                           certificates:
                             description: |-
-                              Client certificates used for mutual TLS (mTLS) authentication with the
-                              upstream MCP server,
-                              referenced by name.
-                              Each entry must be the `name` of an existing AI Certificate on the same
-                              AI Gateway.
-
-                              The certificates are applied to the Kong Gateway Service generated for this
-                              MCP Server, which
-                              proxies requests to the upstream MCP server.
-                              The generated Service presents a single client
-                              certificate (`client_certificate`) during the TLS handshake with the
-                              upstream, so at most one
-                              certificate may be configured.
-
-                              If unset, no client certificate is presented to the upstream.
+                              Client certificates used for mutual TLS (mTLS) authentication with
+                              the upstream MCP server.
+                              Each entry references an AIGatewayCertificate in the cluster.
+                              When `namespace` differs from the AIGatewayMCPServer's namespace,
+                              a KongReferenceGrant in the target namespace must permit the
+                              reference.
+                              At most one certificate may be configured.
                             items:
                               description: |-
-                                AIGatewayCertificateReference A reference to an AI Certificate on the same AI
-                                Gateway, by certificate name.
-                                The certificate must have a valid private key to be presented as a client
-                                certificate to an upstream.
-                              type: string
+                                AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
+                                object's Konnect name is used where the Konnect API accepts it.
+                              properties:
+                                kind:
+                                  default: AIGatewayCertificate
+                                  description: Kind is the kind of the referenced
+                                    object.
+                                  enum:
+                                  - AIGatewayCertificate
+                                  type: string
+                                name:
+                                  description: Name is the name of the referenced
+                                    object.
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  description: |-
+                                    Namespace, if set to a namespace other than the referrer's, must be
+                                    permitted by a KongReferenceGrant in that namespace.
+                                  type: string
+                              required:
+                              - name
+                              type: object
                             maxItems: 1
                             type: array
                           logging:
