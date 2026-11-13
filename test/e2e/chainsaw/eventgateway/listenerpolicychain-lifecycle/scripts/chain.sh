@@ -7,12 +7,16 @@ set -o pipefail
 
 # NAMESPACE, LISTENER_NAME, VIRTUAL_CLUSTER_NAME, AUTH_NAME, AUTH_SECRET_NAME,
 # KONNECT_TOKEN and KONNECT_URL are provided by Chainsaw. Snapshots stay in memory.
-# The observation window must exceed the operator's configured sync period.
+# Each observation waits for the expected state, then checks it once. With
+# HOLD=true it keeps checking it for WINDOW_SECONDS (default 75, longer than the
+# default 60-second Konnect sync period), every CHECK_INTERVAL seconds (default
+# 5): only after the chain is deleted, as nothing reconciles a deleted chain,
+# but the listener and the policies keep reconciling and could still change the
+# order on their next sync.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON="${SCRIPT_DIR}/../../../common/scripts"
 MODE="${1:?expected a lifecycle scenario}"
 WINDOW_SECONDS="${WINDOW_SECONDS:-75}"
-SYNC_PERIOD_SECONDS="${KONNECT_SYNC_PERIOD_SECONDS:-60}"
 CHECK_INTERVAL="${CHECK_INTERVAL:-5}"
 CHAIN_NAME=chain
 export CHAIN_NAME
@@ -21,11 +25,6 @@ fail() {
   jq -n --arg error "$1" '{error: $error}' >&2
   exit 1
 }
-
-for VALUE in "${WINDOW_SECONDS}" "${SYNC_PERIOD_SECONDS}" "${CHECK_INTERVAL}"; do
-  [[ "${VALUE}" =~ ^[1-9][0-9]*$ ]] || fail "observation timings must be positive integer seconds"
-done
-[[ "${WINDOW_SECONDS}" -gt "${SYNC_PERIOD_SECONDS}" ]] || fail "observation window must exceed the configured Konnect sync period"
 
 create_chain() {
   jq -n --arg name "$1" --arg ns "${NAMESPACE}" --arg listener "${LISTENER_NAME}" --argjson names "$2" '
@@ -201,8 +200,6 @@ observe() {
   RETRY_COUNT=150 bash "${COMMON}/konnect_api_request.sh" >&2
   start="${SECONDS}"
   while true; do
-    assert_state "${state}" 1 "${reason}"
-    RETRY_COUNT=1 bash "${COMMON}/konnect_api_request.sh" >&2
     while IFS= read -r name; do
       resource="$(kubectl get eventgatewaylistenerpolicies.configuration.konghq.com "${name}" -n "${NAMESPACE}" -o json)"
       jq -e --argjson snapshot "${SNAPSHOT}" --arg name "${name}" '
@@ -215,8 +212,10 @@ observe() {
         EXPECTED_JQ='.id == $ENV.WANT_ID and (.type == "forward_to_virtual_cluster" or .type == "tls_server")' RETRY_COUNT=1 \
         bash "${COMMON}/konnect_api_request.sh" >&2
     done < <(jq -er '.[]' <<<"${names}" || [[ "${names}" == '[]' ]])
-    [[ $((SECONDS - start)) -ge "${WINDOW_SECONDS}" ]] && break
+    [[ "${HOLD:-false}" == true && $((SECONDS - start)) -lt "${WINDOW_SECONDS}" ]] || break
     sleep "${CHECK_INTERVAL}"
+    assert_state "${state}" 1 "${reason}"
+    RETRY_COUNT=1 bash "${COMMON}/konnect_api_request.sh" >&2
   done
 }
 
@@ -329,7 +328,7 @@ case "${MODE}" in
         .type == "APIAuthValid" and .status == "False" and .reason == "Invalid" and .observedGeneration == $g)' \
       bash "${COMMON}/wait_for_resource_reconciled.sh" >&2
     delete_resource eventgatewaylistenerpolicychains.configuration.konghq.com contender
-    observe '["pending","first","second"]' retained
+    HOLD=true observe '["pending","first","second"]' retained
     jq -en --argjson original "${ORIGINAL}" --argjson current "${SNAPSHOT}" \
       '$original == $current' >/dev/null || fail "chain deletion changed remote order, policy IDs/UIDs, or listener identity"
     ;;

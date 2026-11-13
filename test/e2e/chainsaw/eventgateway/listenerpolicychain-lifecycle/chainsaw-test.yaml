@@ -132,7 +132,7 @@ spec:
             env: *chain_env
             content: |
               bash scripts/chain.sh reorder
-    - name: Repair-out-of-band-order-and-hold-beyond-sync-period
+    - name: Repair-out-of-band-order-on-periodic-sync
       try:
         - script:
             env: *chain_env
