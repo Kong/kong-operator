@@ -78,6 +78,22 @@ func AIGatewayAgentReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayCACertificate{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayAgentForAIGatewayCACertificate(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayCertificate{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayAgentForAIGatewayCertificate(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayAgentList](cl),
@@ -160,6 +176,42 @@ func enqueueAIGatewayAgentForAIGatewayAuthStrategy(
 		var l aiconfigurationv1alpha1.AIGatewayAgentList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayAgentForAIGatewayCACertificate(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayCACertificate)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayAgentList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayAgentOnAIGatewayCACertificateRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayAgentForAIGatewayCertificate(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayCertificate)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayAgentList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayAgentOnAIGatewayCertificateRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

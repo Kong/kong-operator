@@ -130,10 +130,11 @@ spec:
                       'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster',
                       'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy',
                       'EventGatewayVirtualClusterProducePolicy']
-                  - message: Only 'AIGatewayConsumerGroup' kind is supported for 'aiconfiguration.konghq.com'
+                  - message: Only 'AIGatewayConsumerGroup', 'AIGatewayCACertificate'
+                      and 'AIGatewayCertificate' kinds are supported for 'aiconfiguration.konghq.com'
                       group
                     rule: .self.group != 'aiconfiguration.konghq.com' || .self.kind
-                      in ['AIGatewayConsumerGroup']
+                      in ['AIGatewayConsumerGroup', 'AIGatewayCACertificate', 'AIGatewayCertificate']
                 maxItems: 16
                 minItems: 1
                 type: array

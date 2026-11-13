@@ -1,0 +1,250 @@
+# On-prem Event Gateway listener policy chain lifecycle.
+#
+# Kong Operator orders the policies of a listener of an OnPremEventGateway as
+# its EventGatewayListenerPolicyChain declares, in what it pushes to gw-admin.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-listener-policy-chain
+spec:
+  description: |
+    A listener of an OnPremEventGateway with two policies, first and second,
+    created in that order: without a chain, gw-admin holds them in that
+    order, by creation then by name. Each check reads the entities gw-admin
+    serves for the gateway. Every check of a held order is made while the
+    chain orders them second, first, so that a push of the default order
+    shows.
+    1. A chain orders them second, first: gw-admin holds them in that order.
+    2. The chain is reversed, then back: gw-admin follows.
+    3. A second chain of the listener can't claim it: ConflictingChain, and
+       gw-admin keeps the order of the first.
+    4. The chain no longer lists every policy: it isn't Programmed, and the
+       gateway holds back its configuration with InvalidPolicyChain, gw-admin
+       keeping the last order pushed.
+    5. The chain is deleted: the gateway pushes again, the policies in their
+       default order, and the policies are kept.
+    No data plane or Kafka cluster is needed.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+    - name: 1-The-chain-orders-the-policies
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: chain
+              spec:
+                eventGatewayListenerRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: listener
+                apiSpec:
+                  policies:
+                    - name: second
+                    - name: first
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: chain
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                (conditions[?type == 'PolicyChainOwnerValid']):
+                  - status: "True"
+                    reason: Owner
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.listeners[0].policies[].name] == ["second", "first"]'
+    - name: 2-The-chain-is-reversed-and-back
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: first
+                    - name: second
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.listeners[0].policies[].name] == ["first", "second"]'
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: second
+                    - name: first
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.listeners[0].policies[].name] == ["second", "first"]'
+    - name: 3-Another-chain-can't-claim-the-listener
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: competitor
+              spec:
+                eventGatewayListenerRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: listener
+                apiSpec:
+                  policies:
+                    - name: first
+                    - name: second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: competitor
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                (conditions[?type == 'PolicyChainOwnerValid']):
+                  - status: "False"
+                    reason: ConflictingChain
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.listeners[0].policies[].name] == ["second", "first"]'
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              name: competitor
+    - name: 4-An-incomplete-chain-holds-back-the-gateway
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              metadata:
+                name: chain
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidPolicyChain
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.listeners[0].policies[].name] == ["second", "first"]'
+    - name: 5-Deleting-the-chain-restores-the-default-order
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicyChain
+              name: chain
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.listeners[0].policies[].name] == ["first", "second"]'
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: listener
+                (annotations == null || annotations."gateway-operator.konghq.com/listener-policy-chain-owner" == null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: first
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: second
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

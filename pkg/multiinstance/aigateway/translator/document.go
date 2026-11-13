@@ -572,6 +572,31 @@ func BuildDocument(
 				return consumer, nil
 			},
 			&doc.Consumers),
+		// Certificates translate before the entities that reference them: the Agent's
+		// upstream TLS trust store and client certificate are certificate references.
+		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
+			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
+			func(c *aiconfigurationv1alpha1.AIGatewayCACertificate, ctx context.Context, cl client.Client) (*aigw.CACertificate, error) {
+				caCert, err := c.ToAIGWCACertificate(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if first, ok := translatedCACertCRs[caCert.Cert]; ok {
+					return nil, fmt.Errorf(
+						"duplicate CA certificate content: AIGatewayCACertificate %q already carries this cert, and the rendered entity ID is derived from the cert content",
+						first,
+					)
+				}
+				translatedCACertCRs[caCert.Cert] = c.Name
+				return caCert, nil
+			},
+			&doc.CACertificates),
+		translateKind[aiconfigurationv1alpha1.AIGatewayCertificateList](
+			cl, gw, index.IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
+			func(c *aiconfigurationv1alpha1.AIGatewayCertificate, ctx context.Context, cl client.Client) (*aigw.Certificate, error) {
+				return c.ToAIGWCertificate(ctx, cl)
+			},
+			&doc.Certificates),
 		translateKind[aiconfigurationv1alpha1.AIGatewayAgentList](
 			cl, gw, index.IndexFieldAIGatewayAgentOnOnPremAIGatewayRef,
 			func(a *aiconfigurationv1alpha1.AIGatewayAgent, ctx context.Context, cl client.Client) (*aigw.Agent, error) {
@@ -583,6 +608,8 @@ func BuildDocument(
 					checkTranslatedRefs(outcomes, "AIGatewayPolicy", agent.Policies),
 					checkTranslatedACLs(outcomes, agent.Access.ACLs),
 					checkTranslatedRefs(outcomes, "AIGatewayAuthStrategy", agent.Access.AuthStrategies),
+					checkTranslatedRefs(outcomes, "AIGatewayCACertificate", agent.Config.CACertificates),
+					checkTranslatedRefs(outcomes, "AIGatewayCertificate", agent.Config.Certificates),
 				); err != nil {
 					return nil, err
 				}
@@ -642,29 +669,6 @@ func BuildDocument(
 				return vault, nil
 			},
 			&doc.Vaults),
-		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
-			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
-			func(c *aiconfigurationv1alpha1.AIGatewayCACertificate, ctx context.Context, cl client.Client) (*aigw.CACertificate, error) {
-				caCert, err := c.ToAIGWCACertificate(ctx, cl)
-				if err != nil {
-					return nil, err
-				}
-				if first, ok := translatedCACertCRs[caCert.Cert]; ok {
-					return nil, fmt.Errorf(
-						"duplicate CA certificate content: AIGatewayCACertificate %q already carries this cert, and the rendered entity ID is derived from the cert content",
-						first,
-					)
-				}
-				translatedCACertCRs[caCert.Cert] = c.Name
-				return caCert, nil
-			},
-			&doc.CACertificates),
-		translateKind[aiconfigurationv1alpha1.AIGatewayCertificateList](
-			cl, gw, index.IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
-			func(c *aiconfigurationv1alpha1.AIGatewayCertificate, ctx context.Context, cl client.Client) (*aigw.Certificate, error) {
-				return c.ToAIGWCertificate(ctx, cl)
-			},
-			&doc.Certificates),
 		translateKind[aiconfigurationv1alpha1.AIGatewaySNIList](
 			cl, gw, index.IndexFieldAIGatewaySNIOnOnPremAIGatewayRef,
 			func(s *aiconfigurationv1alpha1.AIGatewaySNI, ctx context.Context, cl client.Client) (*aigw.SNI, error) {

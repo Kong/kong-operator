@@ -628,9 +628,9 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 	}
 	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "id". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "id". A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 		tlsServer, _ := payload["tls_server"].(map[string]any)
 		if tlsServer != nil {
@@ -658,8 +658,9 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 	}
 	// spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "id",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping != nil {
 		forwardToVirtualCluster, _ := payload["forward_to_virtual_cluster"].(map[string]any)
 		if forwardToVirtualCluster != nil {
@@ -697,9 +698,9 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 	}
 	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "id". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "id". A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 		tlsServer, _ := payload["tls_server"].(map[string]any)
 		if tlsServer != nil {
@@ -727,8 +728,9 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 	}
 	// spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "id",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping != nil {
 		forwardToVirtualCluster, _ := payload["forward_to_virtual_cluster"].(map[string]any)
 		if forwardToVirtualCluster != nil {

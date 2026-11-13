@@ -1069,8 +1069,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.encrypt.config.encryptionKey.static.key carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "id",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil {
 		encrypt, _ := payload["encrypt"].(map[string]any)
 		if encrypt != nil {
@@ -1098,8 +1099,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key carries a CR reference: inject the resolved Konnect values into
 	// each element of the "encrypt_fields" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors. A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
 		encryptFields, _ := payload["encrypt_fields"].(map[string]any)
 		if encryptFields != nil {
@@ -1146,8 +1148,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
 		schemaValidation, _ := payload["schema_validation"].(map[string]any)
 		if schemaValidation != nil {
@@ -1171,8 +1174,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc != nil {
 		transcode, _ := payload["transcode"].(map[string]any)
 		if transcode != nil {
@@ -1223,8 +1227,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.encrypt.config.encryptionKey.static.key carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "id",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil {
 		encrypt, _ := payload["encrypt"].(map[string]any)
 		if encrypt != nil {
@@ -1252,8 +1257,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key carries a CR reference: inject the resolved Konnect values into
 	// each element of the "encrypt_fields" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors. A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
 		encryptFields, _ := payload["encrypt_fields"].(map[string]any)
 		if encryptFields != nil {
@@ -1300,8 +1306,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
 		schemaValidation, _ := payload["schema_validation"].(map[string]any)
 		if schemaValidation != nil {
@@ -1325,8 +1332,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc != nil {
 		transcode, _ := payload["transcode"].(map[string]any)
 		if transcode != nil {

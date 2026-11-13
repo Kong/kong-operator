@@ -361,6 +361,29 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
+        cel:
+          spec:
+            apiSpec:
+              config:
+                # The OAS describes plain certificate names on the same AI
+                # Gateway; the CR takes in-cluster object references.
+                caCertificates:
+                  _description: |-
+                    The CA certificates used to verify the TLS certificate of the
+                    upstream agent endpoint.
+                    Each entry references an AIGatewayCACertificate in the cluster.
+                    When `namespace` differs from the AIGatewayAgent's namespace, a
+                    KongReferenceGrant in the target namespace must permit the
+                    reference.
+                certificates:
+                  _description: |-
+                    Client certificates used for mutual TLS (mTLS) authentication with
+                    the upstream agent endpoint.
+                    Each entry references an AIGatewayCertificate in the cluster.
+                    When `namespace` differs from the AIGatewayAgent's namespace, a
+                    KongReferenceGrant in the target namespace must permit the
+                    reference.
+                    At most one certificate may be configured.
         dataSources:
           # The proxy's basic-auth password. Same shared type as AIGatewayModel
           # and AIGatewayMCPServer.
@@ -384,6 +407,16 @@ apiGroupVersions:
             kinds: [AIGatewayAuthStrategy]
             refTypeName: AIGatewayAuthStrategyRef
             resolvesTo: name
+          # The upstream's TLS trust store and client certificate. Konnect
+          # takes the certificate names, so the refs resolve to Konnect names.
+          - path: spec.apiSpec.config.caCertificates
+            kinds: [AIGatewayCACertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.config.certificates
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+            supportCrossNamespaceReference: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAgentsSDK
@@ -965,6 +998,7 @@ apiGroupVersions:
           - path: spec.apiSpec.certificate
             kinds: [AIGatewayCertificate]
             resolvesTo: name
+            supportCrossNamespaceReference: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewaySNIsSDK

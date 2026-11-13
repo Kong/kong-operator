@@ -95,6 +95,17 @@ spec:
           value: ['29092']
       use:
         template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+    # Server certificate of the tlsServer policies created by scripts/chain.sh.
+    - name: Create-server-tls-secret
+      bindings:
+        - name: sni_hostname
+          value: chain.example.com
+        - name: cert_secret_name
+          value: server-tls
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
     - name: Reverse-creation-order-and-explicitly-empty-scope
       try:
         - script:

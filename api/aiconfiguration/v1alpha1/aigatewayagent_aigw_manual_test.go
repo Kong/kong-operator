@@ -10,7 +10,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
+
+// onPremGatewayRef returns the parent reference every on-prem AI Gateway entity carries.
+func onPremGatewayRef(name string) AIGatewayRef {
+	return AIGatewayRef{
+		Group:         AIGatewayRefGroupOnPrem,
+		Kind:          AIGatewayRefKindOnPrem,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: name},
+	}
+}
 
 // newAgentACLsFixture returns the allow-ACLs referencing the consumer group fixture below.
 func newAgentACLsFixture() *AIGatewayAgentAccessAcls {
@@ -28,11 +39,13 @@ func newAgentDenyACLsFixture() *AIGatewayAgentAccessAcls {
 	}
 }
 
-// TestAIGatewayAgent_ToAIGWAgent covers the policies, ACL consumer group and auth strategy
-// reference resolution — deliberately without any SetKonnectID on the referenced entities,
-// pinning that the on-prem translation uses the name-only resolver, unlike the generated
-// Konnect resolver — plus the Enabled/Disabled boolean normalization. (The managed_by drop
-// is pinned by the strict round-trip test below, the only decode that can see the key.)
+// TestAIGatewayAgent_ToAIGWAgent covers the policies, ACL consumer group, auth strategy and
+// config certificate reference resolution — deliberately without any SetKonnectID on the
+// referenced entities, pinning that the on-prem translation uses the name-only resolver,
+// unlike the generated Konnect resolver — the same-OnPremAIGateway membership check on the
+// referenced config certificates, plus the Enabled/Disabled boolean normalization. (The
+// managed_by drop is pinned by the strict round-trip test below, the only decode that can see
+// the key.)
 //
 // aigw/doc.go doesn't alias AgentAccessConfig, AccessConfig or AgentConfig, so the want
 // values set their fields through assignment on the zero values (same pattern as
@@ -64,6 +77,28 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			Spec: AIGatewayConsumerGroupSpec{
 				APISpec: AIGatewayConsumerGroupAPISpec{
 					Name: "dev-users",
+				},
+			},
+		}
+	}
+	newReferencedCACertificate := func() *AIGatewayCACertificate {
+		return &AIGatewayCACertificate{
+			Name: "ai-gw-ca-cert", Namespace: "default",
+			Spec: AIGatewayCACertificateSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
+				APISpec: AIGatewayCACertificateAPISpec{
+					Name: "aigw-ca-cert",
+				},
+			},
+		}
+	}
+	newReferencedCertificate := func() *AIGatewayCertificate {
+		return &AIGatewayCertificate{
+			Name: "ai-gw-cert", Namespace: "default",
+			Spec: AIGatewayCertificateSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
+				APISpec: AIGatewayCertificateAPISpec{
+					Name: "aigw-cert",
 				},
 			},
 		}
@@ -213,6 +248,32 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			},
 		},
 		{
+			name: "CA and client certificates resolved by name",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-certs", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "certs-agent",
+						Type: "http",
+						Config: AIGatewayAgentConfig{
+							URL:            "http://upstream:8080",
+							CaCertificates: []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
+							Certificates:   []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{newReferencedCACertificate(), newReferencedCertificate()},
+			want: func() *aigw.Agent {
+				agent := &aigw.Agent{Name: "certs-agent", Type: "http"}
+				agent.Config.URL = "http://upstream:8080"
+				agent.Config.CACertificates = []string{"aigw-ca-cert"}
+				agent.Config.Certificates = []string{"aigw-cert"}
+				return agent
+			},
+		},
+		{
 			name: "no refs",
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-empty", Namespace: "default",
@@ -281,6 +342,52 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 				},
 			},
 			wantErr: "access.authStrategies",
+		},
+		{
+			name: "cross-namespace certificate reference rejected on-prem",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-cross-ns-cert", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "cross-ns-cert-agent",
+						Type: "http",
+						Config: AIGatewayAgentConfig{
+							URL:          "http://upstream:8080",
+							Certificates: []AIGatewayCertificateRef{{Name: "ai-gw-cert", Namespace: "other-namespace"}},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{newReferencedCertificate()},
+			wantErr: "certificates",
+		},
+		{
+			name: "certificate targeting a different OnPremAIGateway rejected",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-other-gw-cert", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "other-gw-cert-agent",
+						Type: "http",
+						Config: AIGatewayAgentConfig{
+							URL:          "http://upstream:8080",
+							Certificates: []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{
+				&AIGatewayCertificate{
+					Name: "ai-gw-cert", Namespace: "default",
+					Spec: AIGatewayCertificateSpec{
+						AIGatewayRef: onPremGatewayRef("other-gw"),
+						APISpec:      AIGatewayCertificateAPISpec{Name: "aigw-cert"},
+					},
+				},
+			},
+			wantErr: "does not target the referencing entity's OnPremAIGateway",
 		},
 		{
 			name: "cross-namespace policy reference rejected",
@@ -387,8 +494,9 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 		Labels:  PublicLabels{"app": "test1"},
 		// Pinned by KnownFields(true) below: an un-dropped managed_by fails the strict decode.
 		ManagedBy: ManagedBy{"kong-operator": "true"},
-		// Policies and access.acls/authStrategies are stripped by the payload builder (they
-		// are re-attached resolved by ToAIGWAgent), so the strict decode must not see them.
+		// Policies, access.acls/authStrategies and config certificates are stripped by the
+		// payload builder (they are re-attached resolved by ToAIGWAgent), so the strict decode
+		// must not see them.
 		Policies: []AIGatewayPolicyRef{{Name: "ai-gw-policy"}},
 		Access: AIGatewayAgentAccess{
 			Acls:           newAgentACLsFixture(),
@@ -397,6 +505,8 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 		Config: AIGatewayAgentConfig{
 			URL:                "http://upstream:8080",
 			MaxRequestBodySize: 1024,
+			CaCertificates:     []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
+			Certificates:       []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
 			Logging: AIGatewayAgentConfigLogging{
 				Payloads:       "Disabled",
 				MaxPayloadSize: 512,
@@ -421,6 +531,8 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 	require.Empty(t, agent.Access.ACLs)
 	require.Empty(t, agent.Access.AuthStrategies)
 	require.Equal(t, "http://upstream:8080", agent.Config.URL)
+	require.Empty(t, agent.Config.CACertificates)
+	require.Empty(t, agent.Config.Certificates)
 	require.NotNil(t, agent.Config.Logging)
 	require.NotNil(t, agent.Config.Logging.Payloads)
 	require.False(t, *agent.Config.Logging.Payloads)

@@ -125,6 +125,29 @@ type AIGatewayAuthStrategyRef struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayCACertificateRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayCACertificate
+	// +kubebuilder:default=AIGatewayCACertificate
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type AIGatewayCertificateRef struct {
@@ -141,9 +164,8 @@ type AIGatewayCertificateRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`

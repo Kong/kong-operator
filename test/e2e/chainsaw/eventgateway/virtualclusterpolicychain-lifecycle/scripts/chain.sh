@@ -10,8 +10,9 @@ set -o pipefail
 #   VIRTUAL_CLUSTER_NAME: Parent virtual cluster name.
 #   KONNECT_TOKEN, KONNECT_URL: Konnect API token and host.
 #   ORIGINAL: Required in "retained" mode; JSON output of "verify".
-#   WINDOW_SECONDS: (optional) Observation window. Default: 75 seconds,
-#     longer than the default 60-second Konnect sync period.
+#   WINDOW_SECONDS: (optional) How long the order must stay retained after the
+#     chain is deleted. Default: 75 seconds, longer than the default
+#     60-second Konnect sync period of the virtual cluster and of the policies.
 #   CHECK_INTERVAL: (optional) Seconds between checks. Default: 5.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -75,13 +76,17 @@ case "${MODE}" in
     ;;
 esac
 
-# First wait for convergence (including the periodic drift repair), then require
-# every GET in a full sync-period window to match; one lucky GET is not enough.
+# Wait for the declared order, for up to about 150s: drift made in Konnect is
+# only repaired at the next periodic sync, every 60s by default. Once Konnect
+# has it, a sync finds nothing to change, and nothing reconciles a deleted
+# chain: one read is enough for the chain. Once deleted, the order is
+# checked across a sync of the virtual cluster and of the policies, which keep
+# reconciling and are all that could still change it.
 RETRY_COUNT=150 bash "${COMMON}/konnect_api_request.sh" >&2
-START="${SECONDS}"
-while true; do
-  RETRY_COUNT=1 bash "${COMMON}/konnect_api_request.sh" >&2
-  if [[ "${MODE}" == "retained" ]]; then
+if [[ "${MODE}" == "retained" ]]; then
+  START="${SECONDS}"
+  while true; do
+    RETRY_COUNT=1 bash "${COMMON}/konnect_api_request.sh" >&2
     CHAIN="$(kubectl get eventgatewayvirtualclusterpolicychains.configuration.konghq.com chain -n "${NAMESPACE}" --ignore-not-found -o name)"
     [[ -z "${CHAIN}" ]] || fail "deleted chain CR reappeared"
     for NAME in first second; do
@@ -99,10 +104,10 @@ while true; do
     kubectl get eventgatewayvirtualclusters.configuration.konghq.com "${VIRTUAL_CLUSTER_NAME}" -n "${NAMESPACE}" -o json |
       jq -e '.metadata.deletionTimestamp == null and .metadata.annotations["gateway-operator.konghq.com/cluster-policy-chain-owner"] == null' \
         >/dev/null || fail "chain deletion did not release ownership of the retained virtual cluster"
-  else
-    assert_programmed
-  fi
-  [[ $((SECONDS - START)) -ge "${WINDOW_SECONDS}" ]] && break
-  sleep "${CHECK_INTERVAL}"
-done
+    [[ $((SECONDS - START)) -ge "${WINDOW_SECONDS}" ]] && break
+    sleep "${CHECK_INTERVAL}"
+  done
+else
+  assert_programmed
+fi
 jq -cn --argjson snapshot "${SNAPSHOT}" '$snapshot'

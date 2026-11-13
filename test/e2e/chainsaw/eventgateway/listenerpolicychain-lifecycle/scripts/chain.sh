@@ -43,16 +43,26 @@ set_order() {
     --type=merge -p "${patch}" >/dev/null
 }
 
+# A listener takes a single portMapping forward policy, so only first forwards;
+# every other policy is a tlsServer policy using the test's server certificate.
 create_policy() {
   jq -n --arg name "$1" --arg remote_name "$2" --arg ns "${NAMESPACE}" \
     --arg listener "${LISTENER_NAME}" --arg vc "${VIRTUAL_CLUSTER_NAME}" '
     {apiVersion: "configuration.konghq.com/v1alpha1", kind: "EventGatewayListenerPolicy",
      metadata: {name: $name, namespace: $ns},
      spec: {eventGatewayListenerRef: {type: "namespacedRef", namespacedRef: {name: $listener}},
-       apiSpec: {type: "forwardToVirtualCluster",
-         forwardToVirtualCluster: {name: $remote_name, enabled: "Enabled",
-           config: {type: "portMapping", portMapping: {bootstrapPort: "at_start",
-             advertisedHost: "placeholder.invalid", destination: {name: $vc}}}}}}}
+       apiSpec: (if $name == "first" then
+         {type: "forwardToVirtualCluster",
+          forwardToVirtualCluster: {name: $remote_name, enabled: "Enabled",
+            config: {type: "portMapping", portMapping: {bootstrapPort: "at_start",
+              advertisedHost: "placeholder.invalid", destination: {name: $vc}}}}}
+       else
+         {type: "tlsServer",
+          tlsServer: {name: $remote_name, enabled: "Enabled",
+            config: {certificates: [{
+              certificate: {type: "secretRef", secretRef: {name: "server-tls", key: "tls.crt"}},
+              key: {type: "secretRef", secretRef: {name: "server-tls", key: "tls.key"}}}]}}}
+       end)}}
   ' | kubectl apply -f - >/dev/null
 }
 
@@ -202,7 +212,7 @@ observe() {
       id="$(jq -er '.status.id' <<<"${resource}")"
       # shellcheck disable=SC2016
       API_PATH="$(jq -er --arg name "${name}" '.policies[$name].entity_path' <<<"${SNAPSHOT}")" WANT_ID="${id}" \
-        EXPECTED_JQ='.id == $ENV.WANT_ID and .type == "forward_to_virtual_cluster"' RETRY_COUNT=1 \
+        EXPECTED_JQ='.id == $ENV.WANT_ID and (.type == "forward_to_virtual_cluster" or .type == "tls_server")' RETRY_COUNT=1 \
         bash "${COMMON}/konnect_api_request.sh" >&2
     done < <(jq -er '.[]' <<<"${names}" || [[ "${names}" == '[]' ]])
     [[ $((SECONDS - start)) -ge "${WINDOW_SECONDS}" ]] && break
@@ -263,7 +273,7 @@ case "${MODE}" in
     set_order '["pending","first","second"]'
     observe '["first","second"]' reference ReferenceNotProgrammed
     kubectl patch eventgatewaylistenerpolicies.configuration.konghq.com pending -n "${NAMESPACE}" \
-      --type=merge -p '{"spec":{"apiSpec":{"forwardToVirtualCluster":{"name":"pending"}}}}' >/dev/null
+      --type=merge -p '{"spec":{"apiSpec":{"tlsServer":{"name":"pending"}}}}' >/dev/null
     wait_policy pending
     observe '["pending","first","second"]' ready
     ;;
