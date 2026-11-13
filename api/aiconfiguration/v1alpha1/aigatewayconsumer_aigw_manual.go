@@ -5,6 +5,7 @@ package v1alpha1
 // for the shared background and the plan to generate this some day.
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -140,7 +141,10 @@ func (obj *AIGatewayConsumer) aigwCredentials(
 	}
 
 	slices.SortFunc(list.Items, func(a, b AIGatewayConsumerCredential) int {
-		return strings.Compare(a.Name, b.Name)
+		return cmp.Or(
+			strings.Compare(a.Namespace, b.Namespace),
+			strings.Compare(a.Name, b.Name),
+		)
 	})
 
 	var (

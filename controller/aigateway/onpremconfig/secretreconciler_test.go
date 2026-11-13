@@ -2,6 +2,7 @@ package onpremconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -14,8 +15,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 )
@@ -263,6 +267,41 @@ func TestSecretReconcilerSkipsUnnotifiableCredentialRefs(t *testing.T) {
 	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
 	require.NoError(t, err)
 	requireNoChange(t, cn.NotifyChannel())
+}
+
+// A consumer of a namespace the instance's cache does not serve reads as a cache
+// error, not as NotFound. It must not fail the reconcile: the credentials of the
+// served consumers still notify their gateway.
+func TestSecretReconcilerSkipsConsumerOfAnUnservedNamespace(t *testing.T) {
+	const secretName = "consumer-api-key"
+	unservedCred := consumerCredential("unserved-cred", "consumer", secretName)
+	unservedCred.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = new("unwatched")
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+	// The unserved credential comes first, so the reconcile would stop before the
+	// served one without the skip.
+	cl := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(unservedCred, consumerCredential("cred", "consumer", secretName), onPremConsumer("consumer", "gw")).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if key.Namespace == "unwatched" {
+					return errors.New("namespace unwatched is not served by the cache")
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}).Build()
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
+	require.NoError(t, err)
+	change := waitForChange(t, cn.NotifyChannel())
+	require.Equal(t, "consumer", change.Object.GetName())
 }
 
 // A cross-namespace secretRef points at a Secret outside the entity's namespace, so a

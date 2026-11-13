@@ -22,7 +22,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -166,17 +165,11 @@ func notifyConsumersForCredentialSecrets(
 	}
 	for i := range list.Items {
 		cred := &list.Items[i]
-		consumerNN, ok := cred.ConsumerNamespacedName()
-		if !ok {
-			continue
-		}
 		for _, secretRef := range cred.GetSensitiveDataSecretRefs() {
 			if !match(cred.GetNamespace(), secretRef) {
 				continue
 			}
-			if err := notifyConsumerGateway(ctx, cl, consumerNN, cn, log); err != nil {
-				return err
-			}
+			notifyConsumerGateway(ctx, cl, cred, cn)
 			break
 		}
 	}
@@ -184,29 +177,20 @@ func notifyConsumersForCredentialSecrets(
 }
 
 // notifyConsumerGateway notifies the ChangeNotifier for the OnPremAIGateway that
-// renders the consumer consumerNN. A consumer that is gone, or that targets a
-// KonnectAIGateway, has no on-prem gateway to notify.
+// renders the consumer the credential references. A consumer that is gone, that
+// the cache does not serve, or that targets a KonnectAIGateway has no on-prem
+// gateway to notify.
 func notifyConsumerGateway(
 	ctx context.Context,
 	cl client.Client,
-	consumerNN types.NamespacedName,
+	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 	cn *changenotifier.ChangeNotifier,
-	log logr.Logger,
-) error {
-	var consumer aiconfigurationv1alpha1.AIGatewayConsumer
-	if err := cl.Get(ctx, consumerNN, &consumer); err != nil {
-		// The consumer is gone: nothing to notify.
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		log.Error(err, "Failed to fetch AIGatewayConsumer referenced by an AIGatewayConsumerCredential",
-			"consumerNamespace", consumerNN.Namespace, "consumerName", consumerNN.Name)
-		return err
+) {
+	consumer := credentialConsumer(ctx, cl, cred)
+	if consumer == nil || !consumerTargetsOnPremAIGateway(consumer) {
+		return
 	}
 	ref := consumer.GetAIGatewayRef()
-	if ref.NamespacedRef == nil || !ref.TargetsOnPremAIGateway() {
-		return nil
-	}
 	parent := types.NamespacedName{
 		Namespace: consumer.GetNamespace(),
 		Name:      ref.NamespacedRef.Name,
@@ -214,8 +198,7 @@ func notifyConsumerGateway(
 	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
 		parent.Namespace = *ref.NamespacedRef.Namespace
 	}
-	cn.NotifyChange(ctx, &parent, &consumer)
-	return nil
+	cn.NotifyChange(ctx, &parent, consumer)
 }
 
 // notifyEntitiesForSecret lists the entities of one kind and notifies the ChangeNotifier

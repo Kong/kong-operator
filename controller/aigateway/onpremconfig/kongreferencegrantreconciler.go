@@ -139,10 +139,7 @@ func notifyConsumersForCredentialConsumerRefs(
 		if !cred.HasCrossNamespaceConsumerRefInto(namespace) {
 			continue
 		}
-		consumerNN, _ := cred.ConsumerNamespacedName()
-		if err := notifyConsumerGateway(ctx, cl, consumerNN, cn, log); err != nil {
-			return err
-		}
+		notifyConsumerGateway(ctx, cl, cred, cn)
 	}
 	return nil
 }
