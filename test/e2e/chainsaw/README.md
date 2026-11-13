@@ -55,9 +55,11 @@ or put it in assertion files, command arguments, debug output, or artifacts.
 The helper suppresses potentially payload-bearing kubectl diagnostics but returns
 an explicit error. Existing debug snapshots redact Secret payloads.
 
-**Local development:** without an input file, the existing dev-image path retains
-its previous behavior unless `GW_ADMIN_LICENSE_REQUIRED=true`; supplied invalid
-input always fails. This optional local path is **not** the CI policy.
+**Local development:** without an input file, and unless
+`GW_ADMIN_LICENSE_REQUIRED=true`, no license Secret is provisioned: gw-admin,
+which requires a license, doesn't start, so only the tests that don't need it
+running can pass. Supplied invalid input always fails. This local path is
+**not** the CI policy.
 
 ### GWAdmin license sources in CI
 

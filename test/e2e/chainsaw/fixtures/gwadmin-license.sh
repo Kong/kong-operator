@@ -6,7 +6,9 @@
 #   NAMESPACE: GWAdmin namespace (install only); it must already exist.
 #   GW_ADMIN_LICENSE_REQUIRED: Require input during install (default: false).
 # check always requires input and never contacts Kubernetes. install permits
-# absent input for the optional local dev-image path; GWAdmin CI requires input.
+# absent input locally: no license Secret is provisioned, so gw-admin, which
+# requires a license, doesn't start, and only the tests that don't need it
+# running can pass. GWAdmin CI requires input.
 set +x
 set -euo pipefail
 
@@ -29,7 +31,7 @@ if [[ -z "${GW_ADMIN_LICENSE_FILE:-}" ]]; then
   if [[ "$1" == check || "${GW_ADMIN_LICENSE_REQUIRED:-false}" == true ]]; then
     fail "GW_ADMIN_LICENSE_FILE is required: supply a readable file containing an enveloped JWS license with event_gateway entitlement (not KONG_LICENSE_DATA JSON)"
   fi
-  echo "[gwadmin-license] input not configured; using the optional local dev-image path, not licensed CI" >&2
+  echo "[gwadmin-license] input not configured: no license Secret provisioned, gw-admin won't start (not licensed CI)" >&2
   echo '{"license_input":"not-configured"}'
   exit 0
 fi

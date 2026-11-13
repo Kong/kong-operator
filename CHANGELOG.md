@@ -91,8 +91,22 @@
   `spec.license.secretRef.key`, identifying the enveloped license in a Secret
   in the same namespace. Existing manifests must include this reference;
   an empty spec is no longer accepted. `spec.license.entitlements` defaults
-  to `[event_gateway]`, the only supported entitlement. This change defines
-  the API contract only; controller support follows separately.
+  to `[event_gateway]`, the only supported entitlement. Kong Operator mounts
+  the Secret key in the gw-admin pods and points gw-admin at it with
+  `GW_ADMIN_ONPREM_LICENSE_FILE` and `GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS`;
+  a pod template overlay can't replace this volume, mount another one at its
+  path, or set these env vars.
+  The kubelet updates the mounted file when the Secret changes, and gw-admin
+  reads it again on each of its periodic license checks, so a renewed license
+  reaches the running pods without a restart. The new `LicenseProvisioned`
+  condition reports a missing Secret, or a missing or empty key, and keeps
+  `Ready` False. The Deployment is applied anyway: gw-admin refuses to start
+  without a valid license. While a `GWAdmin` references the license Secret, the
+  `gateway-operator.konghq.com/gwadmin-license-in-use` finalizer delays its
+  deletion until no `GWAdmin` references it; update a license in place rather
+  than deleting and creating its Secret again. gw-admin, not Kong Operator,
+  validates the license.
+  [#6567](https://github.com/Kong/kong-operator/issues/6567)
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
   it keeps serving, but no spec, image or certificate change is applied until

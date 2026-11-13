@@ -638,7 +638,7 @@ func (r *Reconciler) ensureTLS(
 	deployment *appsv1.Deployment,
 ) (*tlsMaterial, error) {
 	now := r.clock()
-	previousMessage := certificateMessageOf(gw)
+	previousMessage := conditionMessage(gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned)
 
 	m := &tlsMaterial{}
 	for _, s := range []struct {
@@ -1653,7 +1653,7 @@ func (r *Reconciler) manualSigner(
 	now time.Time,
 ) (*corev1.Secret, *x509.Certificate, error) {
 	name := gw.Spec.TLS.ClientCA.SecretRef.Name
-	secret, err := r.userSecret(ctx, gw, "CA", name)
+	secret, err := r.userSecret(ctx, gw, setCertificateCondition, "CA", name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1672,25 +1672,31 @@ func (r *Reconciler) manualSigner(
 	return secret, ca, nil
 }
 
+// conditionSetter sets a condition of the GWAdmin.
+type conditionSetter func(gw *operatorv1alpha1.GWAdmin, status metav1.ConditionStatus, reason, message string)
+
 // userSecret returns the named Secret the spec of the GWAdmin references, the
-// what of the user. A Secret Kong Operator provisions is refused.
-func (r *Reconciler) userSecret(ctx context.Context, gw *operatorv1alpha1.GWAdmin, what, name string) (*corev1.Secret, error) {
+// what of the user, reporting why it can't be used with set. A Secret Kong
+// Operator provisions is refused.
+func (r *Reconciler) userSecret(
+	ctx context.Context, gw *operatorv1alpha1.GWAdmin, set conditionSetter, what, name string,
+) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: name}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefNotFound,
+			set(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefNotFound,
 				fmt.Sprintf("%s Secret %q not found%s", what, name, gwadminref.SecretHint(r.SecretLabelSelector)))
 			return nil, errStop
 		}
 		// A transient API error or an RBAC denial: retried with backoff.
-		setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretReadFailed,
+		set(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretReadFailed,
 			fmt.Sprintf("failed to read %s Secret %q: %v", what, name, err))
 		return nil, fmt.Errorf("failed to read %s Secret %s/%s: %w", what, gw.Namespace, name, err)
 	}
 	if secret.Labels[consts.SecretProvisioningLabelKey] == consts.SecretProvisioningAutomaticLabelValue ||
 		metav1.IsControlledBy(secret, gw) {
-		setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefOperatorManaged,
-			fmt.Sprintf("%s Secret %q is provisioned and managed by the operator; Manual provisioning requires a user-owned Secret", what, name))
+		set(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefOperatorManaged,
+			fmt.Sprintf("%s Secret %q is provisioned and managed by the operator; reference a user-owned Secret", what, name))
 		return nil, errStop
 	}
 	return secret, nil
@@ -1777,7 +1783,7 @@ func (r *Reconciler) manualCPCertificate(
 	now time.Time,
 ) (*corev1.Secret, error) {
 	name := gw.Spec.TLS.CP.SecretRef.Name
-	src, err := r.userSecret(ctx, gw, "cp certificate", name)
+	src, err := r.userSecret(ctx, gw, setCertificateCondition, "cp certificate", name)
 	if err != nil {
 		return nil, err
 	}

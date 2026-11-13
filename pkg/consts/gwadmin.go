@@ -65,6 +65,11 @@ const (
 	// operator namespace.
 	GWAdminCleanupFinalizer = OperatorLabelPrefix + "gwadmin-cleanup"
 
+	// GWAdminLicenseInUseFinalizer delays the deletion of a license Secret
+	// until no GWAdmin references it, nor any of their pods mounts it: a
+	// gw-admin pod losing it stops at its next license check.
+	GWAdminLicenseInUseFinalizer = OperatorLabelPrefix + "gwadmin-license-in-use"
+
 	// GWAdminDataPlaneNamespaceLabel is the label that, set on a data plane
 	// Deployment, holds the namespace of the GWAdmin it pulls the
 	// configuration from: its rollouts gate the rotations of that GWAdmin.
@@ -134,6 +139,10 @@ const (
 	GWAdminAPITLSMountPath = "/etc/gw-admin/api-tls"
 	// GWAdminCPTLSMountPath is where the TLS material of the cp listener is mounted.
 	GWAdminCPTLSMountPath = "/etc/gw-admin/cp-tls"
+	// GWAdminLicenseMountPath is where the license is mounted.
+	GWAdminLicenseMountPath = "/etc/gw-admin/license"
+	// GWAdminLicenseFileName is the name of the license file in GWAdminLicenseMountPath.
+	GWAdminLicenseFileName = "license.jwt"
 
 	// GWAdminAPITLSCertFileEnvVar points gw-admin at the API listener certificate.
 	GWAdminAPITLSCertFileEnvVar = "GW_ADMIN_ONPREM_API_TLS_CERT_FILE"
@@ -147,6 +156,13 @@ const (
 	GWAdminCPTLSKeyFileEnvVar = "GW_ADMIN_ONPREM_CP_TLS_KEY_FILE"
 	// GWAdminCPTLSClientCAFileEnvVar points gw-admin at the CAs trusted for cp clients.
 	GWAdminCPTLSClientCAFileEnvVar = "GW_ADMIN_ONPREM_CP_TLS_CLIENT_CA_FILE"
+	// GWAdminLicenseFileEnvVar points gw-admin at the enveloped license. gw-admin
+	// reads the file again on each periodic license check, so an updated license
+	// is picked up without a restart.
+	GWAdminLicenseFileEnvVar = "GW_ADMIN_ONPREM_LICENSE_FILE"
+	// GWAdminLicenseEntitlementsEnvVar is the comma separated list of
+	// entitlements gw-admin requires the license to grant.
+	GWAdminLicenseEntitlementsEnvVar = "GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS"
 )
 
 // -----------------------------------------------------------------------------

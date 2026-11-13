@@ -114,7 +114,7 @@ func TestGWAdminLicenseInput(t *testing.T) {
 			t.Fatal("preflight contacted Kubernetes")
 		}
 	})
-	t.Run("optional local dev-image path does not require credentials", func(t *testing.T) {
+	t.Run("install without input provisions nothing and requires no credentials", func(t *testing.T) {
 		cmd, dir := licenseCommand(t, "gwadmin-license.sh", "install", "")
 		output, err := cmd.CombinedOutput()
 		if err != nil || !strings.Contains(string(output), `{"license_input":"not-configured"}`) {

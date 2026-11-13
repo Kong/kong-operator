@@ -14,6 +14,11 @@ const (
 	// GWAdminConditionTypeCertificateProvisioned indicates whether the
 	// certificate authority and the certificates of the GWAdmin are in place.
 	GWAdminConditionTypeCertificateProvisioned = "CertificateProvisioned"
+
+	// GWAdminConditionTypeLicenseProvisioned indicates whether the license
+	// Secret of the GWAdmin holds a license gw-admin is pointed at. gw-admin,
+	// not Kong Operator, validates the license.
+	GWAdminConditionTypeLicenseProvisioned = "LicenseProvisioned"
 )
 
 const (
@@ -35,6 +40,9 @@ const (
 
 	// GWAdminReasonCertificateProvisioned is used when every certificate is in place.
 	GWAdminReasonCertificateProvisioned = "CertificateProvisioned"
+	// GWAdminReasonLicenseProvisioned is used when the license is configured
+	// in the gw-admin pods.
+	GWAdminReasonLicenseProvisioned = "LicenseProvisioned"
 	// GWAdminReasonCARotationInProgress is used while the certificates move
 	// to a new certificate authority.
 	GWAdminReasonCARotationInProgress = "CARotationInProgress"
@@ -46,10 +54,11 @@ const (
 	// be read.
 	GWAdminReasonSecretReadFailed = "SecretReadFailed" //nolint:gosec
 	// GWAdminReasonSecretRefNotFound is used when a referenced Secret does
-	// not exist, or is not visible to the operator.
+	// not exist, or is not visible to the operator, or when no license Secret
+	// is referenced, as by a GWAdmin stored before the license was required.
 	GWAdminReasonSecretRefNotFound = "SecretRefNotFound" //nolint:gosec
 	// GWAdminReasonInvalidSecret is used when a referenced Secret does not
-	// hold a usable certificate.
+	// hold a usable certificate, or has no license under its key.
 	GWAdminReasonInvalidSecret = "InvalidSecret"
 	// GWAdminReasonSecretRefOperatorManaged is used when a referenced Secret
 	// is provisioned by the operator.
