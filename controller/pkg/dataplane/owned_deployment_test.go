@@ -253,6 +253,7 @@ func Test_GenerateBaseDeployment_hardening(t *testing.T) {
 			Drop: []corev1.Capability{"ALL"},
 			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 		},
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 	}, container.SecurityContext)
 
 	assert.Equal(t, []corev1.VolumeMount{

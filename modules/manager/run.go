@@ -27,8 +27,10 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -57,6 +59,9 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/platform"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -103,6 +108,14 @@ type Config struct {
 	// Resolution of ipfamily.Auto is fatal if detection fails: the operator
 	// exits with an error instead of assuming a concrete family.
 	IPFamily ipfamily.IPFamily
+	// Platform is the k8s platform flavor the operator runs on. When
+	// admission assigns the container user and group (OpenShift
+	// SecurityContextConstraints), the operator leaves them unset on hardened
+	// containers instead of pinning them. platform.Auto resolves the flavor
+	// by probing the apiserver. Resolution of platform.Auto is fatal if the
+	// probe fails: the operator exits with an error instead of assuming a
+	// concrete flavor.
+	Platform platform.Platform
 	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
 	SecretLabelSelector string
 	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
@@ -224,6 +237,7 @@ func DefaultConfig() Config {
 		ConfigMapLabelSelector:              mgrconfig.DefaultConfigMapLabelSelector,
 		LoggerOpts:                          &zap.Options{},
 		IPFamily:                            ipfamily.Auto,
+		Platform:                            platform.Auto,
 		GatewayControllerEnabled:            true,
 		ControlPlaneControllerEnabled:       true,
 		DataPlaneControllerEnabled:          true,
@@ -422,6 +436,12 @@ func Run(
 	}
 	cfg.IPFamily = ipFamily
 
+	userIDAssignedByPlatform, err := resolveUserIDAssignedByPlatform(setupLog, cfg.Platform, mgr.GetRESTMapper())
+	if err != nil {
+		return err
+	}
+	k8sresources.SetUserIDAssignedByPlatform(userIDAssignedByPlatform)
+
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {
 		setupLog.Error(err, "failed setting up controllers")
@@ -503,6 +523,41 @@ func Run(
 	}
 
 	return nil
+}
+
+// resolveUserIDAssignedByPlatform decides whether admission assigns the
+// container user and group, which makes pinning them in the pod spec invalid.
+// platform.Openshift and platform.Kubernetes answer directly; platform.Auto
+// probes the apiserver for the OpenShift-only securitycontextconstraints
+// resource. Like the ipfamily.Auto resolution, a failed probe is fatal: the
+// operator exits instead of assuming a concrete flavor, because the wrong
+// assumption would be silent and hard to diagnose.
+func resolveUserIDAssignedByPlatform(
+	log logr.Logger, p platform.Platform, mapper apimeta.RESTMapper,
+) (bool, error) {
+	switch p {
+	case platform.Openshift:
+		log.Info("OpenShift platform configured: operands get their user and group from the SecurityContextConstraints")
+		return true, nil
+	case platform.Kubernetes:
+		return false, nil
+	default: // platform.Auto
+		// securitycontextconstraints is served only by OpenShift clusters.
+		onOpenShift, err := k8sutils.CRDExists(mapper, schema.GroupVersionResource{
+			Group:    "security.openshift.io",
+			Version:  "v1",
+			Resource: "securitycontextconstraints",
+		})
+		if err != nil {
+			return false, fmt.Errorf(
+				"unable to detect whether the cluster is OpenShift "+
+					"(set --platform=openshift or --platform=kubernetes to skip the detection): %w", err)
+		}
+		if onOpenShift {
+			log.Info("OpenShift detected: operands get their user and group from the SecurityContextConstraints")
+		}
+		return onOpenShift, nil
+	}
 }
 
 // warnIfLegacyDevelopmentModeEnabled logs a warning if any of the legacy development mode environment variables are set
