@@ -147,9 +147,27 @@ check() {
   return 0
 }
 
+# admit: sets the condition of the readiness gate GATE on the gw-admin pods
+# carrying it, so that they only turn Ready while the peers run: stopping
+# them stalls a rollout (gwadmin.sh peers-stop), whoever else provisions the
+# pods.
+GATE=e2e.konghq.com/peers
+admit() {
+  pods=$(kubectl get pods -n "$NS" -o json \
+    -l "gateway-operator.konghq.com/managed-by=gw-admin,gateway-operator.konghq.com/managed-by-name=$GWADMIN") || return 1
+  for pod in $(printf '%s' "$pods" | jq -r --arg g "$GATE" '.items[] |
+    select(.metadata.deletionTimestamp == null and any(.spec.readinessGates[]?; .conditionType == $g) and
+      (any(.status.conditions[]?; .type == $g and .status == "True") | not)) | .metadata.name'); do
+    kubectl patch pod -n "$NS" "$pod" --subresource=status --type=strategic \
+      -p "{\"status\":{\"conditions\":[{\"type\":\"$GATE\",\"status\":\"True\"}]}}" >/dev/null &&
+      echo "ADMITTED $(date -u +%H:%M:%S) $pod"
+  done
+}
+
 round=0
 paused=0
 while true; do
+  admit
   reconcile_dp
   if fetch; then
     ok=0

@@ -122,33 +122,19 @@ live_count() {
 
 live_rounds() { live_count ROUND; }
 
-# OPERATOR_BLOCK is the NetworkPolicy block_operator applies.
-OPERATOR_BLOCK=gwadmin-operator-blocked
-
-# block_operator: cuts Kong Operator off from the gw-admin pods, so that only
-# the peers provision them. Kong Operator tells the pods of a GWAdmin no
+# PEERS_GATE is the readiness gate the GWAdmins of the tests stopping the
+# peers put on their pods: the peers set its condition on every gw-admin pod
+# they see (see peers.sh). Kong Operator tells the pods of a GWAdmin no
 # OnPremEventGateway may use, like those of these tests, that they serve no
-# gateway, which turns them Ready: a rollout wouldn't stall while the peers
-# are stopped. The pods of the namespace, the peers and gwadmin-dp, still
-# reach them, and so does the kubelet, probing them from their node.
-block_operator() {
-  kubectl apply -n "$(ns)" -f - >/dev/null <<YAML
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: $OPERATOR_BLOCK
-spec:
-  podSelector: {}
-  policyTypes: [Ingress]
-  ingress:
-    - from:
-        - podSelector: {}
-YAML
-}
+# gateway, which turns them Ready: without the gate, a rollout wouldn't stall
+# while the peers are stopped. A pod Ready already stays so.
+PEERS_GATE=e2e.konghq.com/peers
 
-# unblock_operator: lets Kong Operator reach the gw-admin pods again.
-unblock_operator() {
-  kubectl delete networkpolicy -n "$(ns)" "$OPERATOR_BLOCK" --ignore-not-found >/dev/null
+# template_gated gwadmin: the Pod template of the gw-admin Deployment carries
+# PEERS_GATE.
+template_gated() {
+  kubectl get deployment -n "$(ns)" "$1" -o json |
+    jq -e --arg c "$PEERS_GATE" 'any(.spec.template.spec.readinessGates[]?; .conditionType == $c)' >/dev/null
 }
 
 # no_pods namespace selector: no pod matches the selector.
@@ -473,10 +459,12 @@ wait-rounds) # count timeout: the running peers complete count more rounds
   until_true "$2" "peers completed $1 more round(s)" rounds_at_least "$target"
   until_result
   ;;
-peers-stop) # timeout: stops the peers, Kong Operator blocked, so that new gw-admin pods can't turn Ready
-  # Blocked first: the pods the peers didn't provision yet aren't
-  # provisioned by Kong Operator once they are gone.
-  block_operator
+peers-stop) # gwadmin timeout: stops the peers, so that new gw-admin pods can't turn Ready (see PEERS_GATE)
+  gw=$1
+  shift
+  # Without the gate, Kong Operator would turn the new pods Ready: the
+  # rollout wouldn't stall.
+  template_gated "$gw" || { echo "the gw-admin pods of $gw don't carry the readiness gate $PEERS_GATE" >&2; exit 1; }
   # The logs of the peers pods are archived first: assert-no-failures reads
   # them, and they are lost once the pods are deleted. The pods must be gone
   # (not just terminating, when they still run) before anything is changed.
@@ -498,10 +486,10 @@ peers-stop) # timeout: stops the peers, Kong Operator blocked, so that new gw-ad
   done
   until_result archive "$archive"
   ;;
-peers-start) # timeout: starts the peers again, and unblocks Kong Operator
-  unblock_operator
+peers-start) # gwadmin timeout: starts the peers again: they let the new gw-admin pods turn Ready
+  template_gated "$1" || { echo "the gw-admin pods of $1 don't carry the readiness gate $PEERS_GATE" >&2; exit 1; }
   kubectl scale deployment -n "$(ns)" gwadmin-peers --replicas=1 >/dev/null
-  kubectl rollout status deployment -n "$(ns)" gwadmin-peers --timeout="${1}s" >/dev/null
+  kubectl rollout status deployment -n "$(ns)" gwadmin-peers --timeout="${2}s" >/dev/null
   result deployment gwadmin-peers
   ;;
 restart-operator) # timeout: deletes the Kong Operator pod(s) and waits for a new one to be Ready
