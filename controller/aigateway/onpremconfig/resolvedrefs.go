@@ -41,7 +41,8 @@ import (
 // (controller/konnect reconciler_secretref.go handleSecretRef and
 // reconciler_generic_handle_parentref.go). The cross-namespace references are the
 // aiGatewayRef to an OnPremAIGateway of another namespace, the secretRefs to
-// Secrets of another namespace, and the AIGatewayConsumerRef of an
+// Secrets of another namespace, the consumer group ACL references to an
+// AIGatewayConsumerGroup of another namespace, and the AIGatewayConsumerRef of an
 // AIGatewayConsumerCredential to a consumer of another namespace. The condition is
 // removed when the entity has none, so that a switch to same-namespace references
 // does not keep a stale condition.
@@ -68,7 +69,8 @@ func ensureResolvedRefsCondition(
 	crossNamespaceSecrets := ok && hasCrossNamespaceSecretRefs(secretRefsOwner)
 	cred, _ := obj.(*aiconfigurationv1alpha1.AIGatewayConsumerCredential)
 	crossNamespaceConsumer := cred != nil && cred.HasCrossNamespaceConsumerRef()
-	if !crossNamespaceGateway && !crossNamespaceSecrets && !crossNamespaceConsumer {
+	crossNamespaceACLs := aiconfigurationv1alpha1.HasCrossNamespaceConsumerGroupRefs(obj)
+	if !crossNamespaceGateway && !crossNamespaceSecrets && !crossNamespaceConsumer && !crossNamespaceACLs {
 		return meta.RemoveStatusCondition(conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs), nil
 	}
 
@@ -88,6 +90,9 @@ func ensureResolvedRefsCondition(
 	}
 	if err == nil && crossNamespaceConsumer {
 		err = aiconfigurationv1alpha1.CheckCrossNamespaceConsumerRefGranted(ctx, cl, cred)
+	}
+	if err == nil && crossNamespaceACLs {
+		err = aiconfigurationv1alpha1.CheckCrossNamespaceConsumerGroupRefsGranted(ctx, cl, obj)
 	}
 	if err != nil {
 		if !crossnamespace.IsReferenceNotGranted(err) {
@@ -135,9 +140,10 @@ func hasCrossNamespaceSecretRefs(obj aiconfigurationv1alpha1.SecretRefsOwner) bo
 // KongReferenceGrant in its namespace governs, so that their ResolvedRefs
 // condition follows a grant that is created, changed or deleted: an aiGatewayRef
 // to an OnPremAIGateway of the grant's namespace, a secretRef to a Secret of
-// the grant's namespace, or an AIGatewayConsumerRef to a consumer of the grant's
-// namespace. The grant itself is not read: on deletion its spec is gone, and the
-// reconciler checks the grants again.
+// the grant's namespace, a consumer group ACL reference to an
+// AIGatewayConsumerGroup of the grant's namespace, or an AIGatewayConsumerRef to a
+// consumer of the grant's namespace. The grant itself is not read: on deletion its
+// spec is gone, and the reconciler checks the grants again.
 //
 // For kinds with an aiGatewayRef, only the entities that target an
 // OnPremAIGateway are enqueued: the For predicate of the reconciler does not
@@ -190,7 +196,11 @@ func governedByGrantsIn(ent client.Object, namespace string) bool {
 	if getter, ok := ent.(aiGatewayRefGetter); ok && !getter.GetAIGatewayRef().TargetsOnPremAIGateway() {
 		return false
 	}
-	if gw, ok := onPremAIGatewayOf(ent); ok && gw.Namespace == namespace && ent.GetNamespace() != namespace {
+	gw, ok := onPremAIGatewayOf(ent)
+	if ok && gw.Namespace == namespace && ent.GetNamespace() != namespace {
+		return true
+	}
+	if aiconfigurationv1alpha1.HasCrossNamespaceConsumerGroupRefsInto(ent, namespace) {
 		return true
 	}
 	if cred, ok := ent.(*aiconfigurationv1alpha1.AIGatewayConsumerCredential); ok &&

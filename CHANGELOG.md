@@ -412,6 +412,13 @@
   credential renders inside that consumer's document, and a change to its
   Secret or to the grant re-renders the consumer.
   [#6648](https://github.com/Kong/kong-operator/pull/6648)
+- AI Gateway: on an `OnPremAIGateway`, an `AIGatewayMCPServer` can reference an
+  `AIGatewayConsumerGroup` of another namespace. The reference is allowed in the
+  consumer and OAuth token ACLs, the default tool ACLs and the per-tool ACLs.
+  It needs a `KongReferenceGrant` in the consumer group's namespace, as on a
+  `KonnectAIGateway`. The consumer group also needs its own grant when it
+  references the gateway from another namespace.
+  [#5257](https://github.com/Kong/kong-operator/issues/5257)
 
 ### Changed
 

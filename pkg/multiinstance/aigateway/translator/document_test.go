@@ -1441,6 +1441,92 @@ func TestBuildDocument_CrossNamespaceCredentialNeedsKongReferenceGrant(t *testin
 	}
 }
 
+// TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant pins the parity with the
+// Konnect path for the consumer group ACL references: an AIGatewayMCPServer in the
+// gateway's namespace may reference an AIGatewayConsumerGroup of another namespace only
+// when a KongReferenceGrant in the consumer group's namespace allows it. The consumer
+// group itself needs its own grant to reference the gateway, so both grants are needed.
+func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumerGroup := aiGatewayConsumerGroupFixture("group-other")
+	consumerGroup.Namespace = "other"
+	consumerGroup.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+
+	mcpServer := aiGatewayMCPServerFixture("mcp-a")
+	mcpServer.Spec.APISpec.PassthroughListener.Policies = nil
+	mcpServer.Spec.APISpec.PassthroughListener.Access = &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccess{
+		AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
+		Consumer: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{
+			Acls: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAcls{
+				Type:  aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+				Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: "other", Name: consumerGroup.Name}},
+			},
+		},
+	}
+
+	// The consumer group references the gateway across namespaces, so it needs its own
+	// grant in the gateway's namespace.
+	gatewayGrant := crossNamespaceGrant("AIGatewayConsumerGroup", new("gw"))
+	// The MCP server references the consumer group across namespaces, so it needs a grant
+	// in the consumer group's namespace.
+	aclGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cross-ns-acl", Namespace: "other",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      "AIGatewayMCPServer",
+				Namespace: "default",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aiconfiguration.konghq.com",
+				Kind:  "AIGatewayConsumerGroup",
+				Name:  new(configurationv1alpha1.ObjectName(consumerGroup.Name)),
+			}},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		grants       []client.Object
+		wantIncluded bool
+	}{
+		{
+			name:   "no ACL grant",
+			grants: []client.Object{gatewayGrant},
+		},
+		{
+			name:         "ACL grant",
+			grants:       []client.Object{gatewayGrant, aclGrant},
+			wantIncluded: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cl := newTranslatorTestClient(t, append([]client.Object{gw, consumerGroup, mcpServer}, tt.grants...)...)
+
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+			require.NoError(t, err)
+
+			mcpStatus := findStatusByName(t, statuses, mcpServer.Name)
+			if !tt.wantIncluded {
+				require.ErrorContains(t, mcpStatus.Err, "KongReferenceGrant")
+				require.Empty(t, doc.MCPServers)
+				return
+			}
+			require.NoError(t, mcpStatus.Err)
+			require.Len(t, doc.MCPServers, 1)
+			require.Equal(t, []string{"group-other"}, doc.MCPServers[0].Access.ACLs.Allow)
+		})
+	}
+}
+
 // TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the
 // rendered consumer embeds its credentials' secret-resolved api keys, so a change to the
 // backing Secret changes the rendered document (and, in production, the payload hash that
