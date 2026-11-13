@@ -42,6 +42,7 @@ spec:
       - its listener: B, D, E, C
       - the Secret of its server certificate: B, D, S, E
       - its TLS trust bundle: B, W, D, S, E, C
+      - the virtual cluster it forwards to: B, D, S, E, C
   bindings:
     - name: test_name
       value: ($namespace)
@@ -2598,7 +2599,893 @@ spec:
           value: listener-tb-c
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 166-create-listener-listener-lst-n
+    - name: 166-create-listener-listener-dst-b
+      description: "[B, the virtual cluster it forwards to] Create the EventGatewayListener listener-dst-b."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListener.yaml
+      bindings:
+        - name: listener_name
+          value: listener-dst-b
+        - name: listener_namespace
+          value: ($referrer_namespace)
+        - name: listener_port
+          value: "19111"
+        - name: gateway_ref_namespace
+          value: ($namespace)
+    - name: 167-create-backend-cluster-backend-dst-b
+      description: "[B, the virtual cluster it forwards to] Create the EventGatewayBackendCluster backend-dst-b."
+      use:
+        template: ../../_step_templates/apply-eventGatewayBackendCluster.yaml
+      bindings:
+        - name: backend_cluster_name
+          value: backend-dst-b
+        - name: backend_cluster_namespace
+          value: ($namespace)
+        - name: gateway_ref_namespace
+          value: (`null`)
+    - name: 168-create-virtual-cluster-vc-dst-b
+      description: "[B, the virtual cluster it forwards to] Create the EventGatewayVirtualCluster vc-dst-b."
+      use:
+        template: ../../_step_templates/apply-eventGatewayVirtualCluster.yaml
+      bindings:
+        - name: virtual_cluster_name
+          value: vc-dst-b
+        - name: virtual_cluster_namespace
+          value: ($namespace)
+        - name: api_name
+          value: vc-dst-b
+        - name: backend_cluster_name
+          value: backend-dst-b
+        - name: backend_cluster_namespace
+          value: (`null`)
+    - name: 169-create-listener-policy-forward-dst-b
+      description: "[B, the virtual cluster it forwards to] Create the EventGatewayListenerPolicy forward-dst-b."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListenerPolicy-forward.yaml
+      bindings:
+        - name: policy_name
+          value: forward-dst-b
+        - name: policy_namespace
+          value: ($referrer_namespace)
+        - name: listener_name
+          value: listener-dst-b
+        - name: listener_namespace
+          value: (`null`)
+        - name: virtual_cluster_name
+          value: vc-dst-b
+        - name: virtual_cluster_namespace
+          value: ($namespace)
+    - name: 170-assert-dst-b-not-permitted
+      description: "[B, the virtual cluster it forwards to] Without the right KongReferenceGrant, the EventGatewayListenerPolicy reports it may not reference the virtual cluster it forwards to."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotPermitted
+    - name: 171-grant-forward-dst-b-to-virtual-cluster
+      description: "[B, the virtual cluster it forwards to] Let the EventGatewayListenerPolicy forward-dst-b reference the EventGatewayVirtualCluster vc-dst-b in another namespace. The KongReferenceGrant names it: it allows that object only."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayListenerPolicy
+              namespace: ($referrer_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              name: vc-dst-b
+    - name: 172-assert-dst-b-programmed
+      description: "[B, the virtual cluster it forwards to] The KongReferenceGrant, naming the virtual cluster it forwards to, lets the EventGatewayListenerPolicy reference it."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 173-assert-dst-b-programmed-resolved
+      description: "[B, the virtual cluster it forwards to] The KonnectReferencesResolved condition of the EventGatewayListenerPolicy is resolved again."
+      use:
+        template: ../../_step_templates/assert-condition-status.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "True"
+    - name: 174-revoke-forward-dst-b-to-virtual-cluster
+      description: "[D, the virtual cluster it forwards to] Delete the KongReferenceGrant of the EventGatewayListenerPolicy to the virtual cluster it forwards to."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: KongReferenceGrant
+        - name: object_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: object_namespace
+          value: ($namespace)
+    - name: 175-assert-dst-b-not-permitted-again
+      description: "[D, the virtual cluster it forwards to] Without its KongReferenceGrant, the EventGatewayListenerPolicy reports it again."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotPermitted
+    - name: 176-restore-forward-dst-b-to-virtual-cluster
+      description: "[D, the virtual cluster it forwards to] Create the KongReferenceGrant of the EventGatewayListenerPolicy to the virtual cluster it forwards to again."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayListenerPolicy
+              namespace: ($referrer_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              name: vc-dst-b
+    - name: 177-assert-dst-b-programmed-again
+      description: "[D, the virtual cluster it forwards to] The EventGatewayListenerPolicy is restored."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 178-assert-dst-b-programmed-again-resolved
+      description: "[D, the virtual cluster it forwards to] The KonnectReferencesResolved condition of the EventGatewayListenerPolicy is resolved again."
+      use:
+        template: ../../_step_templates/assert-condition-status.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "True"
+    - name: 179-grant-vc-dst-b-to-backend-cluster
+      description: "[S, the virtual cluster it forwards to] Let the EventGatewayVirtualCluster vc-dst-b reference the EventGatewayBackendCluster backend-dst-b in another namespace."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: vc-dst-b-to-backend-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              namespace: ($referrer_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayBackendCluster
+    - name: 180-create-virtual-cluster-vc-dst-b
+      description: "[S, the virtual cluster it forwards to] Create the EventGatewayVirtualCluster vc-dst-b."
+      use:
+        template: ../../_step_templates/apply-eventGatewayVirtualCluster.yaml
+      bindings:
+        - name: virtual_cluster_name
+          value: vc-dst-b
+        - name: virtual_cluster_namespace
+          value: ($referrer_namespace)
+        - name: api_name
+          value: vc-dst-b-local
+        - name: backend_cluster_name
+          value: backend-dst-b
+        - name: backend_cluster_namespace
+          value: ($namespace)
+    - name: 181-revoke-forward-dst-b-to-virtual-cluster-to-switch
+      description: "[S, the virtual cluster it forwards to] Delete the KongReferenceGrant of the EventGatewayListenerPolicy to the virtual cluster it forwards to."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: KongReferenceGrant
+        - name: object_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: object_namespace
+          value: ($namespace)
+    - name: 182-assert-dst-s-not-permitted
+      description: "[S, the virtual cluster it forwards to] Without its KongReferenceGrant, the EventGatewayListenerPolicy reports it."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotPermitted
+    - name: 183-switch-dst-s
+      description: "[S, the virtual cluster it forwards to] Switch the reference of the EventGatewayListenerPolicy to the EventGatewayVirtualCluster vc-dst-b of its namespace."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListenerPolicy-forward.yaml
+      bindings:
+        - name: policy_name
+          value: forward-dst-b
+        - name: policy_namespace
+          value: ($referrer_namespace)
+        - name: listener_name
+          value: listener-dst-b
+        - name: listener_namespace
+          value: (`null`)
+        - name: virtual_cluster_name
+          value: vc-dst-b
+        - name: virtual_cluster_namespace
+          value: (`null`)
+    - name: 184-assert-dst-s-programmed
+      description: "[S, the virtual cluster it forwards to] Referencing the EventGatewayVirtualCluster vc-dst-b of its namespace, the EventGatewayListenerPolicy no longer needs the KongReferenceGrant."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 185-assert-dst-s-programmed-resolved
+      description: "[S, the virtual cluster it forwards to] The KonnectReferencesResolved condition of the EventGatewayListenerPolicy no longer reports the denial."
+      use:
+        template: ../../_step_templates/assert-condition-not-false.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+    - name: 186-switch-back-dst-s
+      description: "[S, the virtual cluster it forwards to] Switch the reference of the EventGatewayListenerPolicy back to the virtual cluster it forwards to of another namespace."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListenerPolicy-forward.yaml
+      bindings:
+        - name: policy_name
+          value: forward-dst-b
+        - name: policy_namespace
+          value: ($referrer_namespace)
+        - name: listener_name
+          value: listener-dst-b
+        - name: listener_namespace
+          value: (`null`)
+        - name: virtual_cluster_name
+          value: vc-dst-b
+        - name: virtual_cluster_namespace
+          value: ($namespace)
+    - name: 187-assert-dst-s-switched-back-not-permitted
+      description: "[S, the virtual cluster it forwards to] Referencing again the virtual cluster it forwards to of another namespace, the EventGatewayListenerPolicy reports the missing KongReferenceGrant."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotPermitted
+    - name: 188-restore-forward-dst-b-to-virtual-cluster
+      description: "[S, the virtual cluster it forwards to] Create the KongReferenceGrant of the EventGatewayListenerPolicy to the virtual cluster it forwards to again."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayListenerPolicy
+              namespace: ($referrer_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              name: vc-dst-b
+    - name: 189-assert-dst-s-programmed-again
+      description: "[S, the virtual cluster it forwards to] The EventGatewayListenerPolicy is restored."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 190-assert-dst-s-programmed-again-resolved
+      description: "[S, the virtual cluster it forwards to] The KonnectReferencesResolved condition of the EventGatewayListenerPolicy is resolved again."
+      use:
+        template: ../../_step_templates/assert-condition-status.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "True"
+    - name: 191-revoke-forward-dst-b-to-virtual-cluster-to-delete
+      description: "[E, the virtual cluster it forwards to] Delete the KongReferenceGrant of the EventGatewayListenerPolicy to the virtual cluster it forwards to again."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: KongReferenceGrant
+        - name: object_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: object_namespace
+          value: ($namespace)
+    - name: 192-assert-dst-b-not-permitted-to-delete
+      description: "[E, the virtual cluster it forwards to] Without its KongReferenceGrant, the EventGatewayListenerPolicy reports it."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotPermitted
+    - name: 193-delete-dst-b-listener-policy-revoked
+      description: "[E, the virtual cluster it forwards to] The EventGatewayListenerPolicy can be deleted while the KongReferenceGrant it needs is revoked."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 194-restore-forward-dst-b-to-virtual-cluster
+      description: "[E, the virtual cluster it forwards to] Create the KongReferenceGrant again, so that the other objects of the scenario are deleted with it in place."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: forward-dst-b-to-virtual-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayListenerPolicy
+              namespace: ($referrer_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              name: vc-dst-b
+    - name: 195-recreate-dst-b-listener-policy
+      description: "[E, the virtual cluster it forwards to] Create the EventGatewayListenerPolicy again, with its name."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListenerPolicy-forward.yaml
+      bindings:
+        - name: policy_name
+          value: forward-dst-b
+        - name: policy_namespace
+          value: ($referrer_namespace)
+        - name: listener_name
+          value: listener-dst-b
+        - name: listener_namespace
+          value: (`null`)
+        - name: virtual_cluster_name
+          value: vc-dst-b
+        - name: virtual_cluster_namespace
+          value: ($namespace)
+    - name: 196-assert-dst-b-recreated
+      description: "[E, the virtual cluster it forwards to] Its entity was deleted from Konnect: the EventGatewayListenerPolicy created again takes its name."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 197-delete-dst-b-switched-virtual-cluster
+      description: "[E, the virtual cluster it forwards to] Delete the EventGatewayVirtualCluster vc-dst-b while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 198-delete-dst-b-listener-policy
+      description: "[E, the virtual cluster it forwards to] Delete the EventGatewayListenerPolicy forward-dst-b while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 199-delete-dst-b-virtual-cluster
+      description: "[E, the virtual cluster it forwards to] Delete the EventGatewayVirtualCluster vc-dst-b while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-b
+        - name: object_namespace
+          value: ($namespace)
+    - name: 200-delete-dst-b-backend-cluster
+      description: "[E, the virtual cluster it forwards to] Delete the EventGatewayBackendCluster backend-dst-b while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayBackendCluster
+        - name: object_name
+          value: backend-dst-b
+        - name: object_namespace
+          value: ($namespace)
+    - name: 201-delete-dst-b-listener
+      description: "[E, the virtual cluster it forwards to] Delete the EventGatewayListener listener-dst-b while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListener
+        - name: object_name
+          value: listener-dst-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 202-create-listener-listener-dst-c
+      description: "[C, the virtual cluster it forwards to] Create the EventGatewayListener listener-dst-c."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListener.yaml
+      bindings:
+        - name: listener_name
+          value: listener-dst-c
+        - name: listener_namespace
+          value: ($referrer_namespace)
+        - name: listener_port
+          value: "19113"
+        - name: gateway_ref_namespace
+          value: ($namespace)
+    - name: 203-create-backend-cluster-backend-dst-c
+      description: "[C, the virtual cluster it forwards to] Create the EventGatewayBackendCluster backend-dst-c."
+      use:
+        template: ../../_step_templates/apply-eventGatewayBackendCluster.yaml
+      bindings:
+        - name: backend_cluster_name
+          value: backend-dst-c
+        - name: backend_cluster_namespace
+          value: ($namespace)
+        - name: gateway_ref_namespace
+          value: (`null`)
+    - name: 204-create-virtual-cluster-vc-dst-c
+      description: "[C, the virtual cluster it forwards to] Create the EventGatewayVirtualCluster vc-dst-c."
+      use:
+        template: ../../_step_templates/apply-eventGatewayVirtualCluster.yaml
+      bindings:
+        - name: virtual_cluster_name
+          value: vc-dst-c
+        - name: virtual_cluster_namespace
+          value: ($target_namespace)
+        - name: api_name
+          value: vc-dst-c
+        - name: backend_cluster_name
+          value: backend-dst-c
+        - name: backend_cluster_namespace
+          value: ($namespace)
+    - name: 205-create-listener-policy-forward-dst-c
+      description: "[C, the virtual cluster it forwards to] Create the EventGatewayListenerPolicy forward-dst-c."
+      use:
+        template: ../../_step_templates/apply-eventGatewayListenerPolicy-forward.yaml
+      bindings:
+        - name: policy_name
+          value: forward-dst-c
+        - name: policy_namespace
+          value: ($referrer_namespace)
+        - name: listener_name
+          value: listener-dst-c
+        - name: listener_namespace
+          value: (`null`)
+        - name: virtual_cluster_name
+          value: vc-dst-c
+        - name: virtual_cluster_namespace
+          value: ($target_namespace)
+    - name: 206-assert-dst-c-not-permitted
+      description: "[C, the virtual cluster it forwards to] Without a KongReferenceGrant, the EventGatewayListenerPolicy reports it may not reference the virtual cluster it forwards to."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotPermitted
+    - name: 207-grant-forward-dst-c-to-virtual-cluster
+      description: "[C, the virtual cluster it forwards to] Let the EventGatewayListenerPolicy forward-dst-c reference the EventGatewayVirtualCluster vc-dst-c in another namespace. The KongReferenceGrant names it: it allows that object only."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: forward-dst-c-to-virtual-cluster
+        - name: kong_reference_grant_namespace
+          value: ($target_namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayListenerPolicy
+              namespace: ($referrer_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              name: vc-dst-c
+    - name: 208-assert-dst-c-target-not-permitted
+      description: "[C, the virtual cluster it forwards to] The EventGatewayVirtualCluster in a second namespace reports it may not reference the EventGatewayBackendCluster backend-dst-c in a third."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-c
+        - name: object_namespace
+          value: ($target_namespace)
+        - name: condition_type
+          value: ResolvedRefs
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: RefNotPermitted
+    - name: 209-assert-dst-c-not-programmed
+      description: "[C, the virtual cluster it forwards to] The KongReferenceGrant of the EventGatewayListenerPolicy alone isn't enough: it may reference the virtual cluster it forwards to, which can't be used. The EventGatewayListenerPolicy isn't programmed."
+      use:
+        template: ../../_step_templates/assert-condition-not-programmed.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: ReferenceNotProgrammed
+    - name: 210-grant-vc-dst-c-to-backend-cluster
+      description: "[C, the virtual cluster it forwards to] Let the EventGatewayVirtualCluster vc-dst-c reference the EventGatewayBackendCluster backend-dst-c in another namespace. The KongReferenceGrant names it: it allows that object only."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: vc-dst-c-to-backend-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              namespace: ($target_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayBackendCluster
+              name: backend-dst-c
+    - name: 211-assert-dst-c-programmed
+      description: "[C, the virtual cluster it forwards to] With both KongReferenceGrants, the EventGatewayListenerPolicy is programmed."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 212-assert-dst-c-programmed-resolved
+      description: "[C, the virtual cluster it forwards to] The KonnectReferencesResolved condition of the EventGatewayListenerPolicy is resolved again."
+      use:
+        template: ../../_step_templates/assert-condition-status.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+        - name: condition_type
+          value: KonnectReferencesResolved
+        - name: condition_status
+          value: "True"
+    - name: 213-revoke-vc-dst-c-to-backend-cluster
+      description: "[C, the virtual cluster it forwards to] Delete the KongReferenceGrant of the EventGatewayVirtualCluster to the EventGatewayBackendCluster backend-dst-c in the third namespace."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: KongReferenceGrant
+        - name: object_name
+          value: vc-dst-c-to-backend-cluster
+        - name: object_namespace
+          value: ($namespace)
+    - name: 214-assert-dst-c-target-not-permitted-again
+      description: "[C, the virtual cluster it forwards to] Without its KongReferenceGrant, the EventGatewayVirtualCluster reports it again."
+      use:
+        template: ../../_step_templates/assert-condition.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-c
+        - name: object_namespace
+          value: ($target_namespace)
+        - name: condition_type
+          value: ResolvedRefs
+        - name: condition_status
+          value: "False"
+        - name: condition_reason
+          value: RefNotPermitted
+    - name: 215-restore-vc-dst-c-to-backend-cluster
+      description: "[C, the virtual cluster it forwards to] Create the KongReferenceGrant of the EventGatewayVirtualCluster to the EventGatewayBackendCluster backend-dst-c in the third namespace again."
+      use:
+        template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+      bindings:
+        - name: kong_reference_grant_name
+          value: vc-dst-c-to-backend-cluster
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayVirtualCluster
+              namespace: ($target_namespace)
+        - name: to
+          value:
+            - group: configuration.konghq.com
+              kind: EventGatewayBackendCluster
+              name: backend-dst-c
+    - name: 216-assert-dst-c-target-programmed-again
+      description: "[C, the virtual cluster it forwards to] The EventGatewayVirtualCluster is restored."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-c
+        - name: object_namespace
+          value: ($target_namespace)
+    - name: 217-assert-dst-c-target-programmed-again-resolved
+      description: "[C, the virtual cluster it forwards to] The ResolvedRefs condition of the EventGatewayVirtualCluster is resolved again."
+      use:
+        template: ../../_step_templates/assert-condition-status.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-c
+        - name: object_namespace
+          value: ($target_namespace)
+        - name: condition_type
+          value: ResolvedRefs
+        - name: condition_status
+          value: "True"
+    - name: 218-assert-dst-c-programmed-again
+      description: "[C, the virtual cluster it forwards to] The EventGatewayListenerPolicy is restored."
+      use:
+        template: ../../_step_templates/assert-programmed-konnect.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 219-delete-dst-c-listener-policy
+      description: "[C, the virtual cluster it forwards to] Delete the EventGatewayListenerPolicy forward-dst-c while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListenerPolicy
+        - name: object_name
+          value: forward-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 220-delete-dst-c-virtual-cluster
+      description: "[C, the virtual cluster it forwards to] Delete the EventGatewayVirtualCluster vc-dst-c while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayVirtualCluster
+        - name: object_name
+          value: vc-dst-c
+        - name: object_namespace
+          value: ($target_namespace)
+    - name: 221-delete-dst-c-backend-cluster
+      description: "[C, the virtual cluster it forwards to] Delete the EventGatewayBackendCluster backend-dst-c while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayBackendCluster
+        - name: object_name
+          value: backend-dst-c
+        - name: object_namespace
+          value: ($namespace)
+    - name: 222-delete-dst-c-listener
+      description: "[C, the virtual cluster it forwards to] Delete the EventGatewayListener listener-dst-c while its KongReferenceGrants exist, so that it is deleted from Konnect."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayListener
+        - name: object_name
+          value: listener-dst-c
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 223-create-listener-listener-lst-n
       description: "[N, its name] Create the EventGatewayListener listener-lst-n."
       use:
         template: ../../_step_templates/apply-eventGatewayListener.yaml
@@ -2608,10 +3495,10 @@ spec:
         - name: listener_namespace
           value: ($namespace)
         - name: listener_port
-          value: "19111"
+          value: "19114"
         - name: gateway_ref_namespace
           value: (`null`)
-    - name: 167-create-tls-trust-bundle-client-ca-lst-n
+    - name: 224-create-tls-trust-bundle-client-ca-lst-n
       description: "[N, its name] Create the EventGatewayTLSTrustBundle client-ca-lst-n."
       use:
         template: ../../_step_templates/apply-eventGatewayTLSTrustBundle.yaml
@@ -2626,7 +3513,7 @@ spec:
           value: (`null`)
         - name: secret_ref_namespace
           value: (`null`)
-    - name: 168-create-listener-policy-mtls-lst-n
+    - name: 225-create-listener-policy-mtls-lst-n
       description: "[N, its name] Create the EventGatewayListenerPolicy mtls-lst-n."
       use:
         template: ../../_step_templates/apply-eventGatewayListenerPolicy-tlsServer.yaml
@@ -2645,7 +3532,7 @@ spec:
           value: client-ca-lst-n
         - name: tls_trust_bundle_namespace
           value: (`null`)
-    - name: 169-assert-lst-n-programmed
+    - name: 226-assert-lst-n-programmed
       description: "[N, its name] The first EventGatewayListenerPolicy mtls-lst-n."
       use:
         template: ../../_step_templates/assert-programmed-konnect.yaml
@@ -2658,7 +3545,7 @@ spec:
           value: mtls-lst-n
         - name: object_namespace
           value: ($namespace)
-    - name: 170-grant-mtls-lst-n-to-listener
+    - name: 227-grant-mtls-lst-n-to-listener
       description: "[N, its name] Let the EventGatewayListenerPolicy mtls-lst-n reference the EventGatewayListener listener-lst-n in another namespace."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -2676,7 +3563,7 @@ spec:
           value:
             - group: configuration.konghq.com
               kind: EventGatewayListener
-    - name: 171-grant-mtls-lst-n-to-secrets
+    - name: 228-grant-mtls-lst-n-to-secrets
       description: "[N, its name] Let the EventGatewayListenerPolicy mtls-lst-n reference the Secret in another namespace."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -2694,7 +3581,7 @@ spec:
           value:
             - group: core
               kind: Secret
-    - name: 172-grant-mtls-lst-n-to-tls-trust-bundle
+    - name: 229-grant-mtls-lst-n-to-tls-trust-bundle
       description: "[N, its name] Let the EventGatewayListenerPolicy mtls-lst-n reference the EventGatewayTLSTrustBundle client-ca-lst-n in another namespace."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -2712,7 +3599,7 @@ spec:
           value:
             - group: configuration.konghq.com
               kind: EventGatewayTLSTrustBundle
-    - name: 173-create-listener-policy-mtls-lst-n
+    - name: 230-create-listener-policy-mtls-lst-n
       description: "[N, its name] Create the EventGatewayListenerPolicy mtls-lst-n."
       use:
         template: ../../_step_templates/apply-eventGatewayListenerPolicy-tlsServer.yaml
@@ -2731,7 +3618,7 @@ spec:
           value: client-ca-lst-n
         - name: tls_trust_bundle_namespace
           value: ($namespace)
-    - name: 174-assert-lst-n-conflicting
+    - name: 231-assert-lst-n-conflicting
       description: "[N, its name] The EventGatewayListenerPolicy of another namespace named the same can't be created in Konnect."
       use:
         template: ../../_step_templates/assert-condition.yaml
@@ -2750,7 +3637,7 @@ spec:
           value: "False"
         - name: condition_reason
           value: FailedToCreate
-    - name: 175-assert-lst-n-first-kept
+    - name: 232-assert-lst-n-first-kept
       description: "[N, its name] The first EventGatewayListenerPolicy keeps its name."
       use:
         template: ../../_step_templates/assert-programmed-konnect.yaml
@@ -2763,7 +3650,7 @@ spec:
           value: mtls-lst-n
         - name: object_namespace
           value: ($namespace)
-    - name: 176-delete-lst-n-conflicting
+    - name: 233-delete-lst-n-conflicting
       description: "[N, its name] Delete the conflicting EventGatewayListenerPolicy."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -2776,7 +3663,7 @@ spec:
           value: mtls-lst-n
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 177-delete-lst-n-listener-policy
+    - name: 234-delete-lst-n-listener-policy
       description: "[N, its name] Delete the EventGatewayListenerPolicy mtls-lst-n while its KongReferenceGrants exist, so that it is deleted from Konnect."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -2789,7 +3676,7 @@ spec:
           value: mtls-lst-n
         - name: object_namespace
           value: ($namespace)
-    - name: 178-delete-lst-n-tls-trust-bundle
+    - name: 235-delete-lst-n-tls-trust-bundle
       description: "[N, its name] Delete the EventGatewayTLSTrustBundle client-ca-lst-n while its KongReferenceGrants exist, so that it is deleted from Konnect."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -2802,7 +3689,7 @@ spec:
           value: client-ca-lst-n
         - name: object_namespace
           value: ($namespace)
-    - name: 179-delete-lst-n-listener
+    - name: 236-delete-lst-n-listener
       description: "[N, its name] Delete the EventGatewayListener listener-lst-n while its KongReferenceGrants exist, so that it is deleted from Konnect."
       use:
         template: ../../_step_templates/delete-and-wait.yaml

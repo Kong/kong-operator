@@ -209,8 +209,11 @@ func virtualCluster(name, ns string, b *object) *object {
 	return &object{
 		Kind: "EventGatewayVirtualCluster", Name: name, NS: ns, Group: groupConfiguration, Named: true,
 		Template: "apply-eventGatewayVirtualCluster.yaml",
-		Own:      own("virtual_cluster_name", name, "virtual_cluster_namespace", ns),
-		Refs:     []ref{{Type: refParent, Target: b, NameKey: "backend_cluster_name", NSKey: "backend_cluster_namespace"}},
+		// The name in the API, a binding of its own: a virtual cluster of
+		// another namespace with the name of the object can then have
+		// another one.
+		Own:  own("virtual_cluster_name", name, "virtual_cluster_namespace", ns, "api_name", name),
+		Refs: []ref{{Type: refParent, Target: b, NameKey: "backend_cluster_name", NSKey: "backend_cluster_namespace"}},
 	}
 }
 
@@ -294,6 +297,20 @@ func listenerPolicy(name, ns string, l *object, secretNS string, tb *object) *ob
 			{Type: refParent, Target: l, NameKey: "listener_name", NSKey: "listener_namespace"},
 			{Type: refSecret, Target: secret("server-tls", secretNS), NSKey: "server_tls_secret_namespace"},
 			{Type: refSibling, Target: tb, NameKey: "tls_trust_bundle_name", NSKey: "tls_trust_bundle_namespace"},
+		},
+	}
+}
+
+// forwardPolicy is a listener policy forwarding the traffic of its listener to
+// a virtual cluster.
+func forwardPolicy(name, ns string, l, v *object) *object {
+	return &object{
+		Kind: "EventGatewayListenerPolicy", Name: name, NS: ns, Group: groupConfiguration, Named: true,
+		Template: "apply-eventGatewayListenerPolicy-forward.yaml",
+		Own:      own("policy_name", name, "policy_namespace", ns),
+		Refs: []ref{
+			{Type: refParent, Target: l, NameKey: "listener_name", NSKey: "listener_namespace"},
+			{Type: refSibling, Target: v, NameKey: "virtual_cluster_name", NSKey: "virtual_cluster_namespace"},
 		},
 	}
 }

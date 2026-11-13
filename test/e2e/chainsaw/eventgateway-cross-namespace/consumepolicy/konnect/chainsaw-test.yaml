@@ -139,6 +139,8 @@ spec:
           value: vc-vc-a
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-vc-a
         - name: backend_cluster_name
           value: backend-vc-a
         - name: backend_cluster_namespace
@@ -243,6 +245,8 @@ spec:
           value: vc-vc-ax
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-vc-ax
         - name: backend_cluster_name
           value: backend-vc-ax
         - name: backend_cluster_namespace
@@ -347,6 +351,8 @@ spec:
           value: vc-vc-b
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-vc-b
         - name: backend_cluster_name
           value: backend-vc-b
         - name: backend_cluster_namespace
@@ -662,6 +668,8 @@ spec:
           value: vc-vc-c
         - name: virtual_cluster_namespace
           value: ($target_namespace)
+        - name: api_name
+          value: vc-vc-c
         - name: backend_cluster_name
           value: backend-vc-c
         - name: backend_cluster_namespace
@@ -1010,6 +1018,8 @@ spec:
           value: vc-trc-b
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-trc-b
         - name: backend_cluster_name
           value: backend-trc-b
         - name: backend_cluster_namespace
@@ -1655,6 +1665,8 @@ spec:
           value: vc-trc-c
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-trc-c
         - name: backend_cluster_name
           value: backend-trc-c
         - name: backend_cluster_namespace
@@ -2052,6 +2064,8 @@ spec:
           value: vc-reg-b
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-reg-b
         - name: backend_cluster_name
           value: backend-reg-b
         - name: backend_cluster_namespace
@@ -2601,6 +2615,8 @@ spec:
           value: vc-reg-c
         - name: virtual_cluster_namespace
           value: ($referrer_namespace)
+        - name: api_name
+          value: vc-reg-c
         - name: backend_cluster_name
           value: backend-reg-c
         - name: backend_cluster_namespace
@@ -2950,6 +2966,8 @@ spec:
           value: vc-parent-b
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-parent-b
         - name: backend_cluster_name
           value: backend-parent-b
         - name: backend_cluster_namespace
@@ -3371,6 +3389,8 @@ spec:
           value: vc-parent-c
         - name: virtual_cluster_namespace
           value: ($third_namespace)
+        - name: api_name
+          value: vc-parent-c
         - name: backend_cluster_name
           value: backend-parent-c
         - name: backend_cluster_namespace
@@ -3732,6 +3752,8 @@ spec:
           value: vc-vc-n
         - name: virtual_cluster_namespace
           value: ($namespace)
+        - name: api_name
+          value: vc-vc-n
         - name: backend_cluster_name
           value: backend-vc-n
         - name: backend_cluster_namespace
