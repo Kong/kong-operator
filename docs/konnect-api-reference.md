@@ -522,6 +522,24 @@ _Appears in:_
 
 
 
+#### ConfigStoreControlPlaneRef
+
+
+ConfigStoreControlPlaneRef references the Konnect Control Plane that owns a
+KonnectConfigStore, using the same konnectNamespacedRef format as KongVault
+and KongCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type must be konnectNamespacedRef. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectGatewayControlPlane by name. An omitted namespace defaults to the KonnectConfigStore's namespace. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)
+
 #### ConfigurationDataPlaneGroupAutoscale
 
 
@@ -1044,7 +1062,7 @@ KonnectConfigStoreSpec defines the desired state of KonnectConfigStore.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | ControlPlaneRef is the reference to the parent ControlPlane object. |
+| `controlPlaneRef` _[ConfigStoreControlPlaneRef](#konnect-konghq-com-v1alpha1-types-configstorecontrolplaneref)_ | ControlPlaneRef is the reference to the parent KonnectGatewayControlPlane object. |
 | `apiSpec` _[KonnectConfigStoreAPISpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoreapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_

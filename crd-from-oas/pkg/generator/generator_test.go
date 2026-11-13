@@ -994,6 +994,77 @@ func TestGenerateCRDType_ParentRefIsImmutableOnceProgrammed(t *testing.T) {
 	})
 }
 
+func TestGenerateConfigStoreCustomControlPlaneRef(t *testing.T) {
+	t.Parallel()
+
+	rc := &config.ReconcilerConfig{
+		ParentEntityGVK: &config.EntityGVKConfig{
+			Kind:    "KonnectGatewayControlPlane",
+			Group:   "konnect.konghq.com",
+			Version: "v1alpha2",
+		},
+		ParentRef: &config.ParentRefConfig{
+			FieldName: "controlPlaneRef",
+			TypeName:  "ConfigStoreControlPlaneRef",
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		CommonTypes: &config.CommonTypesConfig{
+			ObjectRef: &config.ObjectRefConfig{
+				Import: &config.ImportConfig{
+					Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+					Alias: "commonv1alpha1",
+				},
+			},
+		},
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{"KonnectConfigStore": rc},
+	})
+	schema := &parser.Schema{
+		Name: "CreateKonnectConfigStore",
+		Dependencies: []*parser.Dependency{{
+			ParamName:  "controlPlaneId",
+			EntityName: "ControlPlane",
+			FieldName:  "ControlPlaneRef",
+			JSONName:   "controlPlaneRef",
+		}},
+	}
+	content, err := g.generateCRDType(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "ControlPlaneRef ConfigStoreControlPlaneRef")
+	require.Contains(t, content, "ControlPlaneID *KonnectEntityRef")
+
+	funcs, err := g.generateCRDFuncs(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, funcs, "return obj.GetConfigStoreControlPlaneRef().ToObjectRef()")
+	require.Contains(t, funcs, "ConfigStoreControlPlaneRefFromObjectRef(ref)")
+	require.Contains(t, funcs, `Kind:    "KonnectGatewayControlPlane"`)
+	require.Contains(t, funcs, "return ControlPlaneRefValidConditionType")
+	require.NotContains(t, funcs, "OnPremAIGateway")
+	require.NotContains(t, funcs, "SkipKonnectReconciliation")
+
+	metadata := reconcilerEntityMetadata{
+		EntityName:                 "KonnectConfigStore",
+		EntityNameLowerCamel:       "konnectConfigStore",
+		ParentEntityName:           "KonnectGatewayControlPlane",
+		ParentRefFieldName:         "ControlPlaneRef",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias:       "konnectv1alpha1",
+		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha2",
+		ParentAPIGroupPackageAlias: "konnectv1alpha2",
+	}
+	index, err := g.generateIndex(metadata, rc)
+	require.NoError(t, err)
+	require.Contains(t, index, "ref := ent.GetParentRef()")
+	require.NotContains(t, index, "OnPremAIGateway")
+
+	watch, err := g.generateWatch(metadata, rc)
+	require.NoError(t, err)
+	require.NotContains(t, watch, "SkipKonnectReconciliation")
+	require.False(t, g.kindsSkippingKonnectReconciliation([]string{"KonnectConfigStore"})["KonnectConfigStore"])
+}
+
 func TestGenerateCRDType_FieldDescriptionOverride(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroup:   "konnect.konghq.com",
@@ -8053,9 +8124,17 @@ func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
 		want       bool
 	}{
 		{
-			name:       "typed parent ref, e.g. AIGatewayRef",
+			name: "typed parent ref with on-prem support, e.g. AIGatewayRef",
+			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{
+				FieldName:               "aiGatewayRef",
+				TypeName:                "AIGatewayRef",
+				SupportsOnPremAIGateway: true,
+			}},
+			want: true,
+		},
+		{
+			name:       "typed parent ref without on-prem support",
 			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{FieldName: "aiGatewayRef", TypeName: "AIGatewayRef"}},
-			want:       true,
 		},
 		{
 			name: "gatewayRef with additional kinds",

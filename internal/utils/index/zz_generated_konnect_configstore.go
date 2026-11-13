@@ -29,14 +29,15 @@ func konnectConfigStoreOnKonnectGatewayControlPlaneRef(object client.Object) []s
 	if !ok {
 		return nil
 	}
-	if ent.Spec.ControlPlaneRef.NamespacedRef == nil {
+	ref := ent.GetParentRef()
+	if ref.NamespacedRef == nil {
 		return nil
 	}
 
 	refNamespace := ent.GetNamespace()
-	if ent.Spec.ControlPlaneRef.NamespacedRef.Namespace != nil && *ent.Spec.ControlPlaneRef.NamespacedRef.Namespace != "" {
-		refNamespace = *ent.Spec.ControlPlaneRef.NamespacedRef.Namespace
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		refNamespace = *ref.NamespacedRef.Namespace
 	}
 
-	return []string{refNamespace + "/" + ent.Spec.ControlPlaneRef.NamespacedRef.Name}
+	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
 }

@@ -34,6 +34,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/auth-strategies
         name: AIGatewayAuthStrategy
@@ -91,6 +92,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
@@ -200,6 +202,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/model-providers
         name: AIGatewayModelProvider
@@ -358,6 +361,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
@@ -433,6 +437,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/consumers
         name: AIGatewayConsumer
@@ -464,6 +469,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/consumer-groups
         name: AIGatewayConsumerGroup
@@ -487,6 +493,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/mcp-servers
         name: AIGatewayMCPServer
@@ -871,6 +878,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
       # only obtain a Konnect ID once associated with a consumer, so they are
@@ -955,6 +963,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/custom-policies
         name: AIGatewayCustomPolicy
@@ -1004,6 +1013,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
             # Custom policies support both KonnectAIGateway and OnPremAIGateway
             # parents: the on-prem controllers and config translator now handle
             # this entity.
@@ -1032,6 +1042,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/certificates
         name: AIGatewayCertificate
@@ -1060,6 +1071,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # The nested /certificates/{certificateId}/snis path is not modelled as
       # a separate CRD: it's the same underlying SNI object as /snis (just
@@ -1089,6 +1101,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # The backends whose credentials the OAS carries inline are sourced from
       # Kubernetes Secrets, like AIGatewayCertificate's cert/key and
@@ -1137,6 +1150,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # Every writeOnly credential in the datastore configs is sourced from a
       # Secret, like AIGatewayModelProvider's cloud credentials. The token-vault
@@ -1240,6 +1254,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
   configuration.konghq.com/v1alpha1:
     categories:
@@ -2257,3 +2272,6 @@ apiGroupVersions:
             kind: KonnectGatewayControlPlane
             group: konnect.konghq.com
             version: v1alpha2
+          parentRef:
+            fieldName: controlPlaneRef
+            typeName: ConfigStoreControlPlaneRef
