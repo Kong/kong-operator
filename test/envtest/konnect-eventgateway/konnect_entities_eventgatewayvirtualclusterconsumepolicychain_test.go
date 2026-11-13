@@ -1,4 +1,4 @@
-package konnectother
+package konnecteventgateway
 
 import (
 	"context"
@@ -138,6 +138,21 @@ func TestEventGatewayVirtualClusterConsumePolicyChainNestedRecovery(t *testing.T
 		p.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(p.Generation)}
 		require.NoError(t, cl.Status().Update(ctx, p))
 	}
+	registry := objectFromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, ns.Name, `
+metadata: {name: orders}
+spec:
+  gatewayRef: {type: namespacedRef, namespacedRef: {name: `+gateway.Name+`}}
+  apiSpec:
+    type: confluent
+    confluent:
+      name: orders
+      config: {endpoint: "https://registry.example.com", schemaType: avro}
+`)
+	require.NoError(t, cl.Create(ctx, registry))
+	registry.SetKonnectID("registry-id")
+	registry.SetGatewayID("gateway-id")
+	registry.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(registry.Generation)}
+	require.NoError(t, cl.Status().Update(ctx, registry))
 	parent := createPolicy("parent", `type: schemaValidation
 schemaValidation: {name: parent, config: {type: json, json: {valueValidationAction: skip}}}`)
 	mask := createPolicy("mask", `type: maskFields
@@ -157,12 +172,13 @@ transcode:
           subject: orders-value
           version: latest
           schemaRefDestination: {type: none, none: {}}
-          schemaRegistry: {type: namespacedRef, namespacedRef: {name: orders}}`)
+          schemaRegistry: {name: orders}`)
 	root := createPolicy("root", `type: skipRecord
 skipRecord: {name: root}`)
 	for _, p := range []*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{parent, mask, transcode, root} {
 		programPolicy(p)
 	}
+	require.NoError(t, transcode.ResolveKonnectReferences(ctx, cl))
 	chain := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{Name: "chain", Namespace: ns.Name,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainSpec{
 			EventGatewayVirtualClusterRef: parent.GetParentRef(),
