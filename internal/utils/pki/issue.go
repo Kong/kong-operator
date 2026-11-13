@@ -28,13 +28,15 @@ const ClockSkew = 5 * time.Minute
 
 var certificateSubject = pkix.Name{Organization: []string{"Kong, Inc."}, Country: []string{"US"}}
 
-// MaxCommonNameLength is the length RFC 5280 bounds a common name to.
+// MaxCommonNameLength is the number of characters RFC 5280 bounds a common
+// name to.
 const MaxCommonNameLength = 64
 
-// TruncateCommonName truncates a common name to MaxCommonNameLength.
+// TruncateCommonName truncates a common name to MaxCommonNameLength
+// characters, never splitting a multi-byte one.
 func TruncateCommonName(cn string) string {
-	if len(cn) > MaxCommonNameLength {
-		cn = cn[:MaxCommonNameLength]
+	if r := []rune(cn); len(r) > MaxCommonNameLength {
+		cn = string(r[:MaxCommonNameLength])
 	}
 	return cn
 }

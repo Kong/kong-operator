@@ -476,7 +476,7 @@ func TestEnsureOnPremCertificate(t *testing.T) {
 		require.ElementsMatch(t, []string{first.Name, second.Name}, certificateSecretNames(t, cl, r, egdp))
 		cond := certificateProvisioned(t, egdp)
 		require.Equal(t, metav1.ConditionTrue, cond.Status)
-		require.Contains(t, cond.Message, "the cp client CA of the GWAdmin didn't issue the current one")
+		require.Contains(t, cond.Message, "the cp client CA of the GWAdmin didn't issue any of the current ones for the data plane")
 
 		// The previous certificate is still registered, and a duplicate of
 		// the new one was issued: only the duplicate is deleted, the

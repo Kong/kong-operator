@@ -541,8 +541,8 @@ func (r *Reconciler) ensureOnPremCertificate(
 
 // ensureOnPremCertificateAt provisions the client certificate of a data
 // plane of an OnPremEventGateway at now. Once the certificate is due for
-// renewal, or the published CA didn't issue it, e.g. after a rotation of the
-// CA, a new one is issued in a new Secret, alongside the previous one: the
+// renewal, or the published CA didn't issue it for the data plane, e.g. after
+// a rotation of the CA, a new one is issued in a new Secret, alongside the previous one: the
 // Deployment rolls onto it once it is registered on gw-admin, and the
 // previous one is removed after the rollout (see cleanupStaleCertificates).
 func (r *Reconciler) ensureOnPremCertificateAt(
@@ -560,7 +560,7 @@ func (r *Reconciler) ensureOnPremCertificateAt(
 	reissue := ""
 	switch {
 	case !found && len(owned) > 0:
-		reissue = "the cp client CA of the GWAdmin didn't issue the current one"
+		reissue = "the cp client CA of the GWAdmin didn't issue any of the current ones for the data plane"
 	case found && !now.Before(current.renewalTime()):
 		reissue = "the current one is due for renewal"
 	case found:

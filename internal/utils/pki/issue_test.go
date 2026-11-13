@@ -141,4 +141,5 @@ func TestTruncateCommonName(t *testing.T) {
 	assert.Equal(t, "short", TruncateCommonName("short"))
 	assert.Equal(t, strings.Repeat("a", 64), TruncateCommonName(strings.Repeat("a", 64)))
 	assert.Equal(t, strings.Repeat("a", 64), TruncateCommonName(strings.Repeat("a", 65)))
+	assert.Equal(t, strings.Repeat("é", 64), TruncateCommonName(strings.Repeat("é", 65)))
 }
