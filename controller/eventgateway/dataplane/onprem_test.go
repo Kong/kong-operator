@@ -646,6 +646,54 @@ func TestCreateOnPremCertificate(t *testing.T) {
 	})
 }
 
+// TestOnPremCertificateLongSubject checks the client certificate of a data
+// plane whose subject is longer than a common name may be: its common name is
+// truncated, its DNS name keeps the whole subject, and only it is taken as the
+// certificate of the data plane.
+func TestOnPremCertificateLongSubject(t *testing.T) {
+	gateway, gw, bundle, ca := onPremFixture(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca).Build()
+	deps := resolveOnPremDependencies(t, cl, gateway)
+	r := &Reconciler{}
+	now := time.Now()
+
+	egdp := onPremDataPlane()
+	egdp.Name = strings.Repeat("k", 57)
+	egdp.Namespace = strings.Repeat("n", 63)
+	subject := onPremCertificateSubject(egdp)
+	require.Len(t, subject, 121)
+
+	secret, err := r.createOnPremCertificate(t.Context(), cl, egdp, deps, 2*time.Hour, now)
+	require.NoError(t, err)
+	cert := pki.LeafCertificate(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey])
+	require.NotNil(t, cert)
+	require.Equal(t, subject[:pki.MaxCommonNameLength], cert.Subject.CommonName)
+	require.Equal(t, []string{subject}, cert.DNSNames)
+
+	current, found := currentOnPremCertificate([]corev1.Secret{*secret}, subject, deps.clientCACert)
+	require.True(t, found)
+	require.Equal(t, secret.Name, current.secret.Name)
+
+	for _, tc := range []struct {
+		name       string
+		commonName string
+		dnsNames   []string
+	}{
+		{name: "the whole subject as common name", commonName: subject, dnsNames: []string{subject}},
+		{name: "the truncated common name of another subject", commonName: subject[:pki.MaxCommonNameLength], dnsNames: []string{subject + "x"}},
+		{name: "no DNS name", commonName: subject[:pki.MaxCommonNameLength]},
+	} {
+		t.Run(tc.name+" isn't the certificate of the data plane", func(t *testing.T) {
+			certPEM, keyPEM, err := pki.IssueCertificate(deps.clientCA, pki.CertRequest{
+				CommonName: tc.commonName, DNSNames: tc.dnsNames, Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, TTL: time.Hour, Now: now,
+			})
+			require.NoError(t, err)
+			other := corev1.Secret{Data: map[string][]byte{corev1.TLSCertKey: certPEM, corev1.TLSPrivateKeyKey: keyPEM}}
+			require.Empty(t, issuedOnPremCertificates([]corev1.Secret{other}, subject, deps.clientCACert))
+		})
+	}
+}
+
 func TestOnPremCertificateRenewalTime(t *testing.T) {
 	notBefore := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	tlsCert := certificate.MustGenerateCert(certificate.WithValidity(notBefore, notBefore.Add(65*time.Minute)))
@@ -1748,7 +1796,10 @@ func TestIssuedOnPremCertificatesRequireTheIssuerName(t *testing.T) {
 	egdp := onPremDataPlane()
 	certPEM, keyPEM, err := pki.IssueCertificate(&corev1.Secret{Data: map[string][]byte{
 		"tls.crt": originalPEM, "tls.key": pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}),
-	}}, pki.CertRequest{CommonName: onPremCertificateSubject(egdp), Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, TTL: time.Hour, Now: now})
+	}}, pki.CertRequest{
+		CommonName: onPremCertificateSubject(egdp), DNSNames: []string{onPremCertificateSubject(egdp)},
+		Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, TTL: time.Hour, Now: now,
+	})
 	require.NoError(t, err)
 	owned := []corev1.Secret{{Name: "issued", Data: map[string][]byte{"tls.crt": certPEM, "tls.key": keyPEM}}}
 

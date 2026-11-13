@@ -1623,27 +1623,17 @@ func (r *Reconciler) saveRecord(ctx context.Context, gw *operatorv1alpha1.GWAdmi
 
 // clientCACommonName returns the common name of the cp client CA.
 func clientCACommonName(gw *operatorv1alpha1.GWAdmin) string {
-	return truncateCommonName(fmt.Sprintf("gw-admin cp client CA %s/%s", gw.Namespace, gw.Name))
+	return pki.TruncateCommonName(fmt.Sprintf("gw-admin cp client CA %s/%s", gw.Namespace, gw.Name))
 }
 
 // cpServerCACommonName returns the common name of the cp server CA.
 func cpServerCACommonName(gw *operatorv1alpha1.GWAdmin) string {
-	return truncateCommonName(fmt.Sprintf("gw-admin cp server CA %s/%s", gw.Namespace, gw.Name))
+	return pki.TruncateCommonName(fmt.Sprintf("gw-admin cp server CA %s/%s", gw.Namespace, gw.Name))
 }
 
 // apiCACommonName returns the common name of the API CA.
 func apiCACommonName(gw *operatorv1alpha1.GWAdmin) string {
-	return truncateCommonName(fmt.Sprintf("gw-admin API CA %s/%s", gw.Namespace, gw.Name))
-}
-
-// truncateCommonName truncates a common name to the 64 characters RFC 5280
-// allows.
-func truncateCommonName(cn string) string {
-	const maxLen = 64
-	if len(cn) > maxLen {
-		cn = cn[:maxLen]
-	}
-	return cn
+	return pki.TruncateCommonName(fmt.Sprintf("gw-admin API CA %s/%s", gw.Namespace, gw.Name))
 }
 
 // manualSigner returns the user's certificate authority Secret, once validated.
