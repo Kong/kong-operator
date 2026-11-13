@@ -41,6 +41,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterPolicy](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](controllerFactory),
+		newKonnectEntityController[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectAIGateway](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectConfigStore](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.KonnectEventGateway](controllerFactory),

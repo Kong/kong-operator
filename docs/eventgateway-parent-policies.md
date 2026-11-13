@@ -466,14 +466,12 @@ policies of a listener a chain owns. Deleting the chain releases its claim and
 rebuilds the document with the default order of the policies, creation
 timestamp then resource name, deleting neither policies nor their entities.
 
-## Produce policy-chain API
+## Produce policy chains (Konnect only)
 
 `configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterProducePolicyChain`
 declares the execution order of all `EventGatewayVirtualClusterProducePolicy`
-resources in one virtual cluster. **This layer provides the API, CRD, and Helm
-installation artifacts only; Produce chain reconciliation is not yet registered.**
-Controller integration and comprehensive lifecycle coverage are subsequent layers
-of [#6368](https://github.com/Kong/kong-operator/issues/6368).
+resources in one virtual cluster. The Konnect controller resolves the declaration
+and reorders the complete remote chain without creating or deleting policies.
 This is Konnect management-plane ordering, not a Kafka execution or traffic-routing
 guarantee. Consume ordering is separate, and on-prem Produce chain support is not
 included or registered.
@@ -524,10 +522,11 @@ version or region.
   children, cross-parent interleaving, roots-only lists, and children-only lists
   are invalid.
 - Ordering does not change `parent_policy_id`. Existing `parentPolicyRef`
-  validation and immutability remain unchanged: Produce `encryptFields` requires
-  a same-kind, same-namespace, same-virtual-cluster `schemaValidation` parent;
-  `modifyHeaders` may reference one. Moving a child to another parent requires
-  recreating the policy, not moving its chain entry.
+  validation and immutability remain unchanged: Produce `encryptFields`,
+  `maskFields`, and `transcode` require a same-kind, same-namespace,
+  same-virtual-cluster `schemaValidation` parent; `modifyHeaders` may reference
+  one. Moving a child to another parent requires recreating the policy, not
+  moving its chain entry.
 
 No separate nested-list declaration is needed: the complete atomic list
 represents both root-group and sibling order without changing parent references.
@@ -536,25 +535,47 @@ Update it when policies are created or deleted. The example's
 the observed backend requires a validation action despite incomplete OAS
 requiredness.
 
-### Deferred reconciliation boundaries
+### Reconciliation and lifecycle
 
 Admission validates the declaration's shape, kinds, immutable parent reference,
 and absent independent ID; it cannot resolve policy resources or remote sets.
-The next controller layer must reject missing, deleting, unready, stale,
+The controller rejects missing, deleting, unready, stale-generation,
 wrong-kind, cross-namespace, wrong-virtual-cluster, duplicate, and invalid
-parent/group references without applying a shortened chain. Parent validation
-must happen before lookup or adoption of parent IDs. Complete-set validation
-must use all roots and nested children, preserving their `parentPolicyRef`.
+parent/group references without applying a shortened chain. Parent namespace
+validation happens before lookup or adoption of parent IDs, authentication,
+grant checks, or ownership. Reference resolution captures one snapshot per policy
+per reconciliation, and nested validation and programming reuse that complete
+ordered set of IDs. A child's included parent must be a ready root
+`schemaValidation` policy; cycles and deeper nesting are rejected. The controller
+never sorts declarations or rewrites `parentPolicyRef` to make them valid.
 
-Runtime integration must reuse the singleton/no-ID facilities, with ownership
-separate from cluster and listener chains, actionable conflicting-owner status,
-drift correction, and recreation recovery using current policy IDs. Deleting a
-declaration must release ownership while retaining remote ordering and policy
-entities, without requiring working authentication or resolvable policy
-references. These lifecycle behaviors are requirements for the subsequent
-layers, not functionality delivered by this API-only layer.
+`KonnectReferencesResolved=False` distinguishes invalid declarations from missing
+or not-yet-programmed dependencies. Such failures also block `Programmed=True`.
+Ownership uses the virtual cluster's
+`gateway-operator.konghq.com/produce-policy-chain-owner` annotation, bound to the
+chain's name and UID, independently of cluster, listener, or Consume scopes.
+Optimistic locking and live ownership reads prevent active owners from being
+displaced by cache lag. Conflicts report `PolicyChainOwnerValid=False` with
+`ConflictingChain`; stale or malformed claims can be reclaimed.
+
+Policy spec/status, deletion, recreation, and virtual-cluster changes enqueue
+chains. Produce policy changes also enqueue chains sharing the virtual cluster
+even if they do not yet reference that policy. Parent-policy dependencies are
+validated from the same included policy snapshots. Periodic reconciliation
+corrects remote ordering drift; recreation resolves the current policy IDs.
+Watch-triggered reconciliations check the remote set even within the sync period,
+without repeating PUT or changing programming timestamps when the order already
+matches.
+Update the declaration when the complete policy set changes.
+
+Deleting a declaration releases only its matching claim and cleanup finalizer,
+retaining remote ordering and policy entities. Cleanup does not require working
+authentication, a ready parent, or resolvable policy references, and never PUTs an
+empty list or calls a remote DELETE endpoint. Comprehensive lifecycle and
+real-Konnect Chainsaw coverage is a separate final layer of
+[#6368](https://github.com/Kong/kong-operator/issues/6368).
 
 GET and PUT are not atomic against concurrent external policy-set changes.
 A GET failure, including `404`, must remain an error rather than an empty chain;
-a changed or incomplete set must block programming until the declaration and
-remote set agree.
+a changed or incomplete set blocks programming until the declaration and remote
+set agree. A successful PUT response must return exactly the requested order.

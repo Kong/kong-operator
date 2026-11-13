@@ -433,6 +433,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+{{- if .WatchSameParent}}
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+{{- end}}
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
 	{{- if .NeedsSeparateParentImport}}
@@ -585,14 +589,30 @@ func enqueue{{$.EntityName}}For{{.RefKind}}(
 		}); err != nil {
 			return nil
 		}
-{{- if .ReverseSelf}}
+{{- if or .ReverseSelf .WatchSameParent .LiteralTargets}}
 		reqs := objectListToReconcileRequests(l.Items)
+{{- if .ReverseSelf}}
 		for _, key := range {{$.APIGroupPackageAlias}}.{{$.EntityName}}RefsTo{{.RefKind}}(ref) {
 			reqs = append(reqs, reconcile.Request{NamespacedName: key})
 		}
-		return reqs
-{{- else if .LiteralTargets}}
-		reqs := objectListToReconcileRequests(l.Items)
+{{- end}}
+{{- if .WatchSameParent}}
+		parent := ref.GetParentRef()
+		if parent.Type == commonv1alpha1.ObjectRefTypeNamespacedRef && parent.NamespacedRef != nil && parent.NamespacedRef.Name != "" {
+			ns := ref.GetNamespace()
+			if parent.NamespacedRef.Namespace != nil && *parent.NamespacedRef.Namespace != "" {
+				ns = *parent.NamespacedRef.Namespace
+			}
+			var scoped {{$.APIGroupPackageAlias}}.{{$.EntityName}}List
+			if err := cl.List(ctx, &scoped, client.MatchingFields{
+				index.IndexField{{$.EntityName}}On{{$.ParentEntityName}}Ref: ns + "/" + parent.NamespacedRef.Name,
+			}); err != nil {
+				ctrllog.FromContext(ctx).Error(err, "listing declarations for changed policy scope")
+				return reqs
+			}
+			reqs = append(reqs, objectListToReconcileRequests(scoped.Items)...)
+		}
+{{- end}}
 {{- range .LiteralTargets}}
 		// {{$.EntityName}} objects can also set {{.GoField}} literally to the
 		// referenced object's Konnect key: find them through the index.
@@ -981,6 +1001,8 @@ type crossRefWatchData struct {
 	// reference. The extractor then indexes those keys instead of scanning
 	// the refs itself.
 	RefsToFunc string
+	// WatchSameParent includes declarations sharing the referenced object's parent.
+	WatchSameParent bool
 }
 
 // crossRefLiteralTarget is an InjectInto target field an entity may set
@@ -1251,6 +1273,30 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 	}
 
 	crossRefs := g.buildCrossRefWatchData(metadata.EntityName)
+	watchSameParent := false
+	for _, ref := range g.config.References[metadata.EntityName] {
+		if !ref.WatchSameParent {
+			continue
+		}
+		if len(ref.Kinds) != 1 {
+			return "", fmt.Errorf("reference %q: watchSameParent requires exactly one kind", ref.Path)
+		}
+		target := g.config.ReconcilerConfig[ref.Kinds[0]]
+		if rc == nil || target == nil || rc.GetIsRoot() || target.GetIsRoot() ||
+			rc.ParentRef == nil || target.ParentRef == nil || rc.ParentRef.TypeName != "" || target.ParentRef.TypeName != "" ||
+			rc.GatewayRef != nil || target.GatewayRef != nil || rc.ParentEntityKind() == "" ||
+			rc.ParentEntityKind() != target.ParentEntityKind() ||
+			rc.ParentEntityGroup(g.config.APIGroup) != target.ParentEntityGroup(g.config.APIGroup) ||
+			rc.ParentEntityVersion(g.config.APIVersion) != target.ParentEntityVersion(g.config.APIVersion) {
+			return "", fmt.Errorf("reference %q: watchSameParent requires matching configured parent GVKs and ObjectRef parents", ref.Path)
+		}
+		for i := range crossRefs {
+			if crossRefs[i].RefKind == ref.Kinds[0] {
+				crossRefs[i].WatchSameParent = true
+			}
+		}
+		watchSameParent = true
+	}
 
 	// Referring entities whose reverseWatch references target this entity:
 	// its controller watches them (enqueue<Entity>For<Referrer>), which must
@@ -1298,6 +1344,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ReverseRefs                []reverseWatchReferrer
 		HasSecretRefs              bool
 		HasConfigMapRefs           bool
+		WatchSameParent            bool
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
@@ -1323,6 +1370,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ReverseRefs:                reverseRefs,
 		HasSecretRefs:              metadata.HasSecretRefs,
 		HasConfigMapRefs:           metadata.HasConfigMapRefs,
+		WatchSameParent:            watchSameParent,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {

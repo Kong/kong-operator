@@ -80,6 +80,8 @@ func reconciliationWatchOptionsForEntity[
 		return EventGatewayVirtualClusterPolicyChainReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		return EventGatewayVirtualClusterProducePolicyChainReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectAIGateway:
 		return KonnectAIGatewayReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectConfigStore:
