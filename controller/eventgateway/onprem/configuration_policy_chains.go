@@ -245,6 +245,11 @@ func addPolicyChains[C chainObject, E any](ctx context.Context, c *configuration
 			}
 			if message != "" {
 				c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
+				// One already owning the parent keeps its claim: it holds back
+				// the configuration rather than letting the default order apply.
+				if claim, ok := activeClaims[parent]; ok && claim == policychain.ClaimValue(chain) {
+					c.invalidChains = append(c.invalidChains, client.ObjectKeyFromObject(chain).String()+": "+message)
+				}
 				continue
 			}
 		}

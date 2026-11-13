@@ -322,6 +322,15 @@ spec:
 	listener := &configurationv1alpha1.EventGatewayListener{}
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "listener"}, listener))
 	require.NotContains(t, listener.Annotations, policychain.ListenerOwnerAnnotation)
+
+	// A chain already owning the listener holds back the configuration
+	// instead: its order would otherwise be lost.
+	listener.Annotations = map[string]string{policychain.ListenerOwnerAnnotation: policychain.ClaimValue(chain)}
+	require.NoError(t, cl.Update(t.Context(), listener))
+	cfg, err = buildConfiguration(t.Context(), cl, gateway, "", nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{ns + "/chain: " + cfg.excluded[0].message}, cfg.invalidChains)
+	require.Equal(t, policychain.ClaimValue(chain), read(t, cl, listener).Annotations[policychain.ListenerOwnerAnnotation])
 }
 
 // TestBuildListenerPolicyChainExcludedParentOwnership checks, for a listener
