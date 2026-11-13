@@ -382,6 +382,23 @@
   `ai_models` entity keeps the values of the earliest-created model, so a new
   model cannot change it.
   [#6510](https://github.com/Kong/kong-operator/pull/6510)
+- `ControlPlane`, `GatewayConfiguration` and `DataPlane` optional struct fields
+  now get API server defaults, so stored objects materialize them instead of
+  leaving the parent structs nil: `configDump` (`state` and `dumpSensitive`
+  `disabled`), `dataplaneSync` (`reverseSync` `disabled`),
+  `network.services.ingress` (`type` `LoadBalancer`), and
+  `translation.fallbackConfiguration.useLastValidConfig` (`disabled`, applied
+  when `fallbackConfiguration` is set: the parent itself stays unset by
+  default).
+  `useLastValidConfig` no longer defaults to `enabled`, which made the
+  ControlPlane manager fail to start while the `FallbackConfiguration` feature
+  gate is disabled: setting it to `enabled` now requires that feature gate,
+  enforced by a CEL rule. Existing objects that carry
+  `translation.fallbackConfiguration` kept the old `enabled` value: after the
+  upgrade, an update that keeps `useLastValidConfig: enabled` without the
+  `FallbackConfiguration` feature gate is refused; set the field to `disabled`
+  or add the feature gate to update them.
+  [#3104](https://github.com/Kong/kong-operator/pull/3104)
 
 ### Fixes
 

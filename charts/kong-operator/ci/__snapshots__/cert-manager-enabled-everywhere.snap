@@ -57743,8 +57743,13 @@ spec:
                     - issuer
                     type: object
                   services:
+                    default:
+                      ingress:
+                        type: LoadBalancer
                     properties:
                       ingress:
+                        default:
+                          type: LoadBalancer
                         properties:
                           annotations:
                             additionalProperties:
@@ -71545,6 +71550,9 @@ spec:
                     type: string
                 type: object
               configDump:
+                default:
+                  dumpSensitive: disabled
+                  state: disabled
                 properties:
                   dumpSensitive:
                     default: disabled
@@ -71608,6 +71616,8 @@ spec:
                 - message: Ref cannot be provided when type is set to managedByOwner
                   rule: self.type != 'managedByOwner' || !has(self.ref)
               dataplaneSync:
+                default:
+                  reverseSync: disabled
                 properties:
                   interval:
                     type: string
@@ -71771,7 +71781,7 @@ spec:
                   fallbackConfiguration:
                     properties:
                       useLastValidConfig:
-                        default: enabled
+                        default: disabled
                         enum:
                         - enabled
                         - disabled
@@ -71808,6 +71818,8 @@ spec:
             x-kubernetes-validations:
             - message: When dataplane target is of type 'ref' the ingressClass must be set
               rule: self.dataplane.type != 'ref' || has(self.ingressClass)
+            - message: fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled
+              rule: '!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != ''enabled'' || (has(self.featureGates) && self.featureGates.exists(g, g.name == ''FallbackConfiguration'' && g.state == ''enabled''))'
           status:
             properties:
               conditions:
@@ -80591,6 +80603,9 @@ spec:
                         type: string
                     type: object
                   configDump:
+                    default:
+                      dumpSensitive: disabled
+                      state: disabled
                     properties:
                       dumpSensitive:
                         default: disabled
@@ -80630,6 +80645,8 @@ spec:
                     - name
                     x-kubernetes-list-type: map
                   dataplaneSync:
+                    default:
+                      reverseSync: disabled
                     properties:
                       interval:
                         type: string
@@ -80766,7 +80783,7 @@ spec:
                       fallbackConfiguration:
                         properties:
                           useLastValidConfig:
-                            default: enabled
+                            default: disabled
                             enum:
                             - enabled
                             - disabled
@@ -80798,6 +80815,9 @@ spec:
                     - message: list must not be specified when type is not 'list'
                       rule: 'self.type != ''list'' ? !has(self.list) : true'
                 type: object
+                x-kubernetes-validations:
+                - message: fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled
+                  rule: '!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != ''enabled'' || (has(self.featureGates) && self.featureGates.exists(g, g.name == ''FallbackConfiguration'' && g.state == ''enabled''))'
               dataPlaneOptions:
                 properties:
                   deployment:
@@ -85158,8 +85178,13 @@ spec:
                   network:
                     properties:
                       services:
+                        default:
+                          ingress:
+                            type: LoadBalancer
                         properties:
                           ingress:
+                            default:
+                              type: LoadBalancer
                             properties:
                               annotations:
                                 additionalProperties:
