@@ -70,17 +70,17 @@ func TestEventGatewayListenerPolicyChainReferenceWatchRecovery(t *testing.T) {
 	foreign := f.createPolicy(t, ctx, foreignParent, "foreign")
 	f.programPolicy(t, ctx, foreign, "foreign-id")
 	for _, invalid := range []struct {
-		name, message string
-		policies      []configurationv1alpha1.EventGatewayListenerPolicyRef
+		name, message, reason string
+		policies              []configurationv1alpha1.EventGatewayListenerPolicyRef
 	}{
-		{name: "wrong listener", message: "different EventGatewayListener", policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "foreign"}, {Name: "first"}}},
-		{name: "duplicate", message: "duplicates", policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "first"}, {Name: "first", Namespace: f.listener.Namespace}}},
-		{name: "cross namespace", message: "cross-namespace", policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "second", Namespace: "other"}, {Name: "first"}}},
+		{name: "wrong listener", message: "different EventGatewayListener", reason: "ReferenceInvalid", policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "foreign"}, {Name: "first"}}},
+		{name: "duplicate", message: "duplicates", reason: "ReferenceInvalid", policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "first"}, {Name: "first", Namespace: f.listener.Namespace}}},
+		{name: "cross namespace policy without grant", message: "not granted by any KongReferenceGrant", reason: "ReferenceNotPermitted", policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "second", Namespace: "other"}, {Name: "first"}}},
 	} {
 		t.Run(invalid.name, func(t *testing.T) {
 			before := len(f.remote.writes())
 			setListenerChainReferences(t, ctx, f.cl, chain, invalid.policies)
-			waitForListenerChainCondition(t, f.cl, chain, "KonnectReferencesResolved", metav1.ConditionFalse, "ReferenceInvalid")
+			waitForListenerChainCondition(t, f.cl, chain, "KonnectReferencesResolved", metav1.ConditionFalse, invalid.reason)
 			waitForListenerChainCondition(t, f.cl, chain, "Programmed", metav1.ConditionFalse, "")
 			require.Contains(t, meta.FindStatusCondition(chain.Status.Conditions, "KonnectReferencesResolved").Message, invalid.message)
 			assertNoChainWrites(t, f.remote, before)
@@ -316,11 +316,10 @@ func TestEventGatewayListenerPolicyChainCrossNamespaceDeletion(t *testing.T) {
 	chain.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(f.listener.Namespace)
 	chain.Finalizers = []string{konnect.KonnectCleanupFinalizer}
 	require.NoError(t, f.cl.Create(ctx, chain))
-	waitForListenerChainCondition(t, f.cl, chain, chain.GetStatusConditionTypeParentRefValid(), metav1.ConditionFalse, chain.GetStatusConditionReasonParentRefInvalid())
+	waitForListenerChainCondition(t, f.cl, chain, "ResolvedRefs", metav1.ConditionFalse, "RefNotPermitted")
 	waitForListenerChainCondition(t, f.cl, chain, "Programmed", metav1.ConditionFalse, "")
 	require.Contains(t, chain.Finalizers, konnect.KonnectCleanupFinalizer)
-	require.Nil(t, meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs"))
-	require.Contains(t, meta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid()).Message, "same namespace")
+	require.Nil(t, meta.FindStatusCondition(chain.Status.Conditions, chain.GetStatusConditionTypeParentRefValid()))
 	require.Empty(t, chain.GetEventGatewayListenerID())
 	require.Empty(t, chain.GetGatewayID())
 	require.NoError(t, f.cl.Delete(ctx, chain))

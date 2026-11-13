@@ -93,22 +93,22 @@ func TestEventGatewayListenerPolicyChainReferences(t *testing.T) {
 		}, err: "supplied explicitly"},
 		{name: "missing parent", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.EventGatewayListenerRef.NamespacedRef = nil
-		}, err: "same namespace"},
+		}, err: "must reference an EventGatewayListener"},
 		{name: "parent by ID", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.EventGatewayListenerRef.Type = commonv1alpha1.ObjectRefTypeKonnectID
-		}, err: "same namespace"},
-		{name: "cross namespace parent", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
+		}, err: "must reference an EventGatewayListener"},
+		{name: "cross namespace parent with local policies", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new("other")
-		}, err: "same namespace"},
+		}, err: "different EventGatewayListener"},
 		{name: "empty policy name", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies[0].Name = ""
 		}, err: "must name an EventGatewayListenerPolicy"},
 		{name: "wrong kind", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterPolicy"
 		}, err: "must name an EventGatewayListenerPolicy"},
-		{name: "cross namespace policy", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
+		{name: "policy missing from the named namespace", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies[0].Namespace = "other"
-		}, err: "cross-namespace"},
+		}, err: "not found"},
 		{name: "duplicate default and explicit namespace", change: func(c *EventGatewayListenerPolicyChain, _ *EventGatewayListenerPolicy) {
 			c.Spec.APISpec.Policies = append(c.Spec.APISpec.Policies, EventGatewayListenerPolicyRef{Name: "first", Namespace: "default"})
 		}, err: "duplicates"},
