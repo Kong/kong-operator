@@ -622,6 +622,10 @@ entity ID or `Programmed` status involved:
   deletes policies or their entities. A policy recreated with a new UID is
   ordered by its new identity once the declaration lists it.
 
+The [on-prem produce chain scenario](../test/e2e/chainsaw/onpremeventgateway/onprem-produce-policy-chain/chainsaw-test.yaml)
+covers ordering, sibling reorder and group moves, conflicting ownership, invalid
+and incomplete declarations, and retained deletion against a real gw-admin.
+
 ## Consume policy-chain API (Konnect only)
 
 `configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterConsumePolicyChain`
