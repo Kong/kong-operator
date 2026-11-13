@@ -484,6 +484,81 @@ func TestGWAdminContract(t *testing.T) {
 		}
 	})
 
+	t.Run("produce policy order survives an entities round trip", func(t *testing.T) {
+		gwAdmin := contractGWAdmin(t)
+		ctx := t.Context()
+		id := registerContractGateway(t, gwAdmin)
+		bcID, vcID := uuid.NewString(), uuid.NewString()
+		// Creation times sort opposite to the submitted order, and the IDs
+		// opposite to it on one revision out of two: neither may override it.
+		parentID := "00000000-0000-4000-8000-000000000022"
+		childIDs := []string{"00000000-0000-4000-8000-000000000023", "00000000-0000-4000-8000-000000000021"}
+		rootID := "00000000-0000-4000-8000-000000000024"
+		doc := func(revision int, siblings []string) string {
+			policies := fmt.Sprintf(`{
+				"id": %q, "created_at": "2026-10-19T10:00:00Z", "type": "schema_validation", "name": "parent",
+				"config": {"type": "json", "json": {"value_validation_action": "reject"}}
+			}`, parentID)
+			for i, sibling := range siblings {
+				policies += fmt.Sprintf(`, {
+					"id": %q, "created_at": "2026-10-19T10:0%d:00Z", "type": "modify_headers", "name": "child-%d",
+					"parent_policy_id": %q,
+					"config": {"actions": [{"op": "remove", "key": "x-child-%d"}]}
+				}`, sibling, len(siblings)-i, i, parentID, i)
+			}
+			policies += fmt.Sprintf(`, {
+				"id": %q, "created_at": "2026-10-19T10:00:00Z", "type": "modify_headers", "name": "root",
+				"config": {"actions": [{"op": "remove", "key": "x-root"}]}
+			}`, rootID)
+			return fmt.Sprintf(`{"config_version": {"data_version": %d, "operator_version": "1.0.0", "feature_bitmap": 0}, "entities": {
+				"backend_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "bc",
+					"bootstrap_servers": ["kafka:9092"], "authentication": {"type": "anonymous"}, "tls": {"enabled": false},
+					"insecure_allow_anonymous_virtual_cluster_auth": true
+				}],
+				"virtual_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+					"destination": {"id": %q}, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+					"cluster_policies": [], "consume_policies": [], "produce_policies": [%s]
+				}],
+				"listeners": [], "schema_registries": [], "static_keys": [], "tls_trust_bundles": []
+			}}`, revision, bcID, vcID, bcID, policies)
+		}
+		read := func() (ids []string, parents []string) {
+			t.Helper()
+			resp, err := gwAdmin.GetEventGatewayEntities(ctx, id)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+			require.NoError(t, err)
+			require.NotNil(t, parsed.JSON200, "%s: %s", resp.Status, parsed.Body)
+			require.Len(t, parsed.JSON200.Entities.VirtualClusters, 1)
+			for _, p := range parsed.JSON200.Entities.VirtualClusters[0].ProducePolicies {
+				ids = append(ids, p.Id.String())
+				parent := ""
+				if child, err := p.AsEventGatewayModifyHeadersPolicyCreate(); err == nil && child.ParentPolicyId != nil {
+					parent = child.ParentPolicyId.String()
+				}
+				parents = append(parents, parent)
+			}
+			return ids, parents
+		}
+		for revision := range 3 {
+			slices.Reverse(childIDs)
+			require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntitiesWithBody(ctx, id, "application/json", strings.NewReader(doc(revision+1, childIDs)))), 300)
+			want := append([]string{parentID}, childIDs...)
+			want = append(want, rootID)
+			for range 3 {
+				ids, parents := read()
+				require.Equal(t, want, ids, "produce policies must retain their submitted root/child order on every read")
+				require.Equal(t, parentID, parents[1], "ordering must not change parent_policy_id")
+				require.Equal(t, parentID, parents[2])
+				require.Empty(t, parents[0], "the schemaValidation parent is a root policy")
+				require.Empty(t, parents[3], "a root policy has no parent_policy_id")
+			}
+		}
+	})
+
 	t.Run("created_at must be whole seconds in UTC", func(t *testing.T) {
 		for name, createdAt := range map[string]time.Time{
 			"fractional seconds": time.Date(2026, 10, 19, 10, 0, 0, 500_000_000, time.UTC),
