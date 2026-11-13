@@ -393,3 +393,27 @@ func TestSecretRefNotifierFuncsCoverEveryKindWithSecretRefs(t *testing.T) {
 		require.Contains(t, recorder.listed, w, "secretRefNotifierFuncs does not list %s", w)
 	}
 }
+
+// A credential referencing a consumer of another namespace renders into that consumer's
+// document, so a change to its Secret must notify the consumer's gateway too.
+func TestSecretReconcilerNotifiesCrossNamespaceConsumerOfCredentialSecret(t *testing.T) {
+	const secretName = "consumer-api-key"
+	consumer := onPremConsumer("consumer", "gw")
+	consumer.Namespace = "other"
+	cred := consumerCredential("cred", "consumer", secretName)
+	cred.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = new("other")
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t, consumer, cred)
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	ch := cn.NotifyChannel()
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
+	require.NoError(t, err)
+
+	change := waitForChange(t, ch)
+	require.Equal(t, types.NamespacedName{Namespace: "other", Name: "consumer"}, client.ObjectKeyFromObject(change.Object))
+	require.Equal(t, types.NamespacedName{Namespace: "other", Name: "gw"}, *change.ParentNN)
+	requireNoChange(t, ch)
+}

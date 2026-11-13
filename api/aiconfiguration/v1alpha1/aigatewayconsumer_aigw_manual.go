@@ -119,8 +119,9 @@ func consumerGroupNamespacedRefs(refs []AIGatewayConsumerGroupRef) []namespacedR
 //
 // The credentials are listed via the credIndexField index (see ToAIGWConsumer), so only the
 // ones referencing this consumer are read from the cache. The index value is
-// "<refNamespace>/<refName>", with refNamespace defaulting to the credential's namespace —
-// mirroring resolveEntityNames's same-namespace rule for entity references.
+// "<refNamespace>/<refName>", with refNamespace defaulting to the credential's namespace, so
+// the list spans namespaces: a credential of another namespace referencing this consumer
+// renders here too, once a KongReferenceGrant allows the reference (see toAIGWCredential).
 //
 // A credential that fails to translate is left out of the returned credentials and reported
 // through its CredentialTranslation: the remaining credentials still render, mirroring KIC's
@@ -133,7 +134,6 @@ func (obj *AIGatewayConsumer) aigwCredentials(
 ) ([]aigw.Credential, []CredentialTranslation, error) {
 	var list AIGatewayConsumerCredentialList
 	if err := cl.List(ctx, &list,
-		client.InNamespace(obj.Namespace),
 		client.MatchingFields{credIndexField: obj.Namespace + "/" + obj.Name},
 	); err != nil {
 		return nil, nil, fmt.Errorf("listing AIGatewayConsumerCredentials: %w", err)
@@ -161,10 +161,12 @@ func (obj *AIGatewayConsumer) aigwCredentials(
 }
 
 // toAIGWCredential converts a single AIGatewayConsumerCredential into ai-deck-converter's
-// aigw.Credential, resolving its secretRef apiKey. A cross-namespace secretRef must be
-// allowed by a KongReferenceGrant (the generated sdkOpsAPISpec alone would resolve it
-// regardless of namespace).
+// aigw.Credential, resolving its secretRef apiKey. A cross-namespace consumer or secretRef
+// must be allowed by a KongReferenceGrant.
 func (obj *AIGatewayConsumerCredential) toAIGWCredential(ctx context.Context, cl client.Client) (*aigw.Credential, error) {
+	if err := CheckCrossNamespaceConsumerRefGranted(ctx, cl, obj); err != nil {
+		return nil, err
+	}
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, err
 	}

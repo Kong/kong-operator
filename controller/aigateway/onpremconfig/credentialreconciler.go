@@ -57,9 +57,9 @@ import (
 //
 // The reconciler therefore only reports the Programmed condition - writing it, and clearing
 // it when the credential's consumer is gone - and the ResolvedRefs condition of its
-// cross-namespace secretRefs, and never feeds the ChangeNotifier: a
-// credential event is already mapped to its parent consumer (see mapCredentialToConsumer),
-// and the consumer's own reconciler is what notifies the gateway.
+// cross-namespace references (to the consumer and to its Secrets), and never feeds the
+// ChangeNotifier: a credential event is already mapped to its parent consumer (see
+// mapCredentialToConsumer), and the consumer's own reconciler is what notifies the gateway.
 type AIGatewayConsumerCredentialReconciler struct {
 	client.Client
 
@@ -139,8 +139,8 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 
 	// Credentials of a consumer that does not target an OnPremAIGateway are owned by the
 	// Konnect reconciler: writing an on-prem status on one would overwrite its Konnect
-	// condition. An unresolvable consumer (absent, or referenced across namespaces) is
-	// likewise not ours to report.
+	// condition. A credential whose consumer cannot be resolved (absent) is likewise not
+	// ours to report.
 	if !credentialOnPremManaged(ctx, r.Client, obj) {
 		// A credential whose consumer is gone is rendered by nothing, so the Programmed
 		// and ResolvedRefs conditions written while it still was claim a rendering that

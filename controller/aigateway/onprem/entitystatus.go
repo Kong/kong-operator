@@ -202,9 +202,8 @@ func (r *Reconciler) markEntityOutOfScope(
 }
 
 // entityTargetsOnPremAIGateway reports whether the entity belongs to the given
-// gateway. A credential is resolved through the consumer it references, whose
-// reference the on-prem translation requires to live in the credential's own
-// namespace.
+// gateway. A credential is resolved through the consumer it references, which may
+// live in another namespace.
 func (r *Reconciler) entityTargetsOnPremAIGateway(
 	ctx context.Context,
 	ent outOfScopeEntity,
