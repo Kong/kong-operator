@@ -12,6 +12,10 @@ spec:
   deployment:
     podTemplateSpec:
       spec:
+        # Set by the peers (see gwadmin-shared/peers.yaml): new pods only turn
+        # Ready while they run, so that stopping them stalls a rollout.
+        readinessGates:
+          - conditionType: e2e.konghq.com/peers
         containers:
           - name: gw-admin
             readinessProbe:
