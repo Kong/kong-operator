@@ -37,6 +37,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -425,9 +426,10 @@ func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp sharedda
 }
 
 // checkKonnectAIGatewayEndpoints reports whether a resolved KonnectAIGateway has
-// usable endpoints. The DataPlane the hook passes is for the verdicts that read
-// it, the KegDataPlane one; a nil Status.Endpoints is left to buildAIGatewayEnvVars.
-func checkKonnectAIGatewayEndpoints(_ shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
+// usable endpoints. An endpoint the pod template sets is left out: that value
+// wins over the rendered one, so the rendered value is not what the data plane
+// boots with. A nil Status.Endpoints is left to buildAIGatewayEnvVars.
+func checkKonnectAIGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	aigw, ok := cp.(*konnectv1alpha1.KonnectAIGateway)
 	if !ok {
 		return fmt.Errorf("unexpected control plane object %T", cp)
@@ -436,19 +438,43 @@ func checkKonnectAIGatewayEndpoints(_ shareddataplane.Object, cp shareddataplane
 		return nil
 	}
 
-	for _, endpoint := range []string{aigw.Status.Endpoints.Configuration, aigw.Status.Endpoints.Telemetry} {
-		// shortcut: the AI Gateway has no private rendering yet (#6105), drop
-		// this loop when it lands.
-		if konnectendpoint.CarriesPath(endpoint) {
-			return fmt.Errorf("cannot use private endpoint %q: the AI Gateway has no private rendering yet", endpoint)
+	overridden := overriddenEnvVars(dp)
+	endpoints := make([]string, 0, 2)
+	for _, endpoint := range []struct{ envVar, value string }{
+		{EnvKongClusterControlPlane, aigw.Status.Endpoints.Configuration},
+		{EnvKongClusterTelemetryEndpoint, aigw.Status.Endpoints.Telemetry},
+	} {
+		if overridden[endpoint.envVar] {
+			continue
 		}
+		// shortcut: the AI Gateway has no private rendering yet (#6105), drop
+		// this check when it lands.
+		if konnectendpoint.CarriesPath(endpoint.value) {
+			return fmt.Errorf("cannot use private endpoint %q: the AI Gateway has no private rendering yet", endpoint.value)
+		}
+		endpoints = append(endpoints, endpoint.value)
 	}
 
-	return konnectendpoint.CheckPrivateEndpoints(
-		aigw.Status.ServerURL,
-		aigw.Status.Endpoints.Configuration,
-		aigw.Status.Endpoints.Telemetry,
-	)
+	return konnectendpoint.CheckPrivateEndpoints(aigw.Status.ServerURL, endpoints...)
+}
+
+// overriddenEnvVars returns the env var names the pod template overlay sets on
+// the gateway container: those win over the operator's values in the merge.
+func overriddenEnvVars(dp shareddataplane.Object) map[string]bool {
+	aigwdp, ok := dp.(*aigatewayv1alpha1.AIGatewayDataPlane)
+	if !ok || aigwdp.Spec.Deployment == nil || aigwdp.Spec.Deployment.PodTemplateSpec == nil {
+		return nil
+	}
+	c := k8sutils.GetPodContainerByName(
+		&aigwdp.Spec.Deployment.PodTemplateSpec.Spec, consts.AIGatewayDataPlaneContainerName)
+	if c == nil {
+		return nil
+	}
+	set := make(map[string]bool, len(c.Env))
+	for _, e := range c.Env {
+		set[e.Name] = true
+	}
+	return set
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables for the

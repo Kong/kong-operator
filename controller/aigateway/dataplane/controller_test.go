@@ -155,6 +155,38 @@ func newProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
 	}
 }
 
+// newProgrammedKonnectAIGatewayPrivateServerURL builds a Programmed
+// KonnectAIGateway whose serverURL carries a path while the endpoints Konnect
+// returned are public: the geo does not render private endpoints yet.
+func newProgrammedKonnectAIGatewayPrivateServerURL() *konnectv1alpha1.KonnectAIGateway {
+	aigwcp := newProgrammedKonnectAIGateway()
+	aigwcp.Status.ServerURL = "https://us.svc.konghq.tech/api"
+	return aigwcp
+}
+
+// newReconcileAIGWDPWithEndpointOverride builds an AIGatewayDataPlane that
+// supplies the Konnect endpoints itself, as a data plane connecting over
+// PrivateLink does before Konnect returns private endpoints.
+func newReconcileAIGWDPWithEndpointOverride() *aigatewayv1alpha1.AIGatewayDataPlane {
+	aigwdp := newReconcileAIGWDP()
+	aigwdp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{
+		PodTemplateSpec: &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name: pkgconsts.AIGatewayDataPlaneContainerName,
+					Env: []corev1.EnvVar{
+						{Name: EnvKongClusterControlPlane, Value: "us.svc.konghq.tech/cp/aigw123"},
+						{Name: EnvKongClusterServerName, Value: "us.svc.konghq.tech"},
+						{Name: EnvKongClusterTelemetryEndpoint, Value: "us.svc.konghq.tech:443/tp/aigw123"},
+						{Name: EnvKongClusterTelemetryServerName, Value: "us.svc.konghq.tech"},
+					},
+				}},
+			},
+		},
+	}
+	return aigwdp
+}
+
 // newNotProgrammedKonnectAIGateway builds an KonnectAIGateway with Programmed=False.
 func newNotProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
 	aigwcp := newProgrammedKonnectAIGateway()
@@ -854,6 +886,63 @@ func TestReconciler_Reconcile(t *testing.T) {
 				events := drainEvents(recorder)
 				assert.Contains(t, events, "Normal DeploymentCreated Deployment my-dp created")
 				assert.Contains(t, events, "Normal ServiceCreated Ingress Service my-dp-ingress created")
+			},
+		},
+		{
+			name: "private server URL, public endpoints, endpoints overridden in the pod template: Deployment created",
+			objects: []client.Object{
+				newReconcileAIGWDPWithEndpointOverride(),
+				newProgrammedKonnectAIGatewayPrivateServerURL(),
+				caSecret(),
+			},
+			// 1st reconcile provisions the cert Secret, the 2nd creates the Deployment.
+			reconcileCount:    2,
+			betweenReconciles: markGeneratedCertProgrammed,
+			wantResult:        ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+				env := map[string]string{}
+				for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+					env[e.Name] = e.Value
+				}
+				assert.Equal(t, "us.svc.konghq.tech/cp/aigw123", env[EnvKongClusterControlPlane])
+				assert.Equal(t, "us.svc.konghq.tech:443/tp/aigw123", env[EnvKongClusterTelemetryEndpoint])
+
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
+					metav1.ConditionTrue,
+					aigatewayv1alpha1.ControlPlaneResolvedReason,
+				)
+			},
+		},
+		{
+			name: "private server URL, public endpoints, no override: held with EndpointMismatch, no Deployment",
+			objects: []client.Object{
+				newReconcileAIGWDP(),
+				newProgrammedKonnectAIGatewayPrivateServerURL(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, &appsv1.Deployment{})
+				assert.True(t, apierrors.IsNotFound(err))
+
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.KonnectAIGatewayEndpointMismatchReason,
+				)
 			},
 		},
 		{

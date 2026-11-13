@@ -46,6 +46,7 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 		serverURL       string
 		configuration   string
 		telemetry       string
+		overlayEnvVars  []string
 		noEndpoints     bool
 		wantErr         bool
 		wantErrContains string
@@ -94,6 +95,33 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 			serverURL:   privateServerURL,
 			noEndpoints: true,
 		},
+		{
+			// The pod template sets the endpoints itself, so the rendered
+			// public ones never reach the data plane.
+			name:           "private server URL, public endpoints, both overridden in the pod template",
+			serverURL:      privateServerURL,
+			configuration:  publicCP,
+			telemetry:      publicTP,
+			overlayEnvVars: []string{EnvKongClusterControlPlane, EnvKongClusterTelemetryEndpoint},
+		},
+		{
+			name:            "private server URL, public endpoints, only the configuration endpoint overridden",
+			serverURL:       privateServerURL,
+			configuration:   publicCP,
+			telemetry:       publicTP,
+			overlayEnvVars:  []string{EnvKongClusterControlPlane},
+			wantErr:         true,
+			wantErrContains: publicTP,
+		},
+		{
+			// The endpoints carry a path, which the operator cannot render yet:
+			// the pod template supplies them, so the guard does not apply.
+			name:           "private server URL, private endpoints with a path, both overridden in the pod template",
+			serverURL:      privateServerURL,
+			configuration:  privateCPPath,
+			telemetry:      privateTPPath,
+			overlayEnvVars: []string{EnvKongClusterControlPlane, EnvKongClusterTelemetryEndpoint},
+		},
 	}
 
 	for _, tc := range tests {
@@ -107,7 +135,7 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 				}
 			}
 
-			err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.AIGatewayDataPlane{}, aigw)
+			err := checkKonnectAIGatewayEndpoints(aigwdpWithOverlay(tc.overlayEnvVars), aigw)
 			if !tc.wantErr {
 				require.NoError(t, err)
 				return
