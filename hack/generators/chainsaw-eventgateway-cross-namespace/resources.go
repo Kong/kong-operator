@@ -39,8 +39,6 @@ type resource struct {
 	tls bool
 	// held tells the on-prem test runs scenario H.
 	held bool
-	// forward tells the tests run scenario X.
-	forward bool
 	// konnectOnly tells the resource has no test against an
 	// OnPremEventGateway.
 	konnectOnly bool
@@ -184,7 +182,7 @@ func resources() []resource {
 				return built{objs: []*object{o}, referrer: o, target: gateway}
 			}},
 		}},
-		{dir: "listenerpolicy", kind: "EventGatewayListenerPolicy", tls: true, forward: true, axes: []axis{
+		{dir: "listenerpolicy", kind: "EventGatewayListenerPolicy", tls: true, axes: []axis{
 			{name: "lst", what: "its listener", build: func(tag string, p placement, pt *ports) built {
 				l, tb, o := listenerPolicyObjects(tag, p.rns, p.tns, p.rns, p.rns, p.rns, pt)
 				return built{objs: []*object{l, tb, o}, referrer: o, target: l, hop2: hop2Of(l, 0, p)}

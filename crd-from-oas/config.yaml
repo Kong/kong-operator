@@ -1384,11 +1384,14 @@ apiGroupVersions:
           # object name rather than the name of its API entity. It resolves to
           # the Konnect ID, so renaming a virtual cluster can't rebind the policy
           # to another one.
+          # A virtual cluster of another namespace needs a KongReferenceGrant
+          # there, as for the other references between entities.
           # Konnect refuses to delete a virtual cluster a listener policy forwards
           # to: the virtual cluster is reconciled again once they stop using it.
           - path: spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
             kinds: [EventGatewayVirtualCluster]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             reverseWatch: true
         dataSources:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate

@@ -298,20 +298,6 @@ func listenerPolicy(name, ns string, l *object, secretNS string, tb *object) *ob
 	}
 }
 
-// forwardPolicy is a listener policy forwarding the traffic of its listener to
-// a virtual cluster, which must be of its namespace.
-func forwardPolicy(name, ns string, l, v *object) *object {
-	return &object{
-		Kind: "EventGatewayListenerPolicy", Name: name, NS: ns, Group: groupConfiguration, Named: true,
-		Template: "apply-eventGatewayListenerPolicy-forward.yaml",
-		Own:      own("policy_name", name, "policy_namespace", ns),
-		Refs: []ref{
-			{Type: refParent, Target: l, NameKey: "listener_name", NSKey: "listener_namespace"},
-			{Type: refSibling, Target: v, NameKey: "virtual_cluster_name", NSKey: "virtual_cluster_namespace"},
-		},
-	}
-}
-
 func vcRef(v *object) ref {
 	return ref{Type: refParent, Target: v, NameKey: "virtual_cluster_name", NSKey: "virtual_cluster_namespace"}
 }
