@@ -5,8 +5,6 @@ import commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 // ConfigStoreControlPlaneRef references the Konnect Control Plane that owns a
 // KonnectConfigStore, using the same konnectNamespacedRef format as KongVault
 // and KongCertificate.
-//
-// +kong:channels=kong-operator
 type ConfigStoreControlPlaneRef struct {
 	// Type must be konnectNamespacedRef.
 	//

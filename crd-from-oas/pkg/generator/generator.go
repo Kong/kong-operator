@@ -9116,15 +9116,15 @@ func (g *Generator) kindsUnderAncestorSkippingKonnectReconciliation(kinds []stri
 
 // kindsSkippingKonnectReconciliation returns, for each of the given kinds,
 // whether its objects can opt out of the Konnect reconciler: entities with a
-// parent ref whose type name is AIGatewayRef (which can target an OnPremAIGateway)
-// and entities whose gatewayRef accepts additional, non-Konnect kinds. Both get
-// a generated SkipKonnectReconciliation method.
+// parent ref type that supports an OnPremAIGateway, and entities whose
+// gatewayRef accepts additional, non-Konnect kinds. Both get a generated
+// SkipKonnectReconciliation method.
 func (g *Generator) kindsSkippingKonnectReconciliation(kinds []string) map[string]bool {
 	result := make(map[string]bool, len(kinds))
 	for _, kind := range kinds {
 		rc := g.config.ReconcilerConfig[kind]
 		result[kind] = rc != nil &&
-			((rc.ParentRef != nil && rc.ParentRef.TypeName == "AIGatewayRef") ||
+			((rc.ParentRef != nil && rc.ParentRef.SupportsOnPremAIGateway) ||
 				(rc.GatewayRef != nil && len(rc.GatewayRef.AdditionalKinds) > 0))
 	}
 	return result
