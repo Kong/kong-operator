@@ -268,7 +268,7 @@
 - Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
   Helm installation artifacts, to declare Konnect produce-policy ordering with
   Kubernetes references to the complete set of root and nested policies.
-  This API-only layer does not yet reconcile ordering; on-prem support is not included.
+  The operator now reconciles this ordering in Konnect; on-prem support is not included.
   [#6534](https://github.com/Kong/kong-operator/pull/6534)
   [#6537](https://github.com/Kong/kong-operator/pull/6537)
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
