@@ -190,7 +190,8 @@
   to an older keg, read from the tag of its image, and otherwise ignored with a
   `SettingIgnored` Warning Event on the `KegDataPlane`. An image without a
   version tag, e.g. pinned by digest only, counts as keg 1.3.0 or later, so a
-  keg 1.2 pinned that way loses both settings. Both fields are deprecated.
+  keg 1.2 pinned that way loses both settings. Both fields are deprecated: a
+  `ValidatingAdmissionPolicy` warns when a `KegDataPlane` sets either.
   [#6637](https://github.com/Kong/kong-operator/pull/6637)
 - `KonnectConfigStoreSync` now accepts entry values up to 8192 Unicode
   characters, matching the increased Konnect Config Store limit instead of

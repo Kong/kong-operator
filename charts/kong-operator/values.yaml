@@ -130,6 +130,10 @@ global:
     serviceAnnotations:
       # Enable validation on annotations of Services.
       enabled: true
+    kegDataPlaneDeprecatedSettings:
+      # Warn when a KegDataPlane sets spec.config.configPollIntervalSeconds or
+      # spec.config.enableDebugEndpoints, which keg 1.3.0 removed.
+      enabled: true
     podDisruptionBudgetReplicas:
       # Enable validation of PodDisruptionBudget against the replica floor of DataPlanes and GatewayConfigurations
       # (replicas or scaling.horizontal.minReplicas must be >= 2 when a PodDisruptionBudget is set).
