@@ -149,7 +149,11 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	for _, entity := range entityTypes() {
 		b = b.Watches(entity, mapToGateway)
 	}
-	for _, policy := range []client.Object{&configurationv1alpha1.EventGatewayVirtualClusterPolicy{}, &configurationv1alpha1.EventGatewayListenerPolicy{}} {
+	for _, policy := range []client.Object{
+		&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
+		&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+		&configurationv1alpha1.EventGatewayListenerPolicy{},
+	} {
 		b = b.Watches(policy,
 			handler.EnqueueRequestsFromMapFunc(mapPolicyToChainGateways(mgr.GetClient())),
 			builder.WithPredicates(entityChanged()))

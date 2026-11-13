@@ -470,15 +470,21 @@ policies of a listener a chain owns. Deleting the chain releases its claim and
 rebuilds the document with the default order of the policies, creation
 timestamp then resource name, deleting neither policies nor their entities.
 
-## Produce policy chains (Konnect only)
+## Produce policy chains
 
 `configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterProducePolicyChain`
 declares the execution order of all `EventGatewayVirtualClusterProducePolicy`
-resources in one virtual cluster. The Konnect controller resolves the declaration
-and reorders the complete remote chain without creating or deleting policies.
-This is Konnect management-plane ordering, not a Kafka execution or traffic-routing
-guarantee. Consume ordering is separate, and on-prem Produce chain support is not
-included or registered.
+resources in one virtual cluster.
+
+- On Konnect, the controller resolves the declaration and reorders the complete
+  remote chain without creating or deleting policies.
+- On-prem, the `OnPremEventGateway` controller orders the produce policy list of
+  the complete gw-admin document it rebuilds, using the Kubernetes UIDs of the
+  policies as on-prem identifiers. No Konnect credentials, API calls, entity IDs
+  or `Programmed` status are involved.
+
+Both are management-plane ordering, not a Kafka execution or traffic-routing
+guarantee. Consume ordering is separate.
 
 `spec.eventGatewayVirtualClusterRef` must use `namespacedRef` and reference an
 `EventGatewayVirtualCluster` in the chain's namespace. The reference is immutable
@@ -583,6 +589,42 @@ GET and PUT are not atomic against concurrent external policy-set changes.
 A GET failure, including `404`, must remain an error rather than an empty chain;
 a changed or incomplete set blocks programming until the declaration and remote
 set agree. A successful PUT response must return exactly the requested order.
+
+### On-prem application
+
+The `OnPremEventGateway` controller takes the same declaration into the complete
+gw-admin document it rebuilds and pushes, with no Konnect credential, API call,
+entity ID or `Programmed` status involved:
+
+- The chain resolves the virtual cluster and the ordered
+  `EventGatewayVirtualClusterProducePolicy` references through their Kubernetes
+  ancestry. Each policy is identified by its Kubernetes UID, which is also its
+  ID in the on-prem document.
+- The declared order is validated against the gw-admin contract with the same
+  rule Konnect uses: a root `schemaValidation` parent precedes its contiguous
+  children, root groups may move, and siblings may reorder within their group.
+  `parentPolicyRef` is never rewritten.
+- The complete produce set must be listed exactly once. A missing, duplicate,
+  terminating, wrong-kind or wrong-virtual-cluster reference, or an invalid
+  parent/group arrangement, reports `Programmed=False` on the chain and stops
+  the gateway from pushing a shortened document. The last configuration pushed
+  stays in place until the declaration is repaired or removed.
+- Produce ownership is separate from the cluster-level, consume and listener
+  claims of the same virtual cluster. A competing produce chain reports
+  `PolicyChainOwnerValid=False` with reason `ConflictingChain`; the owner keeps
+  its order. A stale or terminating claim is released and rebuilt even when no
+  replacement exists.
+- A produce chain keeps its parent and policies in its own namespace, as its API
+  declares: a `KongReferenceGrant` does not make a produce-chain reference
+  cross-namespace.
+- Deleting only the chain releases the produce claim and rebuilds the document
+  with gw-admin's default produce order (creation time, then name). It never
+  deletes policies or their entities. A policy recreated with a new UID is
+  ordered by its new identity once the declaration lists it.
+
+The [on-prem produce chain scenario](../test/e2e/chainsaw/onpremeventgateway/onprem-produce-policy-chain/chainsaw-test.yaml)
+covers ordering, sibling reorder and group moves, conflicting ownership, invalid
+and incomplete declarations, and retained deletion against a real gw-admin.
 
 ## Consume policy-chain API (Konnect only)
 
