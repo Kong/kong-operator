@@ -29,8 +29,11 @@ set -o pipefail
 #   RETRY_COUNT: (optional) Number of attempts. Default: 120 for GET, 1 for
 #     other methods (a mutating request is not repeated by default).
 #   RETRY_DELAY: (optional) Seconds between attempts. Default: 1.
-#   CONNECT_TIMEOUT: (optional) curl connect timeout in seconds. Default: 5.
-#   MAX_TIME: (optional) curl overall per-request timeout in seconds. Default: 15.
+#   CONNECT_TIMEOUT: (optional) curl connect timeout in seconds. Default: 3.
+#   MAX_TIME: (optional) curl per-try timeout in seconds. Default: 5.
+#   CURL_RETRIES: (optional) Times curl resends a request within one attempt
+#     on a transport error or a 408, 429, 500, 502, 503 or 504. Default: 3,
+#     0 for POST, which may have been applied before the response was lost.
 
 KONNECT_TOKEN="${KONNECT_TOKEN}"
 KONNECT_URL="${KONNECT_URL}"
@@ -45,8 +48,13 @@ else
   RETRY_COUNT="${RETRY_COUNT:-1}"
 fi
 RETRY_DELAY="${RETRY_DELAY:-1}"
-CONNECT_TIMEOUT="${CONNECT_TIMEOUT:-5}"
-MAX_TIME="${MAX_TIME:-15}"
+CONNECT_TIMEOUT="${CONNECT_TIMEOUT:-3}"
+MAX_TIME="${MAX_TIME:-5}"
+if [[ "${METHOD}" == "POST" ]]; then
+  CURL_RETRIES="${CURL_RETRIES:-0}"
+else
+  CURL_RETRIES="${CURL_RETRIES:-3}"
+fi
 
 RESPONSE_FILE="$(mktemp)"
 trap 'rm -f "${RESPONSE_FILE}"' EXIT
@@ -61,8 +69,12 @@ fail() {
   exit 1
 }
 
+# Without --fail, --retry-all-errors resends on transport errors and on 408,
+# 429, 500, 502, 503 and 504 only: a response failing the checks below is not
+# resent here.
 CURL_ARGS=(-s -o "${RESPONSE_FILE}" -w '%{http_code}' -X "${METHOD}"
   --connect-timeout "${CONNECT_TIMEOUT}" --max-time "${MAX_TIME}"
+  --retry "${CURL_RETRIES}" --retry-all-errors --retry-delay 1
   -H @-)
 if [[ -n "${BODY}" ]]; then
   REQUEST_BODY="$(jq -cn "${BODY}")" || fail "BODY is not a valid jq program"
