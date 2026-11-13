@@ -8124,9 +8124,17 @@ func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
 		want       bool
 	}{
 		{
-			name:       "typed parent ref, e.g. AIGatewayRef",
+			name: "typed parent ref with on-prem support, e.g. AIGatewayRef",
+			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{
+				FieldName:               "aiGatewayRef",
+				TypeName:                "AIGatewayRef",
+				SupportsOnPremAIGateway: true,
+			}},
+			want: true,
+		},
+		{
+			name:       "typed parent ref without on-prem support",
 			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{FieldName: "aiGatewayRef", TypeName: "AIGatewayRef"}},
-			want:       true,
 		},
 		{
 			name: "gatewayRef with additional kinds",
