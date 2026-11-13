@@ -7,12 +7,9 @@ set -o pipefail
 
 # NAMESPACE, LISTENER_NAME, VIRTUAL_CLUSTER_NAME, AUTH_NAME, AUTH_SECRET_NAME,
 # KONNECT_TOKEN and KONNECT_URL are provided by Chainsaw. Snapshots stay in memory.
-# Each observation waits for the expected state, then checks it once. With
-# HOLD=true it keeps checking it for WINDOW_SECONDS (default 75, longer than the
-# default 60-second Konnect sync period), every CHECK_INTERVAL seconds (default
-# 5): only after the chain is deleted, as nothing reconciles a deleted chain,
-# but the listener and the policies keep reconciling and could still change the
-# order on their next sync.
+# HOLD=true is used only after the chain is deleted: nothing reconciles the
+# deleted chain, but the listener and the policies still sync (60s by default)
+# and could reorder the retained chain.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON="${SCRIPT_DIR}/../../../common/scripts"
 MODE="${1:?expected a lifecycle scenario}"
@@ -25,6 +22,10 @@ fail() {
   jq -n --arg error "$1" '{error: $error}' >&2
   exit 1
 }
+
+for VALUE in "${WINDOW_SECONDS}" "${CHECK_INTERVAL}"; do
+  [[ "${VALUE}" =~ ^[1-9][0-9]*$ ]] || fail "observation timings must be positive integer seconds"
+done
 
 create_chain() {
   jq -n --arg name "$1" --arg ns "${NAMESPACE}" --arg listener "${LISTENER_NAME}" --argjson names "$2" '
