@@ -93,7 +93,9 @@ var DefaultDataPlaneIngressServicePorts = []corev1.ServicePort{
 }
 
 func getDataPlaneIngressServiceType(dataplane *operatorv1beta1.DataPlane) corev1.ServiceType {
-	if dataplane == nil || dataplane.Spec.Network.Services == nil {
+	if dataplane == nil ||
+		dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil {
 		return DefaultDataPlaneIngressServiceType
 	}
 

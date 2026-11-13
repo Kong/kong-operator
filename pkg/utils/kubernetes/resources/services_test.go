@@ -136,6 +136,63 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			name: "nil Ingress falls back to the default service type",
+			dataplane: &operatorv1beta1.DataPlane{
+				Name:       "dp-1",
+				Namespace:  "default",
+				UID:        types.UID("1234"),
+				APIVersion: "gateway.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Spec: operatorv1beta1.DataPlaneSpec{
+					Network: operatorv1beta1.DataPlaneNetworkOptions{
+						Services: &operatorv1beta1.DataPlaneServices{},
+					},
+				},
+			},
+			expectedSvc: &corev1.Service{
+				GenerateName: "dataplane-ingress-dp-1-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"app": "dp-1",
+					"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+					"gateway-operator.konghq.com/managed-by":             "dataplane",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+						Name:       "dp-1",
+						UID:        "1234",
+						Controller: new(true),
+					},
+				},
+				Finalizers: []string{
+					"gateway-operator.konghq.com/wait-for-owner",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeLoadBalancer,
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       80,
+							TargetPort: intstr.FromInt(8000),
+						},
+						{
+							Name:       "https",
+							Protocol:   corev1.ProtocolTCP,
+							Port:       443,
+							TargetPort: intstr.FromInt(8443),
+						},
+					},
+					Selector: map[string]string{
+						"app": "dp-1",
+					},
+				},
+			},
+			expectedErr: nil,
+		},
+		{
 			name: "setting ExternalTrafficPolicy to Local",
 			dataplane: &operatorv1beta1.DataPlane{
 				Name:       "dp-1",
