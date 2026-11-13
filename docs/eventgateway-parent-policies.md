@@ -466,7 +466,6 @@ policies of a listener a chain owns. Deleting the chain releases its claim and
 rebuilds the document with the default order of the policies, creation
 timestamp then resource name, deleting neither policies nor their entities.
 
-## Produce policy-chain API
 ## Produce policy chains (Konnect only)
 
 `configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterProducePolicyChain`
