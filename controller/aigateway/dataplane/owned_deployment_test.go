@@ -54,6 +54,12 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 	const (
 		cpHost = "abc-cp.us.konghq.com"
 		tpHost = "abc-tp.us.konghq.com"
+		// The private shape Konnect returns for a control plane reached over
+		// PrivateLink: the prefix sits in the path.
+		privateHost   = "us.svc.konghq.tech"
+		privateCPHost = privateHost + "/cp/2cf352e764"
+		privateTPPath = "/tp/2cf352e764"
+		privateTPHost = privateHost + privateTPPath
 	)
 
 	// konnectControlPlane returns a ResolvedControlPlane resolved to a
@@ -128,6 +134,37 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 				assert.Equal(t, KonnectCertMountPath+"tls.crt", mustEnv(t, envs, EnvClientCertPath))
 				assert.Equal(t, KonnectCertMountPath+"tls.key", mustEnv(t, envs, EnvKonnectClientCertKey))
 			},
+		},
+		{
+			// Konnect returns this shape for a control plane reached over
+			// PrivateLink: the port must not land inside the path.
+			name:           "private endpoints that carry a path",
+			cp:             konnectControlPlane(testKonnectAIGateway(privateCPHost, privateTPHost)),
+			certSecretName: "my-cert",
+			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
+				assert.Equal(t, privateCPHost, mustEnv(t, envs, EnvKongClusterControlPlane))
+				assert.Equal(t, privateHost, mustEnv(t, envs, EnvKongClusterServerName))
+				assert.Equal(t, privateHost+":443"+privateTPPath, mustEnv(t, envs, EnvKongClusterTelemetryEndpoint))
+				assert.Equal(t, privateHost, mustEnv(t, envs, EnvKongClusterTelemetryServerName))
+			},
+		},
+		{
+			name:           "public endpoints that already carry a port",
+			cp:             konnectControlPlane(testKonnectAIGateway("cp.example.com:8443", "tp.example.com:8443")),
+			certSecretName: "my-cert",
+			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
+				// A second port used to be appended: host:port:443.
+				assert.Equal(t, "cp.example.com:8443", mustEnv(t, envs, EnvKongClusterControlPlane))
+				assert.Equal(t, "cp.example.com", mustEnv(t, envs, EnvKongClusterServerName))
+				assert.Equal(t, "tp.example.com:8443", mustEnv(t, envs, EnvKongClusterTelemetryEndpoint))
+				assert.Equal(t, "tp.example.com", mustEnv(t, envs, EnvKongClusterTelemetryServerName))
+			},
+		},
+		{
+			name:           "endpoint that cannot be used returns an error",
+			cp:             konnectControlPlane(testKonnectAIGateway("", "")),
+			certSecretName: "my-cert",
+			wantErr:        true,
 		},
 		{
 			name:           "required hardcoded env vars are present",
