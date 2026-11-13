@@ -9799,12 +9799,17 @@ spec:
                     - issuer
                     type: object
                   services:
+                    default:
+                      ingress:
+                        type: LoadBalancer
                     description: |-
                       Services indicates the configuration of Kubernetes Services needed for
                       the topology of various forms of traffic (including ingress, e.t.c.) to
                       and from the DataPlane.
                     properties:
                       ingress:
+                        default:
+                          type: LoadBalancer
                         description: |-
                           Ingress is the Kubernetes Service that will be used to expose ingress
                           traffic for the DataPlane. Here you can determine whether the DataPlane

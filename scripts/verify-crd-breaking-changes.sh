@@ -17,13 +17,27 @@ readonly CURRENT_CRD_DIR
 CRD_BREAKING_CHANGES_REPORT="${CRD_BREAKING_CHANGES_REPORT:-}"
 readonly CRD_BREAKING_CHANGES_REPORT
 
-# Keeps only the breaking changes of crdify output: the ERROR-level findings, one per line. It
-# drops WARNING findings, and the struct diff that crdify prints for changes it cannot classify,
-# because they are not breaking changes or too long for a pull-request comment. The console
-# keeps the full output. A finding line looks like:
+# Keeps only the breaking changes of crdify output. It drops WARNING findings, which are not
+# breaking changes. The console keeps the full output. A finding line looks like:
 #   - v1alpha1 - ^.spec.foo - type - ERROR - type changed : "string" -> "integer"
+# crdify cannot classify a change to a CEL validation rule, so it reports the finding as
+# `unhandled` and prints the struct diff on the lines that follow: indented lines and diff lines
+# marked with `+` or `-`. Those lines show the actual change, so they are kept with their finding.
 breaking_changes_only() {
-	grep -E '^- [^[:space:]]+ - .* - ERROR - ' || true
+	awk '
+		/^- [^[:space:]]+ - / {
+			keep = ($0 ~ / - ERROR - /)
+			if (keep) {
+				print
+			}
+			next
+		}
+		keep && ($0 == "" || /^[[:space:]]/ || /^[-+]/) {
+			print
+			next
+		}
+		{ keep = 0 }
+	'
 }
 
 report_breaking_change() {

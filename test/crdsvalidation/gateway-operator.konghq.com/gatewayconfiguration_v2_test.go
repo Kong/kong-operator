@@ -3,6 +3,7 @@ package crdsvalidation_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -137,6 +138,40 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: nil,
 					},
+				},
+			},
+			{
+				Name: "services ingress type defaults to LoadBalancer",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{},
+						},
+					},
+				},
+				Assert: func(t *testing.T, gc *operatorv2beta1.GatewayConfiguration) {
+					require.NotNil(t, gc.Spec.DataPlaneOptions)
+					require.NotNil(t, gc.Spec.DataPlaneOptions.Network.Services)
+					require.NotNil(t, gc.Spec.DataPlaneOptions.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, gc.Spec.DataPlaneOptions.Network.Services.Ingress.Type)
+				},
+			},
+			{
+				Name: "services ingress type defaults to LoadBalancer when services is empty",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{},
+							},
+						},
+					},
+				},
+				Assert: func(t *testing.T, gc *operatorv2beta1.GatewayConfiguration) {
+					require.NotNil(t, gc.Spec.DataPlaneOptions.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, gc.Spec.DataPlaneOptions.Network.Services.Ingress.Type)
 				},
 			},
 			{
@@ -327,6 +362,86 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			{
+				Name: "specifying fallbackConfiguration.useLastValidConfig=enabled without FallbackConfiguration feature gate",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled"),
+			},
+			{
+				Name: "specifying fallbackConfiguration.useLastValidConfig=enabled with FallbackConfiguration feature gate enabled",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+								{
+									Name:  "FallbackConfiguration",
+									State: operatorv2beta1.FeatureGateStateEnabled,
+								},
+							},
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "update setting fallbackConfiguration.useLastValidConfig to enabled without FallbackConfiguration feature gate is rejected",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+								},
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.ControlPlaneOptions.Translation.FallbackConfiguration.UseLastValidConfig = new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
+				},
+				ExpectedUpdateErrorMessage: new("fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled"),
+			},
+			{
+				Name: "update setting fallbackConfiguration.useLastValidConfig to enabled with FallbackConfiguration feature gate enabled is allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
+								},
+							},
+						},
+					},
+				},
+				Update: func(gc *operatorv2beta1.GatewayConfiguration) {
+					gc.Spec.ControlPlaneOptions.FeatureGates = []operatorv2beta1.ControlPlaneFeatureGate{
+						{
+							Name:  "FallbackConfiguration",
+							State: operatorv2beta1.FeatureGateStateEnabled,
+						},
+					}
+					gc.Spec.ControlPlaneOptions.Translation.FallbackConfiguration.UseLastValidConfig = new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
 				},
 			},
 		}.
@@ -625,6 +740,38 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
+			},
+			{
+				Name: "specify nodeport for listeners with empty dataPlaneOptions.network: ingress type defaults to LoadBalancer",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{},
+						},
+						ListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
+							{
+								Name:     "http",
+								NodePort: int32(30080),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "specify nodeport for listeners without dataPlaneOptions is not allowed",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
+							{
+								Name:     "http",
+								NodePort: int32(30080),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer"),
 			},
 			{
 				Name: "nodePort out of range",
