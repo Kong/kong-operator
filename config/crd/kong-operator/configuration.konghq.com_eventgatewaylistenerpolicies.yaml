@@ -118,9 +118,8 @@ spec:
                                     type: string
                                   namespace:
                                     description: |-
-                                      Namespace defaults to the referrer's namespace. If set, it must be
-                                      the same as the referrer's namespace; cross-namespace references are
-                                      not supported.
+                                      Namespace, if set to a namespace other than the referrer's, must be
+                                      permitted by a KongReferenceGrant in that namespace.
                                     type: string
                                 required:
                                 - name

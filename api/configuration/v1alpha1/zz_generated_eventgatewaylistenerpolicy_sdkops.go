@@ -479,10 +479,6 @@ func resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDe
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayVirtualCluster
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -587,6 +583,26 @@ func (obj *EventGatewayListenerPolicy) CrossNamespaceSiblingReferences() []Cross
 		kind := ref.Kind
 		if kind == "" {
 			kind = "EventGatewayTLSTrustBundle"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayListenerPolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualCluster"
 		}
 		checks = append(checks, CrossNamespaceReferenceCheck{
 			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayListenerPolicy"},
