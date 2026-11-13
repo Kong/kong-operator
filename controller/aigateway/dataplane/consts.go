@@ -59,11 +59,11 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// EnvKongClusterControlPlane is the AI Gateway environment variable for the Konnect control plane endpoint (host:port).
+	// EnvKongClusterControlPlane is the AI Gateway environment variable for the Konnect control plane endpoint (host[:port][/path]).
 	EnvKongClusterControlPlane = "KONG_CLUSTER_CONTROL_PLANE"
 	// EnvKongClusterServerName is the AI Gateway environment variable for the Konnect control plane TLS server name.
 	EnvKongClusterServerName = "KONG_CLUSTER_SERVER_NAME"
-	// EnvKongClusterTelemetryEndpoint is the AI Gateway environment variable for the Konnect telemetry endpoint (host:port).
+	// EnvKongClusterTelemetryEndpoint is the AI Gateway environment variable for the Konnect telemetry endpoint (host:port[/path]).
 	EnvKongClusterTelemetryEndpoint = "KONG_CLUSTER_TELEMETRY_ENDPOINT"
 	// EnvKongClusterTelemetryServerName is the AI Gateway environment variable for the Konnect telemetry TLS server name.
 	EnvKongClusterTelemetryServerName = "KONG_CLUSTER_TELEMETRY_SERVER_NAME"

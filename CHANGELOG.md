@@ -166,9 +166,24 @@
   `route` block to each of these MCP servers before you upgrade the CRDs.** Set
   one matcher in the block: `paths`, `hosts`, `methods` or `headers`.
   [#6485](https://github.com/Kong/kong-operator/pull/6485)
+- `KongReferenceGrant`: a `to` entry naming `EventGatewayBackendCluster`,
+  `EventGatewayListener` or `EventGatewayVirtualCluster` in the
+  `konnect.konghq.com` group is rejected. Such an entry never had any effect:
+  these kinds are in the `configuration.konghq.com` group, and a grant naming
+  them in `konnect.konghq.com` never allowed any reference. A stored grant
+  keeping one can still be updated as long as its `to` list is unchanged;
+  editing `to` requires changing the group to `configuration.konghq.com`.
+  [#6617](https://github.com/Kong/kong-operator/pull/6617)
 
 ### Fixed
 
+- AI Gateway: an `AIGatewayDataPlane` now renders the control plane and
+  telemetry endpoints of a control plane reached over PrivateLink, whose values
+  carry a path. The port no longer lands inside the path, so the data plane
+  connects instead of retrying forever. The `serverURL`-with-a-path mismatch is
+  still reported as `KonnectAIGatewayResolved=False` with reason
+  `EndpointMismatch`.
+  [#6105](https://github.com/Kong/kong-operator/issues/6105)
 - `KonnectConfigStoreSync` now accepts entry values up to 8192 Unicode
   characters, matching the increased Konnect Config Store limit instead of
   rejecting values above 5120 bytes. This allows larger TLS certificate/key
@@ -181,8 +196,7 @@
   `K8SIngressController` endpoint carrying a path, `EndpointMismatch` for a
   `serverURL` carrying a path paired with an endpoint that does not. A
   Konnect-backed `AIGatewayDataPlane` reports `KonnectAIGatewayResolved=False`
-  with reason `EndpointMismatch` on the same mismatch, and on any endpoint
-  carrying a path until its private rendering lands.
+  with reason `EndpointMismatch` on the same mismatch.
   [#6265](https://github.com/Kong/kong-operator/pull/6265)
 - Generated certificate Secrets now carry the full CA chain in `ca.crt`. The
   value holds the certificate that signs the leaf. It then holds each
@@ -245,9 +259,7 @@
   another namespace, with a `KongReferenceGrant` in its namespace, on both
   `KonnectEventGateway`s and `OnPremEventGateway`s. A
   `KongReferenceGrant` names these kinds under their own group,
-  `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
-  never matched, and is still accepted only so that existing grants stay
-  valid.
+  `configuration.konghq.com`.
   Without a `KongReferenceGrant`:
   - an entity that can't reference its parent reports `RefNotPermitted`; on
     an `OnPremEventGateway` it is left out and the configuration is still
