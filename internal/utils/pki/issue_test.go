@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -134,4 +135,11 @@ func TestIssueCertificateFromRSA(t *testing.T) {
 	certPEM, _, err := IssueCertificate(ca, CertRequest{CommonName: "c", TTL: time.Minute, Now: now})
 	require.NoError(t, err)
 	require.NoError(t, ParseCertificates(certPEM)[0].CheckSignatureFrom(ParseCertificates(ca.Data[corev1.TLSCertKey])[0]))
+}
+
+func TestTruncateCommonName(t *testing.T) {
+	assert.Equal(t, "short", TruncateCommonName("short"))
+	assert.Equal(t, strings.Repeat("a", 64), TruncateCommonName(strings.Repeat("a", 64)))
+	assert.Equal(t, strings.Repeat("a", 64), TruncateCommonName(strings.Repeat("a", 65)))
+	assert.Equal(t, strings.Repeat("é", 64), TruncateCommonName(strings.Repeat("é", 65)))
 }

@@ -391,7 +391,7 @@ func issuedOnPremCertificates(owned []corev1.Secret, subject string, ca *x509.Ce
 		c, err := parseOnPremCertificate(&owned[i])
 		// CheckSignatureFrom ignores names: a CA replaced by one with the same
 		// key, under another subject, would pass, while a verifier refuses it.
-		if err != nil || c.cert.Subject.CommonName != subject || !bytes.Equal(c.cert.RawIssuer, ca.RawSubject) ||
+		if err != nil || !issuedForSubject(c.cert, subject) || !bytes.Equal(c.cert.RawIssuer, ca.RawSubject) ||
 			c.cert.CheckSignatureFrom(ca) != nil || !owned[i].DeletionTimestamp.IsZero() {
 			continue
 		}
@@ -421,9 +421,18 @@ func currentOnPremCertificate(owned []corev1.Secret, subject string, ca *x509.Ce
 }
 
 // onPremCertificateSubject returns the subject of the client certificate of a
-// data plane of an OnPremEventGateway.
+// data plane of an OnPremEventGateway: its DNS name, and its common name once
+// truncated (see pki.TruncateCommonName), as the subject can be longer than
+// a common name may be.
 func onPremCertificateSubject(egdp *eventgatewayv1alpha1.KegDataPlane) string {
 	return fmt.Sprintf("%s.%s", egdp.Name, egdp.Namespace)
+}
+
+// issuedForSubject reports whether cert was issued for the subject, by
+// createOnPremCertificate: its DNS name is the subject, and its common name
+// the subject truncated.
+func issuedForSubject(cert *x509.Certificate, subject string) bool {
+	return cert.Subject.CommonName == pki.TruncateCommonName(subject) && slices.Equal(cert.DNSNames, []string{subject})
 }
 
 // referencedOnPremCertificates returns the names of the client certificate
@@ -532,8 +541,8 @@ func (r *Reconciler) ensureOnPremCertificate(
 
 // ensureOnPremCertificateAt provisions the client certificate of a data
 // plane of an OnPremEventGateway at now. Once the certificate is due for
-// renewal, or the published CA didn't issue it, e.g. after a rotation of the
-// CA, a new one is issued in a new Secret, alongside the previous one: the
+// renewal, or the published CA didn't issue it for the data plane, e.g. after
+// a rotation of the CA, a new one is issued in a new Secret, alongside the previous one: the
 // Deployment rolls onto it once it is registered on gw-admin, and the
 // previous one is removed after the rollout (see cleanupStaleCertificates).
 func (r *Reconciler) ensureOnPremCertificateAt(
@@ -551,7 +560,7 @@ func (r *Reconciler) ensureOnPremCertificateAt(
 	reissue := ""
 	switch {
 	case !found && len(owned) > 0:
-		reissue = "the cp client CA of the GWAdmin didn't issue the current one"
+		reissue = "the cp client CA of the GWAdmin didn't issue any of the current ones for the data plane"
 	case found && !now.Before(current.renewalTime()):
 		reissue = "the current one is due for renewal"
 	case found:
@@ -676,7 +685,7 @@ func (r *Reconciler) createOnPremCertificate(
 ) (*corev1.Secret, error) {
 	subject := onPremCertificateSubject(egdp)
 	certPEM, keyPEM, err := pki.IssueCertificate(deps.clientCA, pki.CertRequest{
-		CommonName: subject,
+		CommonName: pki.TruncateCommonName(subject),
 		DNSNames:   []string{subject},
 		Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		TTL:        ttl,

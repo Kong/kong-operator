@@ -28,6 +28,19 @@ const ClockSkew = 5 * time.Minute
 
 var certificateSubject = pkix.Name{Organization: []string{"Kong, Inc."}, Country: []string{"US"}}
 
+// MaxCommonNameLength is the number of characters RFC 5280 bounds a common
+// name to.
+const MaxCommonNameLength = 64
+
+// TruncateCommonName truncates a common name to MaxCommonNameLength
+// characters, never splitting a multi-byte one.
+func TruncateCommonName(cn string) string {
+	if r := []rune(cn); len(r) > MaxCommonNameLength {
+		cn = string(r[:MaxCommonNameLength])
+	}
+	return cn
+}
+
 // GenerateCA generates a self-signed ECDSA P-256 certificate authority valid
 // for ttl from now and returns its certificate and private key, both PEM
 // encoded. It only signs certificates, never other certificate authorities.
