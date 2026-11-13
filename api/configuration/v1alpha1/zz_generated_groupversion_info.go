@@ -35,6 +35,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&EventGatewayVirtualClusterPolicyChainList{},
 		&EventGatewayVirtualClusterProducePolicy{},
 		&EventGatewayVirtualClusterProducePolicyList{},
+		&EventGatewayVirtualClusterProducePolicyChain{},
+		&EventGatewayVirtualClusterProducePolicyChainList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)

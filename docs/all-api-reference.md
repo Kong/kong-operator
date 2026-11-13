@@ -10084,6 +10084,7 @@ _Appears in:_
 - [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
 - [EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)
 - [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
+- [EventGatewayVirtualClusterProducePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainspec)
 - [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
 - [EventGatewayVirtualClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)
 - [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
@@ -10444,6 +10445,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
 - [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+- [EventGatewayVirtualClusterProducePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicychain)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
 - [KongCertificate](#configuration-konghq-com-v1alpha1-kongcertificate)
@@ -10660,6 +10662,21 @@ EventGatewayVirtualClusterProducePolicy is the Schema for the eventgatewayvirtua
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)_ |  |
+
+### EventGatewayVirtualClusterProducePolicyChain
+
+
+EventGatewayVirtualClusterProducePolicyChain is the Schema for the eventgatewayvirtualclusterproducepolicychains API.
+
+<!-- event_gateway_virtual_cluster_produce_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterProducePolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterProducePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterProducePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainstatus)_ |  |
 
 ### IngressClassParameters
 
@@ -14999,6 +15016,55 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
 
+#### EventGatewayVirtualClusterProducePolicyChainAPISpec
+
+
+EventGatewayVirtualClusterProducePolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterProducePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order. This API declares Konnect-only ordering. The parent virtual cluster and every policy must be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. Each policy must belong to the referenced EventGatewayVirtualCluster. List every produce policy exactly once, including roots and nested children. A parent must precede its children, and each parent's group must remain contiguous. Root groups may move and sibling children may reorder within their group. Ordering does not change parentPolicyRef or move children between parents. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainspec)
+
+#### EventGatewayVirtualClusterProducePolicyChainSpec
+
+
+EventGatewayVirtualClusterProducePolicyChainSpec defines the desired state of EventGatewayVirtualClusterProducePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent VirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterProducePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicychain)
+
+#### EventGatewayVirtualClusterProducePolicyChainStatus
+
+
+EventGatewayVirtualClusterProducePolicyChainStatus defines the observed state of EventGatewayVirtualClusterProducePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicychain)
+
 #### EventGatewayVirtualClusterProducePolicyConfig
 
 
@@ -15062,6 +15128,7 @@ object's Konnect id is used where the Konnect API accepts it.
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
+- [EventGatewayVirtualClusterProducePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainapispec)
 
 
 
@@ -16655,6 +16722,7 @@ _Appears in:_
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
 - [EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
+- [EventGatewayVirtualClusterProducePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainstatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 
