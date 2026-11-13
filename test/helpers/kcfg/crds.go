@@ -30,7 +30,7 @@ var (
 
 	chartPath = path.Join(helpers.ProjectRootPath(), "charts/kong-operator")
 
-	gatewayAPIPackageVersion = lo.Must(extractModuleVersion(gatewayAPIModule))
+	gatewayAPIPackageVersion = lo.Must(gatewayAPIVersion())
 	gatewayAPIModulePath     = constructModulePath(gatewayAPIModule, gatewayAPIPackageVersion)
 
 	gatewayAPIConformancePackageVersion = lo.Must(extractModuleVersion(gatewayAPIConformanceModule))
@@ -59,6 +59,53 @@ func IngressControllerIncubatorCRDsPath() string {
 
 func GatewayAPIExperimentalCRDsPath() string {
 	return filepath.Join(gatewayAPIModulePath, "config", "crd", "experimental")
+}
+
+// GatewayAPIStandardCRDsPath returns the standard-channel CRDs of the pinned
+// module. Content-equivalent to the Makefile's standard chart source (a
+// kustomize build of the module's config/crd root, whose kustomization
+// references only standard/* files).
+func GatewayAPIStandardCRDsPath() string {
+	return filepath.Join(gatewayAPIModulePath, "config", "crd", "standard")
+}
+
+// envGatewayAPIVersionOverride allows tests to run against Gateway API CRDs of
+// a version other than the one pinned in go.mod (compatibility testing).
+// The module of that version must be
+// present in the module cache (e.g. `go mod download module@version` or the
+// `ensure.go.pkg.downloaded.gateway-api` make target with GATEWAY_API_VERSION
+// set to the same version).
+const envGatewayAPIVersionOverride = "GATEWAY_API_VERSION"
+
+// gatewayAPIVersion returns the Gateway API version the test cluster CRDs are
+// installed from: the GATEWAY_API_VERSION env if set, otherwise the version
+// pinned in go.mod.
+func gatewayAPIVersion() (string, error) {
+	if v := os.Getenv(envGatewayAPIVersionOverride); v != "" {
+		if !strings.HasPrefix(v, "v") {
+			return "", fmt.Errorf("%s must start with 'v', got %q", envGatewayAPIVersionOverride, v)
+		}
+		return v, nil
+	}
+	return extractModuleVersion(gatewayAPIModule)
+}
+
+// envGatewayAPICRDsChannel selects the Gateway API CRD channel tests install
+// on the cluster: "experimental" (default) or "standard". The standard
+// channel's CRD set grows with the version: TCPRoute/UDPRoute are absent
+// before v1.6 (TLSRoute before v1.5), so older standard installs cannot run
+// tests applying those kinds.
+const envGatewayAPICRDsChannel = "TEST_GATEWAY_API_CRDS_CHANNEL"
+
+// GatewayAPICRDsPath returns the path of the Gateway API CRDs to install in
+// test clusters, based on TEST_GATEWAY_API_CRDS_CHANNEL (default: experimental).
+func GatewayAPICRDsPath() string {
+	switch os.Getenv(envGatewayAPICRDsChannel) {
+	case "standard":
+		return GatewayAPIStandardCRDsPath()
+	default:
+		return GatewayAPIExperimentalCRDsPath()
+	}
 }
 
 func GatewayAPIConformanceTestsFilesystemsWithManifests() []fs.FS {
