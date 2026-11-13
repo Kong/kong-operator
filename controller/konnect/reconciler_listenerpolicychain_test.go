@@ -331,7 +331,7 @@ func TestListenerPolicyChainInvalidReferencesBlockProgramming(t *testing.T) {
 			ids, err := chain.ResolveValidatedPolicyIDs(t.Context(), cl)
 			require.ErrorContains(t, err, tt.wantErr)
 			require.Nil(t, ids, "no shortened result may escape validation")
-			_, stop, res, err := handleTypeSpecific(t.Context(), nil, consts.DefaultKonnectSyncPeriod, cl, cl, chain)
+			_, stop, res, err := handleTypeSpecific(t.Context(), nil, consts.DefaultKonnectSyncPeriod, cl, cl, chain, "")
 			require.NoError(t, err)
 			require.True(t, stop)
 			require.True(t, res.IsZero())

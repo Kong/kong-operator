@@ -40,6 +40,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForEventGatewayTLSTrustBundle(),
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
+		index.OptionsForEventGatewayVirtualClusterConsumePolicyChain(),
 		index.OptionsForEventGatewayVirtualClusterPolicy(),
 		index.OptionsForEventGatewayVirtualClusterPolicyChain(),
 		index.OptionsForEventGatewayVirtualClusterProducePolicy(),

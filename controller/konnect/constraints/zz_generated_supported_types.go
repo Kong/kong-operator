@@ -37,6 +37,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		configurationv1alpha1.EventGatewayTLSTrustBundle |
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |

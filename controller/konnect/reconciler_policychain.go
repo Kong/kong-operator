@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apiconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -43,14 +44,26 @@ func (c policyChainLiveGetClient) Get(ctx context.Context, key client.ObjectKey,
 }
 
 type policyChainReferenceResolver struct {
-	chain     policyChain
-	policyIDs []string
+	chain          policyChain
+	organizationID string
+	policyIDs      []string
 }
 
 // ResolveKonnectReferences validates references and captures their ordered IDs for this reconciliation.
 func (r *policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	chain := r.chain
+	if consume, ok := chain.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain); ok && r.organizationID != "" {
+		if orgID := consume.GetKonnectStatus().GetOrgID(); orgID != "" && orgID != r.organizationID {
+			return configurationv1alpha1.PolicyChainInvalidError{Message: fmt.Sprintf("policy chain %s belongs to Konnect organization %s, not authenticated organization %s", client.ObjectKeyFromObject(consume), orgID, r.organizationID)}
+		}
+		// Organization status is set after SDK operations. Validate a snapshot
+		// against the authenticated organization even on the first reconciliation.
+		snapshot := consume.DeepCopy()
+		snapshot.GetKonnectStatus().SetOrgID(r.organizationID)
+		chain = snapshot
+	}
 	var err error
-	r.policyIDs, err = r.chain.ResolveValidatedPolicyIDs(ctx, cl)
+	r.policyIDs, err = chain.ResolveValidatedPolicyIDs(ctx, cl)
 	return err
 }
 
