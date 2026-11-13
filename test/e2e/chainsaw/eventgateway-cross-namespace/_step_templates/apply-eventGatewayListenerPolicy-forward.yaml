@@ -1,0 +1,40 @@
+# Template for creating a forwardToVirtualCluster EventGatewayListenerPolicy
+# forwarding the traffic of its listener to a virtual cluster.
+#
+# Required bindings:
+#   - policy_name, policy_namespace: The listener policy.
+#   - listener_name, listener_namespace: Its listener.
+#   - virtual_cluster_name, virtual_cluster_namespace: The virtual cluster it
+#     forwards to.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-listener-policy-forward
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayListenerPolicy
+          metadata:
+            name: ($policy_name)
+            namespace: ($policy_namespace)
+          spec:
+            eventGatewayListenerRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($listener_name)
+                namespace: ($listener_namespace)
+            apiSpec:
+              type: forwardToVirtualCluster
+              forwardToVirtualCluster:
+                name: ($policy_name)
+                config:
+                  type: portMapping
+                  portMapping:
+                    bootstrapPort: at_start
+                    advertisedHost: placeholder.invalid
+                    destination:
+                      kind: EventGatewayVirtualCluster
+                      name: ($virtual_cluster_name)
+                      namespace: ($virtual_cluster_namespace)
