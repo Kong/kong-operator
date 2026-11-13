@@ -166,6 +166,14 @@
   `route` block to each of these MCP servers before you upgrade the CRDs.** Set
   one matcher in the block: `paths`, `hosts`, `methods` or `headers`.
   [#6485](https://github.com/Kong/kong-operator/pull/6485)
+- `KongReferenceGrant`: a `to` entry naming `EventGatewayBackendCluster`,
+  `EventGatewayListener` or `EventGatewayVirtualCluster` in the
+  `konnect.konghq.com` group is rejected. Such an entry never had any effect:
+  these kinds are in the `configuration.konghq.com` group, and a grant naming
+  them in `konnect.konghq.com` never allowed any reference. A stored grant
+  keeping one can still be updated as long as its `to` list is unchanged;
+  editing `to` requires changing the group to `configuration.konghq.com`.
+  [#6617](https://github.com/Kong/kong-operator/pull/6617)
 
 ### Fixed
 
@@ -242,9 +250,7 @@
   another namespace, with a `KongReferenceGrant` in its namespace, on both
   `KonnectEventGateway`s and `OnPremEventGateway`s. A
   `KongReferenceGrant` names these kinds under their own group,
-  `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
-  never matched, and is still accepted only so that existing grants stay
-  valid.
+  `configuration.konghq.com`.
   Without a `KongReferenceGrant`:
   - an entity that can't reference its parent reports `RefNotPermitted`; on
     an `OnPremEventGateway` it is left out and the configuration is still
