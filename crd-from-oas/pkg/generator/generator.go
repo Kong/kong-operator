@@ -5678,6 +5678,10 @@ type TemplateRefInjection struct {
 	// an array of reference objects replaced by the ref struct: an empty CR
 	// field sends no array at all, as before the reference.
 	SkipEmpty bool
+	// OptionalAncestor is true when the injection only rewrites a reference
+	// object already in the payload. Every parent hop is then nil-guarded, so
+	// a missing ancestor leaves the payload untouched.
+	OptionalAncestor bool
 	// ElementObjectWrap is true for a reference replacing a by-id/by-name
 	// reference object in each element of the ArrayKey array: each element
 	// setting the reference gets it replaced with {"<ObjectWrapKey>": value}.
@@ -5924,6 +5928,7 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		ElementNavs:        elementNavs,
 		ItemObjectKey:      ref.ItemObjectKey,
 		SkipEmpty:          replacedRef && ref.ItemObjectKey != "",
+		OptionalAncestor:   replacedRef,
 	}
 	if isACL {
 		pathParts := strings.Split(ref.Path, ".")

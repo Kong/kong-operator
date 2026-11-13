@@ -174,6 +174,18 @@
   keeping one can still be updated as long as its `to` list is unchanged;
   editing `to` requires changing the group to `configuration.konghq.com`.
   [#6617](https://github.com/Kong/kong-operator/pull/6617)
+- AI Gateway: `AIGatewayAgent` `spec.apiSpec.config.caCertificates` and
+  `certificates` now reference `AIGatewayCACertificate` and
+  `AIGatewayCertificate` objects, with `kind`, `name` and `namespace`, instead
+  of naming certificates as plain strings. If a `KongReferenceGrant` in the
+  target namespace allows it, a reference on the Konnect path can name an
+  object in another namespace. `AIGatewaySNI` accepts a cross-namespace
+  certificate reference in the same way. On an `OnPremAIGateway`, a certificate
+  reference must name an object in the same namespace.
+  **On upgrade, the field shape changes from a list of strings to a list of
+  objects. A manifest that sets `caCertificates: [my-ca]` must use
+  `caCertificates: [{name: my-ca}]`.**
+  [#5257](https://github.com/Kong/kong-operator/issues/5257)
 
 ### Fixed
 

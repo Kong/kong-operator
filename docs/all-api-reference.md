@@ -1177,8 +1177,8 @@ The structure varies depending on the agent type.
 
 | Field | Description |
 | --- | --- |
-| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream agent endpoint, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this Agent, which proxies requests to `config.url`.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
-| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream agent endpoint, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this Agent, which proxies requests to `config.url`. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
+| `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream agent endpoint. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayAgent's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
+| `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream agent endpoint. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayAgent's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayAgentConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
@@ -1482,6 +1482,24 @@ _Appears in:_
 
 - [AIGatewayCACertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatespec)
 
+#### AIGatewayCACertificateRef
+
+
+AIGatewayCACertificateRef references an AIGatewayCACertificate in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+
 #### AIGatewayCACertificateReference
 
 _Underlying type:_ `string`
@@ -1494,7 +1512,6 @@ same AI Gateway, by CA certificate name.
 
 _Appears in:_
 
-- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
 - [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
 - [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
@@ -1601,10 +1618,11 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
 - [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
 
 #### AIGatewayCertificateReference
@@ -1621,7 +1639,6 @@ certificate to an upstream.
 
 _Appears in:_
 
-- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
 - [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
 - [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)

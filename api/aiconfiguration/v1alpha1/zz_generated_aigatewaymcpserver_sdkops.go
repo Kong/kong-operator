@@ -6676,9 +6676,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener2
 	}
 	// spec.apiSpec.conversion-listener.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
 		conversionListener, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener == nil {
@@ -6692,9 +6690,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener
 	}
 	// spec.apiSpec.conversion-only.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
 		conversionOnly, _ := payload["conversion-only"].(map[string]any)
 		if conversionOnly == nil {
@@ -6708,9 +6704,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-only"] = conversionOnly
 	}
 	// spec.apiSpec.listener.sources carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
 		listener, _ := payload["listener"].(map[string]any)
 		if listener == nil {
@@ -6724,9 +6718,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener
 	}
 	// spec.apiSpec.listener.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
 		listener2, _ := payload["listener"].(map[string]any)
 		if listener2 == nil {
@@ -6740,9 +6732,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener2
 	}
 	// spec.apiSpec.passthrough-listener.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
 		passthroughListener, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener == nil {
@@ -6756,9 +6746,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener
 	}
 	// spec.apiSpec.upstream-server.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
 		upstreamServer, _ := payload["upstream-server"].(map[string]any)
 		if upstreamServer == nil {
@@ -6772,9 +6760,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["upstream-server"] = upstreamServer
 	}
 	// spec.apiSpec.listener.access.consumer.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
 		listener3, _ := payload["listener"].(map[string]any)
 		if listener3 == nil {
@@ -6798,9 +6784,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener3
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
 		listener4, _ := payload["listener"].(map[string]any)
 		if listener4 == nil {
@@ -6824,9 +6808,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener4
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
 		conversionListener2, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener2 == nil {
@@ -6850,9 +6832,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener2
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
 		conversionListener3, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener3 == nil {
@@ -6876,9 +6856,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener3
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
 		passthroughListener2, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener2 == nil {
@@ -6902,9 +6880,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener2
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
 		passthroughListener3, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener3 == nil {
@@ -6928,9 +6904,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener3
 	}
 	// spec.apiSpec.listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
 		listener5, _ := payload["listener"].(map[string]any)
 		if listener5 == nil {
@@ -6959,9 +6933,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener5
 	}
 	// spec.apiSpec.listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
 		listener6, _ := payload["listener"].(map[string]any)
 		if listener6 == nil {
@@ -6990,9 +6962,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener6
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
 		listener7, _ := payload["listener"].(map[string]any)
 		if listener7 == nil {
@@ -7021,9 +6991,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener7
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
 		listener8, _ := payload["listener"].(map[string]any)
 		if listener8 == nil {
@@ -7052,9 +7020,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener8
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
 		conversionListener4, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener4 == nil {
@@ -7083,9 +7049,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener4
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
 		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener5 == nil {
@@ -7114,9 +7078,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener5
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
 		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener6 == nil {
@@ -7145,9 +7107,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener6
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
 		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener7 == nil {
@@ -7176,9 +7136,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener7
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
 		passthroughListener4, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener4 == nil {
@@ -7207,9 +7165,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener4
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
 		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener5 == nil {
@@ -7238,9 +7194,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener5
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
 		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener6 == nil {
@@ -7269,9 +7223,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener6
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
 		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener7 == nil {
@@ -7301,8 +7253,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
 		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener8 == nil {
@@ -7368,8 +7319,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-only.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
 		conversionOnly2, _ := payload["conversion-only"].(map[string]any)
 		if conversionOnly2 == nil {
@@ -7435,8 +7385,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
 		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener8 == nil {
@@ -7502,8 +7451,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.upstream-server.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
 		upstreamServer2, _ := payload["upstream-server"].(map[string]any)
 		if upstreamServer2 == nil {
@@ -7569,9 +7517,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
 		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener9 == nil {
@@ -7590,9 +7536,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
 		conversionOnly3, _ := payload["conversion-only"].(map[string]any)
 		if conversionOnly3 == nil {
@@ -7611,9 +7555,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
 		listener9, _ := payload["listener"].(map[string]any)
 		if listener9 == nil {
@@ -7632,9 +7574,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
 		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener9 == nil {
@@ -7653,9 +7593,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
 		upstreamServer3, _ := payload["upstream-server"].(map[string]any)
 		if upstreamServer3 == nil {
@@ -7903,9 +7841,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener2
 	}
 	// spec.apiSpec.conversion-listener.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
 		conversionListener, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener == nil {
@@ -7919,9 +7855,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener
 	}
 	// spec.apiSpec.conversion-only.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
 		conversionOnly, _ := payload["conversion-only"].(map[string]any)
 		if conversionOnly == nil {
@@ -7935,9 +7869,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-only"] = conversionOnly
 	}
 	// spec.apiSpec.listener.sources carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
 		listener, _ := payload["listener"].(map[string]any)
 		if listener == nil {
@@ -7951,9 +7883,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener
 	}
 	// spec.apiSpec.listener.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
 		listener2, _ := payload["listener"].(map[string]any)
 		if listener2 == nil {
@@ -7967,9 +7897,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener2
 	}
 	// spec.apiSpec.passthrough-listener.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
 		passthroughListener, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener == nil {
@@ -7983,9 +7911,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener
 	}
 	// spec.apiSpec.upstream-server.policies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
 		upstreamServer, _ := payload["upstream-server"].(map[string]any)
 		if upstreamServer == nil {
@@ -7999,9 +7925,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["upstream-server"] = upstreamServer
 	}
 	// spec.apiSpec.listener.access.consumer.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
 		listener3, _ := payload["listener"].(map[string]any)
 		if listener3 == nil {
@@ -8025,9 +7949,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener3
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
 		listener4, _ := payload["listener"].(map[string]any)
 		if listener4 == nil {
@@ -8051,9 +7973,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener4
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
 		conversionListener2, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener2 == nil {
@@ -8077,9 +7997,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener2
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
 		conversionListener3, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener3 == nil {
@@ -8103,9 +8021,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener3
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
 		passthroughListener2, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener2 == nil {
@@ -8129,9 +8045,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener2
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
 		passthroughListener3, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener3 == nil {
@@ -8155,9 +8069,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener3
 	}
 	// spec.apiSpec.listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
 		listener5, _ := payload["listener"].(map[string]any)
 		if listener5 == nil {
@@ -8186,9 +8098,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener5
 	}
 	// spec.apiSpec.listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
 		listener6, _ := payload["listener"].(map[string]any)
 		if listener6 == nil {
@@ -8217,9 +8127,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener6
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
 		listener7, _ := payload["listener"].(map[string]any)
 		if listener7 == nil {
@@ -8248,9 +8156,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener7
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
 		listener8, _ := payload["listener"].(map[string]any)
 		if listener8 == nil {
@@ -8279,9 +8185,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["listener"] = listener8
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
 		conversionListener4, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener4 == nil {
@@ -8310,9 +8214,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener4
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
 		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener5 == nil {
@@ -8341,9 +8243,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener5
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
 		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener6 == nil {
@@ -8372,9 +8272,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener6
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
 		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener7 == nil {
@@ -8403,9 +8301,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["conversion-listener"] = conversionListener7
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
 		passthroughListener4, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener4 == nil {
@@ -8434,9 +8330,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener4
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
 		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener5 == nil {
@@ -8465,9 +8359,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener5
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
 		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener6 == nil {
@@ -8496,9 +8388,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		payload["passthrough-listener"] = passthroughListener6
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
 		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener7 == nil {
@@ -8528,8 +8418,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
 		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener8 == nil {
@@ -8595,8 +8484,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-only.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
 		conversionOnly2, _ := payload["conversion-only"].(map[string]any)
 		if conversionOnly2 == nil {
@@ -8662,8 +8550,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
 		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener8 == nil {
@@ -8729,8 +8616,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.upstream-server.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
 		upstreamServer2, _ := payload["upstream-server"].(map[string]any)
 		if upstreamServer2 == nil {
@@ -8796,9 +8682,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
 		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener9 == nil {
@@ -8817,9 +8701,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
 		conversionOnly3, _ := payload["conversion-only"].(map[string]any)
 		if conversionOnly3 == nil {
@@ -8838,9 +8720,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
 		listener9, _ := payload["listener"].(map[string]any)
 		if listener9 == nil {
@@ -8859,9 +8739,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
 		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener9 == nil {
@@ -8880,9 +8758,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
 		upstreamServer3, _ := payload["upstream-server"].(map[string]any)
 		if upstreamServer3 == nil {

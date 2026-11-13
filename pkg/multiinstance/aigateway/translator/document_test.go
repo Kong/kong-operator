@@ -1784,6 +1784,87 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 	require.NoError(t, findStatusByName(t, statuses, "agent-healthy").Err)
 }
 
+// TestBuildDocument_AgentFailsWhenReferencedCertificateFails pins the translated-reference
+// check for the agent's upstream TLS certificate references: an agent referencing an
+// AIGatewayCACertificate or an AIGatewayCertificate that failed its own translation must be
+// excluded with that certificate's cause.
+func TestBuildDocument_AgentFailsWhenReferencedCertificateFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// A certificate whose cert comes from a Secret that does not exist fails its own
+	// translation while keeping its entity name intact; the healthy pair proves the agent
+	// failure stays per-entity.
+	missingSecret := aiconfigurationv1alpha1.SensitiveDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "missing-secret", Key: "tls.crt"},
+	}
+	brokenCACert := aiGatewayCACertificateFixture("ca-cert-broken", "")
+	brokenCACert.Spec.APISpec.Cert = missingSecret
+	healthyCACert := aiGatewayCACertificateFixture("ca-cert-healthy", genCACertPEM(t))
+	brokenCert := aiGatewayCertificateFixture("cert-broken")
+	brokenCert.Spec.APISpec.Cert = missingSecret
+	healthyCert := aiGatewayCertificateFixture("cert-healthy")
+
+	healthyPolicy := aiGatewayPolicyFixture("policy-healthy")
+	healthyGroup := aiGatewayConsumerGroupFixture("group-healthy")
+	// One agent per checked certificate kind: cmp.Or stops at the first failing check, so a
+	// single agent referencing both broken certificates would pin only the CA certificate.
+	newAgent := func(name string) *aiconfigurationv1alpha1.AIGatewayAgent {
+		agent := aiGatewayAgentFixture(name)
+		agent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
+		agent.Spec.APISpec.Access.Acls.Allow.Allow = []aiconfigurationv1alpha1.AIGatewayACLRef{{Name: "group-healthy"}}
+		agent.Spec.APISpec.Access.AuthStrategies = nil
+		return agent
+	}
+	agentBrokenCACert := newAgent("agent-broken-ca-cert")
+	agentBrokenCACert.Spec.APISpec.Config.CaCertificates = []aiconfigurationv1alpha1.AIGatewayCACertificateRef{{Name: "ca-cert-broken"}}
+	agentBrokenCert := newAgent("agent-broken-cert")
+	agentBrokenCert.Spec.APISpec.Config.Certificates = []aiconfigurationv1alpha1.AIGatewayCertificateRef{{Name: "cert-broken"}}
+	agentHealthy := newAgent("agent-healthy")
+	agentHealthy.Spec.APISpec.Config.CaCertificates = []aiconfigurationv1alpha1.AIGatewayCACertificateRef{{Name: "ca-cert-healthy"}}
+	agentHealthy.Spec.APISpec.Config.Certificates = []aiconfigurationv1alpha1.AIGatewayCertificateRef{{Name: "cert-healthy"}}
+
+	cl := newTestBuilder(
+		scheme,
+		gw, brokenCACert, healthyCACert, brokenCert, healthyCert,
+		healthyPolicy, healthyGroup, agentBrokenCACert, agentBrokenCert, agentHealthy,
+	).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+	require.NoError(t, err)
+
+	require.Len(t, doc.CACertificates, 1)
+	require.Equal(t, "ca-cert-healthy", doc.CACertificates[0].Name)
+	require.Len(t, doc.Certificates, 1)
+	require.Equal(t, "cert-healthy", doc.Certificates[0].Name)
+	require.Len(t, doc.Agents, 1)
+	require.Equal(t, "agent-healthy", doc.Agents[0].Name)
+	require.Equal(t, []string{"ca-cert-healthy"}, doc.Agents[0].Config.CACertificates)
+	require.Equal(t, []string{"cert-healthy"}, doc.Agents[0].Config.Certificates)
+
+	require.Len(t, statuses, 9)
+	require.Contains(t, findStatusByName(t, statuses, "ca-cert-broken").Err.Error(), "missing-secret")
+	require.Contains(t, findStatusByName(t, statuses, "cert-broken").Err.Error(), "missing-secret")
+
+	for agentName, want := range map[string]struct{ kind, name string }{
+		"agent-broken-ca-cert": {kind: "AIGatewayCACertificate", name: "ca-cert-broken"},
+		"agent-broken-cert":    {kind: "AIGatewayCertificate", name: "cert-broken"},
+	} {
+		err := findStatusByName(t, statuses, agentName).Err
+		require.ErrorContains(t, err, fmt.Sprintf(`referenced %s %q was excluded from the document`, want.kind, want.name))
+		var refErr *ReferencedEntityExcludedError
+		require.ErrorAs(t, err, &refErr)
+		require.ErrorContains(t, refErr.Cause, "missing-secret")
+	}
+	require.NoError(t, findStatusByName(t, statuses, "agent-healthy").Err)
+}
+
 // TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails pins the translated-
 // reference check for the MCP server ACL surface (which also covers DefaultToolACLs and
 // per-tool ACLs through the same helper): an MCP server whose access.acls.allow references
