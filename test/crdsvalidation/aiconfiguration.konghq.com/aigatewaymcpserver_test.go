@@ -463,7 +463,8 @@ func validAIGatewayMCPServerConversionListener(ns string) *aiconfigurationv1alph
 				Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 			},
 			Config: aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig{
-				URL: "https://example.com/mcp",
+				URL:   "https://example.com/mcp",
+				Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}},
 			},
 			Tools: []aiconfigurationv1alpha1.AIGatewayMCPConversionTool{
 				{
@@ -489,7 +490,8 @@ func validAIGatewayMCPServerPassthroughListener(ns string) *aiconfigurationv1alp
 				Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 			},
 			Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamConfig{
-				URL: "https://example.com/mcp",
+				URL:   "https://example.com/mcp",
+				Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}},
 			},
 		},
 	}
@@ -505,6 +507,7 @@ func validAIGatewayMCPServerUpstreamServer(ns string) *aiconfigurationv1alpha1.A
 			DisplayName: "Test MCP Server Upstream Server",
 			Config: aiconfigurationv1alpha1.AIGatewayMCPServerUpstreamServerConfig{
 				URL:                  "https://example.com/mcp",
+				Route:                aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}},
 				ToolsCacheTtlSeconds: 60,
 			},
 		},

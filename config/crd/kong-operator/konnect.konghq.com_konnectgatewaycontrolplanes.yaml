@@ -220,9 +220,9 @@ spec:
             - message: spec.cluster_type is immutable
               rule: '!has(self.cluster_type) ? !has(oldSelf.cluster_type) : self.cluster_type
                 == oldSelf.cluster_type'
-            - message: cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'
+            - message: cloud_gateway cannot be true for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'
               rule: 'has(self.cluster_type) && self.cluster_type == ''CLUSTER_TYPE_K8S_INGRESS_CONTROLLER''
-                ? !has(self.cloud_gateway) : true'
+                ? !(has(self.cloud_gateway) && self.cloud_gateway) : true'
             - message: createControlPlaneRequest fields cannot be set for type Mirror
               rule: 'self.source == ''Mirror'' ? !has(self.name) && !has(self.description)
                 && !has(self.cluster_type) && !has(self.auth_type) && !has(self.cloud_gateway)
@@ -587,11 +587,12 @@ spec:
                 ? true : (has(self.createControlPlaneRequest) && has(oldSelf.createControlPlaneRequest)
                 && (!has(self.createControlPlaneRequest.cluster_type) ? !has(oldSelf.createControlPlaneRequest.cluster_type)
                 : self.createControlPlaneRequest.cluster_type == oldSelf.createControlPlaneRequest.cluster_type))'
-            - message: spec.createControlPlaneRequest.cloud_gateway cannot be set
+            - message: spec.createControlPlaneRequest.cloud_gateway cannot be true
                 for spec.createControlPlaneRequest.cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'
               rule: 'has(self.createControlPlaneRequest) && has(self.createControlPlaneRequest.cluster_type)
                 && self.createControlPlaneRequest.cluster_type == ''CLUSTER_TYPE_K8S_INGRESS_CONTROLLER''
-                ? !has(self.createControlPlaneRequest.cloud_gateway) : true'
+                ? !(has(self.createControlPlaneRequest.cloud_gateway) && self.createControlPlaneRequest.cloud_gateway)
+                : true'
             - message: createControlPlaneRequest fields cannot be set for type Mirror
               rule: 'has(self.source) && self.source == ''Mirror'' ? !has(self.createControlPlaneRequest)
                 : true'

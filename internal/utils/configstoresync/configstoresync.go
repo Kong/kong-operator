@@ -24,8 +24,8 @@ const (
 	// a ~582-byte key. The controller enforces this cap pre-write and reports
 	// KeyTooLong instead of pushing.
 	MaxKeyBytes = 512
-	// MaxValueBytes is the Konnect Config Store value size cap (5120 bytes).
-	MaxValueBytes = 5120
+	// MaxValueCharacters is the Konnect Config Store value cap in Unicode code points.
+	MaxValueCharacters = 8192
 
 	// CombinedCertificateSubField is the frozen JSON subfield holding the
 	// certificate in a Combined mode entry value.

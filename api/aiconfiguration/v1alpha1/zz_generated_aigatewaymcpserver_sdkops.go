@@ -5577,7 +5577,7 @@ func resolveAIGatewayMCPServerUpstreamServerDatastores(ctx context.Context, cl c
 func AIGatewayMCPServerRefsToAIGatewayDatastore(obj *AIGatewayMCPServer) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -5587,7 +5587,7 @@ func AIGatewayMCPServerRefsToAIGatewayDatastore(obj *AIGatewayMCPServer) []clien
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayMCPServerConversionOnlyDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -5597,7 +5597,7 @@ func AIGatewayMCPServerRefsToAIGatewayDatastore(obj *AIGatewayMCPServer) []clien
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayMCPServerListenerDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -5607,7 +5607,7 @@ func AIGatewayMCPServerRefsToAIGatewayDatastore(obj *AIGatewayMCPServer) []clien
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -5617,7 +5617,7 @@ func AIGatewayMCPServerRefsToAIGatewayDatastore(obj *AIGatewayMCPServer) []clien
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayMCPServerUpstreamServerDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace

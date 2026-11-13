@@ -52,6 +52,9 @@ a rule on an optional field is skipped when that field is removed, and a normal
 transition rule is also skipped when it is re-added without an old value.
 `_description` replaces the OAS description of one of `spec.apiSpec`'s direct
 fields, e.g. when it describes Konnect behavior that doesn't hold for the CR.
+`_omitZero` emits `json:",omitzero"` for the field, so an explicit empty list
+survives serialization and reaches Konnect instead of being dropped by
+`omitempty`.
 Field markers also apply to configured reference arrays: use `+listType=atomic`
 when reference order is significant. Required reference arrays preserve an
 explicit empty list during JSON serialization.

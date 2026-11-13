@@ -391,37 +391,6 @@ func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 // BackendClusterName The unique name of the backend cluster.
 type BackendClusterName string
 
-// BackendClusterReferenceByID is a type alias.
-type BackendClusterReferenceByID struct {
-	// The unique identifier of the backend cluster.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ID string `json:"id,omitzero"`
-}
-
-// BackendClusterReferenceByName is a type alias.
-type BackendClusterReferenceByName struct {
-	// The unique name of the backend cluster.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name BackendClusterName `json:"name,omitzero"`
-}
-
-// BackendClusterReferenceModify is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type BackendClusterReferenceModify struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *BackendClusterName `json:"name,omitempty"`
-}
-
 // BackendClusterTLS is a type alias.
 type BackendClusterTLS struct {
 	// A literal value or a reference to an existing secret as a template string
@@ -646,49 +615,10 @@ type EncryptionKeyAWS struct {
 
 // EncryptionKeyStatic A static encryption key.
 type EncryptionKeyStatic struct {
-	// A static encryption key reference, either by ID or by value.
-	//
-	//
-	// +required
-	Key *EncryptionKeyStaticReference `json:"key,omitempty"`
-}
-
-// EncryptionKeyStaticReference is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type EncryptionKeyStaticReference struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *string `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayStaticKey object: with a
-	// Konnect gateway, it is resolved to the Konnect id of the object, and with an
-	// on-prem gateway, to its UID.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewayStaticKeyRef `json:"namespacedRef,omitempty"`
-}
-
-// EncryptionKeyStaticReferenceByID A static encryption key reference by ID.
-type EncryptionKeyStaticReferenceByID struct {
-	// The ID of the static key defined in the key source.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ID string `json:"id,omitzero"`
-}
-
-// EncryptionKeyStaticReferenceByName A static encryption key reference by name.
-type EncryptionKeyStaticReferenceByName struct {
-	// The name of the static key defined in the key source.
+	// A reference to an EventGatewayStaticKey holding the static encryption key.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitzero"`
+	Key EventGatewayStaticKeyRef `json:"key,omitzero"`
 }
 
 // EncryptionRecordPart * key - encrypt the record key
@@ -1101,7 +1031,6 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 	// The configuration of the policy.
 	//
 	// +required
-	// +kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true
 	Config *EventGatewayConsumeSchemaValidationPolicyConfig `json:"config,omitempty"`
 	// A human-readable description of the policy.
 	//
@@ -1601,10 +1530,6 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=mark;skip
 	KeyValidationAction ConsumeKeyValidationAction `json:"keyValidationAction,omitzero"`
-	// A reference to a schema Registry.
-	//
-	// +optional
-	SchemaRegistry *EventGatewaySchemaRegistryRefWithNamespacedRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -1669,7 +1594,7 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 	// A reference to a schema Registry.
 	//
 	// +optional
-	SchemaRegistry *EventGatewaySchemaRegistryRefWithNamespacedRef `json:"schemaRegistry,omitempty"`
+	SchemaRegistry *EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -5511,7 +5436,7 @@ type EventGatewayParsedRecordTranscodeSchemaSourceReference struct {
 	// A reference to a schema Registry.
 	//
 	// +required
-	SchemaRegistry *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry `json:"schemaRegistry,omitempty"`
+	SchemaRegistry EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitzero"`
 	// An expression that computes the schema registry subject of the output data's
 	// schema.
 	//
@@ -5652,137 +5577,6 @@ func (u *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinat
 	return nil
 }
 
-// EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-//
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'id' ? has(self.id) && has(self.id.id) : !has(self.id))",message="id must be set only when type is id",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'name' ? has(self.name) : !has(self.name))",message="name must be set only when type is name",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef))",message="namespacedRef must be set only when type is namespacedRef",optionalOldSelf=true
-type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name;namespacedRef
-	Type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
-	// with a Konnect gateway, it is resolved to the Konnect name of the object,
-	// and with an on-prem gateway, to its UID.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewaySchemaRegistryRef `json:"namespacedRef,omitempty"`
-}
-
-// EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType represents the type of schema_registry.
-type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType string
-
-// EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType values.
-const (
-	EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeID            EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType = "id"
-	EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeName          EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType = "name"
-	EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeNamespacedRef EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType = "namespacedRef"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeNamespacedRef:
-		if u.NamespacedRef != nil {
-			raw, err := json.Marshal(u.NamespacedRef)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry namespacedRef: %w", err)
-			}
-			m["namespacedRef"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	case "namespacedRef":
-		payload, ok := raw["namespacedRef"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val EventGatewaySchemaRegistryRef
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry namespacedRef: %w", err)
-		}
-		u.NamespacedRef = &val
-	}
-	return nil
-}
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayParsedRecordTranscodeSchemaSourceReference) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -5791,15 +5585,11 @@ func (s *EventGatewayParsedRecordTranscodeSchemaSourceReference) UnmarshalJSON(d
 	type alias EventGatewayParsedRecordTranscodeSchemaSourceReference
 	aux := alias{}
 	aux.SchemaRefDestination = &EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination{}
-	aux.SchemaRegistry = &EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry{}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReference: %w", err)
 	}
 	if aux.SchemaRefDestination != nil && aux.SchemaRefDestination.Type == "" && aux.SchemaRefDestination.ConfluentFormat == nil && aux.SchemaRefDestination.None == nil && aux.SchemaRefDestination.RecordHeader == nil {
 		aux.SchemaRefDestination = nil
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
 	}
 	*s = EventGatewayParsedRecordTranscodeSchemaSourceReference(aux)
 	return nil
@@ -5870,7 +5660,6 @@ type EventGatewayProduceSchemaValidationPolicy struct {
 	// The configuration of the policy.
 	//
 	// +required
-	// +kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true
 	Config *EventGatewayProduceSchemaValidationPolicyConfig `json:"config,omitempty"`
 	// A human-readable description of the policy.
 	//
@@ -6364,10 +6153,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	KeyValidationAction ProduceKeyValidationAction `json:"keyValidationAction,omitzero"`
-	// A reference to a schema Registry.
-	//
-	// +optional
-	SchemaRegistry *EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -6394,155 +6179,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	ValueValidationAction ProduceValueValidationAction `json:"valueValidationAction,omitzero"`
-}
-
-// EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-//
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'id' ? has(self.id) && has(self.id.id) : !has(self.id))",message="id must be set only when type is id",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'name' ? has(self.name) : !has(self.name))",message="name must be set only when type is name",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef))",message="namespacedRef must be set only when type is namespacedRef",optionalOldSelf=true
-type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name;namespacedRef
-	Type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
-	// with a Konnect gateway, it is resolved to the Konnect name of the object,
-	// and with an on-prem gateway, to its UID.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewaySchemaRegistryRef `json:"namespacedRef,omitempty"`
-}
-
-// EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType string
-
-// EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType values.
-const (
-	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID            EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
-	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeName          EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "name"
-	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeNamespacedRef EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "namespacedRef"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeNamespacedRef:
-		if u.NamespacedRef != nil {
-			raw, err := json.Marshal(u.NamespacedRef)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry namespacedRef: %w", err)
-			}
-			m["namespacedRef"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	case "namespacedRef":
-		payload, ok := raw["namespacedRef"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val EventGatewaySchemaRegistryRef
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry namespacedRef: %w", err)
-		}
-		u.NamespacedRef = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayProduceSchemaValidationPolicyJSONConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfig: nil receiver")
-	}
-	type alias EventGatewayProduceSchemaValidationPolicyJSONConfig
-	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfig: %w", err)
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
-	}
-	*s = EventGatewayProduceSchemaValidationPolicyJSONConfig(aux)
-	return nil
 }
 
 // EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig The
@@ -6578,7 +6214,7 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// A reference to a schema Registry.
 	//
 	// +optional
-	SchemaRegistry *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	SchemaRegistry *EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -6605,155 +6241,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	ValueValidationAction ProduceValueValidationAction `json:"valueValidationAction,omitzero"`
-}
-
-// EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-//
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'id' ? has(self.id) && has(self.id.id) : !has(self.id))",message="id must be set only when type is id",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'name' ? has(self.name) : !has(self.name))",message="name must be set only when type is name",optionalOldSelf=true
-// +kubebuilder:validation:XValidation:rule="(oldSelf.hasValue() && oldSelf.value() == self) || (self.type == 'namespacedRef' ? has(self.namespacedRef) : !has(self.namespacedRef))",message="namespacedRef must be set only when type is namespacedRef",optionalOldSelf=true
-type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name;namespacedRef
-	Type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
-	// with a Konnect gateway, it is resolved to the Konnect name of the object,
-	// and with an on-prem gateway, to its UID.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewaySchemaRegistryRef `json:"namespacedRef,omitempty"`
-}
-
-// EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType string
-
-// EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType values.
-const (
-	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID            EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
-	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName          EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "name"
-	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeNamespacedRef EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "namespacedRef"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeNamespacedRef:
-		if u.NamespacedRef != nil {
-			raw, err := json.Marshal(u.NamespacedRef)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry namespacedRef: %w", err)
-			}
-			m["namespacedRef"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	case "namespacedRef":
-		payload, ok := raw["namespacedRef"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val EventGatewaySchemaRegistryRef
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry namespacedRef: %w", err)
-		}
-		u.NamespacedRef = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig: nil receiver")
-	}
-	type alias EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
-	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig: %w", err)
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
-	}
-	*s = EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig(aux)
-	return nil
 }
 
 // EventGatewayRequestRuleAction What to do when a rule evaluates to `false`.
@@ -7332,7 +6819,7 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	//
 	//
 	// +required
-	TLSTrustBundles []TLSTrustBundleReference `json:"tlsTrustBundles,omitempty"`
+	TLSTrustBundles []EventGatewayTLSTrustBundleRef `json:"tlsTrustBundles,omitempty"`
 }
 
 // EventGatewayTxnOffsetCommitRequestRules The rules to apply to Kafka
@@ -7524,7 +7011,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// A reference to a virtual cluster.
 	//
 	// +required
-	Destination *VirtualClusterReference `json:"destination,omitempty"`
+	Destination EventGatewayVirtualClusterRef `json:"destination,omitzero"`
 	// The lowest broker node ID in the cluster.
 	//
 	// +optional
@@ -8096,29 +7583,6 @@ func (s *SchemaRegistryConfluentConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// SchemaRegistryReference A reference to a schema Registry.
-type SchemaRegistryReference map[string]string
-
-// SchemaRegistryReferenceByID is a type alias.
-type SchemaRegistryReferenceByID struct {
-	// The unique identifier of the schema registry.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ID string `json:"id,omitzero"`
-}
-
-// SchemaRegistryReferenceByName Reference a schema registry by its unique name.
-type SchemaRegistryReferenceByName struct {
-	// The unique name of the schema registry.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitzero"`
-}
-
 // SchemaValidationInlineSchemaConfig represents a union type for SchemaValidationInlineSchemaConfig.
 // Only one of the fields should be set based on the SchemaType.
 type SchemaValidationInlineSchemaConfig struct {
@@ -8281,44 +7745,6 @@ type TLSTrustBundleConfig struct {
 
 // TLSTrustBundleName The unique name of the TLS trust bundle.
 type TLSTrustBundleName string
-
-// TLSTrustBundleReference is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type TLSTrustBundleReference struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *TLSTrustBundleName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object:
-	// with a Konnect gateway, it is resolved to the Konnect id of the object, and
-	// with an on-prem gateway, to its UID.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewayTLSTrustBundleRef `json:"namespacedRef,omitempty"`
-}
-
-// TLSTrustBundleReferenceByID is a type alias.
-type TLSTrustBundleReferenceByID struct {
-	// The unique identifier of the TLS trust bundle.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ID string `json:"id,omitzero"`
-}
-
-// TLSTrustBundleReferenceByName is a type alias.
-type TLSTrustBundleReferenceByName struct {
-	// The unique name of the TLS trust bundle.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name TLSTrustBundleName `json:"name,omitzero"`
-}
 
 // TLSVersionRange A range of TLS versions.
 type TLSVersionRange struct {
@@ -9080,45 +8506,6 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
 	Glob string `json:"glob,omitzero"`
-}
-
-// VirtualClusterReference is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type VirtualClusterReference struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *VirtualClusterName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayVirtualCluster object:
-	// with a Konnect gateway, it is resolved to the Konnect id of the object, and
-	// with an on-prem gateway, to its UID.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewayVirtualClusterRef `json:"namespacedRef,omitempty"`
-}
-
-// VirtualClusterReferenceByID Reference a virtual cluster by its unique
-// identifier.
-type VirtualClusterReferenceByID struct {
-	// The unique identifier of the virtual cluster.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ID string `json:"id,omitzero"`
-}
-
-// VirtualClusterReferenceByName Reference a virtual cluster by its unique name.
-type VirtualClusterReferenceByName struct {
-	// The name of the virtual cluster.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name VirtualClusterName `json:"name,omitzero"`
 }
 
 // VirtualClusterTopicAlias A topic alias maps an alias name to a

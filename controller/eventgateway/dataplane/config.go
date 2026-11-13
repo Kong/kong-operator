@@ -19,12 +19,15 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"net"
 	"slices"
 	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,6 +40,7 @@ import (
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -46,17 +50,21 @@ import (
 // into the shared generic DataPlane reconciler.
 var konnectEventGatewayKind = shareddataplane.ControlPlaneKindConfig{
 	Kind:                      "KonnectEventGateway",
+	GVK:                       metav1.GroupVersionKind(konnectv1alpha1.GroupVersion.WithKind("KonnectEventGateway")),
 	NewObject:                 func() shareddataplane.ControlPlaneObject { return &konnectv1alpha1.KonnectEventGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldKegDataPlaneOnKonnectEventGateway,
 	IsKonnect:                 true,
+	EndpointCheck:             checkKonnectEventGatewayEndpoints,
 	Conditions: shareddataplane.ControlPlaneConditions{
-		ResolvedType:         string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
-		ResolvedReason:       string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
-		ResolvedMessage:      eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
-		NotFoundReason:       string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
-		NotFoundMessage:      eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
-		NotProgrammedReason:  string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
-		NotProgrammedMessage: eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
+		ResolvedType:           string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
+		ResolvedReason:         string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
+		ResolvedMessage:        eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
+		NotFoundReason:         string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
+		NotFoundMessage:        eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
+		NotPermittedReason:     string(eventgatewayv1alpha1.KonnectEventGatewayRefNotPermittedReason),
+		NotProgrammedReason:    string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
+		NotProgrammedMessage:   eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
+		EndpointMismatchReason: string(eventgatewayv1alpha1.KonnectEventGatewayEndpointMismatchReason),
 	},
 }
 
@@ -68,6 +76,7 @@ var config = shareddataplane.Config[
 ]{
 	ControllerName: ControllerName,
 	Kind:           "KegDataPlane",
+	GVK:            metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind("KegDataPlane")),
 
 	NewObject: func() *eventgatewayv1alpha1.KegDataPlane {
 		return &eventgatewayv1alpha1.KegDataPlane{}
@@ -82,8 +91,9 @@ var config = shareddataplane.Config[
 	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
 		if ref := egdp.Spec.ControlPlaneRef.OnPremNamespacedRef; ref != nil {
 			return shareddataplane.ControlPlaneRef{
-				Kind: onPremEventGatewayKind.Kind,
-				Name: ref.Name,
+				Kind:      onPremEventGatewayKind.Kind,
+				Name:      ref.Name,
+				Namespace: lo.FromPtr(ref.Namespace),
 			}
 		}
 		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
@@ -95,8 +105,9 @@ var config = shareddataplane.Config[
 			return shareddataplane.ControlPlaneRef{}
 		}
 		return shareddataplane.ControlPlaneRef{
-			Kind: konnectEventGatewayKind.Kind,
-			Name: ref.Name,
+			Kind:      konnectEventGatewayKind.Kind,
+			Name:      ref.Name,
+			Namespace: lo.FromPtr(ref.Namespace),
 		}
 	},
 	// The OnPremEventGateway kind is added per reconciler (see
@@ -158,6 +169,10 @@ var config = shareddataplane.Config[
 		BuildContainer:        buildContainer,
 		Customize:             customizeDeployment,
 		ControlPlaneGone:      releaseDeploymentFromGWAdmin,
+		// The owner of the gateway revoked the trust of a data plane of
+		// another namespace: its certificates are removed, against Konnect
+		// as against an OnPremEventGateway, so that it no longer connects.
+		ControlPlaneNotPermitted: revokeCertificates,
 
 		TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 	},
@@ -412,6 +427,40 @@ func buildKEGEnvVars(
 	return append(envVars, commonKEGEnvVars(egdp)...), nil
 }
 
+// checkKonnectEventGatewayEndpoints reports whether the data plane can reach the
+// KonnectEventGateway: the Event Gateway builds the host itself, from the region
+// and the domain, and cannot use a path. A host set on the KegDataPlane, with an
+// optional port, lifts the check for that reason, as issue #6107 asks.
+func checkKonnectEventGatewayEndpoints(dp shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
+	keg, ok := cp.(*konnectv1alpha1.KonnectEventGateway)
+	if !ok {
+		return fmt.Errorf("unexpected control plane object %T", cp)
+	}
+	egdp, ok := dp.(*eventgatewayv1alpha1.KegDataPlane)
+	if !ok {
+		return fmt.Errorf("unexpected DataPlane object %T", dp)
+	}
+	var domain string
+	if cfg := egdp.Spec.Config; cfg != nil && cfg.Konnect != nil && cfg.Konnect.Domain != nil {
+		domain = *cfg.Konnect.Domain
+	}
+	// A host with an optional port is what the Event Gateway can build its own
+	// host from: anything else lands in the hostname it composes.
+	host := domain
+	if h, port, err := net.SplitHostPort(domain); err == nil {
+		if _, err := strconv.ParseUint(port, 10, 16); err == nil {
+			host = h
+		}
+	}
+	if !konnectendpoint.CarriesPath(keg.Status.ServerURL) || (host != "" && server.IsDomain(host)) {
+		return nil
+	}
+	return fmt.Errorf(
+		"cannot use the private server URL %q: the Event Gateway composes a public Konnect host from the region and the domain and cannot use a path; set spec.config.konnect.domain to a host, e.g. proxy.corp:8443, to let it connect over the public internet",
+		keg.Status.ServerURL,
+	)
+}
+
 // commonKEGEnvVars builds the keg environment variables that don't depend on
 // the kind of the control plane, from DataPlane spec.config.
 func commonKEGEnvVars(egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.EnvVar {
@@ -507,7 +556,8 @@ func buildEventGatewayDataPlaneCertificate(
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: keg.Name,
+					Name:      keg.Name,
+					Namespace: gatewayNamespaceRef(egdp, keg),
 				},
 			},
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
@@ -540,8 +590,19 @@ func keepEventGatewayDataPlaneCertificateRefField(
 		Group: konnectv1alpha1.GroupVersion.Group,
 		Kind:  "KonnectEventGateway",
 		Name:  desired.Spec.GatewayRef.NamespacedRef.Name,
+
+		Namespace: desired.Spec.GatewayRef.NamespacedRef.Namespace,
 	}
 	desired.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+}
+
+// gatewayNamespaceRef returns the namespace a certificate of the data plane
+// names for its gateway: none in the namespace of the data plane.
+func gatewayNamespaceRef(egdp *eventgatewayv1alpha1.KegDataPlane, gateway client.Object) *string {
+	if gateway.GetNamespace() == egdp.Namespace {
+		return nil
+	}
+	return new(gateway.GetNamespace())
 }
 
 // selectorLabelsForKegDataPlane returns the labels identifying the
@@ -592,4 +653,20 @@ func (r *Reconciler) cleanupStaleCertificates(
 		return shareddataplane.CleanupStaleAutomaticCertificateSecret(ctx, cl, logger, egdp, consts.SecretKEGDataPlaneCertificateLabel)
 	}
 	return nil
+}
+
+// revokeCertificates removes the EventGatewayDataPlaneCertificates of a data
+// plane no KongReferenceGrant lets reference its gateway of another
+// namespace any longer, and releases its Deployment from the GWAdmin of the
+// gateway (see releaseDeploymentFromGWAdmin): the gateway stops trusting its
+// certificate, against Konnect as against an OnPremEventGateway, which only
+// leaves it out of its configuration. Once a KongReferenceGrant lets it in
+// again, its certificate is created again.
+func revokeCertificates(ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) error {
+	if err := shareddataplane.CleanupStaleKonnectCertificates(ctx, cl, logr.Discard(), egdp,
+		&configurationv1alpha1.EventGatewayDataPlaneCertificateList{}, "EventGatewayDataPlaneCertificate", "",
+	); err != nil {
+		return err
+	}
+	return releaseDeploymentFromGWAdmin(ctx, cl, egdp)
 }

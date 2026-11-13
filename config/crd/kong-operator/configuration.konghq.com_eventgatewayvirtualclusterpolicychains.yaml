@@ -64,10 +64,9 @@ spec:
                     description: |-
                       Policies lists distinct EventGatewayVirtualClusterPolicy references in
                       execution order.
-                      Each policy must belong to the referenced EventGatewayVirtualCluster and be
-                      in the same namespace as this chain.
-                      Namespace defaults to this chain's namespace and may be set explicitly to
-                      that same namespace; cross-namespace references are not supported.
+                      Each policy must belong to the referenced EventGatewayVirtualCluster.
+                      Namespace defaults to this chain's namespace; a policy in another namespace
+                      needs a KongReferenceGrant in its namespace.
                       List every cluster-level policy exactly once.
                       An explicit empty list is valid only when the remote chain has no policies;
                       it does not clear an existing chain.
@@ -90,9 +89,8 @@ spec:
                           type: string
                         namespace:
                           description: |-
-                            Namespace defaults to the referrer's namespace. If set, it must be
-                            the same as the referrer's namespace; cross-namespace references are
-                            not supported.
+                            Namespace, if set to a namespace other than the referrer's, must be
+                            permitted by a KongReferenceGrant in that namespace.
                           type: string
                       required:
                       - name
@@ -272,9 +270,10 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
             is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
-            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
-            == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef
+            == self.spec.eventGatewayVirtualClusterRef'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable
           rule: self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef

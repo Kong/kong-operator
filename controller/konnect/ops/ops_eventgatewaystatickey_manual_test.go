@@ -397,18 +397,18 @@ func TestReferencesStaticKey(t *testing.T) {
 // TestProducePolicyStaticKeyReferences verifies that a produce policy's static
 // key references resolve in the SDK request: namespacedRef members become the
 // EventGatewayStaticKey's Konnect ID, in the encrypt policy's single key and
-// in each field of an encrypt fields policy, while Konnect IDs and names are
-// sent as they are, in order.
+// in each field of an encrypt fields policy, in order.
 func TestProducePolicyStaticKeyReferences(t *testing.T) {
 	t.Parallel()
 
 	staticKey := &configurationv1alpha1.EventGatewayStaticKey{Name: "static-key", Namespace: "default"}
 	staticKey.SetGatewayID("gateway-1")
 	staticKey.SetKonnectID("static-key-id")
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(staticKey).Build()
-	byNamespacedRef := &configurationv1alpha1.EncryptionKeyStaticReference{
-		NamespacedRef: &configurationv1alpha1.EventGatewayStaticKeyRef{Name: "static-key"},
-	}
+	otherStaticKey := &configurationv1alpha1.EventGatewayStaticKey{Name: "other-static-key", Namespace: "default"}
+	otherStaticKey.SetGatewayID("gateway-1")
+	otherStaticKey.SetKonnectID("other-static-key-id")
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(staticKey, otherStaticKey).Build()
+	byNamespacedRef := configurationv1alpha1.EventGatewayStaticKeyRef{Name: "static-key"}
 	newPolicy := func(config configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
 		p := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{Name: "policy", Namespace: "default"}
 		p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &config
@@ -450,7 +450,7 @@ func TestProducePolicyStaticKeyReferences(t *testing.T) {
 	t.Run("encrypt fields policy", func(t *testing.T) {
 		t.Parallel()
 
-		static := func(key *configurationv1alpha1.EncryptionKeyStaticReference) configurationv1alpha1.EventGatewayParsedRecordEncryptionSelector {
+		static := func(key configurationv1alpha1.EventGatewayStaticKeyRef) configurationv1alpha1.EventGatewayParsedRecordEncryptionSelector {
 			return configurationv1alpha1.EventGatewayParsedRecordEncryptionSelector{
 				EncryptionKey: &configurationv1alpha1.EventGatewayParsedRecordEncryptionSelectorEncryptionKey{
 					Type:   configurationv1alpha1.EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic,
@@ -468,19 +468,18 @@ func TestProducePolicyStaticKeyReferences(t *testing.T) {
 				Config: configurationv1alpha1.EventGatewayParsedRecordEncryptFieldsConfig{
 					FailureMode: "error",
 					EncryptFields: []configurationv1alpha1.EventGatewayParsedRecordEncryptionSelector{
-						static(&configurationv1alpha1.EncryptionKeyStaticReference{ID: new("konnect-key-id")}),
 						static(byNamespacedRef),
-						static(&configurationv1alpha1.EncryptionKeyStaticReference{Name: new("konnect-key-name")}),
+						static(configurationv1alpha1.EventGatewayStaticKeyRef{Name: "other-static-key"}),
 					},
 				},
 			},
 		})
 		assert.Equal(t,
-			[]configurationv1alpha1.EventGatewayStaticKeyRef{{Name: "static-key"}},
+			[]configurationv1alpha1.EventGatewayStaticKeyRef{{Name: "static-key"}, {Name: "other-static-key"}},
 			configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(policy),
 		)
 		assert.Equal(t,
-			[]client.ObjectKey{{Namespace: "default", Name: "static-key"}},
+			[]client.ObjectKey{{Namespace: "default", Name: "static-key"}, {Namespace: "default", Name: "other-static-key"}},
 			configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(policy),
 		)
 		require.NoError(t, policy.ResolveKonnectReferences(t.Context(), cl))

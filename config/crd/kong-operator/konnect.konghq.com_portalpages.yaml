@@ -326,9 +326,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef
-            == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
         - message: parentPageIDRef must not reference the PortalPage itself
           rule: '!has(self.spec.apiSpec.parentPageIDRef) || !has(self.spec.apiSpec.parentPageIDRef.namespacedRef)
             || self.spec.apiSpec.parentPageIDRef.namespacedRef.name != self.metadata.name'

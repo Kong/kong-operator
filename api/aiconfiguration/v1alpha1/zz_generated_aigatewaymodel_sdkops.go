@@ -2026,7 +2026,7 @@ func resolveAIGatewayModelModelDatastores(ctx context.Context, cl client.Client,
 func AIGatewayModelRefsToAIGatewayDatastore(obj *AIGatewayModel) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtAIGatewayModelAPIDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -2036,7 +2036,7 @@ func AIGatewayModelRefsToAIGatewayDatastore(obj *AIGatewayModel) []client.Object
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelModelDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace

@@ -69,28 +69,19 @@ spec:
                                 maxLength: 253
                                 type: string
                               destination:
-                                maxProperties: 1
-                                minProperties: 1
                                 properties:
-                                  id:
+                                  kind:
+                                    default: EventGatewayVirtualCluster
+                                    enum:
+                                    - EventGatewayVirtualCluster
                                     type: string
                                   name:
+                                    minLength: 1
                                     type: string
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewayVirtualCluster
-                                        enum:
-                                        - EventGatewayVirtualCluster
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
+                                  namespace:
+                                    type: string
+                                required:
+                                - name
                                 type: object
                               minBrokerID:
                                 type: integer
@@ -262,28 +253,19 @@ spec:
                                 type: string
                               tlsTrustBundles:
                                 items:
-                                  maxProperties: 1
-                                  minProperties: 1
                                   properties:
-                                    id:
+                                    kind:
+                                      default: EventGatewayTLSTrustBundle
+                                      enum:
+                                      - EventGatewayTLSTrustBundle
                                       type: string
                                     name:
+                                      minLength: 1
                                       type: string
-                                    namespacedRef:
-                                      properties:
-                                        kind:
-                                          default: EventGatewayTLSTrustBundle
-                                          enum:
-                                          - EventGatewayTLSTrustBundle
-                                          type: string
-                                        name:
-                                          minLength: 1
-                                          type: string
-                                        namespace:
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
+                                    namespace:
+                                      type: string
+                                  required:
+                                  - name
                                   type: object
                                 type: array
                             required:
@@ -448,9 +430,15 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayListenerRef is immutable when an entity is already
             Programmed
-          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions)
+          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
+        - fieldPath: .spec.eventGatewayListenerRef
+          message: spec.eventGatewayListenerRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayListenerRef) || self.spec.eventGatewayListenerRef.type
+            == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayListenerRef)
+            && oldSelf.value().spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef)'
         - fieldPath: .spec.eventGatewayListenerRef
           message: spec.eventGatewayListenerRef is immutable once the entity has been
             created in Konnect

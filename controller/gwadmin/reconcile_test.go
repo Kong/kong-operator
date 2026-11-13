@@ -84,15 +84,17 @@ func withoutStatusOwnership(funcs interceptor.Funcs) interceptor.Funcs {
 	return funcs
 }
 
+// newReconcileEnv returns an environment holding objs and a valid license
+// Secret.
 func newReconcileEnv(t *testing.T, funcs interceptor.Funcs, objs ...client.Object) *reconcileEnv {
 	t.Helper()
 	funcs = withoutStatusOwnership(funcs)
 	tc := managedfields.NewDeducedTypeConverter()
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).
+	cl := withIndexes(fake.NewClientBuilder().WithScheme(managerscheme.Get())).
 		WithTypeConverters(tc).
 		WithReturnManagedFields().
 		WithStatusSubresource(&operatorv1alpha1.GWAdmin{}).
-		WithObjects(objs...).
+		WithObjects(append(objs, licenseSecret(testLicenseToken))...).
 		WithInterceptorFuncs(funcs).
 		Build()
 	e := &reconcileEnv{cl: cl, now: time.Now(), rec: events.NewFakeRecorder(100)}
@@ -568,14 +570,14 @@ func TestOwnedSecretNamesNeverCollide(t *testing.T) {
 func TestSecretIndexValues(t *testing.T) {
 	owned := []string{
 		"ns/gw-api-ca-bundle", "ns/gw-api-tls", "ns/gw-cp-tls", "ns/gw-cp-server-ca-bundle",
-		"ns/gw-cp-client-ca-bundle",
+		"ns/gw-cp-client-ca-bundle", "ns/" + testLicenseSecretName,
 	}
 
 	assert.Nil(t, secretIndexValues(&corev1.Secret{}), "not a GWAdmin")
 	assert.Equal(t, owned, secretIndexValues(newGWAdmin(nil)))
-	assert.Equal(t, append(owned, "ns/user-ca", "ns/user-cp"),
+	assert.ElementsMatch(t, append(owned, "ns/user-ca", "ns/user-cp"),
 		secretIndexValues(newGWAdmin(&operatorv1alpha1.GWAdminTLS{ClientCA: manualCA(userCASecretName), CP: manualCP()})))
-	assert.Equal(t, append(owned, "ns/user-cp"),
+	assert.ElementsMatch(t, append(owned, "ns/user-cp"),
 		secretIndexValues(newGWAdmin(&operatorv1alpha1.GWAdminTLS{CP: manualCP()})))
 
 	// Manual without a reference, as stored before the CRD validation.
@@ -586,10 +588,16 @@ func TestSecretIndexValues(t *testing.T) {
 	assert.Equal(t, owned, secretIndexValues(broken))
 
 	opts := IndexOptions()
-	require.Len(t, opts, 1)
+	require.Len(t, opts, 2)
 	assert.Equal(t, IndexFieldGWAdminOnSecret, opts[0].Field)
 	assert.IsType(t, &operatorv1alpha1.GWAdmin{}, opts[0].Object)
 	assert.Equal(t, owned, opts[0].ExtractValueFn(newGWAdmin(nil)))
+	assert.Equal(t, IndexFieldSecretLicenseInUse, opts[1].Field)
+	assert.IsType(t, &corev1.Secret{}, opts[1].Object)
+	held := licenseSecret(nil)
+	assert.Nil(t, opts[1].ExtractValueFn(held), "not held")
+	held.Finalizers = []string{consts.GWAdminLicenseInUseFinalizer}
+	assert.Equal(t, []string{"true"}, opts[1].ExtractValueFn(held))
 }
 
 // TestReconcile_ManualCAKeyKongOperatorCantParse checks that a Manual CA

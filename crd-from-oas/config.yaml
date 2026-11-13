@@ -65,6 +65,16 @@ apiGroupVersions:
             refTypeName: AIGatewayDatastoreNamespacedRef
             resolvesTo: name
             reverseWatch: true
+        cel:
+          spec:
+            apiSpec:
+              key-auth:
+                config:
+                  identityRealms:
+                    # Konnect applies a default identity realm when the field is
+                    # absent, which conflicts with principals.enabled. An explicit
+                    # empty list must reach the request to clear that default.
+                    _omitZero: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAuthStrategiesSDK
@@ -1138,6 +1148,12 @@ apiGroupVersions:
       # Event Gateway APIs
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate
+        cel:
+          _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
         dataSources:
           - path: spec.apiSpec.certificate
             type: Secret
@@ -1170,6 +1186,12 @@ apiGroupVersions:
                 kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/schema-registries
         name: EventGatewaySchemaRegistry
+        cel:
+          _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
         dataSources:
           - path: spec.apiSpec.confluent.config.authentication.basic.password
             type: Secret
@@ -1196,6 +1218,12 @@ apiGroupVersions:
                 kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/tls-trust-bundles
         name: EventGatewayTLSTrustBundle
+        cel:
+          _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
         dataSources:
           - path: spec.apiSpec.config.trustedCa
             type: Secret
@@ -1238,6 +1266,10 @@ apiGroupVersions:
         cel:
           # Rules on the resource root, spanning spec and status.
           _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || self.spec.gatewayRef == oldSelf.spec.gatewayRef\",message=\"gatewayRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.gatewayRef\""
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef\",message=\"parentRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.parentRef\""
             # The deprecated gatewayRef can still be replaced by a parentRef to
@@ -1288,6 +1320,12 @@ apiGroupVersions:
                 kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
+        cel:
+          _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenersSDK
@@ -1318,38 +1356,42 @@ apiGroupVersions:
         cel:
           # Rules on the resource root, spanning spec and status.
           _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || self.spec.eventGatewayListenerRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayListenerRef) && oldSelf.value().spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef)",message="spec.eventGatewayListenerRef must use namespacedRef",fieldPath=".spec.eventGatewayListenerRef",optionalOldSelf=true'
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef\",message=\"spec.eventGatewayListenerRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayListenerRef\""
         references:
-          # Additive: Konnect trust bundle IDs/names keep working; namespacedRef
-          # references an EventGatewayTLSTrustBundle in the cluster instead. It
-          # resolves to the Konnect ID, which is how Konnect binds the bundle, so
-          # renaming a trust bundle can't rebind the policy to another bundle.
+          # References an EventGatewayTLSTrustBundle in the cluster. It resolves
+          # to the Konnect ID, which is how Konnect binds the bundle, so renaming
+          # a trust bundle can't rebind the policy to another bundle.
           - path: spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles
             kinds: [EventGatewayTLSTrustBundle]
             resolvesTo: id
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             # Konnect allows deleting a trust bundle used by listener policies,
             # leaving them referencing a missing trust bundle (failing their
             # next update), so the operator blocks the deletion while Konnect
             # listener policies reference it (see
             # deleteEventGatewayTLSTrustBundleGuarded). The
             # EventGatewayTLSTrustBundle controller watches the policies so the
-            # deletion is retried as soon as one referencing it through
-            # namespacedRef is deleted (otherwise on the periodic retry of a
+            # deletion is retried as soon as one referencing it is deleted
+            # (otherwise on the periodic retry of a
             # blocked deletion), and a trust bundle being deleted is not
             # resolved for policies not created in Konnect yet.
             reverseWatch: true
-          # Additive: Konnect virtual cluster IDs/names keep working;
-          # namespacedRef references an EventGatewayVirtualCluster in the cluster
-          # instead, by its object name rather than the name of its API entity.
-          # It resolves to the Konnect ID, so renaming a virtual cluster can't
-          # rebind the policy to another one.
+          # References an EventGatewayVirtualCluster in the cluster, by its
+          # object name rather than the name of its API entity. It resolves to
+          # the Konnect ID, so renaming a virtual cluster can't rebind the policy
+          # to another one.
+          # A virtual cluster of another namespace needs a KongReferenceGrant
+          # there, as for the other references between entities.
           # Konnect refuses to delete a virtual cluster a listener policy forwards
           # to: the virtual cluster is reconciled again once they stop using it.
           - path: spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
             kinds: [EventGatewayVirtualCluster]
             resolvesTo: id
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
         dataSources:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
@@ -1384,6 +1426,8 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayListenerPolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
+            resolverMethod: ResolveValidatedPolicyIDs
         cel:
           _validations:
             - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef",message="spec.eventGatewayListenerRef is immutable",fieldPath=".spec.eventGatewayListenerRef"'
@@ -1398,19 +1442,42 @@ apiGroupVersions:
               policies:
                 _description: >-
                   Policies lists distinct EventGatewayListenerPolicy references in execution order.
-                  Each policy must belong to the referenced EventGatewayListener
-                  and be in the same namespace as this chain.
-                  Namespace defaults to this chain's namespace and may be set explicitly
-                  to that same namespace; cross-namespace references are not supported.
+                  Each policy must belong to the referenced EventGatewayListener.
+                  Namespace defaults to this chain's namespace; a policy in another
+                  namespace needs a KongReferenceGrant in its namespace.
                   List every listener policy exactly once. An explicit empty list
                   is valid only when the remote chain has no policies; it does not clear
                   an existing chain. When a policy is created or deleted, update this
                   list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayListenerPoliciesSDK
+            fieldName: EventGatewayListenerPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyChainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyChainRequest
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayListener
+          parentRef:
+            fieldName: eventGatewayListenerRef
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentSDKFields:
+            - GatewayID
+            - ListenerID
       - path: /v1/event-gateways/{gatewayId}/backend-clusters
         name: EventGatewayBackendCluster
         cel:
+          _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
           spec:
             apiSpec:
               tls:
@@ -1452,6 +1519,10 @@ apiGroupVersions:
         cel:
           # Rules on the resource root, spanning spec and status.
           _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayBackendClusterRef) || self.spec.eventGatewayBackendClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayBackendClusterRef) && oldSelf.value().spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef)",message="spec.eventGatewayBackendClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayBackendClusterRef",optionalOldSelf=true'
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef == oldSelf.spec.eventGatewayBackendClusterRef\",message=\"spec.eventGatewayBackendClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayBackendClusterRef\""
         ops:
           sdk:
@@ -1479,57 +1550,53 @@ apiGroupVersions:
           - path: spec.apiSpec.parentPolicyRef
             kinds: [EventGatewayVirtualClusterProducePolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             injectInto: parentPolicyID
             requiredAPISpecType: schemaValidation
             reverseWatch: true
             description: |-
-              ParentPolicyRef references a schemaValidation produce policy in the same
-              namespace and virtual cluster. Required for encryptFields, maskFields and
-              transcode, and optional for modifyHeaders. It is immutable once this policy exists in Konnect.
+              ParentPolicyRef references a schemaValidation produce policy of the same
+              virtual cluster. One in another namespace needs a KongReferenceGrant in
+              its namespace. Required for encryptFields, maskFields and transcode, and
+              optional for modifyHeaders. It is immutable once this policy exists in Konnect.
               Deleting a parent is blocked while child policy objects reference it.
-          # Additive: Konnect static key IDs/names keep working; namespacedRef
-          # references an EventGatewayStaticKey in the cluster instead,
-          # resolved to its Konnect ID. Konnect refuses to delete a static key
+          # References an EventGatewayStaticKey in the cluster, resolved to its
+          # Konnect ID. Konnect refuses to delete a static key
           # while policies use it: the EventGatewayStaticKey controller watches
           # the policies so a blocked deletion resumes as soon as they stop
           # using it.
           - path: spec.apiSpec.encrypt.config.encryptionKey.static.key
             kinds: [EventGatewayStaticKey]
             resolvesTo: id
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key
             kinds: [EventGatewayStaticKey]
             resolvesTo: id
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
           # Konnect refuses to delete a schema registry a policy uses: the
           # registry is reconciled again once the policies stop using it.
-          # The CRD refuses json.schemaRegistry on a new object (see the
-          # _validations below), but a stored object may still set it: its
-          # reference is kept so that it is resolved, watched and holds the
-          # registry like any other.
           # Resolved to the Konnect name, unlike a virtual cluster (resolved to
           # its id), as the consume schema validation references, released
           # before, already were: both kinds of policy send the same. The policy
           # sends the current name of the registry each time it is created or
           # updated in Konnect.
-          - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
-            kinds: [EventGatewaySchemaRegistry]
-            resolvesTo: name
-            unionMember: namespacedRef
-            reverseWatch: true
           - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
         schemaFieldOmissions:
+          # The type json parses without a schema: Konnect and gw-admin both
+          # refuse a schema registry with it.
+          EventGatewayProduceSchemaValidationPolicyJSONConfig:
+            - schemaRegistry
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID
           EventGatewayParsedRecordEncryptFieldsPolicyCreate:
@@ -1540,6 +1607,10 @@ apiGroupVersions:
             - parentPolicyID
         cel:
           _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)",message="spec.eventGatewayVirtualClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayVirtualClusterRef",optionalOldSelf=true'
             # The parent reference is immutable once the entity has been created
             # in Konnect (status.id set), not only while it is Programmed: Konnect
             # scopes the entity under its parent, so it can't move to another one,
@@ -1551,15 +1622,23 @@ apiGroupVersions:
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders'', ''maskFields'', ''transcode''])",message="parentPolicyRef is only supported for encryptFields, modifyHeaders, maskFields and transcode",fieldPath=".spec.apiSpec.parentPolicyRef"'
           spec:
             apiSpec:
-              schemaValidation:
+              encrypt:
                 config:
-                  # The type json parses without a schema: Konnect and gw-admin both
-                  # refuse a schema registry with it. A stored object that sets one
-                  # can still be updated, e.g. its finalizer removed, as long as it
-                  # keeps that schema registry or drops it: the rule compares with
-                  # the old object rather than relying on CRD validation ratcheting.
-                  _validations:
-                    - '+kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true'
+                  encryptionKey:
+                    static:
+                      key:
+                        # The OpenAPI description names a reference by ID or by
+                        # value, which the field no longer takes.
+                        _description: A reference to an EventGatewayStaticKey holding the static encryption key.
+              encryptFields:
+                config:
+                  encryptFields:
+                    encryptionKey:
+                      static:
+                        key:
+                          # The OpenAPI description names a reference by ID or by
+                          # value, which the field no longer takes.
+                          _description: A reference to an EventGatewayStaticKey holding the static encryption key.
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
@@ -1585,41 +1664,38 @@ apiGroupVersions:
           - path: spec.apiSpec.parentPolicyRef
             kinds: [EventGatewayVirtualClusterConsumePolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             injectInto: parentPolicyID
             requiredAPISpecType: schemaValidation
             reverseWatch: true
             description: |-
-              ParentPolicyRef references a schemaValidation consume policy in the same
-              namespace and virtual cluster. Required for decryptFields, maskFields and
-              transcode, and optional for modifyHeaders and skipRecord. It is immutable once this policy exists
+              ParentPolicyRef references a schemaValidation consume policy of the same
+              virtual cluster. One in another namespace needs a KongReferenceGrant in
+              its namespace. Required for decryptFields, maskFields and transcode, and
+              optional for modifyHeaders and skipRecord. It is immutable once this policy exists
               in Konnect. Deleting a parent is blocked while child policy objects reference it.
           # Konnect refuses to delete a schema registry a policy uses: the
           # registry is reconciled again once the policies stop using it.
-          # Released as a reference by name to the object: it also accepts
-          # type namespacedRef, as written in the produce and transcode
-          # references, which also accept a Konnect ID or name. The json one
-          # is kept for stored objects, as for produce policies.
-          - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
-            kinds: [EventGatewaySchemaRegistry]
-            resolvesTo: name
-            typedMember: namespacedRef
-            reverseWatch: true
           - path: spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
-            typedMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
           - path: spec.apiSpec.transcode.config.json.schemaSource.reference.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
-            unionMember: namespacedRef
+            supportCrossNamespaceReference: true
             reverseWatch: true
         schemaFieldOmissions:
+          # The type json parses without a schema: Konnect and gw-admin both
+          # refuse a schema registry with it.
+          EventGatewayConsumeSchemaValidationPolicyJSONConfig:
+            - schemaRegistry
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID
           EventGatewayParsedRecordDecryptFieldsPolicyCreate:
@@ -1632,6 +1708,10 @@ apiGroupVersions:
             - parentPolicyID
         cel:
           _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)",message="spec.eventGatewayVirtualClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayVirtualClusterRef",optionalOldSelf=true'
             # The parent reference is immutable once the entity has been created
             # in Konnect (status.id set), not only while it is Programmed: Konnect
             # scopes the entity under its parent, so it can't move to another one,
@@ -1641,17 +1721,6 @@ apiGroupVersions:
             - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type in [''decryptFields'', ''maskFields'', ''transcode'']) || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for decryptFields, maskFields and transcode",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'', ''modifyHeaders'', ''skipRecord'', ''maskFields'', ''transcode''])",message="parentPolicyRef is only supported for decryptFields, modifyHeaders, skipRecord, maskFields and transcode",fieldPath=".spec.apiSpec.parentPolicyRef"'
-          spec:
-            apiSpec:
-              schemaValidation:
-                config:
-                  # The type json parses without a schema: Konnect and gw-admin both
-                  # refuse a schema registry with it. A stored object that sets one
-                  # can still be updated, e.g. its finalizer removed, as long as it
-                  # keeps that schema registry or drops it: the rule compares with
-                  # the old object rather than relying on CRD validation ratcheting.
-                  _validations:
-                    - '+kubebuilder:validation:XValidation:rule="!has(self.json) || !has(self.json.schemaRegistry) || (oldSelf.hasValue() && has(oldSelf.value().json) && has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry == self.json.schemaRegistry)",message="json.schemaRegistry can not be set with the type json, which parses without a schema: use the type confluentSchemaRegistry",optionalOldSelf=true'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
@@ -1680,6 +1749,10 @@ apiGroupVersions:
         cel:
           # Rules on the resource root, spanning spec and status.
           _validations:
+            # A Konnect ID never worked: the parent is resolved from the cluster only.
+            # A stored object keeping its reference can still be updated, e.g. its
+            # finalizer removed.
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)",message="spec.eventGatewayVirtualClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayVirtualClusterRef",optionalOldSelf=true'
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
         ops:
           sdk:
@@ -1707,6 +1780,7 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayVirtualClusterPolicy]
             resolvesTo: id
+            supportCrossNamespaceReference: true
             resolverMethod: ResolveValidatedPolicyIDs
         cel:
           _validations:
@@ -1722,10 +1796,9 @@ apiGroupVersions:
               policies:
                 _description: >-
                   Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order.
-                  Each policy must belong to the referenced EventGatewayVirtualCluster
-                  and be in the same namespace as this chain.
-                  Namespace defaults to this chain's namespace and may be set explicitly
-                  to that same namespace; cross-namespace references are not supported.
+                  Each policy must belong to the referenced EventGatewayVirtualCluster.
+                  Namespace defaults to this chain's namespace; a policy in another
+                  namespace needs a KongReferenceGrant in its namespace.
                   List every cluster-level policy exactly once. An explicit empty list
                   is valid only when the remote chain has no policies; it does not clear
                   an existing chain. When a policy is created or deleted, update this

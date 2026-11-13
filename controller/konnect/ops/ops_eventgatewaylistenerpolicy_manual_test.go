@@ -37,17 +37,11 @@ func TestCreateEventGatewayListenerPolicy(t *testing.T) {
 	assert.Equal(t,
 		[]sdkkonnectcomp.TLSTrustBundleReference{
 			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByID(
-				sdkkonnectcomp.TLSTrustBundleReferenceByID{ID: "trust-bundle-by-id"},
-			),
-			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByID(
 				sdkkonnectcomp.TLSTrustBundleReferenceByID{ID: "trust-bundle-1"},
-			),
-			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByName(
-				sdkkonnectcomp.TLSTrustBundleReferenceByName{Name: "trust-bundle-by-name"},
 			),
 		},
 		createVariant.Config.ClientAuthentication.TLSTrustBundles,
-		"Konnect IDs and names should be kept as-is and the EventGatewayTLSTrustBundle reference resolved to its Konnect ID, in order",
+		"the EventGatewayTLSTrustBundle reference should be resolved to its Konnect ID",
 	)
 
 	sdk.EXPECT().
@@ -61,38 +55,6 @@ func TestCreateEventGatewayListenerPolicy(t *testing.T) {
 
 	require.NoError(t, createEventGatewayListenerPolicy(ctx, cl, sdk, policy))
 	assert.Equal(t, "listener-policy-1", policy.GetKonnectID())
-}
-
-func TestEventGatewayListenerPolicyKonnectTLSTrustBundleReferences(t *testing.T) {
-	t.Parallel()
-
-	// Trust bundles referenced by Konnect ID or name only (the form accepted
-	// before EventGatewayTLSTrustBundle existed) need no in-cluster objects and
-	// are sent as-is.
-	ctx := t.Context()
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
-	policy := testEventGatewayListenerPolicy()
-	policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.TLSTrustBundleReference{
-		{ID: new("trust-bundle-by-id")},
-		{Name: new(configurationv1alpha1.TLSTrustBundleName("trust-bundle-by-name"))},
-	}
-
-	req, err := policy.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
-	require.NoError(t, err)
-	createVariant := req.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy
-	require.NotNil(t, createVariant)
-	require.NotNil(t, createVariant.Config.ClientAuthentication)
-	assert.Equal(t,
-		[]sdkkonnectcomp.TLSTrustBundleReference{
-			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByID(
-				sdkkonnectcomp.TLSTrustBundleReferenceByID{ID: "trust-bundle-by-id"},
-			),
-			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByName(
-				sdkkonnectcomp.TLSTrustBundleReferenceByName{Name: "trust-bundle-by-name"},
-			),
-		},
-		createVariant.Config.ClientAuthentication.TLSTrustBundles,
-	)
 }
 
 func TestEventGatewayListenerPolicyTLSTrustBundleReferenceResolutionErrors(t *testing.T) {
@@ -113,9 +75,7 @@ func TestEventGatewayListenerPolicyTLSTrustBundleReferenceResolutionErrors(t *te
 	}
 	withRef := func(ref configurationv1alpha1.EventGatewayTLSTrustBundleRef) *configurationv1alpha1.EventGatewayListenerPolicy {
 		policy := testEventGatewayListenerPolicy()
-		policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.TLSTrustBundleReference{
-			{NamespacedRef: &ref},
-		}
+		policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.EventGatewayTLSTrustBundleRef{ref}
 		return policy
 	}
 
@@ -181,11 +141,11 @@ func TestEventGatewayListenerPolicyTLSTrustBundleReferenceResolutionErrors(t *te
 			},
 		},
 		{
-			name:    "referenced trust bundle in another namespace",
+			name:    "referenced trust bundle missing from the named namespace",
 			objects: []client.Object{trustBundle(nil)},
 			policy:  withRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle", Namespace: "other"}),
 			assertErr: func(t *testing.T, err error) {
-				var target configurationv1alpha1.ReferenceCrossNamespaceError
+				var target configurationv1alpha1.ReferenceNotFoundError
 				assert.ErrorAs(t, err, &target)
 			},
 		},
@@ -227,9 +187,7 @@ func TestEventGatewayListenerPolicyKeepsResolvingTLSTrustBundleBeingDeleted(t *t
 	trustBundle.SetKonnectID("trust-bundle-1")
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(trustBundle).Build()
 	policy := testEventGatewayListenerPolicy()
-	policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.TLSTrustBundleReference{
-		{NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle"}},
-	}
+	policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.EventGatewayTLSTrustBundleRef{{Name: "trust-bundle"}}
 	policy.SetKonnectID("listener-policy-1")
 
 	req, err := policy.ToUpdateEventGatewayListenerPolicyRequest(t.Context(), cl)
@@ -253,13 +211,12 @@ func TestEventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(t *testing.T
 	// The EventGatewayTLSTrustBundle controller watches listener policies
 	// (reverseWatch) and re-reconciles the trust bundles they reference.
 	policy := testEventGatewayListenerPolicy()
-	policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.TLSTrustBundleReference{
-		{ID: new("trust-bundle-by-id")},
-		{NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle"}},
-		{Name: new(configurationv1alpha1.TLSTrustBundleName("trust-bundle-by-name"))},
+	policy.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles = []configurationv1alpha1.EventGatewayTLSTrustBundleRef{
+		{Name: "trust-bundle"},
+		{Name: "other-trust-bundle", Namespace: "other"},
 	}
 	assert.Equal(t,
-		[]client.ObjectKey{{Namespace: "default", Name: "trust-bundle"}},
+		[]client.ObjectKey{{Namespace: "default", Name: "trust-bundle"}, {Namespace: "other", Name: "other-trust-bundle"}},
 		configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(policy),
 	)
 }
@@ -284,17 +241,11 @@ func TestUpdateEventGatewayListenerPolicy(t *testing.T) {
 	assert.Equal(t,
 		[]sdkkonnectcomp.TLSTrustBundleReference{
 			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByID(
-				sdkkonnectcomp.TLSTrustBundleReferenceByID{ID: "trust-bundle-by-id"},
-			),
-			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByID(
 				sdkkonnectcomp.TLSTrustBundleReferenceByID{ID: "trust-bundle-1"},
-			),
-			sdkkonnectcomp.CreateTLSTrustBundleReferenceTLSTrustBundleReferenceByName(
-				sdkkonnectcomp.TLSTrustBundleReferenceByName{Name: "trust-bundle-by-name"},
 			),
 		},
 		updateVariant.Config.ClientAuthentication.TLSTrustBundles,
-		"Konnect IDs and names should be kept as-is and the EventGatewayTLSTrustBundle reference resolved to its Konnect ID, in order",
+		"the EventGatewayTLSTrustBundle reference should be resolved to its Konnect ID",
 	)
 
 	sdk.EXPECT().
@@ -391,18 +342,8 @@ func testEventGatewayListenerPolicy() *configurationv1alpha1.EventGatewayListene
 							},
 							ClientAuthentication: configurationv1alpha1.EventGatewayTLSListenerPolicyConfigClientAuthentication{
 								Mode: "requested",
-								TLSTrustBundles: []configurationv1alpha1.TLSTrustBundleReference{
-									{
-										ID: new("trust-bundle-by-id"),
-									},
-									{
-										NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{
-											Name: "trust-bundle",
-										},
-									},
-									{
-										Name: new(configurationv1alpha1.TLSTrustBundleName("trust-bundle-by-name")),
-									},
+								TLSTrustBundles: []configurationv1alpha1.EventGatewayTLSTrustBundleRef{
+									{Name: "trust-bundle"},
 								},
 							},
 						},

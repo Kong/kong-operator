@@ -1,12 +1,17 @@
 package konnect
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -14,9 +19,125 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
+
+func TestPolicyChainParentNamespace(t *testing.T) {
+	t.Parallel()
+	// A chain of another namespace than its parent needs a KongReferenceGrant
+	// (see TestPolicyChainCrossNamespaceGrantedLifecycle and
+	// TestListenerPolicyChainCrossNamespaceGrantedLifecycle).
+	for _, kind := range []string{"listener", "virtual cluster"} {
+		for _, tc := range []struct {
+			name      string
+			namespace *string
+		}{
+			{name: "omitted"},
+			{name: "empty", namespace: new("")},
+			{name: "same", namespace: new("default")},
+		} {
+			t.Run(kind+"/"+tc.name, func(t *testing.T) {
+				var chain objectWithParentRef
+				var parent objectWithParentRef
+				var handleParent func(context.Context, client.Client, objectWithParentRef) (ctrl.Result, error)
+				var reconcile func(context.Context, client.Client) (ctrl.Result, error)
+				if kind == "listener" {
+					c := testListenerPolicyChain("chain")
+					chain = c
+					parent = &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: "default"}
+					handleParent = (parentRefHandler[configurationv1alpha1.EventGatewayListener, *configurationv1alpha1.EventGatewayListener]{}).handleParentRef
+					reconcile = func(ctx context.Context, cl client.Client) (ctrl.Result, error) {
+						return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayListenerPolicyChain](nil, logging.DevelopmentMode, cl).Reconcile(ctx, c)
+					}
+				} else {
+					c := testPolicyChain("chain")
+					chain = c
+					parent = &configurationv1alpha1.EventGatewayVirtualCluster{Name: "vc", Namespace: "default"}
+					handleParent = (parentRefHandler[configurationv1alpha1.EventGatewayVirtualCluster, *configurationv1alpha1.EventGatewayVirtualCluster]{}).handleParentRef
+					reconcile = func(ctx context.Context, cl client.Client) (ctrl.Result, error) {
+						return NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](nil, logging.DevelopmentMode, cl).Reconcile(ctx, c)
+					}
+				}
+				chain.GetParentRef().NamespacedRef.Namespace = tc.namespace
+				chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(chain.GetParentGVK().Kind + "PolicyChain"))
+				chain.SetFinalizers([]string{KonnectCleanupFinalizer})
+				konnectEntityStatusOf(parent).ID = "parent-id"
+				parent.(interface{ SetGatewayID(string) }).SetGatewayID("gateway-id")
+				parent.SetConditions([]metav1.Condition{{
+					Type: string(konnectv1alpha1.KonnectEntityProgrammedConditionType), Status: metav1.ConditionTrue, Reason: "Programmed",
+				}})
+				cl := newFakeClientBuilder(scheme.Get()).WithObjects(chain, parent).WithStatusSubresource(chain).Build()
+				res, err := handleParent(t.Context(), cl, chain)
+				require.NoError(t, err)
+				require.True(t, res.IsZero())
+				require.Equal(t, "gateway-id", chain.(objectExposingAncestorIDs).GetAncestorIDs()["KonnectEventGateway"])
+				condition := meta.FindStatusCondition(chain.GetConditions(), chain.GetStatusConditionTypeParentRefValid())
+				require.NotNil(t, condition)
+				require.Equal(t, metav1.ConditionTrue, condition.Status)
+				require.Equal(t, chain.GetStatusConditionReasonParentRefValid(), condition.Reason)
+				require.Nil(t, meta.FindStatusCondition(chain.GetConditions(), configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+				require.Empty(t, parent.GetAnnotations(), "resolving the parent doesn't claim it")
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+				persistedCondition := meta.FindStatusCondition(chain.GetConditions(), chain.GetStatusConditionTypeParentRefValid())
+				require.Equal(t, condition, persistedCondition)
+				require.Nil(t, meta.FindStatusCondition(chain.GetConditions(), configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+				// Deletion must still remove the finalizer without auth.
+				require.NoError(t, cl.Delete(t.Context(), chain))
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+				res, err = reconcile(t.Context(), cl)
+				require.NoError(t, err)
+				require.True(t, res.IsZero())
+				require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain)))
+			})
+		}
+	}
+}
+
+func TestListenerPolicyCrossNamespaceParentGrant(t *testing.T) {
+	t.Parallel()
+	policy := &configurationv1alpha1.EventGatewayListenerPolicy{
+		Name: "policy", Namespace: "default",
+		Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
+			EventGatewayListenerRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: "listener", Namespace: new("other"),
+				},
+			},
+		},
+	}
+	policy.SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayListenerPolicy"))
+	parent := &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: "other"}
+	parent.SetKonnectID("listener-id")
+	parent.SetGatewayID("gateway-id")
+	parent.SetConditions([]metav1.Condition{{
+		Type: string(konnectv1alpha1.KonnectEntityProgrammedConditionType), Status: metav1.ConditionTrue, Reason: "Programmed",
+	}})
+	grant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-policy", Namespace: "other",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:  "EventGatewayListenerPolicy", Namespace: "default",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group), Kind: "EventGatewayListener",
+			}},
+		},
+	}
+	cl := newFakeClientBuilder(scheme.Get()).WithObjects(policy, parent, grant).WithStatusSubresource(policy).Build()
+	handler := parentRefHandler[configurationv1alpha1.EventGatewayListener, *configurationv1alpha1.EventGatewayListener]{}
+	res, err := handler.handleParentRef(t.Context(), cl, policy)
+	require.NoError(t, err)
+	require.True(t, res.IsZero())
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(policy), policy))
+	require.Equal(t, "listener-id", policy.GetEventGatewayListenerID())
+	require.Equal(t, "gateway-id", policy.GetGatewayID())
+	require.True(t, meta.IsStatusConditionTrue(policy.GetConditions(), policy.GetStatusConditionTypeParentRefValid()))
+	require.True(t, meta.IsStatusConditionTrue(policy.GetConditions(), configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+}
 
 // childEntry describes a child entity in parentRefHandler tests.
 type childEntry struct {
@@ -720,4 +841,97 @@ func TestHandleParentRef_NotKonnectManagedParent(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, cred.GetStatusConditionReasonParentRefInvalid(), cond.Reason)
 	})
+}
+
+func TestEnsureKongReferenceGrantForParentRef_NotGranted(t *testing.T) {
+	newListener := func() *configurationv1alpha1.EventGatewayListener {
+		listener := &configurationv1alpha1.EventGatewayListener{
+			Name: "listener", Namespace: "listeners",
+			Finalizers: []string{KonnectCleanupFinalizer},
+		}
+		listener.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayListener"))
+		return listener
+	}
+	ref := commonv1alpha1.ObjectRef{
+		Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gateway", Namespace: new("gateways")},
+	}
+	parentGVK := konnectv1alpha1.GroupVersion.WithKind("KonnectEventGateway")
+
+	t.Run("an entity not being deleted waits for a grant, and reports it", func(t *testing.T) {
+		listener := newListener()
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(listener).WithStatusSubresource(listener).Build()
+		res, err := ensureKongReferenceGrantForParentRef(t.Context(), cl, listener, ref, parentGVK)
+		require.NoError(t, err)
+		require.False(t, res.IsZero())
+		require.True(t, meta.IsStatusConditionFalse(listener.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)))
+	})
+
+	t.Run("an entity being deleted in Konnect isn't held back by a revoked grant", func(t *testing.T) {
+		listener := newListener()
+		listener.DeletionTimestamp = new(metav1.Now())
+		listener.SetKonnectID("listener-id")
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(listener).WithStatusSubresource(listener).Build()
+		res, err := ensureKongReferenceGrantForParentRef(t.Context(), cl, listener, ref, parentGVK)
+		require.NoError(t, err)
+		require.True(t, res.IsZero())
+	})
+
+	t.Run("an entity being deleted not in Konnect stops, without reading its parent, and drops its finalizer", func(t *testing.T) {
+		listener := newListener()
+		listener.DeletionTimestamp = new(metav1.Now())
+		cl := newFakeClientBuilder(scheme.Get()).WithObjects(listener).WithStatusSubresource(listener).Build()
+		res, err := ensureKongReferenceGrantForParentRef(t.Context(), cl, listener, ref, parentGVK)
+		_, ok := errors.AsType[ReferencedObjectNotGrantedOnDeletionError](err)
+		require.True(t, ok, "expected ReferencedObjectNotGrantedOnDeletionError, got %v", err)
+
+		stop, res, err := handleRefResult(t.Context(), cl, listener, res, err)
+		require.NoError(t, err)
+		require.True(t, stop)
+		require.True(t, res.IsZero())
+		require.Empty(t, listener.Finalizers)
+		require.Empty(t, listener.GetGatewayID())
+	})
+}
+
+func TestHandleParentRef_EntityBeingDeletedWithParentNotProgrammed(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		parentID     string
+		wantDeferred bool
+	}{
+		{name: "the entity goes on, with the Konnect ID of its parent", parentID: "listener-id"},
+		{name: "without a Konnect ID on its parent, it waits", wantDeferred: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			parent := &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: "listeners"}
+			parent.SetKonnectID(tc.parentID)
+			parent.SetGatewayID("gateway-id")
+			parent.SetConditions([]metav1.Condition{{Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionFalse}})
+			policy := &configurationv1alpha1.EventGatewayListenerPolicy{
+				Name: "policy", Namespace: "listeners",
+				Finalizers:        []string{KonnectCleanupFinalizer},
+				DeletionTimestamp: new(metav1.Now()),
+				Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
+					EventGatewayListenerRef: commonv1alpha1.ObjectRef{
+						Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "listener"},
+					},
+				},
+			}
+			policy.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayListenerPolicy"))
+			cl := newFakeClientBuilder(scheme.Get()).WithObjects(parent, policy).WithStatusSubresource(parent, policy).Build()
+
+			handler := parentRefHandler[configurationv1alpha1.EventGatewayListener, *configurationv1alpha1.EventGatewayListener]{}
+			res, err := handler.handleParentRef(t.Context(), cl, policy)
+			if tc.wantDeferred {
+				require.NoError(t, err)
+				require.False(t, res.IsZero())
+				return
+			}
+			require.NoError(t, err)
+			require.True(t, res.IsZero())
+			require.Equal(t, "listener-id", policy.GetEventGatewayListenerID())
+		})
+	}
 }

@@ -56,7 +56,8 @@ func entityChanged() predicate.Predicate {
 			// A terminating policy or chain is unusable before its finalizers
 			// are removed. A claim is metadata, not a generation change.
 			switch e.ObjectNew.(type) {
-			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+				*configurationv1alpha1.EventGatewayListenerPolicy, *configurationv1alpha1.EventGatewayListenerPolicyChain:
 				return !e.ObjectOld.GetDeletionTimestamp().Equal(e.ObjectNew.GetDeletionTimestamp())
 			case *configurationv1alpha1.EventGatewayVirtualCluster:
 				return e.ObjectOld.GetAnnotations()[policychain.OwnerAnnotation] != e.ObjectNew.GetAnnotations()[policychain.OwnerAnnotation]
@@ -97,21 +98,36 @@ func mapEntityToOnPremEventGateway(cl client.Client) handler.MapFunc {
 	}
 }
 
-// mapClusterPolicyToChainGateways also rebuilds gateways referencing a policy
-// with a different parent, including a policy deleted and recreated there.
-func mapClusterPolicyToChainGateways(cl client.Client) handler.MapFunc {
+// mapPolicyToChainGateways also rebuilds gateways of the chains referencing a
+// cluster or listener policy, which may have a different parent, including a
+// policy deleted and recreated there.
+func mapPolicyToChainGateways(cl client.Client) handler.MapFunc {
 	toGateway := mapEntityToOnPremEventGateway(cl)
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		var chains configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
-		if err := cl.List(ctx, &chains, client.MatchingFields{
-			index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterPolicyRef: client.ObjectKeyFromObject(obj).String(),
-		}); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list cluster policy chains referencing a policy", "policy", client.ObjectKeyFromObject(obj))
+		var (
+			chains []client.Object
+			err    error
+		)
+		key := client.ObjectKeyFromObject(obj).String()
+		switch obj.(type) {
+		case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
+			var list configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterPolicyRef, key)
+		case *configurationv1alpha1.EventGatewayListenerPolicy:
+			var list configurationv1alpha1.EventGatewayListenerPolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayListenerPolicyChainOnEventGatewayListenerPolicyRef, key)
+		default:
+			return nil
+		}
+		if err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list policy chains referencing a policy", "policy", key)
 			return onPremEventGatewaysIn(ctx, cl, obj.GetNamespace())
 		}
 		var requests []reconcile.Request
-		for i := range chains.Items {
-			for _, req := range toGateway(ctx, &chains.Items[i]) {
+		for _, chain := range chains {
+			for _, req := range toGateway(ctx, chain) {
 				if !slices.Contains(requests, req) {
 					requests = append(requests, req)
 				}
@@ -119,6 +135,22 @@ func mapClusterPolicyToChainGateways(cl client.Client) handler.MapFunc {
 		}
 		return requests
 	}
+}
+
+// listObjects lists into list, whose items are items, the objects whose index
+// field is key.
+func listObjects[T any, PT interface {
+	*T
+	client.Object
+}](ctx context.Context, cl client.Client, list client.ObjectList, items *[]T, field, key string) ([]client.Object, error) {
+	if err := cl.List(ctx, list, client.MatchingFields{field: key}); err != nil {
+		return nil, err
+	}
+	objs := make([]client.Object, 0, len(*items))
+	for i := range *items {
+		objs = append(objs, PT(&(*items)[i]))
+	}
+	return objs, nil
 }
 
 // onPremEventGatewayOf returns the OnPremEventGateway obj belongs to,
@@ -221,10 +253,12 @@ func onPremEventGatewaysIn(ctx context.Context, cl client.Client, namespaces ...
 
 // mapKongReferenceGrantToOnPremEventGateways returns a MapFunc that enqueues
 // the OnPremEventGateways the KongReferenceGrant may concern: those of the
-// namespaces it grants that reference a GWAdmin of its namespace, and those
-// of the namespaces whose entities it allows to read Secrets of its
-// namespace. The other gateways don't depend on it.
+// namespaces it grants that reference a GWAdmin of its namespace, and those of
+// the entities of the kinds it grants that reference something of its
+// namespace, whichever namespace the gateway is in. The other gateways don't
+// depend on it.
 func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFunc {
+	toGateway := mapEntityToOnPremEventGateway(cl)
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		grant, ok := obj.(*configurationv1alpha1.KongReferenceGrant)
 		if !ok {
@@ -243,29 +277,72 @@ func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFun
 				}
 			}
 		}
-		// An entity is in the namespace of its gateway (see
-		// configuration.entityID).
-		return append(requests, onPremEventGatewaysIn(ctx, cl, namespacesGrantedSecrets(grant)...)...)
+		for _, from := range grant.Spec.From {
+			gk := schema.GroupKind{Group: string(from.Group), Kind: string(from.Kind)}
+			if _, ok := entityGroupKinds[gk]; !ok || string(from.Namespace) == grant.Namespace {
+				continue
+			}
+			entities, err := entitiesIn(ctx, cl, gk, string(from.Namespace))
+			if err != nil {
+				ctrl.LoggerFrom(ctx).Error(err, "failed to list the entities a KongReferenceGrant concerns", "kind", gk.Kind, "namespace", from.Namespace)
+				continue
+			}
+			for _, entity := range entities {
+				if referencesNamespace(entity, grant.Namespace) {
+					requests = append(requests, toGateway(ctx, entity)...)
+				}
+			}
+		}
+		slices.SortFunc(requests, func(a, b reconcile.Request) int { return strings.Compare(a.String(), b.String()) })
+		return slices.Compact(requests)
 	}
 }
 
-// namespacesGrantedSecrets returns the namespaces whose entities the
-// KongReferenceGrant allows to read Secrets of its namespace.
-func namespacesGrantedSecrets(grant *configurationv1alpha1.KongReferenceGrant) []string {
-	if !slices.ContainsFunc(grant.Spec.To, func(to configurationv1alpha1.ReferenceGrantTo) bool {
-		return to.Group == "core" && to.Kind == "Secret"
-	}) {
-		return nil
-	}
-	var namespaces []string
-	for _, from := range grant.Spec.From {
-		ns := string(from.Namespace)
-		if _, ok := entityGroupKinds[schema.GroupKind{Group: string(from.Group), Kind: string(from.Kind)}]; ok &&
-			ns != grant.Namespace && !slices.Contains(namespaces, ns) {
-			namespaces = append(namespaces, ns)
+// referencesNamespace reports whether the entity references something of the
+// namespace: its parent, another entity, or a Secret it reads.
+func referencesNamespace(obj client.Object, namespace string) bool {
+	if entity, ok := obj.(entityWithParent); ok {
+		if ref := entity.GetParentRef(); ref.NamespacedRef != nil &&
+			refKey(obj, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name).Namespace == namespace {
+			return true
 		}
 	}
-	return namespaces
+	if siblings, ok := obj.(interface {
+		CrossNamespaceSiblingReferences() []commonv1alpha1.CrossNamespaceReferenceCheck
+	}); ok && slices.ContainsFunc(siblings.CrossNamespaceSiblingReferences(), func(c commonv1alpha1.CrossNamespaceReferenceCheck) bool {
+		return c.ToNamespace == namespace
+	}) {
+		return true
+	}
+	return slices.ContainsFunc(sensitiveDataSecretRefs(obj), func(ref configurationv1alpha1.SensitiveDataSecretRef) bool {
+		return secretKey(obj, ref).Namespace == namespace
+	})
+}
+
+// entitiesIn returns the entities of a kind in a namespace.
+func entitiesIn(ctx context.Context, cl client.Client, gk schema.GroupKind, namespace string) ([]client.Object, error) {
+	o, err := cl.Scheme().New(configurationv1alpha1.GroupVersion.WithKind(gk.Kind + "List"))
+	if err != nil {
+		return nil, err
+	}
+	list, ok := o.(client.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("%T is not a list", o)
+	}
+	if err := cl.List(ctx, list, client.InNamespace(namespace)); err != nil {
+		return nil, err
+	}
+	items, err := apimeta.ExtractList(list)
+	if err != nil {
+		return nil, err
+	}
+	entities := make([]client.Object, 0, len(items))
+	for _, item := range items {
+		if entity, ok := item.(client.Object); ok {
+			entities = append(entities, entity)
+		}
+	}
+	return entities, nil
 }
 
 // secretReaders are the kinds of entity reading values from Secrets: the

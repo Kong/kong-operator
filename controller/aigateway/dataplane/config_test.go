@@ -102,7 +102,7 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 				}
 			}
 
-			err := checkKonnectAIGatewayEndpoints(aigw)
+			err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.AIGatewayDataPlane{}, aigw)
 			if !tc.wantErr {
 				require.NoError(t, err)
 				return
@@ -116,6 +116,6 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 // TestCheckKonnectAIGatewayEndpointsUnexpectedObject asserts the check fails closed
 // on a control plane object of another kind instead of reporting usable endpoints.
 func TestCheckKonnectAIGatewayEndpointsUnexpectedObject(t *testing.T) {
-	err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.OnPremAIGateway{})
+	err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.AIGatewayDataPlane{}, &aigatewayv1alpha1.OnPremAIGateway{})
 	require.ErrorContains(t, err, "unexpected control plane object")
 }

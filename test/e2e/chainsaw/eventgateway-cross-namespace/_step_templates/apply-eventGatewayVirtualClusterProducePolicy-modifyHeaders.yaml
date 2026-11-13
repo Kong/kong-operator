@@ -1,0 +1,35 @@
+# Template for creating a modifyHeaders EventGatewayVirtualClusterProducePolicy setting a header,
+# without a parent policy.
+#
+# Required bindings:
+#   - policy_name, policy_namespace: The policy.
+#   - virtual_cluster_name, virtual_cluster_namespace: Its virtual cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster-produce-policy-modify-headers
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualClusterProducePolicy
+          metadata:
+            name: ($policy_name)
+            namespace: ($policy_namespace)
+          spec:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($virtual_cluster_name)
+                namespace: ($virtual_cluster_namespace)
+            apiSpec:
+              type: modifyHeaders
+              modifyHeaders:
+                name: ($policy_name)
+                config:
+                  actions:
+                    - op: set
+                      set:
+                        key: Policy
+                        value: ($policy_name)

@@ -106,8 +106,7 @@ spec:
         clientAuthentication:
           mode: required
           tlsTrustBundles:
-            - namespacedRef:
-                name: client-ca
+            - name: client-ca
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: EventGatewayListenerPolicy
@@ -128,5 +127,4 @@ spec:
           bootstrapPort: at_start
           advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
           destination:
-            namespacedRef:
-              name: vcluster
+            name: vcluster

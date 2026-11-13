@@ -82,9 +82,9 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 		{name: "wrong kind", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayListenerPolicy"
 		}, err: "must name an EventGatewayVirtualClusterPolicy"},
-		{name: "wrong namespace", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
+		{name: "policy missing from the named namespace", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
 			c.Spec.APISpec.Policies[0].Namespace = "other"
-		}, err: "cross-namespace"},
+		}, err: "not found"},
 		{name: "missing policy", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
 			c.Spec.APISpec.Policies[0].Name = "missing"
 		}, err: "not found"},
@@ -99,7 +99,7 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 		}, err: "not referrer Gateway"},
 		{name: "cross-namespace parent", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
-		}, err: "same namespace"},
+		}, err: "different EventGatewayVirtualCluster"},
 		{name: "deleting", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
 			p.DeletionTimestamp = new(metav1.Now())
 			p.Finalizers = []string{"test"}
@@ -109,6 +109,15 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 		}, err: "not programmed"},
 		{name: "stale readiness", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
 			p.Generation++
+		}, err: "not programmed"},
+		// Not programmed yet, e.g. its virtual cluster of another namespace
+		// not granted to it, the policy has no gateway nor virtual cluster
+		// ID: it isn't of another gateway nor of another virtual cluster.
+		{name: "not programmed yet", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
+			p.SetKonnectID("")
+			p.SetGatewayID("")
+			p.SetVirtualClusterID("")
+			p.Status.Conditions[0].Status = metav1.ConditionFalse
 		}, err: "not programmed"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

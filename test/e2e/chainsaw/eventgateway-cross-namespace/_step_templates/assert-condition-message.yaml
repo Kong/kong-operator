@@ -1,0 +1,25 @@
+# Template for asserting a condition of an object, with its reason and a part
+# of its message.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - condition_type, condition_status, condition_reason: The condition.
+#   - message_part: A part of its message.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-condition-message
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (conditions[?type == $condition_type]):
+              - status: ($condition_status)
+                reason: ($condition_reason)
+                (contains(message, $message_part)): true

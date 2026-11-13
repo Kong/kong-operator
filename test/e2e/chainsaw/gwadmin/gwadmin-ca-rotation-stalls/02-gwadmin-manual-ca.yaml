@@ -6,6 +6,10 @@ metadata:
     # Rotates the API CA and the cp server CA at the same time.
     gateway-operator.konghq.com/rotate-certificate-authorities: "1"
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   tls:
     clientCA:
       provisioning: Manual

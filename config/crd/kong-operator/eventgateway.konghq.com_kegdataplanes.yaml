@@ -262,13 +262,13 @@ spec:
                 description: |-
                   ControlPlaneRef references the control plane this KegDataPlane connects to.
                   The type field identifies which kind of control plane is being referenced:
-                  konnectNamespacedRef references a KonnectEventGateway resource in the
-                  same namespace, onpremNamespacedRef an OnPremEventGateway resource in
-                  the same namespace.
+                  konnectNamespacedRef references a KonnectEventGateway resource,
+                  onpremNamespacedRef an OnPremEventGateway resource. A gateway in another
+                  namespace needs a KongReferenceGrant in its namespace.
                 properties:
                   konnectNamespacedRef:
                     description: |-
-                      KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace.
+                      KonnectNamespacedRef references a KonnectEventGateway resource.
                       Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
                     properties:
                       name:
@@ -276,13 +276,22 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectEventGateway resource, by
+                          default the namespace of the DataPlane. Another namespace needs a
+                          KongReferenceGrant in that namespace allowing the KegDataPlane, and one
+                          allowing its EventGatewayDataPlaneCertificate, to reference it.
+                        maxLength: 63
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
                   onpremNamespacedRef:
                     description: |-
-                      OnPremNamespacedRef references an OnPremEventGateway resource in the
-                      same namespace. The data plane pulls its configuration from the gw-admin
+                      OnPremNamespacedRef references an OnPremEventGateway resource. The data
+                      plane pulls its configuration from the gw-admin
                       pods of the GWAdmin of that gateway, and authenticates with a client
                       certificate trusted by the cp client CA of the GWAdmin.
                       Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct.
@@ -290,6 +299,15 @@ spec:
                       name:
                         description: Name is the name of the OnPremEventGateway resource.
                         maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the OnPremEventGateway resource, by
+                          default the namespace of the DataPlane. Another namespace needs a
+                          KongReferenceGrant in that namespace allowing the KegDataPlane, and one
+                          allowing its EventGatewayDataPlaneCertificate, to reference it.
+                        maxLength: 63
                         minLength: 1
                         type: string
                     required:

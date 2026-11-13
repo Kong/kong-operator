@@ -75,15 +75,17 @@ const onPremRegion = "testing"
 // Dependencies is set per reconciler: it needs the operator namespace.
 var onPremEventGatewayKind = shareddataplane.ControlPlaneKindConfig{
 	Kind:                      "OnPremEventGateway",
+	GVK:                       metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind("OnPremEventGateway")),
 	NewObject:                 func() shareddataplane.ControlPlaneObject { return &eventgatewayv1alpha1.OnPremEventGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldKegDataPlaneOnOnPremEventGateway,
 	Conditions: shareddataplane.ControlPlaneConditions{
-		ResolvedType:    string(eventgatewayv1alpha1.OnPremEventGatewayResolvedType),
-		ResolvedReason:  string(eventgatewayv1alpha1.OnPremEventGatewayResolvedReason),
-		ResolvedMessage: eventgatewayv1alpha1.OnPremEventGatewayResolvedMessage,
-		NotFoundReason:  string(eventgatewayv1alpha1.OnPremEventGatewayNotFoundReason),
-		NotFoundMessage: eventgatewayv1alpha1.OnPremEventGatewayNotFoundMessage,
-		NotReadyReason:  string(eventgatewayv1alpha1.KegDataPlaneGWAdminNotReadyReason),
+		ResolvedType:       string(eventgatewayv1alpha1.OnPremEventGatewayResolvedType),
+		ResolvedReason:     string(eventgatewayv1alpha1.OnPremEventGatewayResolvedReason),
+		ResolvedMessage:    eventgatewayv1alpha1.OnPremEventGatewayResolvedMessage,
+		NotFoundReason:     string(eventgatewayv1alpha1.OnPremEventGatewayNotFoundReason),
+		NotFoundMessage:    eventgatewayv1alpha1.OnPremEventGatewayNotFoundMessage,
+		NotPermittedReason: string(eventgatewayv1alpha1.OnPremEventGatewayRefNotPermittedReason),
+		NotReadyReason:     string(eventgatewayv1alpha1.KegDataPlaneGWAdminNotReadyReason),
 	},
 	CertificateRegistration: &shareddataplane.CertificateRegistrationConditions{
 		Type:                     string(eventgatewayv1alpha1.GWAdminCertificateRegisteredType),
@@ -1340,11 +1342,12 @@ func cleanupServerBundleCopy(
 
 // onPremCertificateParentRef returns the parent reference of the
 // EventGatewayDataPlaneCertificate of a data plane of the OnPremEventGateway.
-func onPremCertificateParentRef(gateway *eventgatewayv1alpha1.OnPremEventGateway) *commonv1alpha1.GatewayRef {
+func onPremCertificateParentRef(egdp *eventgatewayv1alpha1.KegDataPlane, gateway *eventgatewayv1alpha1.OnPremEventGateway) *commonv1alpha1.GatewayRef {
 	return &commonv1alpha1.GatewayRef{
-		Group: eventgatewayv1alpha1.GroupName,
-		Kind:  "OnPremEventGateway",
-		Name:  gateway.Name,
+		Group:     eventgatewayv1alpha1.GroupName,
+		Kind:      "OnPremEventGateway",
+		Name:      gateway.Name,
+		Namespace: gatewayNamespaceRef(egdp, gateway),
 	}
 }
 
@@ -1363,7 +1366,7 @@ func buildOnPremCertificate(
 		Namespace:  egdp.Namespace,
 		Labels:     selectorLabelsForKegDataPlane(egdp),
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-			ParentRef: onPremCertificateParentRef(gateway),
+			ParentRef: onPremCertificateParentRef(egdp, gateway),
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
 					Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,

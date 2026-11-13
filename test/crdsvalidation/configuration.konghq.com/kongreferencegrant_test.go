@@ -117,10 +117,12 @@ func TestKongReferenceGrant(t *testing.T) {
 				TestObject: grantFrom("EventGatewayListenerPolicy"),
 			},
 			{
-				// Only the Event Gateway kinds pushed to gw-admin that read
-				// Secrets are supported.
-				Name:                 "from another Event Gateway kind is rejected",
-				TestObject:           grantFrom("EventGatewayListener"),
+				Name:       "from an EventGatewayDataPlaneCertificate works",
+				TestObject: grantFrom("EventGatewayDataPlaneCertificate"),
+			},
+			{
+				Name:                 "from a kind that isn't an Event Gateway entity is rejected",
+				TestObject:           grantFrom("KonnectEventGateway"),
 				ExpectedErrorMessage: new("kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
@@ -237,49 +239,42 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("Generated Konnect child references to Konnect targets", func(t *testing.T) {
+	t.Run("Event Gateway entity references", func(t *testing.T) {
+		const configurationGroup = "configuration.konghq.com"
 		testCases := []struct {
 			name     string
 			fromKind string
+			toGroup  string
 			toKind   string
 		}{
-			{
-				name:     "PortalPage to Portal",
-				fromKind: "PortalPage",
-				toKind:   "Portal",
-			},
-			{
-				name:     "EventGatewayListener to KonnectEventGateway",
-				fromKind: "EventGatewayListener",
-				toKind:   "KonnectEventGateway",
-			},
-			{
-				name:     "EventGatewayListenerPolicy to EventGatewayListener",
-				fromKind: "EventGatewayListenerPolicy",
-				toKind:   "EventGatewayListener",
-			},
-			{
-				name:     "EventGatewayVirtualCluster to EventGatewayBackendCluster",
-				fromKind: "EventGatewayVirtualCluster",
-				toKind:   "EventGatewayBackendCluster",
-			},
-			{
-				name:     "EventGatewayVirtualClusterConsumePolicy to EventGatewayVirtualCluster",
-				fromKind: "EventGatewayVirtualClusterConsumePolicy",
-				toKind:   "EventGatewayVirtualCluster",
-			},
+			{"EventGatewayListener to KonnectEventGateway", "EventGatewayListener", "konnect.konghq.com", "KonnectEventGateway"},
+			{"EventGatewayListener to OnPremEventGateway", "EventGatewayListener", "eventgateway.konghq.com", "OnPremEventGateway"},
+			{"EventGatewayDataPlaneCertificate to KonnectEventGateway", "EventGatewayDataPlaneCertificate", "konnect.konghq.com", "KonnectEventGateway"},
+			{"EventGatewayListenerPolicy to EventGatewayListener", "EventGatewayListenerPolicy", configurationGroup, "EventGatewayListener"},
+			{"EventGatewayListenerPolicy to EventGatewayTLSTrustBundle", "EventGatewayListenerPolicy", configurationGroup, "EventGatewayTLSTrustBundle"},
+			{"EventGatewayVirtualCluster to EventGatewayBackendCluster", "EventGatewayVirtualCluster", configurationGroup, "EventGatewayBackendCluster"},
+			{"EventGatewayListenerPolicyChain to EventGatewayListener", "EventGatewayListenerPolicyChain", configurationGroup, "EventGatewayListener"},
+			{"EventGatewayListenerPolicyChain to EventGatewayListenerPolicy", "EventGatewayListenerPolicyChain", configurationGroup, "EventGatewayListenerPolicy"},
+			{"EventGatewayVirtualClusterPolicy to EventGatewayVirtualCluster", "EventGatewayVirtualClusterPolicy", configurationGroup, "EventGatewayVirtualCluster"},
+			{"EventGatewayVirtualClusterPolicyChain to EventGatewayVirtualCluster", "EventGatewayVirtualClusterPolicyChain", configurationGroup, "EventGatewayVirtualCluster"},
+			{"EventGatewayVirtualClusterPolicyChain to EventGatewayVirtualClusterPolicy", "EventGatewayVirtualClusterPolicyChain", configurationGroup, "EventGatewayVirtualClusterPolicy"},
+			{"EventGatewayVirtualClusterConsumePolicy to EventGatewayVirtualCluster", "EventGatewayVirtualClusterConsumePolicy", configurationGroup, "EventGatewayVirtualCluster"},
+			{"EventGatewayVirtualClusterConsumePolicy to EventGatewayVirtualClusterConsumePolicy", "EventGatewayVirtualClusterConsumePolicy", configurationGroup, "EventGatewayVirtualClusterConsumePolicy"},
+			{"EventGatewayVirtualClusterConsumePolicy to EventGatewaySchemaRegistry", "EventGatewayVirtualClusterConsumePolicy", configurationGroup, "EventGatewaySchemaRegistry"},
+			{"EventGatewayVirtualClusterProducePolicy to EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualClusterProducePolicy", configurationGroup, "EventGatewayVirtualClusterProducePolicy"},
+			{"EventGatewayVirtualClusterProducePolicy to EventGatewayStaticKey", "EventGatewayVirtualClusterProducePolicy", configurationGroup, "EventGatewayStaticKey"},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				toKonnectTarget := configurationv1alpha1.ReferenceGrantTo{
-					Group: "konnect.konghq.com",
+				to := configurationv1alpha1.ReferenceGrantTo{
+					Group: configurationv1alpha1.Group(tc.toGroup),
 					Kind:  configurationv1alpha1.Kind(tc.toKind),
 				}
 
 				common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
-					kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", "konnect.konghq.com", tc.fromKind, toKonnectTarget),
-					kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "other", "konnect.konghq.com", tc.fromKind, toKonnectTarget),
+					kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", configurationGroup, tc.fromKind, to),
+					kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "other", configurationGroup, tc.fromKind, to),
 				}.RunWithConfig(t, cfg, scheme)
 			})
 		}

@@ -78,6 +78,16 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
+              minRuntimeVersion:
+                description: |-
+                  MinRuntimeVersion is the oldest AI Gateway release that must accept the
+                  generated configuration, in MAJOR.MINOR form.
+                  If not specified, the default applies.
+                  This value is independent of DataPlane image tags. Changing it changes the
+                  configuration for every DataPlane that references this OnPremAIGateway.
+                maxLength: 32
+                pattern: ^\d+\.\d+$
+                type: string
               objectFilters:
                 description: ObjectFilters defines the filters to limit watched objects
                   by the controllers.

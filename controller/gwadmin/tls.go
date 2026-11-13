@@ -92,6 +92,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -637,7 +638,7 @@ func (r *Reconciler) ensureTLS(
 	deployment *appsv1.Deployment,
 ) (*tlsMaterial, error) {
 	now := r.clock()
-	previousMessage := certificateMessageOf(gw)
+	previousMessage := conditionMessage(gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned)
 
 	m := &tlsMaterial{}
 	for _, s := range []struct {
@@ -1337,8 +1338,10 @@ type dataPlane struct {
 // dataPlanes returns the data plane Deployments of the GWAdmin, sorted by
 // namespace and name. Only those the owner of the GWAdmin allows count: in
 // its namespace, or in a namespace a KongReferenceGrant in its namespace
-// grants from OnPremEventGateway to GWAdmin. Anyone else's labelled
-// Deployment is ignored: it can't hold the rotations back.
+// grants from OnPremEventGateway to GWAdmin, or that of a KegDataPlane a
+// KongReferenceGrant lets reference one of its gateways (see
+// isGrantedDataPlane). Anyone else's labelled Deployment is ignored: it
+// can't hold the rotations back.
 func (r *Reconciler) dataPlanes(ctx context.Context, gw *operatorv1alpha1.GWAdmin) ([]dataPlane, error) {
 	list := &appsv1.DeploymentList{}
 	if err := r.List(ctx, list, client.MatchingLabels{
@@ -1355,13 +1358,66 @@ func (r *Reconciler) dataPlanes(ctx context.Context, gw *operatorv1alpha1.GWAdmi
 	for i := range list.Items {
 		d := &list.Items[i]
 		if d.Namespace != gw.Namespace && !granted[d.Namespace] {
-			continue
+			ok, err := r.isGrantedDataPlane(ctx, gw, d)
+			if err != nil {
+				return nil, err
+			}
+			if !ok {
+				continue
+			}
 		}
 		dps = append(dps, dataPlane{name: d.Namespace + "/" + d.Name, state: rolloutOf(d)})
 	}
 	slices.SortFunc(dps, func(a, b dataPlane) int { return strings.Compare(a.name, b.name) })
 	return dps, nil
 }
+
+// isGrantedDataPlane reports whether the Deployment is that of a KegDataPlane
+// of its namespace referencing an OnPremEventGateway of another namespace
+// that is allowed to use the GWAdmin, with a KongReferenceGrant in the
+// namespace of the gateway allowing the reference. Such a KegDataPlane runs
+// in a namespace the KongReferenceGrants of the GWAdmin needn't name.
+func (r *Reconciler) isGrantedDataPlane(ctx context.Context, gw *operatorv1alpha1.GWAdmin, d *appsv1.Deployment) (bool, error) {
+	owner := metav1.GetControllerOf(d)
+	if owner == nil || owner.Kind != kegDataPlaneGVK.Kind || owner.APIVersion != eventgatewayv1alpha1.SchemeGroupVersion.String() {
+		return false, nil
+	}
+	var dp eventgatewayv1alpha1.KegDataPlane
+	if err := r.Get(ctx, client.ObjectKey{Namespace: d.Namespace, Name: owner.Name}, &dp); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get the KegDataPlane %s/%s: %w", d.Namespace, owner.Name, err)
+	}
+	ref := dp.Spec.ControlPlaneRef.OnPremNamespacedRef
+	if dp.UID != owner.UID || ref == nil || ref.Namespace == nil || *ref.Namespace == dp.Namespace {
+		return false, nil
+	}
+	var gateway eventgatewayv1alpha1.OnPremEventGateway
+	if err := r.Get(ctx, client.ObjectKey{Namespace: *ref.Namespace, Name: ref.Name}, &gateway); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get the OnPremEventGateway %s/%s: %w", *ref.Namespace, ref.Name, err)
+	}
+	if gateway.GWAdminKey() != client.ObjectKeyFromObject(gw) {
+		return false, nil
+	}
+	if reason, err := gwadminref.NotAllowed(ctx, r.Client, &gateway); err != nil || reason != "" {
+		return false, err
+	}
+	err := crossnamespace.CheckKongReferenceGrantForResource(ctx, r.Client, dp.Namespace, gateway.Namespace, gateway.Name,
+		kegDataPlaneGVK, onPremEventGatewayGVK)
+	if crossnamespace.IsReferenceNotGranted(err) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+var (
+	kegDataPlaneGVK       = metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind("KegDataPlane"))
+	onPremEventGatewayGVK = metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind(eventgatewayv1alpha1.OnPremEventGatewayKind))
+)
 
 // grantedNamespaces returns the namespaces the KongReferenceGrants in the
 // namespace of the GWAdmin allow its data planes in: those of the
@@ -1597,7 +1653,7 @@ func (r *Reconciler) manualSigner(
 	now time.Time,
 ) (*corev1.Secret, *x509.Certificate, error) {
 	name := gw.Spec.TLS.ClientCA.SecretRef.Name
-	secret, err := r.userSecret(ctx, gw, "CA", name)
+	secret, err := r.userSecret(ctx, gw, setCertificateCondition, "CA", name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1616,25 +1672,31 @@ func (r *Reconciler) manualSigner(
 	return secret, ca, nil
 }
 
+// conditionSetter sets a condition of the GWAdmin.
+type conditionSetter func(gw *operatorv1alpha1.GWAdmin, status metav1.ConditionStatus, reason, message string)
+
 // userSecret returns the named Secret the spec of the GWAdmin references, the
-// what of the user. A Secret Kong Operator provisions is refused.
-func (r *Reconciler) userSecret(ctx context.Context, gw *operatorv1alpha1.GWAdmin, what, name string) (*corev1.Secret, error) {
+// what of the user, reporting why it can't be used with set. A Secret Kong
+// Operator provisions is refused.
+func (r *Reconciler) userSecret(
+	ctx context.Context, gw *operatorv1alpha1.GWAdmin, set conditionSetter, what, name string,
+) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if err := r.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: name}, secret); err != nil {
 		if apierrors.IsNotFound(err) {
-			setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefNotFound,
+			set(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefNotFound,
 				fmt.Sprintf("%s Secret %q not found%s", what, name, gwadminref.SecretHint(r.SecretLabelSelector)))
 			return nil, errStop
 		}
 		// A transient API error or an RBAC denial: retried with backoff.
-		setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretReadFailed,
+		set(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretReadFailed,
 			fmt.Sprintf("failed to read %s Secret %q: %v", what, name, err))
 		return nil, fmt.Errorf("failed to read %s Secret %s/%s: %w", what, gw.Namespace, name, err)
 	}
 	if secret.Labels[consts.SecretProvisioningLabelKey] == consts.SecretProvisioningAutomaticLabelValue ||
 		metav1.IsControlledBy(secret, gw) {
-		setCertificateCondition(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefOperatorManaged,
-			fmt.Sprintf("%s Secret %q is provisioned and managed by the operator; Manual provisioning requires a user-owned Secret", what, name))
+		set(gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonSecretRefOperatorManaged,
+			fmt.Sprintf("%s Secret %q is provisioned and managed by the operator; reference a user-owned Secret", what, name))
 		return nil, errStop
 	}
 	return secret, nil
@@ -1721,7 +1783,7 @@ func (r *Reconciler) manualCPCertificate(
 	now time.Time,
 ) (*corev1.Secret, error) {
 	name := gw.Spec.TLS.CP.SecretRef.Name
-	src, err := r.userSecret(ctx, gw, "cp certificate", name)
+	src, err := r.userSecret(ctx, gw, setCertificateCondition, "cp certificate", name)
 	if err != nil {
 		return nil, err
 	}

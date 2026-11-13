@@ -1,0 +1,23 @@
+# Template for asserting an object has no condition of a type with the status
+# False: True or absent, e.g. ResolvedRefs once its references are all in its
+# namespace, which the Konnect controllers then no longer report. Asserted
+# after the condition was False, it tells the object was reconciled since.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - condition_type: The condition.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-condition-not-false
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (length(conditions[?type == $condition_type && status == 'False'])): 0

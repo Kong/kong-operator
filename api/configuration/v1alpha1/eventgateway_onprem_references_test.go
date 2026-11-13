@@ -59,12 +59,12 @@ spec:
     type: schemaValidation
     schemaValidation:
       config:
-        type: json
-        json:
+        type: confluentSchemaRegistry
+        confluentSchemaRegistry:
           schemaRegistry: {name: registry}
 `, policy)
-		require.NotEmpty(t, RefsAtEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSchemaRegistry(policy))
-		_, err := resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSchemaRegistry(t.Context(), newClient(t), policy)
+		require.NotEmpty(t, RefsAtEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(policy))
+		_, err := resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(t.Context(), newClient(t), policy)
 		require.ErrorAs(t, err, new(ReferenceNotKonnectManagedError))
 		require.ErrorContains(t, err, "EventGatewaySchemaRegistry default/registry is not attached to a Konnect gateway")
 	})
@@ -81,7 +81,7 @@ spec:
         encryptionKey:
           type: static
           static:
-            key: {namespacedRef: {name: key}}
+            key: {name: key}
 `, policy)
 		require.NotEmpty(t, RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(policy))
 		_, err := resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(t.Context(), newClient(t), policy)
@@ -100,7 +100,7 @@ spec:
       config:
         clientAuthentication:
           tlsTrustBundles:
-            - namespacedRef: {name: bundle}
+            - name: bundle
 `, policy)
 		require.NotEmpty(t, RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(policy))
 		_, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(t.Context(), newClient(t), policy)
@@ -118,7 +118,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: forward
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: `+name+`}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: `+name+`}}}
 `, policy)
 			return policy
 		}

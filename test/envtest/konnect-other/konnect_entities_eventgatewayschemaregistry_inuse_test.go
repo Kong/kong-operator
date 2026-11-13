@@ -112,7 +112,7 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: validate
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: `+registry.Name+`}}, valueValidationAction: reject}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: `+registry.Name+`}, valueValidationAction: reject}}
 `), policy))
 	require.NoError(t, clientNamespaced.Create(ctx, policy))
 	policy.SetKonnectID(policyID)

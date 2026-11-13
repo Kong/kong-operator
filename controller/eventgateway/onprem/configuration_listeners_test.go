@@ -91,18 +91,16 @@ spec:
 	l := listener("listener", "listener", 2)
 	// Left out as a duplicate: its policy is left out with it.
 	lDuplicate := listener("listener-duplicate", "listener", 3)
-	forward := forwardPolicy("forward", "listener", "{namespacedRef: {name: vc}}", 4)
-	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{namespacedRef: {name: unknown}}", 5)
-	forwardByName := forwardPolicy("forward-by-name", "listener", "{name: vc}", 9)
-	forwardByID := forwardPolicy("forward-by-id", "listener", "{id: 9524ec7d-36d9-465d-a8c5-83a3c9390458}", 6)
-	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{namespacedRef: {name: vc}}", 7)
-	// Of another namespace, attached to a listener of the gateway: left out,
-	// whatever its parent reference says.
-	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{namespacedRef: {name: vc}}", 8)
+	forward := forwardPolicy("forward", "listener", "{name: vc}", 4)
+	forwardUnknown := forwardPolicy("forward-unknown", "listener", "{name: unknown}", 5)
+	forwardOfDuplicate := forwardPolicy("forward-of-duplicate", "listener-duplicate", "{name: vc}", 7)
+	// Of another namespace, attached to a listener of the gateway, without a
+	// KongReferenceGrant: left out.
+	forwardOtherNamespace := forwardPolicy("forward-other-namespace", "listener", "{name: vc}", 8)
 	forwardOtherNamespace.SetNamespace("other")
 	forwardOtherNamespace.Spec.EventGatewayListenerRef.NamespacedRef.Namespace = new(ns)
 
-	cl := newFakeClient(t, bc, vc, l, lDuplicate, forward, forwardUnknown, forwardByName, forwardByID, forwardOfDuplicate, forwardOtherNamespace)
+	cl := newFakeClient(t, bc, vc, l, lDuplicate, forward, forwardUnknown, forwardOfDuplicate, forwardOtherNamespace)
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
 
@@ -114,10 +112,8 @@ spec:
 		"EventGatewayListener listener-duplicate": `another listener of the gateway is named "listener"`,
 		"EventGatewayListenerPolicy forward-unknown": "resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: EventGatewayVirtualCluster " + ns +
 			`/unknown: eventgatewayvirtualclusters.configuration.konghq.com "unknown" not found`,
-		"EventGatewayListenerPolicy forward-by-name":         "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references an EventGatewayVirtualCluster by name: with an OnPremEventGateway, only namespacedRef is allowed",
-		"EventGatewayListenerPolicy forward-by-id":           "spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references an EventGatewayVirtualCluster by id: with an OnPremEventGateway, only namespacedRef is allowed",
 		"EventGatewayListenerPolicy forward-of-duplicate":    "its EventGatewayListener " + ns + "/listener-duplicate isn't in the configuration",
-		"EventGatewayListenerPolicy forward-other-namespace": "it must be in the namespace of the OnPremEventGateway, " + ns,
+		"EventGatewayListenerPolicy forward-other-namespace": "no KongReferenceGrant allows it to reference the EventGatewayListener " + ns + "/listener",
 	}, excluded)
 
 	got, err := json.Marshal(cfg.entities)
@@ -175,7 +171,7 @@ spec:
             key: {type: secretRef, secretRef: {name: tls, key: tls.key}}
         clientAuthentication:
           mode: required
-          tlsTrustBundles: [{namespacedRef: {name: bundle}}]
+          tlsTrustBundles: [{name: bundle}]
 `)
 	secret := &corev1.Secret{Name: "tls", Namespace: ns, Data: map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")}}
 
@@ -224,4 +220,102 @@ func keptStatus(t *testing.T, cfg configuration, obj client.Object) entityStatus
 	}
 	require.Failf(t, "not included", "%s isn't in the configuration", obj.GetName())
 	return entityStatus{}
+}
+
+// TestBuildConfigurationListenerDestinationAcrossNamespaces checks a listener
+// policy may forward to a virtual cluster of another namespace with a
+// KongReferenceGrant there, as for its other references. Without one, the
+// policy belongs to the gateway but can't be sent, which stops the push.
+func TestBuildConfigurationListenerDestinationAcrossNamespaces(t *testing.T) {
+	const tenants = "tenants"
+	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: "gateway", Namespace: ns}
+	gateway.SetUID(types.UID("4b1e7d2a-9c3f-4a8e-b5d6-0f2c8e1a7b94"))
+	created := time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)
+	at := func(minutes int) time.Time { return created.Add(time.Duration(minutes) * time.Minute) }
+
+	bc := fromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, at(0), `
+metadata: {name: bc}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: bc
+    authentication: {type: anonymous, anonymous: {}}
+    bootstrapServers: ["kafka:9092"]
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls: {enabled: Disabled}
+`)
+	vc := fromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, at(1), `
+metadata: {name: vc, namespace: tenants}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc, namespace: `+ns+`}}
+  apiSpec:
+    name: vc
+    aclMode: passthrough
+    authentication: [{type: anonymous}]
+    dnsLabel: vc
+`)
+	l := fromYAML[configurationv1alpha1.EventGatewayListener](t, at(2), `
+metadata: {name: listener}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: listener
+    addresses: ["0.0.0.0"]
+    ports: [19092]
+`)
+	forward := fromYAML[configurationv1alpha1.EventGatewayListenerPolicy](t, at(3), `
+metadata: {name: forward}
+spec:
+  eventGatewayListenerRef: {type: namespacedRef, namespacedRef: {name: listener}}
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping:
+          advertisedHost: localhost
+          destination: {name: vc, namespace: tenants}
+`)
+	grant := func(namespace, fromNamespace, fromKind, toKind string) *configurationv1alpha1.KongReferenceGrant {
+		return &configurationv1alpha1.KongReferenceGrant{
+			Name: fromKind + "-to-" + toKind, Namespace: namespace,
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(fromKind), Namespace: configurationv1alpha1.Namespace(fromNamespace)}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(toKind)}},
+			},
+		}
+	}
+	// The virtual cluster belongs to the gateway, through its backend cluster.
+	vcToBC := grant(ns, tenants, "EventGatewayVirtualCluster", "EventGatewayBackendCluster")
+
+	t.Run("without a KongReferenceGrant, the policy stops the push", func(t *testing.T) {
+		cfg, err := buildConfiguration(t.Context(), newFakeClient(t, bc, vc, l, forward, vcToBC), gateway, "", nil)
+		require.NoError(t, err)
+		require.Error(t, cfg.blocked())
+		assert.Equal(t, map[string]string{
+			"EventGatewayListenerPolicy forward": "no KongReferenceGrant allows it to reference the EventGatewayVirtualCluster " + tenants + "/vc",
+		}, excludedMessages(cfg))
+	})
+
+	t.Run("with a KongReferenceGrant, it forwards to the virtual cluster", func(t *testing.T) {
+		policyToVC := grant(tenants, ns, "EventGatewayListenerPolicy", "EventGatewayVirtualCluster")
+		cfg, err := buildConfiguration(t.Context(), newFakeClient(t, bc, vc, l, forward, vcToBC, policyToVC), gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		require.Empty(t, cfg.excluded)
+
+		got, err := json.Marshal(cfg.entities)
+		require.NoError(t, err)
+		var entities struct {
+			Listeners []struct {
+				Policies []map[string]any `json:"policies"`
+			} `json:"listeners"`
+		}
+		require.NoError(t, json.Unmarshal(got, &entities))
+		require.Len(t, entities.Listeners, 1)
+		require.Len(t, entities.Listeners[0].Policies, 1)
+		config, _ := entities.Listeners[0].Policies[0]["config"].(map[string]any)
+		assert.Equal(t, map[string]any{"id": string(vc.UID)}, config["destination"])
+	})
 }

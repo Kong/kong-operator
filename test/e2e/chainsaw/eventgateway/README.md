@@ -28,3 +28,71 @@ make test.e2e.chainsaw \
 The 75-second observation windows assume the default 60-second Konnect sync
 period. If the sync period is increased, increase the observation windows and
 convergence/exec timeouts accordingly.
+
+## Listener policy chain lifecycle
+
+The `listenerpolicychain-lifecycle` scenario creates an isolated, test-labeled
+Konnect gateway, backend, virtual cluster, and two listeners. It uses
+`forward_to_virtual_cluster` policies without sending traffic or deploying Kafka
+or a data plane.
+
+It checks reverse creation order and declaration changes, an explicitly empty
+scope, out-of-band ordering drift and periodic repair, missing and unprogrammed
+references without shortened writes, extra and omitted policies, real policy
+deletion/recreation with new Konnect IDs and Kubernetes UIDs, conflicting chains
+and handover, and deletion without authentication or valid references. Successful
+chains must have every prerequisite condition `True` at the current generation
+and no independent `status.id`.
+
+Every observation requires a JSON object with an explicit `policies` array equal
+to the exact expected ID sequence, then repeats backend and Kubernetes identity
+checks for longer than a full sync period. The unready-policy scenario deliberately
+uses another test policy's Konnect name; recovery assigns its own unique name,
+without adopting or deleting the original policy.
+The no-auth scenario removes only its credential Secret's token key, waits for
+current-generation `APIAuthValid=False`, and then deletes the chain with invalid policy references.
+It checks retained IDs and UIDs without requiring policies to remain programmed
+while their authentication is unavailable.
+An exit handler restores the token key and waits for authentication to recover
+on success, failure, or handled termination, before ordinary test cleanup runs.
+
+```bash
+make test.e2e.chainsaw \
+  CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/listenerpolicychain-lifecycle
+```
+
+The defaults are `KONNECT_SYNC_PERIOD_SECONDS=60`, `WINDOW_SECONDS=75`, and
+`CHECK_INTERVAL=5`. Set the first value to the running operator's actual
+`--konnect-sync-period` in integer seconds; the script rejects an observation
+window that does not exceed it. For an isolated operator configured with
+`--konnect-sync-period=5s`, a shorter bounded run is:
+
+```bash
+KONNECT_SYNC_PERIOD_SECONDS=5 WINDOW_SECONDS=8 CHECK_INTERVAL=1 \
+  make test.e2e.chainsaw \
+    CHAINSAW_TEST_DIR=./test/e2e/chainsaw/eventgateway/listenerpolicychain-lifecycle
+```
+
+CI keeps the operator's default 60-second sync period and the 75-second observation
+windows. The listener lifecycle has 19 sequential observation windows, requiring
+at least 23 minutes 45 seconds before resource convergence, drift repair, and
+cleanup. The mutation/recovery checks run sequentially against the same resources;
+shortening their windows below the sync period would no longer verify stability
+across periodic reconciliation.
+In [a passing CI run](https://github.com/Kong/kong-operator/actions/runs/43178413365/job/131049655973),
+the listener scenario took 27 minutes 10 seconds, the full Chainsaw suite took
+28 minutes 39 seconds, and the whole job including cluster/operator setup took
+31 minutes 58 seconds. The workflow therefore allows 45 minutes for `eventgateway`
+only, with headroom for API/runner latency and cleanup; other suites retain their
+30-minute default and `GHA_EXTENDED_TIMEOUT_MINUTES` still overrides both.
+
+Cleanup is registered before resource creation and targets only this namespace's
+named probe resources and the exact-name, test-labeled remote gateway. It restores
+the probe's authentication if a failure interrupted the no-auth scenario, removes
+remote children before their parents, and releases any stranded deletion finalizers
+only after verifying that this dedicated remote gateway is absent.
+
+These are management-plane ordering checks, not traffic-routing tests or a
+guarantee that GET and PUT are atomic against concurrent out-of-band policy-set
+changes. Use a disposable, isolated cluster with this branch's CRDs and operator;
+do not replace a shared operator deployment to run this scenario.

@@ -75,6 +75,38 @@
 
 ### Breaking changes
 
+- A `KegDataPlane` whose `KonnectEventGateway` `serverURL` carries a path is no
+  longer reconciled: it keeps serving, but no spec, image or certificate change
+  is applied, its certificate is not renewed, and a data plane that was not
+  deployed yet is not deployed at all. Its `KonnectEventGatewayResolved`
+  condition is `False` with reason `EndpointMismatch`: the Event Gateway
+  composes a public Konnect host from the region and the domain and cannot use a
+  path. Setting `spec.config.konnect.domain` to a host does not make that
+  connection private, it only lets the data plane connect over the public
+  internet. A `KONG_KONNECT_DOMAIN` set in
+  `spec.deployment.podTemplateSpec` does not count as that override: move the
+  value to `spec.config.konnect.domain` to keep the data plane reconciled.
+  [#6107](https://github.com/Kong/kong-operator/issues/6107)
+- `GWAdmin` now requires `spec.license.secretRef.name` and
+  `spec.license.secretRef.key`, identifying the enveloped license in a Secret
+  in the same namespace. Existing manifests must include this reference;
+  an empty spec is no longer accepted. `spec.license.entitlements` defaults
+  to `[event_gateway]`, the only supported entitlement. Kong Operator mounts
+  the Secret key in the gw-admin pods and points gw-admin at it with
+  `GW_ADMIN_ONPREM_LICENSE_FILE` and `GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS`;
+  a pod template overlay can't replace this volume, mount another one at its
+  path, or set these env vars.
+  The kubelet updates the mounted file when the Secret changes, and gw-admin
+  reads it again on each of its periodic license checks, so a renewed license
+  reaches the running pods without a restart. The new `LicenseProvisioned`
+  condition reports a missing Secret, or a missing or empty key, and keeps
+  `Ready` False. The Deployment is applied anyway: gw-admin refuses to start
+  without a valid license. While a `GWAdmin` references the license Secret, the
+  `gateway-operator.konghq.com/gwadmin-license-in-use` finalizer delays its
+  deletion until no `GWAdmin` references it; update a license in place rather
+  than deleting and creating its Secret again. gw-admin, not Kong Operator,
+  validates the license.
+  [#6567](https://github.com/Kong/kong-operator/issues/6567)
 - A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
   on a geo that does not return private endpoints yet, is no longer reconciled:
   it keeps serving, but no spec, image or certificate change is applied until
@@ -93,26 +125,47 @@
   update must use the object shape.**
   [#6433](https://github.com/Kong/kong-operator/pull/6433)
 - `EventGatewayVirtualClusterProducePolicy` and
-  `EventGatewayVirtualClusterConsumePolicy`: the CRDs reject specs Konnect
-  refuses: a schema registry reference whose `type` doesn't match the member
-  set, or of `type: id` without its id, `schemaRegistry` in a `json` schema
-  validation, and a `transcode` or `maskFields` policy without
-  `parentPolicyRef`. A stored object that doesn't follow them can still be
-  updated, e.g. its finalizer removed, as long as it keeps or drops the
-  schema registry reference it has.
+  `EventGatewayVirtualClusterConsumePolicy`: the CRDs reject a `transcode` or
+  `maskFields` policy without `parentPolicyRef`, which Konnect refuses.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
-- `EventGatewayVirtualClusterConsumePolicy` Go API: the `schemaRegistry` field
-  of a `schemaValidation` policy's `json` and `confluentSchemaRegistry` configs
-  is now an `EventGatewaySchemaRegistryRefWithNamespacedRef`, instead of an
-  `EventGatewaySchemaRegistryRef`. Its `kind`, `name` and `namespace` fields
-  are kept; `Ref()` returns the reference in either form. The CRD still
-  accepts the released shape.
-  [#6491](https://github.com/Kong/kong-operator/pull/6491)
-- `OnPremEventGateway`: the policies reference schema registries, static keys
-  and TLS trust bundles by object only, with `namespacedRef`, or, in a consume
-  `schemaValidation` policy, the name of the object set directly. A policy that
-  references one by id or by name is refused.
-  [#6491](https://github.com/Kong/kong-operator/pull/6491)
+- Event Gateway: references between entities name only the Kubernetes object,
+  as `{kind, name, namespace}` (`kind` and `namespace` optional).
+  - The Konnect ID and name forms, and the `namespacedRef` wrapper, are
+    removed from:
+    - `EventGatewayListenerPolicy`: `forwardToVirtualCluster` `destination`
+      and `tlsServer` `clientAuthentication.tlsTrustBundles`
+    - `EventGatewayVirtualClusterProducePolicy`: the `encrypt` and
+      `encryptFields` static `key`, and the `schemaValidation` and
+      `transcode` `schemaRegistry`
+    - `EventGatewayVirtualClusterConsumePolicy`: the `transcode`
+      `schemaRegistry`
+  - The `json` `schemaRegistry` of `schemaValidation` policies is removed:
+    Konnect and gw-admin refuse a registry there.
+  - A `konnectID` parent reference (`gatewayRef`,
+    `eventGatewayBackendClusterRef`, `eventGatewayListenerRef`,
+    `eventGatewayVirtualClusterRef`), which was never resolved, is rejected. A
+    stored object keeping one can still be updated, e.g. to remove its
+    finalizer.
+
+  **Migrate every stored reference to the object form before upgrading.**
+  After the upgrade:
+  - a reference by Konnect ID or by `namespacedRef`, or a schema registry
+    reference by Konnect name, loses its name, and the policy fails with
+    `reference has no name set`;
+  - a reference by Konnect name to a static key, a TLS trust bundle or a
+    virtual cluster, `{name: x}`, is read as the name of an object in the
+    policy's namespace: if an object of that kind is named `x`, the policy
+    uses it, e.g. encrypts with that static key.
+
+  [#6550](https://github.com/Kong/kong-operator/pull/6550)
+- `AIGatewayMCPServer`: the `route` field in `config` is now required for four
+  types: `conversion-listener`, `listener`, `passthrough-listener` and
+  `upstream-server`. The Konnect API now requires this field. The
+  `conversion-only` type is not affected. A manifest without `route` fails on
+  create. A stored object without `route` fails on the next update. **Add a
+  `route` block to each of these MCP servers before you upgrade the CRDs.** Set
+  one matcher in the block: `paths`, `hosts`, `methods` or `headers`.
+  [#6485](https://github.com/Kong/kong-operator/pull/6485)
 
 ### Fixed
 
@@ -123,6 +176,12 @@
   still reported as `KonnectAIGatewayResolved=False` with reason
   `EndpointMismatch`.
   [#6105](https://github.com/Kong/kong-operator/issues/6105)
+- `KonnectConfigStoreSync` now accepts entry values up to 8192 Unicode
+  characters, matching the increased Konnect Config Store limit instead of
+  rejecting values above 5120 bytes. This allows larger TLS certificate/key
+  pairs and certificate chains. `status.entries[].valueBytes` still reports
+  the value size in bytes.
+  [#6564](https://github.com/Kong/kong-operator/pull/6564)
 - A `KonnectExtension` whose Konnect endpoints cannot be used now reports
   `Ready=False` and holds its data plane, instead of letting it reach Konnect
   through the public endpoint: reason `InvalidEndpoint` for a
@@ -141,6 +200,18 @@
 - A missing CA Secret now reports an error that names the Secret and the
   secret label selector, instead of a bare `not found` message.
   [#6500](https://github.com/Kong/kong-operator/issues/6500)
+- `Gateway`: Missing route CRDs are now skipped when counting attached routes, and
+  listener `supportedKinds` reflects the route CRDs installed in the cluster.
+  Listeners whose protocol has no installed route kind at all report `ResolvedRefs=False`
+  with reason `InvalidRouteKinds`, and so do listeners that explicitly allow a
+  route kind whose CRD is not installed in the cluster.
+  [#6482](https://github.com/Kong/kong-operator/pull/6482)
+- Event Gateway, Konnect portal, `KonnectConfigStore` and
+  `AIGatewayConsumerCredential` CRDs: an object without a status, e.g. updated
+  before its controller wrote one, can be updated again instead of being
+  refused with `no such key: status` by the rule keeping its parent reference
+  once Programmed.
+  [#6550](https://github.com/Kong/kong-operator/pull/6550)
 
 ### Added
 
@@ -148,6 +219,7 @@
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.
   [#6501](https://github.com/Kong/kong-operator/pull/6501)
+  [#6502](https://github.com/Kong/kong-operator/pull/6502)
 - `EventGatewayVirtualClusterPolicyChain` now applies declared cluster-level
   policy ordering to `OnPremEventGateway` configuration, using Kubernetes policy
   references without Konnect IDs. Invalid owning declarations pause the
@@ -159,6 +231,59 @@
   description and enabled flag to avoid repeatedly pushing an unchanged
   configuration.
   [#6395](https://github.com/Kong/kong-operator/pull/6395)
+- `EventGatewayListenerPolicyChain` now orders the policies of the listeners of
+  an `OnPremEventGateway` too, as `EventGatewayVirtualClusterPolicyChain` does
+  those of its virtual clusters: an invalid owning chain pauses the gateway's
+  configuration updates, and deleting it restores the default policy order.
+  [#6630](https://github.com/Kong/kong-operator/pull/6630)
+- Event Gateway entities can reference their parent, the entities they use
+  (schema registries, static keys, TLS trust bundles, parent policies, the
+  virtual cluster a listener policy forwards to) and the Secrets they read in
+  another namespace, with a `KongReferenceGrant` in its namespace, on both
+  `KonnectEventGateway`s and `OnPremEventGateway`s. A
+  `KongReferenceGrant` names these kinds under their own group,
+  `configuration.konghq.com`: the `konnect.konghq.com` form of the samples
+  never matched, and is still accepted only so that existing grants stay
+  valid.
+  Without a `KongReferenceGrant`:
+  - an entity that can't reference its parent reports `RefNotPermitted`; on
+    an `OnPremEventGateway` it is left out and the configuration is still
+    pushed, as the entity doesn't belong to the gateway;
+  - an entity that can't reference another entity reports
+    `ReferenceNotPermitted`, against Konnect in `KonnectReferencesResolved`
+    and on an `OnPremEventGateway` in `Programmed`, and one that can't read a
+    Secret `RefNotPermitted`; on an `OnPremEventGateway`, both stop the
+    configuration from being pushed, except for an
+    `EventGatewayDataPlaneCertificate`, which is only left out, no longer
+    trusted;
+  - a child policy of another namespace that isn't in Konnect doesn't block
+    the deletion of its parent policy;
+  - an entity being deleted isn't held back: against Konnect it is still
+    deleted, and on an `OnPremEventGateway` one kept for the policies using
+    it is sent as it was last, so that deleting a namespace with its
+    `KongReferenceGrant`s doesn't stop the push that releases it.
+  [#6580](https://github.com/Kong/kong-operator/pull/6580), [#6626](https://github.com/Kong/kong-operator/pull/6626)
+- `EventGatewayVirtualClusterPolicyChain`s can reference their virtual
+  cluster, and order policies, in another namespace, with a
+  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
+  `OnPremEventGateway`s, and so can `EventGatewayListenerPolicyChain`s their
+  listener and policies.
+  Without a `KongReferenceGrant`:
+  - a policy chain that can't order its policies reports
+    `ReferenceNotPermitted`, and doesn't claim its virtual cluster or
+    listener;
+  - a policy chain of another namespace loses its claim on its virtual
+    cluster or listener, so that a chain of the namespace of that one can
+    claim it.
+  [#6582](https://github.com/Kong/kong-operator/pull/6582), [#6631](https://github.com/Kong/kong-operator/pull/6631)
+- `KegDataPlane`: `konnectNamespacedRef` and `onpremNamespacedRef` can name a
+  gateway in another namespace, with a `KongReferenceGrant` in its namespace
+  allowing the `KegDataPlane`, and one allowing its
+  `EventGatewayDataPlaneCertificate`, to reference it. Without one, the
+  `KegDataPlane` reports `RefNotPermitted`, and has its
+  `EventGatewayDataPlaneCertificate`s removed, so that the gateway no longer
+  trusts it, until a `KongReferenceGrant` lets it in again.
+  [#6583](https://github.com/Kong/kong-operator/pull/6583)
 - `KegDataPlane`: the operator deploys a data plane for an
   `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
   gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
@@ -186,10 +311,8 @@
   [#6515](https://github.com/Kong/kong-operator/pull/6515)
 - `EventGatewayVirtualClusterProducePolicy` and
   `EventGatewayVirtualClusterConsumePolicy`: schema registry references.
-  - A schema registry can be referenced by object, with `type: namespacedRef`,
-    next to `id` and `name`. For a consume `schemaValidation` policy, a
-    reference moved to `namespacedRef` must drop `kind`.
-  - A `type: id` reference now keeps its id (`id: {id: <uuid>}`).
+  - A schema registry is referenced by object, as `{kind, name, namespace}`
+    (`kind` and `namespace` optional).
   - `transcode` and `maskFields` policies accept `parentPolicyRef`.
   [#6491](https://github.com/Kong/kong-operator/pull/6491)
 - `EventGatewaySchemaRegistry`: a schema registry policies use in Konnect
@@ -205,14 +328,15 @@
   `OnPremEventGateway` controller owns the status of its entities, and clears
   what the Konnect controllers set on them.
   [#6530](https://github.com/Kong/kong-operator/pull/6530)
-- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy can
-  reference its virtual cluster by object, with `destination.namespacedRef`. A
-  virtual cluster, or its backend cluster, that listener policies forward to
-  isn't deleted until they stop: it reports `DeletionBlocked`, naming the
-  policies, created in Konnect, that forward to it.
-  - `OnPremEventGateway`: only `destination.namespacedRef` is allowed, and the
-    virtual cluster and its backend cluster are held by the finalizer
-    `gateway-operator.konghq.com/onprem-eventgateway-in-use` while in use.
+- `EventGatewayListenerPolicy`: a `forwardToVirtualCluster` policy
+  references its virtual cluster by object, with
+  `destination: {kind, name, namespace}`. A virtual cluster, or its backend
+  cluster, that listener policies forward to isn't deleted until they stop:
+  it reports `DeletionBlocked`, naming the policies, created in Konnect, that
+  forward to it.
+  - `OnPremEventGateway`: the virtual cluster and its backend cluster are held
+    by the finalizer `gateway-operator.konghq.com/onprem-eventgateway-in-use`
+    while in use.
   [#6492](https://github.com/Kong/kong-operator/pull/6492)
 - `OnPremEventGateway`: an entity that can't be sent stops the push of its
   gateway instead of being left out, e.g. a policy whose reference, parent
@@ -242,10 +366,28 @@
   the reported hash differs from the hash recorded after the last successful
   push, the sync pushes the configuration again.
   [#6518](https://github.com/Kong/kong-operator/pull/6518)
+- DataPlane: make the hardened security context OpenShift compatible.
+  Operand containers built with the hardened security context now set
+  `seccompProfile: RuntimeDefault` and, on OpenShift, no longer pin
+  `runAsUser`/`runAsGroup` to a fixed UID, because the `restricted-v2` SCC
+  rejects a UID outside the namespace range and assigns one instead. The
+  affected workloads are DataPlanes with `hardened: enabled`, and the AI
+  Gateway, Event Gateway, GWAdmin and MCP Server containers, which harden
+  unconditionally. The platform is detected by default and can be overridden
+  with the new `--platform` flag (`auto`, `openshift`, `kubernetes`).
+  [#6562](https://github.com/Kong/kong-operator/pull/6562)
 - `--gwadmin-ca-ttl` now defaults to 10 years and must be at least 1 hour, as a
   shorter validity could keep the client certificate of an on-prem `KegDataPlane`
   from being issued.
   [#6435](https://github.com/Kong/kong-operator/pull/6435)
+- The `AIGatewayModel` alias conflict is now scoped to one route: two models
+  sharing an alias on different routes of the same on-prem AI Gateway no longer
+  conflict (they share the rendered `ai_models` entity, and each keeps its own
+  route and plugin), while two models claiming one alias on the same route
+  still exclude the later-created one with `Programmed=False`. A shared
+  `ai_models` entity keeps the values of the earliest-created model, so a new
+  model cannot change it.
+  [#6510](https://github.com/Kong/kong-operator/pull/6510)
 
 ### Fixes
 
@@ -2257,8 +2399,8 @@ by the operator's semver:
 - Hybridgateway: Wait for cleanup of all child resources before removing the
   finalizers of the parent resource
   [#4785](https://github.com/Kong/kong-operator/pull/4785) [#4892](https://github.com/Kong/kong-operator/pull/4892)
-- Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+- [CVE-2026-16543](https://www.cve.org/CVERecord?id=CVE-2026-16543) Preserve only one CA certificate from secrets if there are
+   multiple ones with the duplicate IDs.
   [#4877](https://github.com/Kong/kong-operator/pull/4877)
 
 ## [v2.2.2]
@@ -2684,8 +2826,8 @@ by the operator's semver:
 
 ### Fixes
 
-- Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+- [CVE-2026-16543](https://www.cve.org/CVERecord?id=CVE-2026-16543) Preserve only one CA certificate from secrets if there are
+   multiple ones with the duplicate IDs.
   [#4876](https://github.com/Kong/kong-operator/pull/4876)
 
 ## [v2.1.8]
@@ -3238,8 +3380,8 @@ by the operator's semver:
 
 ### Fixes
 
-- Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+- [CVE-2026-16543](https://www.cve.org/CVERecord?id=CVE-2026-16543) Preserve only one CA certificate from secrets if there are
+   multiple ones with the duplicate IDs.
   [#4875](https://github.com/Kong/kong-operator/pull/4875)
 
 ## [v2.0.10]

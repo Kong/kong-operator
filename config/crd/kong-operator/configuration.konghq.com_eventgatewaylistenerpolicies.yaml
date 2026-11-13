@@ -103,43 +103,26 @@ spec:
                                 type: string
                               destination:
                                 description: A reference to a virtual cluster.
-                                maxProperties: 1
-                                minProperties: 1
                                 properties:
-                                  id:
+                                  kind:
+                                    default: EventGatewayVirtualCluster
+                                    description: Kind is the kind of the referenced
+                                      object.
+                                    enum:
+                                    - EventGatewayVirtualCluster
                                     type: string
                                   name:
-                                    description: VirtualClusterName The name of the
-                                      virtual cluster.
+                                    description: Name is the name of the referenced
+                                      object.
+                                    minLength: 1
                                     type: string
-                                  namespacedRef:
+                                  namespace:
                                     description: |-
-                                      NamespacedRef references an in-cluster EventGatewayVirtualCluster object:
-                                      with a Konnect gateway, it is resolved to the Konnect id of the object, and
-                                      with an on-prem gateway, to its UID.
-                                      It is mutually exclusive with the other fields.
-                                    properties:
-                                      kind:
-                                        default: EventGatewayVirtualCluster
-                                        description: Kind is the kind of the referenced
-                                          object.
-                                        enum:
-                                        - EventGatewayVirtualCluster
-                                        type: string
-                                      name:
-                                        description: Name is the name of the referenced
-                                          object.
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        description: |-
-                                          Namespace defaults to the referrer's namespace. If set, it must be
-                                          the same as the referrer's namespace; cross-namespace references are
-                                          not supported.
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
+                                      Namespace, if set to a namespace other than the referrer's, must be
+                                      permitted by a KongReferenceGrant in that namespace.
+                                    type: string
+                                required:
+                                - name
                                 type: object
                               minBrokerID:
                                 description: The lowest broker node ID in the cluster.
@@ -447,44 +430,29 @@ spec:
                                   accepted if it
                                   chains to any trusted CA across all bundles.
                                 items:
-                                  description: TLSTrustBundleReference is a type alias.
-                                  maxProperties: 1
-                                  minProperties: 1
+                                  description: |-
+                                    EventGatewayTLSTrustBundleRef references an EventGatewayTLSTrustBundle in the cluster. The referenced
+                                    object's Konnect id is used where the Konnect API accepts it.
                                   properties:
-                                    id:
+                                    kind:
+                                      default: EventGatewayTLSTrustBundle
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - EventGatewayTLSTrustBundle
                                       type: string
                                     name:
-                                      description: TLSTrustBundleName The unique name
-                                        of the TLS trust bundle.
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
                                       type: string
-                                    namespacedRef:
+                                    namespace:
                                       description: |-
-                                        NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object:
-                                        with a Konnect gateway, it is resolved to the Konnect id of the object, and
-                                        with an on-prem gateway, to its UID.
-                                        It is mutually exclusive with the other fields.
-                                      properties:
-                                        kind:
-                                          default: EventGatewayTLSTrustBundle
-                                          description: Kind is the kind of the referenced
-                                            object.
-                                          enum:
-                                          - EventGatewayTLSTrustBundle
-                                          type: string
-                                        name:
-                                          description: Name is the name of the referenced
-                                            object.
-                                          minLength: 1
-                                          type: string
-                                        namespace:
-                                          description: |-
-                                            Namespace defaults to the referrer's namespace. If set, it must be
-                                            the same as the referrer's namespace; cross-namespace references are
-                                            not supported.
-                                          type: string
-                                      required:
-                                      - name
-                                      type: object
+                                        Namespace, if set to a namespace other than the referrer's, must be
+                                        permitted by a KongReferenceGrant in that namespace.
+                                      type: string
+                                  required:
+                                  - name
                                   type: object
                                 type: array
                             required:
@@ -722,9 +690,15 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayListenerRef is immutable when an entity is already
             Programmed
-          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions)
+          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
+        - fieldPath: .spec.eventGatewayListenerRef
+          message: spec.eventGatewayListenerRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayListenerRef) || self.spec.eventGatewayListenerRef.type
+            == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayListenerRef)
+            && oldSelf.value().spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef)'
         - fieldPath: .spec.eventGatewayListenerRef
           message: spec.eventGatewayListenerRef is immutable once the entity has been
             created in Konnect

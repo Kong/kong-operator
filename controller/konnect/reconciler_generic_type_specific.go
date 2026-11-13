@@ -23,6 +23,7 @@ import (
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // handleTypeSpecific handles type-specific logic for Konnect entities.
@@ -37,6 +38,7 @@ func handleTypeSpecific[
 	sdk sdkops.SDKWrapper,
 	syncPeriod time.Duration,
 	cl client.Client,
+	chainClient client.Client,
 	ent TEnt,
 ) (context.Context, bool, ctrl.Result, error) {
 	var (
@@ -48,8 +50,8 @@ func handleTypeSpecific[
 
 	resolver, hasReferences := any(ent).(konnectReferenceResolver)
 	var chainResolver *policyChainReferenceResolver
-	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
-		chainResolver = &policyChainReferenceResolver{EventGatewayVirtualClusterPolicyChain: chain}
+	if chain, ok := any(ent).(policyChain); ok {
+		chainResolver = &policyChainReferenceResolver{chain: chain}
 		resolver, hasReferences = chainResolver, true
 	}
 	if hasReferences {
@@ -62,16 +64,16 @@ func handleTypeSpecific[
 			return ctx, false, refRes, nil
 		}
 		if chainResolver != nil && !refProblem {
-			ctx = ops.WithResolvedPolicyChainIDs(ctx, chainResolver.EventGatewayVirtualClusterPolicyChain, chainResolver.policyIDs)
+			ctx = ops.WithResolvedPolicyChainIDs(ctx, ent, chainResolver.policyIDs)
 		}
 		updated = updated || refUpdated
 		isProblem = isProblem || refProblem
 	}
 
 	switch e := any(ent).(type) {
-	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+	case policyChain:
 		if !isProblem {
-			owned, res, err := claimPolicyChain(ctx, cl, e, syncPeriod)
+			owned, res, err := claimPolicyChain(ctx, chainClient, e, syncPeriod)
 			if err != nil || !res.IsZero() || !owned {
 				return ctx, true, res, err
 			}
@@ -168,21 +170,6 @@ type konnectReferenceResolver interface {
 	ResolveKonnectReferences(ctx context.Context, cl client.Client) error
 }
 
-// crossNamespaceSiblingReferences returns every cross-namespace sibling
-// reference declared on ent's spec (references with
-// SupportCrossNamespaceReference: true whose target namespace differs from
-// the entity's own) that must be authorized by a KongReferenceGrant before
-// ResolveKonnectReferences is called.
-func crossNamespaceSiblingReferences(ent any) []commonv1alpha1.CrossNamespaceReferenceCheck {
-	r, ok := ent.(interface {
-		CrossNamespaceSiblingReferences() []commonv1alpha1.CrossNamespaceReferenceCheck
-	})
-	if !ok {
-		return nil
-	}
-	return r.CrossNamespaceSiblingReferences()
-}
-
 // handleKonnectReferences authorizes any cross-namespace sibling references
 // declared on ent's spec against KongReferenceGrant, then resolves the CR
 // references declared on ent's spec (if any), and reflects the outcome in the
@@ -190,22 +177,19 @@ func crossNamespaceSiblingReferences(ent any) []commonv1alpha1.CrossNamespaceRef
 // (isProblem=true) before any SDK calls when references fail to resolve.
 // A non-zero res is returned when the caller should requeue (e.g. the status
 // patch conflicted with a concurrent write on a stale cached object).
-func handleKonnectReferences[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](
+func handleKonnectReferences(
 	ctx context.Context,
 	cl client.Client,
-	ent TEnt,
+	ent k8sutils.ConditionsAwareObject,
 	resolver konnectReferenceResolver,
 ) (updated bool, isProblem bool, res ctrl.Result, err error) {
 	// Snapshot before any condition mutation: the patch below must be computed
 	// against the pre-mutation state, otherwise the changed conditions array is
 	// never included in the patch.
-	old := ent.DeepCopyObject().(TEnt)
+	old := ent.DeepCopyObject().(client.Object)
 
 	var refErr error
-	if grantErr := checkCrossNamespaceSiblingReferences(ctx, cl, crossNamespaceSiblingReferences(resolver)); grantErr != nil {
+	if grantErr := crossnamespace.CheckSiblingReferences(ctx, cl, ent); grantErr != nil {
 		refErr = grantErr
 	} else {
 		refErr = resolver.ResolveKonnectReferences(ctx, cl)
@@ -235,28 +219,10 @@ func handleKonnectReferences[
 	return updated, isProblem, ctrl.Result{}, err
 }
 
-// checkCrossNamespaceSiblingReferences authorizes every check against
-// KongReferenceGrant, reusing the same authorization mechanism the parent-ref
-// handler uses (see ensureKongReferenceGrantForParentRef). Returns nil when
-// checks is empty (the common case today, since no ReferenceConfig entry sets
-// SupportCrossNamespaceReference yet) without listing any KongReferenceGrant.
-func checkCrossNamespaceSiblingReferences(ctx context.Context, cl client.Client, checks []commonv1alpha1.CrossNamespaceReferenceCheck) error {
-	var errs []error
-	for _, c := range checks {
-		if err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, c.FromNamespace, c.ToNamespace, c.ToName, c.FromGVK, c.ToGVK); err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return errors.Join(errs...)
-}
-
 // setKonnectReferencesResolvedCondition reflects a reference-resolution
-// outcome (from either checkCrossNamespaceSiblingReferences or
+// outcome (from either crossnamespace.CheckSiblingReferences or
 // ResolveKonnectReferences) in the KonnectReferencesResolved condition.
-func setKonnectReferencesResolvedCondition[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](ent TEnt, err error) (updated bool, isProblem bool, retErr error) {
+func setKonnectReferencesResolvedCondition(ent k8sutils.ConditionsAwareObject, err error) (updated bool, isProblem bool, retErr error) {
 	if err == nil {
 		updated = patch.SetStatusWithConditionIfDifferent(
 			ent,

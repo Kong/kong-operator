@@ -2,7 +2,7 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.27.4@sha256:08bcb99a38f85a265f9a93d1d3323e2440eec333380f3ea26ee0dec9264bb41c AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.4@sha256:5e8afd493a7124a8586e134d9b532731161d4b9becf9dee5a5956b107426f93d AS builder
 
 WORKDIR /workspace
 ARG GOPATH
@@ -56,7 +56,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 # UBI minimal is used instead of UBI micro because it ships the RHEL CA bundle
 # needed for outbound TLS (Konnect, Kubernetes API, OIDC, etc.). Keep this image
 # at the latest UBI 9.8 digest so certification does not detect unapplied errata.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8-1794186349@sha256:f26ef64172ea61f5ac5ba4be8c5c738bf8760b22b3e5148ce7b40f7308ab32db AS ubi
+FROM registry.access.redhat.com/ubi9/ubi-minimal:1793829911@sha256:ecb40c7bdfa5b0bb71e978c98c7cf56ce38edf1f8fb3561078acbc4b13698c07 AS ubi
 
 ARG TAG
 ARG NAME="Kong Operator"
@@ -91,7 +91,7 @@ ENTRYPOINT ["/manager"]
 
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot@sha256:25ac8f0c3b2334a9eb05452266bd4697864a8c8ef0ef71e5e6480d7f92868329 AS distroless
+FROM gcr.io/distroless/static:nonroot@sha256:aafe993665bf6200db38a02c11a9351e782a84b6a45e7f33b6695638c88e3931 AS distroless
 
 ARG TAG
 ARG NAME="Kong Operator"

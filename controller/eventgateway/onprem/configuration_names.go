@@ -46,8 +46,9 @@ type policyNameCandidate struct {
 
 // reservePolicyNames reserves each policy name for the oldest policy of the
 // gateway, of the virtual clusters or of the listeners attached to it, naming
-// it. Only the policies of the gateway's namespace count: the others never
-// belong to it.
+// it. Only the policies that belong to the gateway count: those of another
+// namespace no KongReferenceGrant lets reference their parent are only left
+// out (see parentNotGranted), and must not take a name.
 func (c *configuration) reservePolicyNames(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, virtualClusters parents,
 ) error {
@@ -67,7 +68,12 @@ func (c *configuration) reservePolicyNames(
 			for _, obj := range items {
 				// A policy being deleted that is held keeps its name: it stays
 				// in the configuration (see live).
-				if !isLive(obj) || obj.GetNamespace() != c.namespace {
+				if !isLive(obj) {
+					continue
+				}
+				if message, err := c.parentNotGranted(ctx, cl, obj, kind); err != nil {
+					return err
+				} else if message != "" {
 					continue
 				}
 				if name := apiSpecPolicyName(obj); name != "" {
@@ -97,9 +103,16 @@ func (c *configuration) reservePolicyNames(
 	}
 	listenerKeys := make([]client.ObjectKey, 0, len(listeners.Items))
 	for i := range listeners.Items {
-		if l := &listeners.Items[i]; l.Namespace == c.namespace && l.DeletionTimestamp.IsZero() {
-			listenerKeys = append(listenerKeys, client.ObjectKeyFromObject(l))
+		l := &listeners.Items[i]
+		if !l.DeletionTimestamp.IsZero() {
+			continue
 		}
+		if message, err := c.parentNotGranted(ctx, cl, l, "EventGatewayListener"); err != nil {
+			return err
+		} else if message != "" {
+			continue
+		}
+		listenerKeys = append(listenerKeys, client.ObjectKeyFromObject(l))
 	}
 	if err := add(&configurationv1alpha1.EventGatewayListenerPolicyList{}, "EventGatewayListenerPolicy",
 		index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef, listenerKeys); err != nil {

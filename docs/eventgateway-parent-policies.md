@@ -21,8 +21,9 @@ reference resolution (`KonnectReferencesResolved=False`).
 | Other policy types | Not supported |
 
 The reference belongs directly under `apiSpec`, not inside the policy variant.
-For example, given an `EventGatewayVirtualCluster` named `vc` and a Konnect
-static key named `encryption-key` in that gateway:
+For example, given an `EventGatewayVirtualCluster` named `vc` and an
+`EventGatewayStaticKey` named `encryption-key` in the same namespace, both
+belonging to the same gateway:
 
 ```yaml
 apiVersion: configuration.konghq.com/v1alpha1
@@ -300,9 +301,9 @@ the document, so its surviving chain does not block updates to the gateway.
 Chain changes and policy creation, updates, termination, deletion and same-name
 recreation trigger a rebuild. A pure order change changes the configuration hash
 and revision and is pushed to gw-admin. Reconciliation also detects and corrects
-ordering drift within explicitly managed cluster-policy scopes. Listener,
-consume and produce ordering, and comparison behavior for virtual clusters
-without a chain, remain unchanged.
+ordering drift within explicitly managed cluster-policy scopes. Consume and
+produce ordering, and comparison behavior for virtual clusters without a chain,
+remain unchanged.
 
 Deleting the chain releases its ownership and rebuilds the complete document
 using the existing default order: policy creation timestamp, then resource name.
@@ -318,15 +319,17 @@ The cluster-level round-trip contract test submits both orders of the same
 policies, then repeats the reads to check that gw-admin preserves their order
 and payload with its known defaults for omitted optional fields (`condition: ""`,
 `description: ""`, `enabled: true`). Comparison accounts for these defaults so
-they do not cause repeated pushes. It does not test listener,
-consume or produce ordering.
+they do not cause repeated pushes. A second test,
+`listener_policy_order_survives_an_entities_round_trip`, checks the order of
+the policies of a listener only, not their payload. Neither tests consume or
+produce ordering.
 
 To run it against a **dedicated real gw-admin**, set `GW_ADMIN_CONTRACT_URL`
 (including `/v1`), `GW_ADMIN_CONTRACT_SERVER_NAME`, and the certificate file paths
 `GW_ADMIN_CONTRACT_CA`, `GW_ADMIN_CONTRACT_CERT` and `GW_ADMIN_CONTRACT_KEY`, then run:
 
 ```bash
-go test ./test/envtest/eventgateway -run '^TestGWAdminContract$/^cluster-level_policy_order_survives_an_entities_round_trip$' -count=1 -v
+go test ./test/envtest/eventgateway -run '^TestGWAdminContract$/^(cluster-level|listener)_policy_order_survives_an_entities_round_trip$' -count=1 -v
 ```
 
 The tests replace the gateways served by that gw-admin and clean up their
@@ -334,24 +337,27 @@ temporary gateway afterward. Without `GW_ADMIN_CONTRACT_URL`, the test uses the
 fake backend; passing against the fake does not establish the real backend's
 ordering contract.
 
-On 2026-11-04, this test passed against the pinned
+On 2026-11-04, the cluster-level test passed against the pinned
 `kong/kong-gw-admin-cp-dev:pr-1502` image
 (`sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b`).
 That backend preserved both submitted orders across repeated reads and supplied
 the three defaults listed above. This observation applies to the tested image,
-not every gw-admin version.
+not every gw-admin version. The listener test hasn't been run against a real
+gw-admin.
 
 ## Listener policy-chain API
 
 `configuration.konghq.com/v1alpha1` `EventGatewayListenerPolicyChain` declares the
 execution order of all `EventGatewayListenerPolicy` resources attached to one
-`EventGatewayListener`. This is a Konnect-only API foundation: listener-chain
-controller support is not implemented yet, and the resource is not registered
-with the on-prem Event Gateway controller.
+`EventGatewayListener`. The Konnect controller manages this parent-scoped
+singleton configuration for a listener of a `KonnectEventGateway`, the on-prem
+Event Gateway controller for a listener of an `OnPremEventGateway` (see
+[On-prem listener-chain reconciliation](#on-prem-listener-chain-reconciliation)).
 
-`spec.eventGatewayListenerRef` must use `namespacedRef` to reference a listener
-in the same namespace. The parent reference is immutable from creation, even
-before programming; create a new chain CR to manage a different listener.
+`spec.eventGatewayListenerRef` must use `namespacedRef`. A listener of another
+namespace needs a `KongReferenceGrant` there allowing the
+`EventGatewayListenerPolicyChain` to reference it. The parent reference is immutable from
+creation, even before programming; create a new chain CR to manage a different listener.
 The chain configures its parent rather than creating an independent Konnect
 entity, so `status.id` must remain unset. The shared status structure provides
 conditions, organization/server information, and parent IDs instead.
@@ -360,10 +366,10 @@ Supply `spec`, `spec.apiSpec`, and `spec.apiSpec.policies` explicitly. `policies
 is an atomic ordered list of Kubernetes references, not Konnect IDs. Each entry
 has a required `name`, an optional `kind` defaulting to
 `EventGatewayListenerPolicy`, and an optional `namespace` defaulting to the
-chain's namespace. An explicit namespace must be the same as the chain's;
-cross-namespace references are not supported. Every policy must belong to the
-referenced listener. List order, not resource names or YAML document order,
-declares execution order. See the
+chain's namespace. A policy of another namespace needs a `KongReferenceGrant`
+there allowing the `EventGatewayListenerPolicyChain` to reference it. Every
+policy must belong to the referenced listener. List order, not resource names
+or YAML document order, declares execution order. See the
 [listener-chain example](../config/samples/konnect_eventgateway_listener_policy_chain.yaml).
 It includes API authentication, the gateway, listener, backend, virtual cluster,
 forwarding policy, and chain in one file. Replace the token and Kafka/data-plane
@@ -386,3 +392,76 @@ rejected with `400` without changing the remote order. These are observations
 from the tested development backend, not a guarantee for every production
 version. The pinned SDK already provides listener-chain GET and PUT operations;
 no SDK upgrade is required for this API.
+
+### Konnect listener-chain reconciliation
+
+Each reference must resolve to a distinct policy on the same listener and gateway,
+with a nonempty Konnect ID and `Programmed=True` at its current generation.
+Missing, deleting, unready, wrong-kind, wrong-parent and duplicate references
+block programming with an actionable `KonnectReferencesResolved=False`
+condition, and so does a policy of another namespace no `KongReferenceGrant`
+allows, with reason `ReferenceNotPermitted`. Without a `KongReferenceGrant` for
+a listener of another namespace, the chain reports `ResolvedRefs=False` with
+reason `RefNotPermitted`, doesn't claim the listener, and isn't applied. The
+controller reads each policy once per reconciliation and reuses that snapshot's
+ordered IDs for the apply operation; it resolves references anew
+on the next reconciliation. It never silently skips an invalid policy.
+
+Before applying, the controller GETs the listener chain and requires the declared
+IDs to be an exact complete-set permutation of the remote IDs. Empty IDs,
+duplicates, omitted or null remote lists, nil responses, and GET errors (including
+`404`) are failures, not an empty chain. It PUTs the requested order only after
+this check and verifies that the response contains exactly that order. A
+policy-set mismatch keeps `Programmed=False` until the declaration and remote set
+align. GET and PUT are not atomic; avoid concurrent out-of-band policy-set changes.
+
+The first chain to claim the listener owns it, using the UID-bound annotation
+`gateway-operator.konghq.com/listener-policy-chain-owner` on that listener.
+This is independent of cluster-chain ownership. Optimistic-lock patches serialize
+competing declarations, and ownership reads bypass the Kubernetes cache so an
+active owner cannot be mistaken for a stale one. Another chain reports
+`PolicyChainOwnerValid=False` with reason `ConflictingChain` and does not write
+Konnect. Malformed, missing-owner,
+recreated-owner, and wrong-parent claims can be reclaimed. Delete the owner before
+replacing it; a terminating owner retains its claim until cleanup releases it.
+
+Periodic reconciliation corrects ordering drift. Policy spec/status changes,
+deletion, and recreation enqueue referencing chains, as do listener changes.
+Ownership conflicts retry at the configured Konnect sync period; listener changes
+also allow prompt handover after release.
+
+Deleting the chain CR releases ownership and stops management while preserving
+remote policy order and all policy entities. Cleanup uses Kubernetes only and
+does not require working authentication or resolvable policy references. It does
+not PUT an empty list or call a remote DELETE endpoint.
+
+### On-prem listener-chain reconciliation
+
+A chain whose listener references an `OnPremEventGateway` orders the policies
+of the listener in the complete gw-admin document, as a cluster policy chain
+orders those of its virtual cluster (see [On-prem reconciliation](#on-prem-reconciliation)):
+its references resolve to the policies' Kubernetes UIDs, without Konnect, and
+`status.id` remains unset.
+
+List every live policy of the listener exactly once. Missing, terminating,
+duplicate, wrong-kind and wrong-parent references, and a policy left out of
+the configuration, are invalid. A listener or policy of another namespace needs
+a `KongReferenceGrant` there: without one for its listener, a chain is left
+out without holding back the gateway; without one for a policy, it reports
+`ReferenceNotPermitted` and, when no other chain owns the listener, holds back
+the gateway, as it would keep the default order of the policies.
+
+Ownership uses the same annotation as Konnect,
+`gateway-operator.konghq.com/listener-policy-chain-owner`, independent of
+cluster-chain ownership: the earliest-created eligible chain claims the
+listener, a competing chain reports `PolicyChainOwnerValid=False` with reason
+`ConflictingChain`, and a terminating owner releases its claim without waiting
+for its finalizers.
+
+An invalid owning chain reports `Programmed=False`, and the gateway
+`Programmed=False` / `ConfigurationPushed=False` with reason
+`InvalidPolicyChain`: no new document is applied to the gateway until the chain
+is repaired or removed. Reconciliation corrects drift of the order of the
+policies of a listener a chain owns. Deleting the chain releases its claim and
+rebuilds the document with the default order of the policies, creation
+timestamp then resource name, deleting neither policies nor their entities.

@@ -659,7 +659,7 @@ func TestReportTranslationStatus(t *testing.T) {
 	t.Run("model alias conflict stays a warning and is returned for the caller to emit", func(t *testing.T) {
 		instance := testPushInstance(t)
 		conflicted := testAIGatewayModel("model-b")
-		conflictErr := &translator.ModelAliasConflictError{Alias: "shared-alias", First: "model-a"}
+		conflictErr := &translator.ModelAliasConflictError{Alias: "shared-alias", Route: "openai-chat", First: "model-a"}
 		returned := instance.reportTranslationStatus(ctx, gwNN, nil, []EntityFailure{
 			{Obj: conflicted, Err: conflictErr},
 		}, nil)

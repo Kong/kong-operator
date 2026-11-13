@@ -166,7 +166,7 @@ func (r *Reconciler) push(
 	if err := pushCertificates(ctx, pod, gwAdmin, gatewayID, cfg, certificates, outcome); err != nil {
 		return err
 	}
-	same, err := sameEntities(held.Entities, cfg.pushedKey, cfg.orderedClusterPolicies...)
+	same, err := sameEntities(held.Entities, cfg.pushedKey, cfg.orderedPolicies...)
 	if err != nil {
 		return err
 	}

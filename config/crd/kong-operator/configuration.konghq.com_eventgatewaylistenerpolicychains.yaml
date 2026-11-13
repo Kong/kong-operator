@@ -64,10 +64,9 @@ spec:
                     description: |-
                       Policies lists distinct EventGatewayListenerPolicy references in execution
                       order.
-                      Each policy must belong to the referenced EventGatewayListener and be in the
-                      same namespace as this chain.
-                      Namespace defaults to this chain's namespace and may be set explicitly to
-                      that same namespace; cross-namespace references are not supported.
+                      Each policy must belong to the referenced EventGatewayListener.
+                      Namespace defaults to this chain's namespace; a policy in another namespace
+                      needs a KongReferenceGrant in its namespace.
                       List every listener policy exactly once.
                       An explicit empty list is valid only when the remote chain has no policies;
                       it does not clear an existing chain.
@@ -90,9 +89,8 @@ spec:
                           type: string
                         namespace:
                           description: |-
-                            Namespace defaults to the referrer's namespace. If set, it must be
-                            the same as the referrer's namespace; cross-namespace references are
-                            not supported.
+                            Namespace, if set to a namespace other than the referrer's, must be
+                            permitted by a KongReferenceGrant in that namespace.
                           type: string
                       required:
                       - name
@@ -273,7 +271,7 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayListenerRef is immutable when an entity is already
             Programmed
-          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions)
+          rule: '!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef'
         - fieldPath: .spec.eventGatewayListenerRef

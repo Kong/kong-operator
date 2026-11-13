@@ -7,54 +7,77 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apiconsts "github.com/kong/kong-operator/v2/api/common/consts"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/policychain"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-const policyChainOwnerAnnotation = policychain.OwnerAnnotation
+const (
+	policyChainOwnerAnnotation         = policychain.OwnerAnnotation
+	listenerPolicyChainOwnerAnnotation = policychain.ListenerOwnerAnnotation
+)
+
+type policyChain interface {
+	k8sutils.ConditionsAwareObject
+	policychain.Chain
+	GetParentGVK() schema.GroupVersionKind
+	ResolveValidatedPolicyIDs(context.Context, client.Client) ([]string, error)
+}
+
+type policyChainLiveGetClient struct {
+	client.Client
+
+	apiReader client.Reader
+}
+
+// Get observes live owners and parents so cache lag cannot turn an active claim
+// into a stale claim that another declaration is allowed to replace.
+func (c policyChainLiveGetClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return c.apiReader.Get(ctx, key, obj, opts...)
+}
 
 type policyChainReferenceResolver struct {
-	*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
-
+	chain     policyChain
 	policyIDs []string
 }
 
 // ResolveKonnectReferences validates references and captures their ordered IDs for this reconciliation.
 func (r *policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
 	var err error
-	r.policyIDs, err = r.ResolveValidatedPolicyIDs(ctx, cl)
+	r.policyIDs, err = r.chain.ResolveValidatedPolicyIDs(ctx, cl)
 	return err
 }
 
-func policyChainOwnerClaim(chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
+func policyChainOwnerClaim(chain policychain.Chain) string {
 	return policychain.ClaimValue(chain)
 }
 
-func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) (ctrl.Result, error) {
-	if chain.DeletionTimestamp.After(time.Now()) {
-		return ctrl.Result{RequeueAfter: time.Until(chain.DeletionTimestamp.Time)}, nil
+func finalizePolicyChain(ctx context.Context, cl client.Client, chain policyChain) (ctrl.Result, error) {
+	if chain.GetDeletionTimestamp().After(time.Now()) {
+		return ctrl.Result{RequeueAfter: time.Until(chain.GetDeletionTimestamp().Time)}, nil
 	}
-	ref := chain.Spec.EventGatewayVirtualClusterRef
+	parent, _, annotation, err := policychain.Scope(chain)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	// Invalid parent references cannot claim ownership, but can acquire the
-	// generic cleanup finalizer before validation rejects them.
-	if ref.Type == commonv1alpha1.ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil && ref.NamespacedRef.Name != "" &&
-		(ref.NamespacedRef.Namespace == nil || *ref.NamespacedRef.Namespace == "" || *ref.NamespacedRef.Namespace == chain.Namespace) {
-		var parent configurationv1alpha1.EventGatewayVirtualCluster
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: ref.NamespacedRef.Name}, &parent); err != nil {
+	// generic cleanup finalizer before validation rejects them: their parent
+	// isn't read.
+	if key, err := policychain.ClaimParentKey(chain); err == nil {
+		if err := cl.Get(ctx, key, parent); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, fmt.Errorf("getting virtual cluster to release policy chain ownership: %w", err)
+				return ctrl.Result{}, fmt.Errorf("getting %s to release policy chain ownership: %w", chain.GetParentGVK().Kind, err)
 			}
-		} else if parent.Annotations[policyChainOwnerAnnotation] == policyChainOwnerClaim(chain) {
-			old := parent.DeepCopy()
-			delete(parent.Annotations, policyChainOwnerAnnotation)
-			if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+		} else if parent.GetAnnotations()[annotation] == policyChainOwnerClaim(chain) {
+			old := parent.DeepCopyObject().(client.Object)
+			delete(parent.GetAnnotations(), annotation)
+			if err := cl.Patch(ctx, parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 				if apierrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, nil
 				}
@@ -64,7 +87,7 @@ func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configura
 			}
 		}
 	}
-	old := chain.DeepCopy()
+	old := chain.DeepCopyObject().(client.Object)
 	if controllerutil.RemoveFinalizer(chain, KonnectCleanupFinalizer) {
 		if err := cl.Patch(ctx, chain, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			if apierrors.IsConflict(err) {
@@ -80,7 +103,31 @@ func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configura
 
 // claimPolicyChain serializes ownership on the parent with an optimistic-lock
 // patch. A cached list of chains alone cannot prevent simultaneous claimants.
-func claimPolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, syncPeriod time.Duration) (bool, ctrl.Result, error) {
+func claimPolicyChain(ctx context.Context, cl client.Client, chain policyChain, syncPeriod time.Duration) (bool, ctrl.Result, error) {
+	_, existing, _, err := policychain.Scope(chain)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	parentKind := chain.GetParentGVK().Kind
+	// A chain may claim a parent of another namespace, the
+	// KongReferenceGrant checked with its parent reference.
+	parentKey, err := policychain.ClaimParentKey(chain)
+	if err != nil {
+		return false, ctrl.Result{}, err
+	}
+	if chain.GetUID() == "" {
+		return false, ctrl.Result{}, fmt.Errorf("policy chain %s has no Kubernetes UID", client.ObjectKeyFromObject(chain))
+	}
+	current := existing.DeepCopyObject().(client.Object)
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(chain), current); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, ctrl.Result{}, nil
+		}
+		return false, ctrl.Result{}, fmt.Errorf("getting current policy chain before claiming ownership: %w", err)
+	}
+	if current.GetUID() != chain.GetUID() || current.GetGeneration() != chain.GetGeneration() || !current.GetDeletionTimestamp().IsZero() {
+		return false, ctrl.Result{Requeue: true}, nil
+	}
 	owner, err := policychain.Claim(ctx, cl, chain)
 	if err != nil {
 		if apierrors.IsConflict(err) {
@@ -92,7 +139,7 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain *configuratio
 		res, err := patch.StatusWithCondition(ctx, cl, chain,
 			apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionFalse,
 			apiconsts.ConditionReason("ConflictingChain"),
-			fmt.Sprintf("EventGatewayVirtualCluster %s is owned by policy chain %s; delete that chain before claiming it", chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name, owner))
+			fmt.Sprintf("%s %s is owned by policy chain %s; delete that chain before claiming it", parentKind, policychain.NameIn(parentKey, chain.GetNamespace()), owner))
 		if err != nil || !res.IsZero() {
 			return false, res, err
 		}
@@ -104,6 +151,6 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain *configuratio
 	}
 	res, err := patch.StatusWithCondition(ctx, cl, chain,
 		apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionTrue,
-		apiconsts.ConditionReason("Owner"), "This resource owns the parent cluster policy chain")
+		apiconsts.ConditionReason("Owner"), "This resource owns the "+parentKind+" policy chain")
 	return err == nil && res.IsZero(), res, err
 }

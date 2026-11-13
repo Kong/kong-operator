@@ -73,28 +73,19 @@ spec:
                               static:
                                 properties:
                                   key:
-                                    maxProperties: 1
-                                    minProperties: 1
                                     properties:
-                                      id:
+                                      kind:
+                                        default: EventGatewayStaticKey
+                                        enum:
+                                        - EventGatewayStaticKey
                                         type: string
                                       name:
+                                        minLength: 1
                                         type: string
-                                      namespacedRef:
-                                        properties:
-                                          kind:
-                                            default: EventGatewayStaticKey
-                                            enum:
-                                            - EventGatewayStaticKey
-                                            type: string
-                                          name:
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            type: string
-                                        required:
-                                        - name
-                                        type: object
+                                      namespace:
+                                        type: string
+                                    required:
+                                    - name
                                     type: object
                                 required:
                                 - key
@@ -177,28 +168,19 @@ spec:
                                     static:
                                       properties:
                                         key:
-                                          maxProperties: 1
-                                          minProperties: 1
                                           properties:
-                                            id:
+                                            kind:
+                                              default: EventGatewayStaticKey
+                                              enum:
+                                              - EventGatewayStaticKey
                                               type: string
                                             name:
+                                              minLength: 1
                                               type: string
-                                            namespacedRef:
-                                              properties:
-                                                kind:
-                                                  default: EventGatewayStaticKey
-                                                  enum:
-                                                  - EventGatewayStaticKey
-                                                  type: string
-                                                name:
-                                                  minLength: 1
-                                                  type: string
-                                                namespace:
-                                                  type: string
-                                              required:
-                                              - name
-                                              type: object
+                                            namespace:
+                                              type: string
+                                          required:
+                                          - name
                                           type: object
                                       required:
                                       - key
@@ -570,64 +552,19 @@ spec:
                                 type: string
                               schemaRegistry:
                                 properties:
-                                  id:
-                                    properties:
-                                      id:
-                                        maxLength: 253
-                                        minLength: 1
-                                        type: string
-                                    type: object
-                                  name:
-                                    properties:
-                                      name:
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
+                                  kind:
+                                    default: EventGatewaySchemaRegistry
                                     enum:
-                                    - id
-                                    - name
-                                    - namespacedRef
+                                    - EventGatewaySchemaRegistry
+                                    type: string
+                                  name:
                                     minLength: 1
                                     type: string
+                                  namespace:
+                                    type: string
                                 required:
-                                - type
+                                - name
                                 type: object
-                                x-kubernetes-validations:
-                                - message: id must be set only when type is id
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''id'' ? has(self.id) &&
-                                    has(self.id.id) : !has(self.id))'
-                                - message: name must be set only when type is name
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''name'' ? has(self.name)
-                                    : !has(self.name))'
-                                - message: namespacedRef must be set only when type
-                                    is namespacedRef
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                                    : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -750,66 +687,6 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                properties:
-                                  id:
-                                    properties:
-                                      id:
-                                        maxLength: 253
-                                        minLength: 1
-                                        type: string
-                                    type: object
-                                  name:
-                                    properties:
-                                      name:
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  namespacedRef:
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    enum:
-                                    - id
-                                    - name
-                                    - namespacedRef
-                                    minLength: 1
-                                    type: string
-                                required:
-                                - type
-                                type: object
-                                x-kubernetes-validations:
-                                - message: id must be set only when type is id
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''id'' ? has(self.id) &&
-                                    has(self.id.id) : !has(self.id))'
-                                - message: name must be set only when type is name
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''name'' ? has(self.name)
-                                    : !has(self.name))'
-                                - message: namespacedRef must be set only when type
-                                    is namespacedRef
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                                    : !has(self.namespacedRef))'
                               validateKey:
                                 enum:
                                 - Enabled
@@ -837,14 +714,6 @@ spec:
                         required:
                         - type
                         type: object
-                        x-kubernetes-validations:
-                        - message: 'json.schemaRegistry can not be set with the type
-                            json, which parses without a schema: use the type confluentSchemaRegistry'
-                          optionalOldSelf: true
-                          rule: '!has(self.json) || !has(self.json.schemaRegistry)
-                            || (oldSelf.hasValue() && has(oldSelf.value().json) &&
-                            has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry
-                            == self.json.schemaRegistry)'
                       description:
                         maxLength: 512
                         type: string
@@ -928,66 +797,19 @@ spec:
                                         type: object
                                       schemaRegistry:
                                         properties:
-                                          id:
-                                            properties:
-                                              id:
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            type: object
-                                          name:
-                                            properties:
-                                              name:
-                                                maxLength: 255
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          namespacedRef:
-                                            properties:
-                                              kind:
-                                                default: EventGatewaySchemaRegistry
-                                                enum:
-                                                - EventGatewaySchemaRegistry
-                                                type: string
-                                              name:
-                                                minLength: 1
-                                                type: string
-                                              namespace:
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          type:
+                                          kind:
+                                            default: EventGatewaySchemaRegistry
                                             enum:
-                                            - id
-                                            - name
-                                            - namespacedRef
+                                            - EventGatewaySchemaRegistry
+                                            type: string
+                                          name:
                                             minLength: 1
                                             type: string
+                                          namespace:
+                                            type: string
                                         required:
-                                        - type
+                                        - name
                                         type: object
-                                        x-kubernetes-validations:
-                                        - message: id must be set only when type is
-                                            id
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value()
-                                            == self) || (self.type == ''id'' ? has(self.id)
-                                            && has(self.id.id) : !has(self.id))'
-                                        - message: name must be set only when type
-                                            is name
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value()
-                                            == self) || (self.type == ''name'' ? has(self.name)
-                                            : !has(self.name))'
-                                        - message: namespacedRef must be set only
-                                            when type is namespacedRef
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value()
-                                            == self) || (self.type == ''namespacedRef''
-                                            ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         maxLength: 253
                                         minLength: 1
@@ -1167,9 +989,16 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
             is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
-            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
-            == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef
+            == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type
+            == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef)
+            && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity
             has been created in Konnect

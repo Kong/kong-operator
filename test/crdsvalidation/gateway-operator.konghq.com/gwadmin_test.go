@@ -7,6 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
@@ -23,7 +25,12 @@ func TestGWAdmin(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	gwAdmin := func(mutate func(*operatorv1alpha1.GWAdmin)) *operatorv1alpha1.GWAdmin {
-		obj := &operatorv1alpha1.GWAdmin{ObjectMeta: common.CommonObjectMeta(ns.Name)}
+		obj := &operatorv1alpha1.GWAdmin{
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
+			Spec: operatorv1alpha1.GWAdminSpec{License: operatorv1alpha1.GWAdminLicense{
+				SecretRef: operatorv1alpha1.GWAdminLicenseSecretRef{Name: "license", Key: "license"},
+			}},
+		}
 		if mutate != nil {
 			mutate(obj)
 		}
@@ -44,13 +51,131 @@ func TestGWAdmin(t *testing.T) {
 	t.Run("name", func(t *testing.T) {
 		const msg = "name must be a valid DNS-1035 label of at most 59 characters"
 		common.TestCasesGroup[*operatorv1alpha1.GWAdmin]{
-			{Name: "empty spec - valid", TestObject: gwAdmin(nil)},
+			{Name: "license with default options - valid", TestObject: gwAdmin(nil)},
 			{Name: "59 characters - valid", TestObject: named("a" + strings.Repeat("0", 58))},
 			{Name: "60 characters - invalid", TestObject: named("a" + strings.Repeat("0", 59)), ExpectedErrorMessage: new(msg)},
 			{Name: "contains a dot - invalid", TestObject: named("gw.admin"), ExpectedErrorMessage: new(msg)},
 			{Name: "starts with a digit - invalid", TestObject: named("1gw"), ExpectedErrorMessage: new(msg)},
 			{Name: "ends with '-' - invalid", TestObject: named("gw-"), ExpectedErrorMessage: new(msg)},
 			{Name: "uppercase - invalid", TestObject: named("GW"), ExpectedErrorMessage: new("a lowercase RFC 1123 subdomain")},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("license", func(t *testing.T) {
+		object := func(mutate func(map[string]any)) *unstructured.Unstructured {
+			t.Helper()
+			data, err := runtime.DefaultUnstructuredConverter.ToUnstructured(gwAdmin(nil))
+			require.NoError(t, err)
+			mutate(data)
+			obj := &unstructured.Unstructured{Object: data}
+			obj.SetGroupVersionKind(operatorv1alpha1.SchemeGroupVersion.WithKind(operatorv1alpha1.GWAdminKind))
+			return obj
+		}
+		license := func(mutate func(*operatorv1alpha1.GWAdminLicense)) *operatorv1alpha1.GWAdmin {
+			return gwAdmin(func(obj *operatorv1alpha1.GWAdmin) { mutate(&obj.Spec.License) })
+		}
+		common.TestCasesGroup[*unstructured.Unstructured]{
+			{
+				Name: "missing spec - invalid",
+				TestObject: object(func(data map[string]any) {
+					delete(data, "spec")
+				}),
+				ExpectedErrorMessage: new("spec: Required value"),
+			},
+			{
+				Name: "empty spec - invalid",
+				TestObject: object(func(data map[string]any) {
+					data["spec"] = map[string]any{}
+				}),
+				ExpectedErrorMessage: new("spec.license: Required value"),
+			},
+			{
+				Name: "missing secretRef - invalid",
+				TestObject: object(func(data map[string]any) {
+					unstructured.RemoveNestedField(data, "spec", "license", "secretRef")
+				}),
+				ExpectedErrorMessage: new("spec.license.secretRef: Required value"),
+			},
+			{
+				Name: "empty entitlements - invalid",
+				TestObject: object(func(data map[string]any) {
+					require.NoError(t, unstructured.SetNestedSlice(data, []any{}, "spec", "license", "entitlements"))
+				}),
+				ExpectedErrorMessage: new("spec.license.entitlements"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+		common.TestCasesGroup[*operatorv1alpha1.GWAdmin]{
+			{
+				Name:       "entitlements default to event_gateway",
+				TestObject: gwAdmin(nil),
+				Assert: func(t *testing.T, obj *operatorv1alpha1.GWAdmin) {
+					assert.Equal(t, []operatorv1alpha1.GWAdminLicenseEntitlement{
+						operatorv1alpha1.GWAdminLicenseEntitlementEventGateway,
+					}, obj.Spec.License.Entitlements)
+				},
+			},
+			{
+				Name: "explicit event_gateway entitlement - valid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.Entitlements = []operatorv1alpha1.GWAdminLicenseEntitlement{
+						operatorv1alpha1.GWAdminLicenseEntitlementEventGateway,
+					}
+				}),
+			},
+			{
+				Name: "unsupported entitlement - invalid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.Entitlements = []operatorv1alpha1.GWAdminLicenseEntitlement{"ai_gateway"}
+				}),
+				ExpectedErrorMessage: new(`Unsupported value: "ai_gateway"`),
+			},
+			{
+				Name: "duplicate entitlements - invalid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.Entitlements = []operatorv1alpha1.GWAdminLicenseEntitlement{
+						operatorv1alpha1.GWAdminLicenseEntitlementEventGateway,
+						operatorv1alpha1.GWAdminLicenseEntitlementEventGateway,
+					}
+				}),
+				ExpectedErrorMessage: new("spec.license.entitlements"),
+			},
+			{
+				Name: "missing secret name - invalid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.SecretRef.Name = ""
+				}),
+				ExpectedErrorMessage: new("spec.license.secretRef.name: Required value"),
+			},
+			{
+				Name: "invalid secret name - invalid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.SecretRef.Name = "INVALID"
+				}),
+				ExpectedErrorMessage: new("spec.license.secretRef.name"),
+			},
+			{
+				Name: "missing secret key - invalid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.SecretRef.Key = ""
+				}),
+				ExpectedErrorMessage: new("spec.license.secretRef.key: Required value"),
+			},
+			{
+				Name: "invalid secret key - invalid",
+				TestObject: license(func(l *operatorv1alpha1.GWAdminLicense) {
+					l.SecretRef.Key = "license/key"
+				}),
+				ExpectedErrorMessage: new("spec.license.secretRef.key"),
+			},
+			{
+				Name:       "secret reference can be updated",
+				TestObject: gwAdmin(nil),
+				Update: func(obj *operatorv1alpha1.GWAdmin) {
+					obj.Spec.License.SecretRef = operatorv1alpha1.GWAdminLicenseSecretRef{
+						Name: "replacement-license", Key: "license.jws",
+					}
+				},
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 

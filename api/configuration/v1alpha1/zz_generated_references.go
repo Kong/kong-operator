@@ -39,11 +39,6 @@ const (
 // before calling ResolveKonnectReferences.
 type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
 
-// ObjectReferencePath is the path of a reference that names another object
-// either by object, with namespacedRef, or otherwise, e.g. by its Konnect ID
-// or name.
-type ObjectReferencePath = commonv1alpha1.ObjectReferencePath
-
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 
@@ -99,9 +94,8 @@ type EventGatewayListenerPolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -123,9 +117,8 @@ type EventGatewaySchemaRegistryRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -147,9 +140,8 @@ type EventGatewayStaticKeyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -171,9 +163,8 @@ type EventGatewayTLSTrustBundleRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -195,9 +186,8 @@ type EventGatewayVirtualClusterConsumePolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -219,9 +209,8 @@ type EventGatewayVirtualClusterPolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -243,9 +232,8 @@ type EventGatewayVirtualClusterProducePolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -267,59 +255,9 @@ type EventGatewayVirtualClusterRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace defaults to the referrer's namespace. If set, it must be
-	// the same as the referrer's namespace; cross-namespace references are
-	// not supported.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
-}
-
-// EventGatewaySchemaRegistryRefWithNamespacedRef references an EventGatewaySchemaRegistry in the cluster, in either
-// of two forms naming the same object: its name, with kind and namespace, set
-// directly, or type namespacedRef with the namespacedRef member, as written in the
-// references that also accept a Konnect ID or name.
-//
-// +kubebuilder:validation:XValidation:rule="has(self.name) != has(self.namespacedRef)",message="exactly one of name and namespacedRef must be set"
-// +kubebuilder:validation:XValidation:rule="has(self.type) == has(self.namespacedRef)",message="type namespacedRef must be set with namespacedRef, and only with it"
-// +kubebuilder:validation:XValidation:rule="!has(self.namespacedRef) || (!has(self.kind) && !has(self.__namespace__))",message="kind and namespace must not be set next to namespacedRef: remove kind, and set the namespace in namespacedRef"
-type EventGatewaySchemaRegistryRefWithNamespacedRef struct {
-	// Type selects the namespacedRef form. It is left unset when name is set
-	// directly.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=namespacedRef
-	Type string `json:"type,omitempty"`
-
-	// NamespacedRef references the object, with type namespacedRef.
-	//
-	// +optional
-	NamespacedRef *EventGatewaySchemaRegistryRef `json:"namespacedRef,omitempty"`
-
-	// Kind is the kind of the referenced object, when its name is set
-	// directly.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=EventGatewaySchemaRegistry
-	Kind string `json:"kind,omitempty"`
-
-	// Name is the name of the referenced object, set directly.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name,omitempty"`
-
-	// Namespace defaults to the referrer's namespace, when the name is set
-	// directly. If set, it must be the same as the referrer's namespace.
-	//
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-}
-
-// Ref returns the reference to the object, whichever form names it.
-func (r EventGatewaySchemaRegistryRefWithNamespacedRef) Ref() EventGatewaySchemaRegistryRef {
-	if r.NamespacedRef != nil {
-		return *r.NamespacedRef
-	}
-	return EventGatewaySchemaRegistryRef{Kind: r.Kind, Name: r.Name, Namespace: r.Namespace}
 }

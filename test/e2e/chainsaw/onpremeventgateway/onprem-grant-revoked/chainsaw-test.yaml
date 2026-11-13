@@ -43,6 +43,13 @@ spec:
       value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+        with:
+          bindings:
+            - name: gwadmin_license_namespace
+              value: ($admin_namespace)
     - name: 1-Data-plane-of-a-granted-gwadmin
       try:
         - apply:

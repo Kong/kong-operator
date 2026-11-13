@@ -231,10 +231,11 @@ func KonnectAPIAuthConfigurationWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
+	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	t.Helper()
 
-	apiAuth := KonnectAPIAuthConfiguration(t, ctx, cl)
+	apiAuth := KonnectAPIAuthConfiguration(t, ctx, cl, opts...)
 	apiAuth.Status.Conditions = []metav1.Condition{
 		{
 			Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,

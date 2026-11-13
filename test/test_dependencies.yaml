@@ -10,19 +10,19 @@ integration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.4'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.16.0.1'
+  kong-ee: '3.16.0.2'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.4'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.16.0.1'
+  kong-ee: '3.16.0.2'
   # renovate: datasource=docker depName=kong/kong-ai-gateway versioning=docker
-  aigw-dp: '2.3.0'
+  aigw-dp: '2.3.1'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.16.0.1'
+  kong-ee: '3.16.0.2'
   # This is a version of Kong Gateway that does not support sticky sessions,
   # all versions >= 3.11.0 support sticky sessions.
   kong-without-sticky-sessions: '3.9.1'
@@ -31,19 +31,18 @@ chainsaw:
   kong-ee:
     image: kong/kong-gateway
     # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-    tag: '3.16.0.1'
+    tag: '3.16.0.2'
   aigw-dp:
     image: kong/kong-ai-gateway
     # renovate: datasource=docker depName=kong/kong-ai-gateway versioning=docker
-    tag: '2.3.0'
+    tag: '2.3.1'
   keg-dp:
     image: kong/kong-event-gateway
     # renovate: datasource=docker depName=kong/kong-event-gateway versioning=docker
     tag: '1.3.0'
   gw-admin:
     # gw-admin has no semver release yet: this is a development image pinned by
-    # digest (the build of its pull request 1520 until merged, then an
-    # immutable main-<commit> tag), not tracked by renovate. Bump it by hand,
-    # together with consts.DefaultGWAdminTag in pkg/consts/gwadmin.go.
+    # digest (an immutable main-<commit> tag), not tracked by renovate. Bump it
+    # by hand, together with consts.DefaultGWAdminTag in pkg/consts/gwadmin.go.
     image: kong/kong-gw-admin-cp-dev
-    tag: 'pr-1520@sha256:dcf2f39c9d9e4f308603701073c0fe57b903b65ee484756a20807bb598007f49'
+    tag: 'main-42f5715@sha256:7829e796664079b6c1e6187aa58d003791e4090d9c196af5fab172ec43239a44'

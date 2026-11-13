@@ -980,6 +980,9 @@ func TestGenerateCRDType_ParentRefIsImmutableOnceProgrammed(t *testing.T) {
 		assert.Contains(t, content, "ControlPlaneRef commonv1alpha1.ObjectRef")
 		assert.Contains(t, content, rulePrefix+"controlPlaneRef)")
 		assert.Contains(t, content, `message="spec.controlPlaneRef is immutable when an entity is already Programmed"`)
+		// An object updated before any status is written has no self.status,
+		// and self.status.conditions would fail with "no such key".
+		assert.Contains(t, content, `rule="!has(self.spec.controlPlaneRef) || !has(self.status) || !has(self.status.conditions) ||`)
 	})
 
 	t.Run("root entity without a parent", func(t *testing.T) {
@@ -1886,25 +1889,27 @@ func generatedStructBlock(t *testing.T, content, typeName string) string {
 
 func TestTagOmitSuffix(t *testing.T) {
 	tests := []struct {
-		goType string
-		want   string
+		goType        string
+		forceOmitZero bool
+		want          string
 	}{
-		{"string", ",omitzero"},
-		{"int64", ",omitzero"},
-		{"float64", ",omitzero"},
-		{"VirtualClusterNamespace", ",omitzero"},
-		{"VirtualClusterName", ",omitzero"},
-		{"apiextensionsv1.JSON", ",omitzero"},
-		{"*string", ",omitempty"},
-		{"*KonnectEntityRef", ",omitempty"},
-		{"[]VirtualClusterTopicAlias", ",omitempty"},
-		{"[]metav1.Condition", ",omitempty"},
-		{"map[string]Labels", ",omitempty"},
-		{"map[string]string", ",omitempty"},
+		{"string", false, ",omitzero"},
+		{"int64", false, ",omitzero"},
+		{"float64", false, ",omitzero"},
+		{"VirtualClusterNamespace", false, ",omitzero"},
+		{"VirtualClusterName", false, ",omitzero"},
+		{"apiextensionsv1.JSON", false, ",omitzero"},
+		{"*string", false, ",omitempty"},
+		{"*KonnectEntityRef", false, ",omitempty"},
+		{"[]VirtualClusterTopicAlias", false, ",omitempty"},
+		{"[]metav1.Condition", false, ",omitempty"},
+		{"map[string]Labels", false, ",omitempty"},
+		{"map[string]string", false, ",omitempty"},
+		{"[]VirtualClusterTopicAlias", true, ",omitzero"},
 	}
 	for _, tc := range tests {
-		t.Run(tc.goType, func(t *testing.T) {
-			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType))
+		t.Run(fmt.Sprintf("%s/force=%t", tc.goType, tc.forceOmitZero), func(t *testing.T) {
+			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType, tc.forceOmitZero))
 		})
 	}
 }
@@ -1938,6 +1943,88 @@ func TestGenerateSchemaTypes_EmitsOmitzeroForStructFields(t *testing.T) {
 	assert.NotContains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitempty\"`")
 	_, err := format.Source([]byte(content))
 	require.NoError(t, err)
+}
+
+func TestGenerateSchemaTypes_FieldConfigOmitZero(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"KeyAuthConfig": {
+				Name: "KeyAuthConfig",
+				Properties: []*parser.Property{
+					{Name: "identity_realms", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "key_names", Type: "array", Items: &parser.Property{Type: "string"}},
+				},
+			},
+		},
+	}
+	schemaCursors := map[string]*config.FieldConfig{
+		"KeyAuthConfig": {
+			Fields: map[string]*config.FieldConfig{
+				"identityRealms": {OmitZero: true},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"KeyAuthConfig": true}, parsed, schemaCursors)
+
+	assert.Contains(t, content, "IdentityRealms []string `json:\"identityRealms,omitzero\"`")
+	assert.Contains(t, content, "KeyNames []string `json:\"keyNames,omitempty\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+func TestGenerateSchemaTypes_FieldConfigOmitZeroThroughRootUnion(t *testing.T) {
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateAIGatewayAuthStrategy": {
+				Name:                 "CreateAIGatewayAuthStrategy",
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"key-auth": "AIGatewayAuthStrategyKeyAuth"},
+				OneOf: []*parser.Property{
+					{Name: "AIGatewayAuthStrategyKeyAuth", RefName: "AIGatewayAuthStrategyKeyAuth"},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayAuthStrategyKeyAuth": {
+				Name:       "AIGatewayAuthStrategyKeyAuth",
+				Properties: []*parser.Property{{Name: "config", RefName: "AIGWKeyAuthGeneratedConfig"}},
+			},
+			"AIGWKeyAuthGeneratedConfig": {
+				Name: "AIGWKeyAuthGeneratedConfig",
+				Properties: []*parser.Property{
+					{Name: "identity_realms", Type: "array", Items: &parser.Property{Type: "string"}},
+				},
+			},
+		},
+	}
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"AIGatewayAuthStrategy": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"key-auth": {Fields: map[string]*config.FieldConfig{
+									"config": {Fields: map[string]*config.FieldConfig{
+										"identityRealms": {OmitZero: true},
+									}},
+								}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+
+	cursors, err := g.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	content := g.generateSchemaTypes(map[string]bool{"AIGWKeyAuthGeneratedConfig": true}, parsed, cursors)
+
+	assert.Contains(t, content, "IdentityRealms []string `json:\"identityRealms,omitzero\"`")
 }
 
 func TestEntityFilePrefix(t *testing.T) {

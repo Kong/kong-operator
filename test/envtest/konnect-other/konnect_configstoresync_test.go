@@ -2,12 +2,19 @@ package konnectother
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"math/big"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -290,19 +297,55 @@ func TestKonnectConfigStoreSyncEnvtestCombined(t *testing.T) {
 	assertCombinedValue(t, e.value(t, "tls-entry"), cert3, key3)
 }
 
+func TestKonnectConfigStoreSyncEnvtestRSA4096Chain(t *testing.T) {
+	t.Parallel()
+	e := newConfigStoreSyncEnvtest(t)
+	parent := certificate.MustGenerateCert(certificate.WithCATrue())
+	parentCert, err := x509.ParseCertificate(parent.Certificate[0])
+	require.NoError(t, err)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	require.NoError(t, err)
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		NotBefore:    parentCert.NotBefore,
+		NotAfter:     parentCert.NotAfter,
+		DNSNames:     []string{"rsa4096.example.test"},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, parentCert, &privateKey.PublicKey, parent.PrivateKey)
+	require.NoError(t, err)
+	certPEM, keyPEM := certificate.CertToPEMFormat(tls.Certificate{
+		Certificate: [][]byte{der},
+		PrivateKey:  privateKey,
+	})
+	parentPEM, _ := certificate.CertToPEMFormat(parent)
+	chainPEM := slices.Concat(certPEM, parentPEM)
+	value, err := configstoresync.CombinedValue(chainPEM, keyPEM)
+	require.NoError(t, err)
+	require.Greater(t, len(value), 5120)
+	require.LessOrEqual(t, utf8.RuneCount(value), 8192)
+
+	secret := e.secret(t, "rsa4096-chain", map[string][]byte{"tls.crt": chainPEM, "tls.key": keyPEM})
+	sync := e.sync(t, "rsa4096", secret.Name, combinedSyncSpec("tls-entry"))
+	got := e.waitReady(t, sync, configstoresync.ValueHash(value))
+	require.Len(t, got.Status.Entries, 1)
+	assert.Equal(t, int64(len(value)), got.Status.Entries[0].ValueBytes)
+	assertCombinedValue(t, e.value(t, "tls-entry"), chainPEM, keyPEM)
+}
+
 func TestKonnectConfigStoreSyncEnvtestPreflight(t *testing.T) {
 	t.Parallel()
 	e := newConfigStoreSyncEnvtest(t)
-	// The Config Store API measures decoded bytes, not runes. The existing
-	// fake's own unit tests assert that 5120/512 bytes succeed and +1 fail.
-	atCap := []byte(strings.Repeat("é", 2559) + "ab")
-	require.Len(t, atCap, sdkmocks.FakeConfigStoreSecretMaxValueBytes)
+	// The value cap counts Unicode code points, but status still reports bytes.
+	atCap := []byte(strings.Repeat("é", 8192))
+	require.Equal(t, sdkmocks.FakeConfigStoreSecretMaxValueCharacters, utf8.RuneCount(atCap))
 	secret := e.secret(t, "values", map[string][]byte{"value": atCap})
 	sync := e.sync(t, "size", secret.Name, splitSyncSpec(
 		konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{Field: "value", StoreKey: new("size-entry")},
 	))
 	got := e.waitReady(t, sync, configstoresync.ValueHash(atCap))
-	assert.Equal(t, int64(5120), got.Status.Entries[0].ValueBytes)
+	assert.Equal(t, int64(16384), got.Status.Entries[0].ValueBytes)
 	assert.Equal(t, string(atCap), e.value(t, "size-entry"))
 	e.waitSettled(t)
 
@@ -320,7 +363,7 @@ func TestKonnectConfigStoreSyncEnvtestPreflight(t *testing.T) {
 			konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{Field: "oversize", StoreKey: new("second-entry")})
 	})
 	e.remote.ResetCalls()
-	e.updateSecret(t, secret, map[string][]byte{"value": []byte("new"), "oversize": stringsToBytes(5121)})
+	e.updateSecret(t, secret, map[string][]byte{"value": []byte("new"), "oversize": stringsToBytes(8193)})
 	e.waitSync(t, sync, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 		konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonValueTooLarge)
 	assertNoConfigStoreWrites(t, e.remote)

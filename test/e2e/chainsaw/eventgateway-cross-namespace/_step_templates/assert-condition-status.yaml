@@ -1,0 +1,22 @@
+# Template for asserting the status of a condition of an object, whatever its
+# reason.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - condition_type, condition_status: The condition.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-condition-status
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (conditions[?type == $condition_type]):
+              - status: ($condition_status)

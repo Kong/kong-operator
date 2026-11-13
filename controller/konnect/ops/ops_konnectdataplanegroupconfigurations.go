@@ -272,7 +272,7 @@ func configurationDataPlaneGroupAutoscaleTypeToSDKAutoscale(
 			Type: sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleTypeConfigurationDataPlaneGroupAutoscaleStatic,
 			// ConfigurationDataPlaneGroupAutoscaleStatic is deprecated.
 			ConfigurationDataPlaneGroupAutoscaleStatic: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleStatic{ //nolint:staticcheck
-				Kind:               sdkkonnectcomp.KindStatic,
+				Kind:               sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleStaticKindStatic,
 				InstanceType:       autoscale.Static.InstanceType,
 				RequestedInstances: autoscale.Static.RequestedInstances,
 			},

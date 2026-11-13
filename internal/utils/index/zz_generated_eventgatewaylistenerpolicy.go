@@ -68,15 +68,8 @@ func eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef(object client.Obj
 		return nil
 	}
 	var out []string
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayTLSTrustBundle" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
+	for _, key := range configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(ent) {
+		out = append(out, key.String())
 	}
 	return out
 }
@@ -87,15 +80,8 @@ func eventGatewayListenerPolicyOnEventGatewayVirtualClusterRef(object client.Obj
 		return nil
 	}
 	var out []string
-	for _, ref := range configurationv1alpha1.RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ent) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualCluster" {
-			continue
-		}
-		ns := ref.Namespace
-		if ns == "" {
-			ns = ent.GetNamespace()
-		}
-		out = append(out, ns+"/"+ref.Name)
+	for _, key := range configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(ent) {
+		out = append(out, key.String())
 	}
 	return out
 }

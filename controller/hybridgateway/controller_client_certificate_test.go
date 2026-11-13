@@ -20,6 +20,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
@@ -127,12 +128,16 @@ func TestReconcileInvalidClientCertificateCleansOldBindings(t *testing.T) {
 			for range 6 {
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(route), route))
 				route.SetGroupVersionKind(schema.GroupVersionKind{Group: gatewayv1.GroupName, Version: "v1", Kind: "HTTPRoute"})
-				_, err := reconciler.Reconcile(t.Context(), route)
+				result, err := reconciler.Reconcile(t.Context(), route)
+				// Progress continuations use RequeueAfter. A rate-limited requeue accumulates
+				// exponential backoff across the one-resource-per-reconcile sequence.
+				require.False(t, result.Requeue) //nolint:staticcheck // The continuation must not use rate-limited requeue.
 				if state == "API failure" {
 					require.Error(t, err)
 					break
 				}
 				require.NoError(t, err)
+				require.Equal(t, ctrlconsts.RequeueWithoutBackoff, result.RequeueAfter)
 				if apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(oldService), &configurationv1alpha1.KongService{})) {
 					break
 				}

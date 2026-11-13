@@ -95,43 +95,28 @@ spec:
                                 description: Static configuration.
                                 properties:
                                   key:
-                                    description: A static encryption key reference,
-                                      either by ID or by value.
-                                    maxProperties: 1
-                                    minProperties: 1
+                                    description: A reference to an EventGatewayStaticKey
+                                      holding the static encryption key.
                                     properties:
-                                      id:
+                                      kind:
+                                        default: EventGatewayStaticKey
+                                        description: Kind is the kind of the referenced
+                                          object.
+                                        enum:
+                                        - EventGatewayStaticKey
                                         type: string
                                       name:
+                                        description: Name is the name of the referenced
+                                          object.
+                                        minLength: 1
                                         type: string
-                                      namespacedRef:
+                                      namespace:
                                         description: |-
-                                          NamespacedRef references an in-cluster EventGatewayStaticKey object: with a
-                                          Konnect gateway, it is resolved to the Konnect id of the object, and with an
-                                          on-prem gateway, to its UID.
-                                          It is mutually exclusive with the other fields.
-                                        properties:
-                                          kind:
-                                            default: EventGatewayStaticKey
-                                            description: Kind is the kind of the referenced
-                                              object.
-                                            enum:
-                                            - EventGatewayStaticKey
-                                            type: string
-                                          name:
-                                            description: Name is the name of the referenced
-                                              object.
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            description: |-
-                                              Namespace defaults to the referrer's namespace. If set, it must be
-                                              the same as the referrer's namespace; cross-namespace references are
-                                              not supported.
-                                            type: string
-                                        required:
-                                        - name
-                                        type: object
+                                          Namespace, if set to a namespace other than the referrer's, must be
+                                          permitted by a KongReferenceGrant in that namespace.
+                                        type: string
+                                    required:
+                                    - name
                                     type: object
                                 required:
                                 - key
@@ -253,43 +238,28 @@ spec:
                                       description: Static configuration.
                                       properties:
                                         key:
-                                          description: A static encryption key reference,
-                                            either by ID or by value.
-                                          maxProperties: 1
-                                          minProperties: 1
+                                          description: A reference to an EventGatewayStaticKey
+                                            holding the static encryption key.
                                           properties:
-                                            id:
+                                            kind:
+                                              default: EventGatewayStaticKey
+                                              description: Kind is the kind of the
+                                                referenced object.
+                                              enum:
+                                              - EventGatewayStaticKey
                                               type: string
                                             name:
+                                              description: Name is the name of the
+                                                referenced object.
+                                              minLength: 1
                                               type: string
-                                            namespacedRef:
+                                            namespace:
                                               description: |-
-                                                NamespacedRef references an in-cluster EventGatewayStaticKey object: with a
-                                                Konnect gateway, it is resolved to the Konnect id of the object, and with an
-                                                on-prem gateway, to its UID.
-                                                It is mutually exclusive with the other fields.
-                                              properties:
-                                                kind:
-                                                  default: EventGatewayStaticKey
-                                                  description: Kind is the kind of
-                                                    the referenced object.
-                                                  enum:
-                                                  - EventGatewayStaticKey
-                                                  type: string
-                                                name:
-                                                  description: Name is the name of
-                                                    the referenced object.
-                                                  minLength: 1
-                                                  type: string
-                                                namespace:
-                                                  description: |-
-                                                    Namespace defaults to the referrer's namespace. If set, it must be
-                                                    the same as the referrer's namespace; cross-namespace references are
-                                                    not supported.
-                                                  type: string
-                                              required:
-                                              - name
-                                              type: object
+                                                Namespace, if set to a namespace other than the referrer's, must be
+                                                permitted by a KongReferenceGrant in that namespace.
+                                              type: string
+                                          required:
+                                          - name
                                           type: object
                                       required:
                                       - key
@@ -776,9 +746,10 @@ spec:
                     type: object
                   parentPolicyRef:
                     description: |-
-                      ParentPolicyRef references a schemaValidation produce policy in the same
-                      namespace and virtual cluster. Required for encryptFields, maskFields and
-                      transcode, and optional for modifyHeaders.
+                      ParentPolicyRef references a schemaValidation produce policy of the same
+                      virtual cluster. One in another namespace needs a KongReferenceGrant in
+                      its namespace. Required for encryptFields, maskFields and transcode, and
+                      optional for modifyHeaders.
                       It is immutable once this policy exists in Konnect.
                       Deleting a parent is blocked while child policy objects reference it.
                     properties:
@@ -794,9 +765,8 @@ spec:
                         type: string
                       namespace:
                         description: |-
-                          Namespace defaults to the referrer's namespace. If set, it must be
-                          the same as the referrer's namespace; cross-namespace references are
-                          not supported.
+                          Namespace, if set to a namespace other than the referrer's, must be
+                          permitted by a KongReferenceGrant in that namespace.
                         type: string
                     required:
                     - name
@@ -848,84 +818,26 @@ spec:
                               schemaRegistry:
                                 description: A reference to a schema Registry.
                                 properties:
-                                  id:
-                                    description: ID configuration.
-                                    properties:
-                                      id:
-                                        description: The unique identifier of the
-                                          schema registry.
-                                        maxLength: 253
-                                        minLength: 1
-                                        type: string
-                                    type: object
-                                  name:
-                                    description: Name configuration.
-                                    properties:
-                                      name:
-                                        description: The unique name of the schema
-                                          registry.
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  namespacedRef:
-                                    description: |-
-                                      NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
-                                      with a Konnect gateway, it is resolved to the Konnect name of the object,
-                                      and with an on-prem gateway, to its UID.
-                                      It is mutually exclusive with the other fields.
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        description: Kind is the kind of the referenced
-                                          object.
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        description: Name is the name of the referenced
-                                          object.
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        description: |-
-                                          Namespace defaults to the referrer's namespace. If set, it must be
-                                          the same as the referrer's namespace; cross-namespace references are
-                                          not supported.
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    description: Type designates the type of configuration.
+                                  kind:
+                                    default: EventGatewaySchemaRegistry
+                                    description: Kind is the kind of the referenced
+                                      object.
                                     enum:
-                                    - id
-                                    - name
-                                    - namespacedRef
+                                    - EventGatewaySchemaRegistry
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referenced
+                                      object.
                                     minLength: 1
                                     type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace, if set to a namespace other than the referrer's, must be
+                                      permitted by a KongReferenceGrant in that namespace.
+                                    type: string
                                 required:
-                                - type
+                                - name
                                 type: object
-                                x-kubernetes-validations:
-                                - message: id must be set only when type is id
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''id'' ? has(self.id) &&
-                                    has(self.id.id) : !has(self.id))'
-                                - message: name must be set only when type is name
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''name'' ? has(self.name)
-                                    : !has(self.name))'
-                                - message: namespacedRef must be set only when type
-                                    is namespacedRef
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                                    : !has(self.namespacedRef))'
                               validateKey:
                                 description: |-
                                   If true, validate the record key.
@@ -1134,87 +1046,6 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                description: A reference to a schema Registry.
-                                properties:
-                                  id:
-                                    description: ID configuration.
-                                    properties:
-                                      id:
-                                        description: The unique identifier of the
-                                          schema registry.
-                                        maxLength: 253
-                                        minLength: 1
-                                        type: string
-                                    type: object
-                                  name:
-                                    description: Name configuration.
-                                    properties:
-                                      name:
-                                        description: The unique name of the schema
-                                          registry.
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  namespacedRef:
-                                    description: |-
-                                      NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
-                                      with a Konnect gateway, it is resolved to the Konnect name of the object,
-                                      and with an on-prem gateway, to its UID.
-                                      It is mutually exclusive with the other fields.
-                                    properties:
-                                      kind:
-                                        default: EventGatewaySchemaRegistry
-                                        description: Kind is the kind of the referenced
-                                          object.
-                                        enum:
-                                        - EventGatewaySchemaRegistry
-                                        type: string
-                                      name:
-                                        description: Name is the name of the referenced
-                                          object.
-                                        minLength: 1
-                                        type: string
-                                      namespace:
-                                        description: |-
-                                          Namespace defaults to the referrer's namespace. If set, it must be
-                                          the same as the referrer's namespace; cross-namespace references are
-                                          not supported.
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    description: Type designates the type of configuration.
-                                    enum:
-                                    - id
-                                    - name
-                                    - namespacedRef
-                                    minLength: 1
-                                    type: string
-                                required:
-                                - type
-                                type: object
-                                x-kubernetes-validations:
-                                - message: id must be set only when type is id
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''id'' ? has(self.id) &&
-                                    has(self.id.id) : !has(self.id))'
-                                - message: name must be set only when type is name
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''name'' ? has(self.name)
-                                    : !has(self.name))'
-                                - message: namespacedRef must be set only when type
-                                    is namespacedRef
-                                  optionalOldSelf: true
-                                  rule: '(oldSelf.hasValue() && oldSelf.value() ==
-                                    self) || (self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                                    : !has(self.namespacedRef))'
                               validateKey:
                                 description: |-
                                   If true, validate the record key.
@@ -1257,14 +1088,6 @@ spec:
                         required:
                         - type
                         type: object
-                        x-kubernetes-validations:
-                        - message: 'json.schemaRegistry can not be set with the type
-                            json, which parses without a schema: use the type confluentSchemaRegistry'
-                          optionalOldSelf: true
-                          rule: '!has(self.json) || !has(self.json.schemaRegistry)
-                            || (oldSelf.hasValue() && has(oldSelf.value().json) &&
-                            has(oldSelf.value().json.schemaRegistry) && oldSelf.value().json.schemaRegistry
-                            == self.json.schemaRegistry)'
                       description:
                         description: A human-readable description of the policy.
                         maxLength: 512
@@ -1409,87 +1232,26 @@ spec:
                                       schemaRegistry:
                                         description: A reference to a schema Registry.
                                         properties:
-                                          id:
-                                            description: ID configuration.
-                                            properties:
-                                              id:
-                                                description: The unique identifier
-                                                  of the schema registry.
-                                                maxLength: 253
-                                                minLength: 1
-                                                type: string
-                                            type: object
-                                          name:
-                                            description: Name configuration.
-                                            properties:
-                                              name:
-                                                description: The unique name of the
-                                                  schema registry.
-                                                maxLength: 255
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          namespacedRef:
-                                            description: |-
-                                              NamespacedRef references an in-cluster EventGatewaySchemaRegistry object:
-                                              with a Konnect gateway, it is resolved to the Konnect name of the object,
-                                              and with an on-prem gateway, to its UID.
-                                              It is mutually exclusive with the other fields.
-                                            properties:
-                                              kind:
-                                                default: EventGatewaySchemaRegistry
-                                                description: Kind is the kind of the
-                                                  referenced object.
-                                                enum:
-                                                - EventGatewaySchemaRegistry
-                                                type: string
-                                              name:
-                                                description: Name is the name of the
-                                                  referenced object.
-                                                minLength: 1
-                                                type: string
-                                              namespace:
-                                                description: |-
-                                                  Namespace defaults to the referrer's namespace. If set, it must be
-                                                  the same as the referrer's namespace; cross-namespace references are
-                                                  not supported.
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          type:
-                                            description: Type designates the type
-                                              of configuration.
+                                          kind:
+                                            default: EventGatewaySchemaRegistry
+                                            description: Kind is the kind of the referenced
+                                              object.
                                             enum:
-                                            - id
-                                            - name
-                                            - namespacedRef
+                                            - EventGatewaySchemaRegistry
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
                                             minLength: 1
                                             type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
                                         required:
-                                        - type
+                                        - name
                                         type: object
-                                        x-kubernetes-validations:
-                                        - message: id must be set only when type is
-                                            id
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value()
-                                            == self) || (self.type == ''id'' ? has(self.id)
-                                            && has(self.id.id) : !has(self.id))'
-                                        - message: name must be set only when type
-                                            is name
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value()
-                                            == self) || (self.type == ''name'' ? has(self.name)
-                                            : !has(self.name))'
-                                        - message: namespacedRef must be set only
-                                            when type is namespacedRef
-                                          optionalOldSelf: true
-                                          rule: '(oldSelf.hasValue() && oldSelf.value()
-                                            == self) || (self.type == ''namespacedRef''
-                                            ? has(self.namespacedRef) : !has(self.namespacedRef))'
                                       subject:
                                         description: |-
                                           An expression that computes the schema registry subject of the output data's
@@ -1746,9 +1508,16 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
             is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
-            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
-            == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef
+            == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type
+            == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef)
+            && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity
             has been created in Konnect

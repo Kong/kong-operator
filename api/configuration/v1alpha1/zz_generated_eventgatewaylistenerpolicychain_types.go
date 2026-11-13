@@ -18,7 +18,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef", message="spec.eventGatewayListenerRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef", message="spec.eventGatewayListenerRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef",message="spec.eventGatewayListenerRef is immutable",fieldPath=".spec.eventGatewayListenerRef"
 // +kubebuilder:validation:XValidation:rule="self.spec.eventGatewayListenerRef.type == 'namespacedRef'",message="spec.eventGatewayListenerRef must use namespacedRef",fieldPath=".spec.eventGatewayListenerRef"
 // +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.id) || size(self.status.id) == 0",message="status.id must be unset because policy chains have no independent Konnect ID",fieldPath=".status.id"
@@ -59,10 +59,9 @@ type EventGatewayListenerPolicyChainSpec struct {
 type EventGatewayListenerPolicyChainAPISpec struct {
 	// Policies lists distinct EventGatewayListenerPolicy references in execution
 	// order.
-	// Each policy must belong to the referenced EventGatewayListener and be in the
-	// same namespace as this chain.
-	// Namespace defaults to this chain's namespace and may be set explicitly to
-	// that same namespace; cross-namespace references are not supported.
+	// Each policy must belong to the referenced EventGatewayListener.
+	// Namespace defaults to this chain's namespace; a policy in another namespace
+	// needs a KongReferenceGrant in its namespace.
 	// List every listener policy exactly once.
 	// An explicit empty list is valid only when the remote chain has no policies;
 	// it does not clear an existing chain.

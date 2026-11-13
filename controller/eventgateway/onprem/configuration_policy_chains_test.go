@@ -35,7 +35,7 @@ func TestBuildClusterPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, string(policies[1].UID), cfg.entities.VirtualClusters[0].ClusterPolicies[0].Id.String())
 	require.Equal(t, "EventGatewayVirtualClusterPolicy "+ns+"/z-second", cfg.objects["virtual_clusters.0.cluster_policies.0"])
 	require.Equal(t, "EventGatewayVirtualClusterPolicy "+ns+"/a-first", cfg.objects["virtual_clusters.0.cluster_policies.1"])
-	require.Len(t, cfg.orderedClusterPolicies, 1)
+	require.Len(t, cfg.orderedPolicies, 1)
 
 	competitor := chain.DeepCopy()
 	competitor.Name, competitor.UID, competitor.ResourceVersion = "competitor", types.UID(uuid.NewString()), ""
@@ -68,7 +68,7 @@ func TestBuildClusterPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, policychain.ClaimValue(recreated), parent.Annotations[policychain.OwnerAnnotation], "a recreated chain must acquire its own UID-bound claim")
 	require.NoError(t, cl.Delete(t.Context(), recreated))
 	cfg = build()
-	require.Empty(t, cfg.orderedClusterPolicies)
+	require.Empty(t, cfg.orderedPolicies)
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(parent), parent))
 	require.NotContains(t, parent.Annotations, policychain.OwnerAnnotation)
 	require.Len(t, cfg.entities.VirtualClusters[0].ClusterPolicies, 2, "deleting chains must never delete policy entities")
@@ -82,7 +82,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 		blocked     bool
 	}{
 		{name: "unclaimed"},
-		{name: "live owner and competitor", claim: policychain.ClaimValue, blocked: true},
+		{name: "live owner and competitor", claim: policychain.ClaimValue[*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain], blocked: true},
 		{name: "recreated owner", claim: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
 			return c.Name + "/" + uuid.NewString()
 		}},
@@ -92,7 +92,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 		{name: "malformed claim", claim: func(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
 			return "malformed"
 		}},
-		{name: "terminating owner", claim: policychain.ClaimValue, terminating: true},
+		{name: "terminating owner", claim: policychain.ClaimValue[*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain], terminating: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, chain, _, objects := clusterPolicyChainObjects(t)
@@ -118,7 +118,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, cfg.entities.VirtualClusters, 1)
 			require.Equal(t, string(validParent.UID), cfg.entities.VirtualClusters[0].Id.String())
-			require.Empty(t, cfg.orderedClusterPolicies)
+			require.Empty(t, cfg.orderedPolicies)
 			if tt.blocked {
 				require.Equal(t, []string{client.ObjectKeyFromObject(chain).String() + ": its EventGatewayVirtualCluster " +
 					client.ObjectKeyFromObject(parent).String() + " isn't in the configuration"}, cfg.invalidChains,
@@ -407,12 +407,12 @@ func TestClusterPolicyOrderValidation(t *testing.T) {
 		{name: "wrong kind", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterPolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterConsumePolicy"
 		}, problem: "must name an EventGatewayVirtualClusterPolicy"},
-		{name: "cross namespace policy", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterPolicy) {
+		{name: "cross namespace policy without a KongReferenceGrant", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterPolicy) {
 			c.Spec.APISpec.Policies[0].Namespace = "other"
-		}, problem: "same namespace as the chain"},
-		{name: "cross namespace parent", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterPolicy) {
+		}, problem: "no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterPolicy other/z-second"},
+		{name: "cross namespace parent of other policies", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterPolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
-		}, problem: "same namespace"},
+		}, problem: "different virtual cluster"},
 		{name: "wrong parent", change: func(_ *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, p []*configurationv1alpha1.EventGatewayVirtualClusterPolicy) {
 			p[1].Spec.EventGatewayVirtualClusterRef = namespacedRef("other-vc")
 		}, problem: "different virtual cluster"},
@@ -432,7 +432,7 @@ func TestClusterPolicyOrderValidation(t *testing.T) {
 			cl := newFakeClient(t, objects...)
 			cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 			require.NoError(t, err)
-			ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+			ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 			require.NoError(t, err)
 			if tt.problem != "" {
 				require.Contains(t, problem, tt.problem)
@@ -446,6 +446,239 @@ func TestClusterPolicyOrderValidation(t *testing.T) {
 			require.Empty(t, chain.GetKonnectID())
 		})
 	}
+}
+
+// TestClusterPolicyOrderAcrossNamespaces checks a chain orders the policies of
+// its virtual cluster of other namespaces a KongReferenceGrant lets it
+// reference, and needn't list those no KongReferenceGrant lets reference the
+// virtual cluster: they are left out of the configuration.
+func TestClusterPolicyOrderAcrossNamespaces(t *testing.T) {
+	const other = "other"
+	// grant lets objects of fromKind in fromNamespace reference objects of
+	// toKind in namespace.
+	grant := func(namespace, fromNamespace, fromKind, toKind string) *configurationv1alpha1.KongReferenceGrant {
+		return &configurationv1alpha1.KongReferenceGrant{
+			Name: fromKind + "-to-" + toKind, Namespace: namespace,
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{
+					Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(fromKind), Namespace: configurationv1alpha1.Namespace(fromNamespace),
+				}},
+				To: []configurationv1alpha1.ReferenceGrantTo{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(toKind)}},
+			},
+		}
+	}
+	// A policy of the other namespace, attached to the virtual cluster of
+	// the gateway's namespace.
+	otherPolicy := func(t *testing.T) *configurationv1alpha1.EventGatewayVirtualClusterPolicy {
+		return fromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicy](t, time.Date(2026, 11, 2, 1, 0, 0, 0, time.UTC), `
+metadata: {name: m-other, namespace: `+other+`}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc, namespace: `+ns+`}}
+  apiSpec:
+    type: acls
+    acls:
+      name: m-other
+      config:
+        rules:
+        - action: allow
+          resourceType: topic
+          operations: [{name: read}]
+          resourceNames: {type: stat, stat: [{match: orders}]}
+`)
+	}
+
+	t.Run("a granted policy of another namespace is ordered", func(t *testing.T) {
+		gateway, chain, policies, objects := clusterPolicyChainObjects(t)
+		policy := otherPolicy(t)
+		chain.Spec.APISpec.Policies = append(chain.Spec.APISpec.Policies, configurationv1alpha1.EventGatewayVirtualClusterPolicyRef{Name: policy.Name, Namespace: other})
+		cl := newFakeClient(t, append(objects, policy,
+			grant(ns, other, "EventGatewayVirtualClusterPolicy", "EventGatewayVirtualCluster"),
+			grant(other, ns, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualClusterPolicy"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
+		require.NoError(t, err)
+		require.Empty(t, problem)
+		require.Len(t, ordered, 3)
+		require.Equal(t, uuid.MustParse(string(policies[1].UID)), ordered[0].Id)
+		require.Equal(t, uuid.MustParse(string(policies[0].UID)), ordered[1].Id)
+		require.Equal(t, uuid.MustParse(string(policy.UID)), ordered[2].Id)
+	})
+
+	t.Run("a granted policy of another namespace must be listed", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		cl := newFakeClient(t, append(objects, otherPolicy(t),
+			grant(ns, other, "EventGatewayVirtualClusterPolicy", "EventGatewayVirtualCluster"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		_, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
+		require.NoError(t, err)
+		require.Contains(t, problem, "policy "+other+"/m-other is missing")
+	})
+
+	t.Run("a policy of another namespace not let reference the virtual cluster needn't be listed", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		cl := newFakeClient(t, append(objects, otherPolicy(t))...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
+		require.NoError(t, err)
+		require.Empty(t, problem)
+		require.Len(t, ordered, 2)
+	})
+
+	t.Run("a granted chain of another namespace claims the virtual cluster", func(t *testing.T) {
+		gateway, chain, policies, objects := clusterPolicyChainObjects(t)
+		chain.Namespace = other
+		chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new(ns)
+		for i := range chain.Spec.APISpec.Policies {
+			chain.Spec.APISpec.Policies[i].Namespace = ns
+		}
+		cl := newFakeClient(t, append(objects, chain,
+			grant(ns, other, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster"),
+			grant(ns, other, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualClusterPolicy"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		require.Empty(t, cfg.invalidChains)
+		require.Len(t, cfg.orderedPolicies, 1)
+		var vc configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
+		require.Equal(t, other+"/chain/"+string(chain.UID), vc.Annotations[policychain.OwnerAnnotation])
+		require.Equal(t, uuid.MustParse(string(policies[1].UID)), cfg.entities.VirtualClusters[0].ClusterPolicies[0].Id)
+	})
+
+	t.Run("a chain without a KongReferenceGrant to its policies reports it and blocks", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		chain.Namespace = other
+		chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new(ns)
+		for i := range chain.Spec.APISpec.Policies {
+			chain.Spec.APISpec.Policies[i].Namespace = ns
+		}
+		cl := newFakeClient(t, append(objects, chain,
+			grant(ns, other, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, cfg.invalidChains)
+		require.Len(t, cfg.excluded, 1)
+		require.Equal(t, eventgatewayv1alpha1.OnPremEntityReferenceNotPermittedReason, cfg.excluded[0].reason)
+		require.Contains(t, cfg.excluded[0].message, "no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterPolicy")
+		require.Empty(t, cfg.excluded[0].conditions, "it doesn't claim the virtual cluster, as against Konnect")
+		var vc configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
+		require.NotContains(t, vc.Annotations, policychain.OwnerAnnotation)
+	})
+
+	// otherChain returns an older chain of the other namespace for the
+	// virtual cluster, ordering its policies.
+	otherChain := func(chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain {
+		c := chain.DeepCopy()
+		c.Namespace = other
+		c.UID = types.UID(uuid.NewString())
+		c.CreationTimestamp = metav1.NewTime(chain.CreationTimestamp.Add(-time.Hour))
+		c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new(ns)
+		for i := range c.Spec.APISpec.Policies {
+			c.Spec.APISpec.Policies[i].Namespace = ns
+		}
+		return c
+	}
+
+	t.Run("an older chain without a KongReferenceGrant to its policies leaves the virtual cluster to a valid one", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		older := otherChain(chain)
+		cl := newFakeClient(t, append(objects, chain, older,
+			grant(ns, other, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		require.Empty(t, cfg.invalidChains)
+		require.Len(t, cfg.orderedPolicies, 1)
+		var vc configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
+		require.Equal(t, "chain/"+string(chain.UID), vc.Annotations[policychain.OwnerAnnotation])
+		require.Equal(t, map[string]string{
+			"EventGatewayVirtualClusterPolicyChain chain": "no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterPolicy " + ns + "/z-second",
+		}, excludedMessages(cfg))
+	})
+
+	t.Run("the claim of a chain of another namespace whose KongReferenceGrant is revoked is released", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		older := otherChain(chain)
+		vc := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+		vc.Annotations = map[string]string{policychain.OwnerAnnotation: policychain.ClaimValue(older)}
+		cl := newFakeClient(t, append(objects, chain, older)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		require.Empty(t, cfg.invalidChains)
+		require.Len(t, cfg.orderedPolicies, 1, "the chain of the namespace of the virtual cluster orders it")
+		var got configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(vc), &got))
+		require.Equal(t, "chain/"+string(chain.UID), got.Annotations[policychain.OwnerAnnotation])
+	})
+
+	t.Run("a chain losing the claim to an owner without a KongReferenceGrant to its policies doesn't release the push", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		// The owner keeps its claim, as it may still reference the virtual
+		// cluster, but can't order its policies.
+		owner := otherChain(chain)
+		vc := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+		vc.Annotations = map[string]string{policychain.OwnerAnnotation: policychain.ClaimValue(owner)}
+		cl := newFakeClient(t, append(objects, chain, owner,
+			grant(ns, other, "EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster"),
+		)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.orderedPolicies)
+		require.Equal(t, []string{
+			other + "/chain: no KongReferenceGrant allows it to reference the EventGatewayVirtualClusterPolicy " + ns + "/z-second",
+		}, cfg.invalidChains, "the owner's policies would keep their default order")
+		var got configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(vc), &got))
+		require.Equal(t, policychain.ClaimValue(owner), got.Annotations[policychain.OwnerAnnotation])
+	})
+
+	t.Run("a virtual cluster of another namespace not let reference its backend cluster doesn't hold back the push", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		foreign := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster).DeepCopy()
+		foreign.Namespace, foreign.UID = other, types.UID(uuid.NewString())
+		foreign.Spec.EventGatewayBackendClusterRef.NamespacedRef.Namespace = new(ns)
+		foreignChain := chain.DeepCopy()
+		foreignChain.Namespace, foreignChain.UID = other, types.UID(uuid.NewString())
+		// It owns its virtual cluster, and can't order it: the cluster isn't
+		// in the configuration.
+		foreign.Annotations = map[string]string{policychain.OwnerAnnotation: policychain.ClaimValue(foreignChain)}
+		cl := newFakeClient(t, append(objects, chain, foreign, foreignChain)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		require.Empty(t, cfg.invalidChains)
+		var got configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(foreign), &got))
+		require.Equal(t, policychain.ClaimValue(foreignChain), got.Annotations[policychain.OwnerAnnotation], "the claim isn't the gateway's to release")
+	})
+
+	t.Run("a chain of another namespace without a KongReferenceGrant is left out without claiming", func(t *testing.T) {
+		gateway, chain, _, objects := clusterPolicyChainObjects(t)
+		chain.Namespace = other
+		chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new(ns)
+		cl := newFakeClient(t, append(objects, chain)...)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.NoError(t, cfg.blocked())
+		require.Empty(t, cfg.orderedPolicies)
+		var vc configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "vc"}, &vc))
+		require.NotContains(t, vc.Annotations, policychain.OwnerAnnotation)
+		require.Equal(t, map[string]string{
+			"EventGatewayVirtualClusterPolicyChain chain": "no KongReferenceGrant allows it to reference the EventGatewayVirtualCluster " + ns + "/vc",
+		}, excludedMessages(cfg))
+	})
 }
 
 func TestClusterPolicyChainUsesAssembledParentPolicies(t *testing.T) {
@@ -495,7 +728,7 @@ func TestClusterPolicyChainUsesAssembledParentPolicies(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, cfg.invalidChains, 1)
 			require.Contains(t, cfg.invalidChains[0], "policy set changed during configuration assembly")
-			require.Empty(t, cfg.orderedClusterPolicies)
+			require.Empty(t, cfg.orderedPolicies)
 		})
 	}
 }
@@ -509,7 +742,7 @@ func TestClusterPolicyOrderEmptyAndReadErrors(t *testing.T) {
 	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayVirtualClusterPolicyRef{}
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
-	ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), cl, chain)
+	ordered, problem, err := policyOrder(t.Context(), &cfg, cl, chain, clusterPolicyChains)
 	require.NoError(t, err)
 	require.Empty(t, problem)
 	require.NotNil(t, ordered)
@@ -531,7 +764,7 @@ func TestClusterPolicyOrderEmptyAndReadErrors(t *testing.T) {
 				},
 				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error { return failure },
 			}, objects...)
-			ordered, problem, err := cfg.clusterPolicyOrder(t.Context(), broken, chain)
+			ordered, problem, err := policyOrder(t.Context(), &cfg, broken, chain, clusterPolicyChains)
 			require.ErrorIs(t, err, failure)
 			require.Empty(t, problem, "API failures must be retried, not mistaken for invalid or empty configuration")
 			require.Nil(t, ordered)

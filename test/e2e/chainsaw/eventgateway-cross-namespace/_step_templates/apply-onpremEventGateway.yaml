@@ -1,0 +1,58 @@
+# Template for creating a GWAdmin with Automatic certificate authorities and the
+# OnPremEventGateway it serves, in the namespace of the test, and asserting the
+# gateway is Programmed.
+#
+# Required bindings:
+#   - gwadmin_name: Name of the GWAdmin.
+#   - gateway_name: Name of the OnPremEventGateway.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-onprem-event-gateway
+spec:
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+        content: bash ../../../fixtures/gwadmin-license.sh install
+    - apply:
+        resource:
+          apiVersion: gateway-operator.konghq.com/v1alpha1
+          kind: GWAdmin
+          metadata:
+            name: ($gwadmin_name)
+            namespace: ($namespace)
+          spec:
+            license:
+              secretRef:
+                name: gw-admin-license
+                key: license
+            deployment:
+              podTemplateSpec:
+                spec:
+                  containers:
+                    - name: gw-admin
+                      readinessProbe:
+                        periodSeconds: 1
+                        failureThreshold: 30
+    - apply:
+        resource:
+          apiVersion: eventgateway.konghq.com/v1alpha1
+          kind: OnPremEventGateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          spec:
+            gwAdminRef:
+              name: ($gwadmin_name)
+    - assert:
+        resource:
+          apiVersion: eventgateway.konghq.com/v1alpha1
+          kind: OnPremEventGateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: "True"

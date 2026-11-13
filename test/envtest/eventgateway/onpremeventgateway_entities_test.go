@@ -470,7 +470,7 @@ spec:
     type: schemaValidation
     schemaValidation:
       name: parent
-      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {type: namespacedRef, namespacedRef: {name: registry}}, valueValidationAction: mark}}
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: registry}, valueValidationAction: mark}}
 `)
 		child := consumePolicy("child", `
     type: modifyHeaders
@@ -549,7 +549,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: virtual-cluster}}}
+        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
 `)
 		var virtualCluster configurationv1alpha1.EventGatewayVirtualCluster
 		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "virtual-cluster"}, &virtualCluster))
@@ -910,7 +910,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: virtual-cluster}}}
+        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
 `)
 		for _, obj := range []client.Object{virtualCluster, listener, forward} {
 			require.NoError(t, cl.Create(ctx, obj))
@@ -1100,7 +1100,7 @@ spec:
       name: forward
       config:
         type: portMapping
-        portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: missing}}}
+        portMapping: {advertisedHost: localhost, destination: {name: missing}}
 `)
 		require.NoError(t, cl.Create(ctx, other))
 		require.NoError(t, cl.Create(ctx, policy))

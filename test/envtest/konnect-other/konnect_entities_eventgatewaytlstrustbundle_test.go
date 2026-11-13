@@ -220,10 +220,8 @@ func TestEventGatewayTLSTrustBundle(t *testing.T) {
 									Key:         configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("key")},
 								}},
 								ClientAuthentication: configurationv1alpha1.EventGatewayTLSListenerPolicyConfigClientAuthentication{
-									Mode: "required",
-									TLSTrustBundles: []configurationv1alpha1.TLSTrustBundleReference{{
-										NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: trustBundle.Name},
-									}},
+									Mode:            "required",
+									TLSTrustBundles: []configurationv1alpha1.EventGatewayTLSTrustBundleRef{{Name: trustBundle.Name}},
 								},
 							},
 						},

@@ -14,7 +14,7 @@ import (
 )
 
 // The entities that can belong to an OnPremEventGateway.
-// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaydataplanecertificates;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterconsumepolicies;eventgatewayvirtualclusterpolicies;eventgatewayvirtualclusterpolicychains;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaydataplanecertificates;eventgatewaylistenerpolicies;eventgatewaylistenerpolicychains;eventgatewaylisteners;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterconsumepolicies;eventgatewayvirtualclusterpolicies;eventgatewayvirtualclusterpolicychains;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch
 
 // entityTypes returns an object of each entity kind that can belong to an
 // OnPremEventGateway: the entities whose gatewayRef accepts it and,
@@ -25,6 +25,7 @@ func entityTypes() []client.Object {
 		&configurationv1alpha1.EventGatewayDataPlaneCertificate{},
 		&configurationv1alpha1.EventGatewayListener{},
 		&configurationv1alpha1.EventGatewayListenerPolicy{},
+		&configurationv1alpha1.EventGatewayListenerPolicyChain{},
 		&configurationv1alpha1.EventGatewaySchemaRegistry{},
 		&configurationv1alpha1.EventGatewayStaticKey{},
 		&configurationv1alpha1.EventGatewayTLSTrustBundle{},
@@ -42,6 +43,7 @@ var entityGroupKinds = map[schema.GroupKind]struct{}{
 	{Group: "configuration.konghq.com", Kind: "EventGatewayDataPlaneCertificate"}:        {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayListener"}:                    {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicy"}:              {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain"}:         {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewaySchemaRegistry"}:              {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayStaticKey"}:                   {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayTLSTrustBundle"}:              {},
@@ -60,6 +62,7 @@ func IndexOptions() []index.Option {
 		index.OptionsForEventGatewayDataPlaneCertificate(),
 		index.OptionsForEventGatewayListener(),
 		index.OptionsForEventGatewayListenerPolicy(),
+		index.OptionsForEventGatewayListenerPolicyChain(),
 		index.OptionsForEventGatewaySchemaRegistry(),
 		index.OptionsForEventGatewayStaticKey(),
 		index.OptionsForEventGatewayTLSTrustBundle(),
@@ -79,6 +82,7 @@ func EntityGroupVersionResources() []schema.GroupVersionResource {
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewaydataplanecertificates"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewaylisteners"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),
+		configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicychains"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayschemaregistries"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewaystatickeys"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewaytlstrustbundles"),
@@ -98,6 +102,10 @@ var parentEntities = map[reflect.Type][]parentEntity{
 	reflect.TypeFor[*configurationv1alpha1.EventGatewayListenerPolicy](): {
 		{&configurationv1alpha1.EventGatewayListener{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayListenerPolicyList{} },
 			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef},
+	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayListenerPolicyChain](): {
+		{&configurationv1alpha1.EventGatewayListener{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayListenerPolicyChainList{} },
+			index.IndexFieldEventGatewayListenerPolicyChainOnEventGatewayListenerRef},
 	},
 	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster](): {
 		{&configurationv1alpha1.EventGatewayBackendCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterList{} },

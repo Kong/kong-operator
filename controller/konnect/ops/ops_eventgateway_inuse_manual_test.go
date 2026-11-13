@@ -3,6 +3,7 @@ package ops
 import (
 	"errors"
 	"net/http"
+	"slices"
 	"testing"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -40,7 +42,11 @@ func TestDeleteEventGatewayEntitiesInUseGuarded(t *testing.T) {
 	}
 	newClient := func(t *testing.T, objs ...client.Object) client.Client {
 		t.Helper()
-		return fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(objs...).Build()
+		builder := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(objs...)
+		for _, opt := range slices.Concat(index.OptionsForEventGatewayVirtualCluster(), index.OptionsForEventGatewayListenerPolicy()) {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+		return builder.Build()
 	}
 
 	t.Run("backend cluster", func(t *testing.T) {
@@ -61,7 +67,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: forward
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: orders}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: orders}}}
 `))
 		sdk := sdkmocks.NewMockEventGatewayBackendClustersSDK(t)
 		sdk.EXPECT().DeleteEventGatewayBackendCluster(mock.Anything, gatewayID, "bc-id").Return(nil, badRequest()).Once()
@@ -71,6 +77,37 @@ spec:
 		assert.Equal(t, []string{"EventGatewayListenerPolicy default/forward"}, inUse.Users)
 		assert.Equal(t, "backend cluster", inUse.What)
 		assert.Equal(t, "deletion blocked: the backend cluster is in use by EventGatewayListenerPolicy default/forward; "+
+			"delete them or stop forwarding to its virtual clusters and the deletion will proceed automatically", inUse.DeletionBlockedMessage())
+	})
+
+	t.Run("backend cluster used by a virtual cluster of another namespace", func(t *testing.T) {
+		t.Parallel()
+
+		bc := &configurationv1alpha1.EventGatewayBackendCluster{Name: "bc", Namespace: "infra"}
+		bc.SetGatewayID(gatewayID)
+		bc.SetKonnectID("bc-id")
+		vc := fromYAML(t, &configurationv1alpha1.EventGatewayVirtualCluster{}, `
+metadata: {name: orders, namespace: teams}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: bc, namespace: infra}}
+`)
+		forward := inKonnect(fromYAML(t, &configurationv1alpha1.EventGatewayListenerPolicy{}, `
+metadata: {name: forward, namespace: teams}
+spec:
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: orders}}}
+`))
+		sdk := sdkmocks.NewMockEventGatewayBackendClustersSDK(t)
+		sdk.EXPECT().DeleteEventGatewayBackendCluster(mock.Anything, gatewayID, "bc-id").Return(nil, badRequest()).Once()
+		err := deleteEventGatewayBackendClusterGuarded(t.Context(), sdk, newClient(t, vc, forward), bc.DeepCopy())
+		inUse, ok := errors.AsType[EventGatewayEntityInUseError](err)
+		require.True(t, ok, "expected EventGatewayEntityInUseError, got %v", err)
+		assert.Empty(t, inUse.Users)
+		assert.Equal(t, 1, inUse.OtherNamespacesUsers)
+		assert.Equal(t, "deletion blocked: the backend cluster is in use by 1 policy objects in other namespaces; "+
 			"delete them or stop forwarding to its virtual clusters and the deletion will proceed automatically", inUse.DeletionBlockedMessage())
 	})
 
@@ -87,7 +124,7 @@ spec:
     type: forwardToVirtualCluster
     forwardToVirtualCluster:
       name: forward
-      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {namespacedRef: {name: orders}}}}
+      config: {type: portMapping, portMapping: {advertisedHost: localhost, destination: {name: orders}}}
 `))
 		expectDelete := func(t *testing.T, err error) *sdkmocks.MockEventGatewayVirtualClustersSDK {
 			sdk := sdkmocks.NewMockEventGatewayVirtualClustersSDK(t)

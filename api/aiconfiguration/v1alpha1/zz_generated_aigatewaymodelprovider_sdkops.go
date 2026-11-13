@@ -6582,7 +6582,7 @@ func resolveAIGatewayModelProviderXaiDatastores(ctx context.Context, cl client.C
 func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtAIGatewayModelProviderAnthropicDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6592,7 +6592,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderAzureDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6602,7 +6602,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderBasetenDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6612,7 +6612,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderBedrockDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6622,7 +6622,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderCerebrasDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6632,7 +6632,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderCohereDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6642,7 +6642,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderDashscopeDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6652,7 +6652,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderDatabricksDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6662,7 +6662,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderDeepseekDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6672,7 +6672,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderGeminiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6682,7 +6682,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderHuggingfaceDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6692,7 +6692,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderKimiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6702,7 +6702,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderLlama2Datastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6712,7 +6712,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderMistralDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6722,7 +6722,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderOllamaDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6732,7 +6732,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderOpenaiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6742,7 +6742,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderSagemakerDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6752,7 +6752,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderTypesafeDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6762,7 +6762,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderVercelDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6772,7 +6772,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderVllmDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6782,7 +6782,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderXaiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace

@@ -226,9 +226,7 @@ func TestEventGatewayStaticKey(t *testing.T) {
 								EncryptionKey: &configurationv1alpha1.EventGatewayEncryptConfigEncryptionKey{
 									Type: configurationv1alpha1.EventGatewayEncryptConfigEncryptionKeyTypeStatic,
 									Static: &configurationv1alpha1.EncryptionKeyStatic{
-										Key: &configurationv1alpha1.EncryptionKeyStaticReference{
-											NamespacedRef: &configurationv1alpha1.EventGatewayStaticKeyRef{Name: staticKey.Name},
-										},
+										Key: configurationv1alpha1.EventGatewayStaticKeyRef{Name: staticKey.Name},
 									},
 								},
 							},

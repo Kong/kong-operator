@@ -47,7 +47,7 @@ type lastConfigFixture struct {
 func newLastConfigFixture(t *testing.T) lastConfigFixture {
 	t.Helper()
 	s := newSchemaRegistryFixture(t)
-	policy := s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: orders}}`, 3)
+	policy := s.validateWith("validate", `{name: orders}`, 3)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 		return append(append(f.gwAdmin.Objects(), f.gateway),
 			append(s.virtualCluster(), s.registry("orders", "gateway", 1), s.registry("other", "gateway", 2), policy)...)
@@ -67,7 +67,7 @@ func (f lastConfigFixture) reconcile(t *testing.T) {
 // impossible to send.
 func (f lastConfigFixture) setRegistry(t *testing.T, registry string) {
 	t.Helper()
-	changed := f.s.validateWith("validate", `{type: namespacedRef, namespacedRef: {name: `+registry+`}}`, 3)
+	changed := f.s.validateWith("validate", `{name: `+registry+`}`, 3)
 	changed.ObjectMeta = read(t, f.cl, f.policy).ObjectMeta
 	changed.Generation++
 	require.NoError(t, f.cl.Update(t.Context(), changed))
@@ -194,13 +194,13 @@ func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
 	}`), &entities))
 	ordered := []uuid.UUID{entities.VirtualClusters[0].Id}
 	last := &lastGoodConfig{
-		revision:               3,
-		config:                 gatewayConfig{Entities: entities},
-		orderedClusterPolicies: ordered,
+		revision:        3,
+		config:          gatewayConfig{Entities: entities},
+		orderedPolicies: ordered,
 	}
 
 	for name, current := range map[string]configuration{
-		"the current configuration orders them too":       {namespace: ns, orderedClusterPolicies: ordered},
+		"the current configuration orders them too":       {namespace: ns, orderedPolicies: ordered},
 		"the current configuration no longer orders them": {namespace: ns},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -208,14 +208,14 @@ func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
 			require.NoError(t, err)
 
 			held := withGWAdminDefaults(entities)
-			same, err := sameEntities(held, pushing.pushedKey, pushing.orderedClusterPolicies...)
+			same, err := sameEntities(held, pushing.pushedKey, pushing.orderedPolicies...)
 			require.NoError(t, err)
 			assert.True(t, same, "a pod holding the last entities isn't pushed them again")
 
 			held.VirtualClusters = slices.Clone(held.VirtualClusters)
 			held.VirtualClusters[0].ClusterPolicies = slices.Clone(held.VirtualClusters[0].ClusterPolicies)
 			slices.Reverse(held.VirtualClusters[0].ClusterPolicies)
-			same, err = sameEntities(held, pushing.pushedKey, pushing.orderedClusterPolicies...)
+			same, err = sameEntities(held, pushing.pushedKey, pushing.orderedPolicies...)
 			require.NoError(t, err)
 			assert.False(t, same, "a pod holding them in another order is")
 		})
@@ -254,7 +254,7 @@ func TestEntitiesInUseBySent(t *testing.T) {
 	}`), &sent))
 
 	forwardPolicy := reportedEntity{typ: listenerPolicyType, key: client.ObjectKeyFromObject(forward)}
-	gonePolicy := reportedEntity{typ: producePolicyType, key: client.ObjectKey{Namespace: ns, Name: "validate"}}
+	gonePolicy := reportedEntity{typ: producePolicyType, key: client.ObjectKey{Name: "validate"}}
 	assert.Equal(t, map[reportedEntity][]reportedEntity{
 		{typ: virtualClusterType, key: client.ObjectKeyFromObject(vc)}:       {forwardPolicy},
 		{typ: backendClusterType, key: client.ObjectKeyFromObject(backend)}:  {forwardPolicy},
