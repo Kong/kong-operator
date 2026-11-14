@@ -273,6 +273,7 @@
   updates; deleting the chain resumes parent-first assembly without deleting
   policy entities. This covers gw-admin configuration ordering, not Kafka
   data-path guarantees.
+  [#6672](https://github.com/Kong/kong-operator/pull/6672)
 - Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect-only
   Consume policy-chain ordering using Kubernetes references to the complete set
   of root and nested policies on one virtual cluster. Parent groups remain
