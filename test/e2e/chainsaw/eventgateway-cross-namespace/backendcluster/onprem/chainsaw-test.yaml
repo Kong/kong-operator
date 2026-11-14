@@ -1462,27 +1462,51 @@ spec:
           value: Invalid
         - name: message_part
           value: "\"backend-gw-n\""
-    - name: 92-assert-gw-n-gateway-held-back
-      description: "[N, its name] The conflicting EventGatewayBackendCluster can't be sent: the gateway doesn't push its configuration."
+    - name: 92-create-witness-4
+      description: "[N, its name] Create witness-4, a backend cluster of the gateway used as a witness: it is programmed only once a push including it succeeds."
+      use:
+        template: ../../_step_templates/apply-eventGatewayBackendCluster.yaml
+      bindings:
+        - name: backend_cluster_name
+          value: witness-4
+        - name: backend_cluster_namespace
+          value: ($namespace)
+        - name: gateway_ref_namespace
+          value: (`null`)
+    - name: 93-assert-gw-n-gateway-not-held-back
+      description: "[N, its name] The conflicting EventGatewayBackendCluster, never sent, is only left out. witness-4, created after it, is pushed."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:
         - name: object_api_version
-          value: eventgateway.konghq.com/v1alpha1
+          value: configuration.konghq.com/v1alpha1
         - name: object_kind
-          value: OnPremEventGateway
+          value: EventGatewayBackendCluster
         - name: object_name
-          value: ($gateway_name)
+          value: witness-4
         - name: object_namespace
           value: ($namespace)
         - name: condition_type
           value: Programmed
         - name: condition_status
-          value: "False"
+          value: "True"
         - name: condition_reason
-          value: InvalidEntities
-    - name: 93-assert-gw-n-first-kept
-      description: "[N, its name] The first EventGatewayBackendCluster keeps its name. It stays in the configuration, which isn't pushed."
+          value: Programmed
+    - name: 94-delete-witness-4
+      description: "[N, its name] Delete witness-4."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayBackendCluster
+        - name: object_name
+          value: witness-4
+        - name: object_namespace
+          value: ($namespace)
+    - name: 95-assert-gw-n-first-kept
+      description: "[N, its name] The first EventGatewayBackendCluster keeps its name."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:
@@ -1497,10 +1521,10 @@ spec:
         - name: condition_type
           value: Programmed
         - name: condition_status
-          value: "False"
+          value: "True"
         - name: condition_reason
-          value: GatewayNotProgrammed
-    - name: 94-delete-gw-n-conflicting
+          value: Programmed
+    - name: 96-delete-gw-n-conflicting
       description: "[N, its name] Delete the conflicting EventGatewayBackendCluster."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -1513,25 +1537,6 @@ spec:
           value: backend-gw-n
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 95-assert-gw-n-gateway-pushes
-      description: "[N, its name] The gateway pushes its configuration again."
-      use:
-        template: ../../_step_templates/assert-condition.yaml
-      bindings:
-        - name: object_api_version
-          value: eventgateway.konghq.com/v1alpha1
-        - name: object_kind
-          value: OnPremEventGateway
-        - name: object_name
-          value: ($gateway_name)
-        - name: object_namespace
-          value: ($namespace)
-        - name: condition_type
-          value: Programmed
-        - name: condition_status
-          value: "True"
-        - name: condition_reason
-          value: Programmed
 
   catch:
     - description: Capture debug snapshot on test failure.

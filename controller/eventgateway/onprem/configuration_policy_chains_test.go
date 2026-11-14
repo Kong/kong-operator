@@ -175,9 +175,11 @@ func TestReconcileClusterPolicyChainParentLifecycle(t *testing.T) {
 				backend := read(t, f.cl, objects[1].(*configurationv1alpha1.EventGatewayBackendCluster))
 				backend.Spec.APISpec.Name = "changed-backend"
 				require.NoError(t, f.cl.Update(t.Context(), backend))
-				duplicate = read(t, f.cl, duplicate)
-				duplicate.Spec.APISpec.Name = parent.Spec.APISpec.Name
-				require.NoError(t, f.cl.Update(t.Context(), duplicate))
+				// Renamed into the name the duplicate runs with, the owning
+				// parent is left out.
+				renamed := read(t, f.cl, parent)
+				renamed.Spec.APISpec.Name = duplicate.Spec.APISpec.Name
+				require.NoError(t, f.cl.Update(t.Context(), renamed))
 			}
 			f.pod().reset()
 			reconcile()

@@ -174,6 +174,16 @@ func excludedMessages(cfg configuration) map[string]string {
 	return excluded
 }
 
+// excludedBlocking returns, by kind and name, whether each object left out of
+// the configuration stops it from being pushed.
+func excludedBlocking(cfg configuration) map[string]bool {
+	blocking := map[string]bool{}
+	for _, e := range cfg.excluded {
+		blocking[reflect.TypeOf(e.obj).Elem().Name()+" "+e.obj.GetName()] = e.blocks
+	}
+	return blocking
+}
+
 func TestBuildConfigurationSchemaRegistryObjectReferences(t *testing.T) {
 	f := newSchemaRegistryFixture(t)
 	orders := f.registry("orders", "gateway", 2)

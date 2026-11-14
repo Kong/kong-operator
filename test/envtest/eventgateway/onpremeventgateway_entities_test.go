@@ -71,6 +71,21 @@ spec:` + onPremEventGatewayParentRef(gateway) + `
 
 // backendClusterNames returns the names of the backend clusters the pod
 // holds for the gateway.
+// programmedOf reads the object again and returns its Programmed condition,
+// or nil when it can't be read or has none.
+func programmedOf(ctx context.Context, ct *assert.CollectT, cl client.Client, obj interface {
+	client.Object
+	GetConditions() []metav1.Condition
+},
+) *metav1.Condition {
+	if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+		return nil
+	}
+	cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
+	assert.NotNil(ct, cond, "%T %s", obj, obj.GetName())
+	return cond
+}
+
 func backendClusterNames(ct *assert.CollectT, pod *fakeGWAdmin, gateway *eventgatewayv1alpha1.OnPremEventGateway) []string {
 	g, ok, _ := pod.state(gatewayID(ct, gateway))
 	if !assert.True(ct, ok, "the gw-admin pod doesn't know the gateway") {
@@ -180,11 +195,7 @@ spec:
 	) {
 		t.Helper()
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
-				return
-			}
-			cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
-			if assert.NotNil(ct, cond, "%T %s", obj, obj.GetName()) {
+			if cond := programmedOf(ctx, ct, cl, obj); cond != nil {
 				assert.Equal(ct, status, cond.Status, cond.Message)
 				assert.Equal(ct, reason, cond.Reason, cond.Message)
 			}
@@ -224,22 +235,21 @@ spec:
 		}, waitTime, tickTime)
 	})
 
-	t.Run("a backend cluster that can't be sent stops the push until it is deleted", func(t *testing.T) {
+	t.Run("a backend cluster never sent with a name taken is left out, and the push goes on", func(t *testing.T) {
 		duplicate := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 			backendClusterYAML("duplicate", "backend-cluster", gateway.Name))
 		require.NoError(t, cl.Create(ctx, duplicate))
 		other := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 			backendClusterYAML("other", "other", gateway.Name))
 		require.NoError(t, cl.Create(ctx, other))
-		// The duplicate name can't be sent: nothing is, gw-admin keeps what it
-		// has.
-		expectBlocked(t, "duplicate", "backend-cluster")
+		// The backend cluster running with the name keeps it: the duplicate
+		// changes nothing on the gateway.
+		expectBackendClusters(t, "backend-cluster", "other")
 		expectProgrammed(t, "duplicate", metav1.ConditionFalse, "Invalid")
-		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotProgrammed")
+		expectProgrammed(t, "other", metav1.ConditionTrue, "Programmed")
 
 		require.NoError(t, cl.Delete(ctx, duplicate))
 		expectBackendClusters(t, "backend-cluster", "other")
-		expectProgrammed(t, "other", metav1.ConditionTrue, "Programmed")
 	})
 
 	t.Run("a backend cluster reads a Secret of another namespace once a KongReferenceGrant allows it", func(t *testing.T) {
@@ -983,7 +993,45 @@ spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
     authentication: {type: anonymous, anonymous: {}}
     tls: {enabled: Disabled}
 `)
+		taken := `its spec.apiSpec.name "backend-cluster" is already the one of EventGatewayBackendCluster ` + ns.Name + "/backend-cluster"
+		programmed := func(ct *assert.CollectT, obj *configurationv1alpha1.EventGatewayBackendCluster) *metav1.Condition {
+			return programmedOf(ctx, ct, cl, obj.DeepCopy())
+		}
+		renameDuplicate := func(t *testing.T, name string) {
+			t.Helper()
+			require.NoError(t, cl.Patch(ctx, duplicate, client.RawPatch("application/merge-patch+json",
+				[]byte(`{"spec":{"apiSpec":{"name":"`+name+`"}}}`))))
+		}
+
+		// Never sent, it is only left out: the push goes on.
 		require.NoError(t, cl.Create(ctx, duplicate))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := programmed(ct, duplicate); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Equal(ct, "Invalid", cond.Reason)
+				assert.Contains(ct, cond.Message, taken)
+			}
+			if cond := programmed(ct, backendCluster); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
+			}
+			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
+			}
+		}, waitTime, tickTime)
+
+		// Under a name of its own, it is sent.
+		renameDuplicate(t, "backend-cluster-2")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := programmed(ct, duplicate); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
+			}
+			g, _, _ := pod0.state(gatewayID(t, gatewayA))
+			assert.Len(ct, g.entities.BackendClusters, 2)
+		}, waitTime, tickTime)
+
+		// Sent, and renamed into the name the other runs with, it stops the
+		// push: left out, it would be taken off the gateway.
+		renameDuplicate(t, "backend-cluster")
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
 				// The gateway names it, and so does the entity on its own status.
@@ -991,35 +1039,27 @@ spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
 				assert.Equal(ct, "InvalidEntities", cond.Reason)
 				assert.Contains(ct, cond.Message, "EventGatewayBackendCluster "+ns.Name+"/duplicate-name: ")
 			}
+			if cond := programmed(ct, duplicate); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Equal(ct, "Invalid", cond.Reason)
+				assert.Contains(ct, cond.Message, taken)
+			}
+			if cond := programmed(ct, backendCluster); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status, "the configuration isn't pushed")
+				assert.Equal(ct, "GatewayNotProgrammed", cond.Reason)
+			}
 		}, waitTime, tickTime)
 		// gw-admin keeps what it has.
 		g, _, _ := pod0.state(gatewayID(t, gatewayA))
-		require.Len(t, g.entities.BackendClusters, 1)
-		// Each entity reports it too.
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			left := &configurationv1alpha1.EventGatewayBackendCluster{}
-			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(duplicate), left)) {
-				cond := apimeta.FindStatusCondition(left.Status.Conditions, "Programmed")
-				if assert.NotNil(ct, cond) {
-					assert.Equal(ct, metav1.ConditionFalse, cond.Status)
-					assert.Equal(ct, "Invalid", cond.Reason)
-					assert.Contains(ct, cond.Message, `another backend cluster of the gateway is named "backend-cluster"`)
-				}
-			}
-			kept := &configurationv1alpha1.EventGatewayBackendCluster{}
-			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(backendCluster), kept)) {
-				cond := apimeta.FindStatusCondition(kept.Status.Conditions, "Programmed")
-				if assert.NotNil(ct, cond) {
-					assert.Equal(ct, metav1.ConditionFalse, cond.Status, "the configuration isn't pushed")
-					assert.Equal(ct, "GatewayNotProgrammed", cond.Reason)
-				}
-			}
-		}, waitTime, tickTime)
+		require.Len(t, g.entities.BackendClusters, 2)
+
 		require.NoError(t, cl.Delete(ctx, duplicate))
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
 				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
 			}
+			g, _, _ := pod0.state(gatewayID(t, gatewayA))
+			assert.Len(ct, g.entities.BackendClusters, 1)
 		}, waitTime, tickTime)
 	})
 
@@ -1079,11 +1119,7 @@ spec:`+onPremEventGatewayParentRef("gateway")+`
 	expectStatusOf := func(t *testing.T, obj k8sutils.ConditionsAwareObject, status metav1.ConditionStatus, reason, message string) {
 		t.Helper()
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
-				return
-			}
-			cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
-			if assert.NotNil(ct, cond) {
+			if cond := programmedOf(ctx, ct, cl, obj); cond != nil {
 				assert.Equal(ct, status, cond.Status)
 				assert.Equal(ct, reason, cond.Reason)
 				assert.Contains(ct, cond.Message, message)

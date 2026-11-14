@@ -2128,7 +2128,7 @@ spec:
         - name: gateway_ref_namespace
           value: (`null`)
     - name: 129-assert-lst-n-gateway-not-held-back
-      description: "[N, its name] The conflicting EventGatewayListenerPolicyChain is only left out. witness-5, created after it, is pushed."
+      description: "[N, its name] The conflicting EventGatewayListenerPolicyChain, never sent, is only left out. witness-5, created after it, is pushed."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:

@@ -77,7 +77,7 @@ type configuration struct {
 	// invalidChains prevent pushing a partial document or falling back to
 	// implicit ordering while an owning declaration cannot be fulfilled.
 	invalidChains []string
-	// previous holds the entities of the last configuration built for the
+	// previous holds the entities of the last configuration recorded for the
 	// gateway, by the UID of their object, and built those of this one: an
 	// entity reading a Secret that is gone is sent as it was last.
 	previous, built map[types.UID]any
@@ -91,12 +91,18 @@ type configuration struct {
 	// entitiesInUse are the entities the policies in the configuration reference
 	// by object, with those policies: FinalizerInUse holds them.
 	entitiesInUse map[reportedEntity][]reportedEntity
-	// claimed holds, by scope (see uniqueValue), the values entities of the
-	// configuration took, with the object of each.
-	claimed map[string]map[string]string
-	// reserved holds, by policy name, the oldest policy of the gateway naming
-	// it (see reservePolicyNames).
-	reserved map[string]string
+	// conflicts holds, by object (see ownerOf), why an object can't have its
+	// unique values (see reserve).
+	conflicts map[string]string
+	// sent holds, by id, the entities of the last configuration of the
+	// gateway that could be sent, the one it records (see lastGoodConfig), or
+	// nil when it isn't known.
+	sent map[uuid.UUID]any
+	// sentUnknown tells the gateway records a configuration whose entities
+	// sent doesn't hold, e.g. after a restart of the operator, before it is
+	// read back from a gw-admin pod: whether an entity was sent isn't known
+	// (see wasSent).
+	sentUnknown bool
 	// parentsNotGranted holds, by "Kind namespace/name", why each object of
 	// another namespace than its parent can't reference it, or "" (see
 	// parentNotGranted).
@@ -104,36 +110,200 @@ type configuration struct {
 }
 
 // uniqueValue is a value of an entity that no other entity of the gateway may
-// have in the same scope, across kinds, e.g. the name of a policy among every
-// policy, as Konnect requires.
+// have in the same scope: the name of an entity among the entities of its
+// kind, as gw-admin requires, or a value across kinds, e.g. the name of a
+// policy among every policy, as Konnect requires.
 type uniqueValue struct {
+	// kind, when set, is the kind of the entities the value is unique among.
+	kind string
 	// scope names what the value is, e.g. "policy name".
 	scope string
 	value string
 }
 
-// claim records the unique values of the object, and returns why it can't have
-// one, as another object of the configuration took it, or "".
-func (c *configuration) claim(obj client.Object, kind string, values []uniqueValue) string {
-	if c.claimed == nil {
-		c.claimed = map[string]map[string]string{}
+// claimant is an object converted into its entity, with the unique values of
+// its entity.
+type claimant struct {
+	// key names the object (see ownerOf).
+	key  string
+	kind string
+	obj  client.Object
+	// values are the unique values of its entity, and sent those of its
+	// entity in the last configuration that could be sent.
+	values, sent []uniqueValue
+	// requires, when set, names its parent policy (see ownerOf): it is added
+	// only along with it.
+	requires string
+}
+
+// ownerOf names an object as messages name it: its kind, namespace and name.
+func ownerOf(kind string, obj client.Object) string {
+	return kind + " " + client.ObjectKeyFromObject(obj).String()
+}
+
+// reserve decides which claimants have their unique values, recording in
+// conflicts why each other one can't. A value goes to the claimant sent with
+// it, or else to the oldest claimant: an object taking a value later, e.g.
+// created after, renamed or fixed, is the one left out, not the entity
+// running with it. A claimant has all its values or none: one that can't have
+// one of them, or whose parent policy is out, is out and claims none, so it
+// doesn't keep another object from a value. Ties go to the claimant whose
+// values all go to claimants having all theirs, so that a value is taken from
+// a claimant out anyway rather than given to it.
+func (c *configuration) reserve(claimants []claimant) {
+	if c.conflicts == nil {
+		c.conflicts = map[string]string{}
 	}
-	self := kind + " " + client.ObjectKeyFromObject(obj).String()
-	for _, v := range values {
-		if owner, ok := c.claimed[v.scope][v.value]; ok {
-			return fmt.Sprintf("its %s %q is already the one of %s", v.scope, v.value, owner)
+	sorted := slices.Clone(claimants)
+	slices.SortFunc(sorted, func(a, b claimant) int {
+		return cmp.Or(byCreation(a.obj, b.obj), cmp.Compare(a.kind, b.kind))
+	})
+	active := make(map[string]bool, len(sorted))
+	byKey := make(map[string]claimant, len(sorted))
+	for _, cand := range sorted {
+		active[cand.key] = true
+		byKey[cand.key] = cand
+	}
+	for {
+		owners := map[uniqueValue]string{}
+		for _, sentFirst := range []bool{true, false} {
+			for _, cand := range sorted {
+				if !active[cand.key] {
+					continue
+				}
+				for _, v := range cand.values {
+					if _, owned := owners[v]; owned || (sentFirst && !slices.Contains(cand.sent, v)) {
+						continue
+					}
+					owners[v] = cand.key
+				}
+			}
 		}
-		if owner, ok := c.reserved[v.value]; ok && v.scope == policyNameScope && owner != self {
-			return fmt.Sprintf("its %s %q is already the one of %s", v.scope, v.value, owner)
+		// lost returns the first value of the claimant another one owns.
+		lost := func(cand claimant) (uniqueValue, bool) {
+			for _, v := range cand.values {
+				if owners[v] != cand.key {
+					return v, true
+				}
+			}
+			return uniqueValue{}, false
+		}
+		// settled tells the claimant has its values for good: it loses none,
+		// and neither do its parent policies.
+		var settled func(key string, seen map[string]bool) bool
+		settled = func(key string, seen map[string]bool) bool {
+			cand, ok := byKey[key]
+			if !ok || !active[key] || seen[key] {
+				return false
+			}
+			if _, loses := lost(cand); loses {
+				return false
+			}
+			seen[key] = true
+			return cand.requires == "" || settled(cand.requires, seen)
+		}
+		var out []claimant
+		for _, cand := range sorted {
+			if active[cand.key] && cand.requires != "" && !active[cand.requires] {
+				// Out with its parent policy, which tells why.
+				out = append(out, cand)
+			}
+		}
+		if len(out) == 0 {
+			// Those losing a value to a claimant that has its values for good
+			// are out: whatever else goes, they can't have it.
+			var losers []claimant
+			for _, cand := range sorted {
+				if !active[cand.key] {
+					continue
+				}
+				if v, ok := lost(cand); ok {
+					losers = append(losers, cand)
+					if settled(owners[v], map[string]bool{}) {
+						out = append(out, cand)
+					}
+				}
+			}
+			if len(out) == 0 {
+				// Each loser loses only to claimants that lose too, e.g. two
+				// that swapped their values: none can have its values.
+				out = losers
+			}
+		}
+		if len(out) == 0 {
+			return
+		}
+		for _, cand := range out {
+			active[cand.key] = false
+			if v, ok := lost(cand); ok {
+				c.conflicts[cand.key] = fmt.Sprintf("its %s %q is already the one of %s", v.scope, v.value, owners[v])
+			}
 		}
 	}
-	for _, v := range values {
-		if c.claimed[v.scope] == nil {
-			c.claimed[v.scope] = map[string]string{}
-		}
-		c.claimed[v.scope][v.value] = self
+}
+
+// wasSent tells whether the entity of the object was in the last
+// configuration of the gateway that could be sent, or whether that isn't
+// known (see sentUnknown).
+func (c *configuration) wasSent(obj client.Object) bool {
+	if c.sent == nil {
+		return c.sentUnknown
 	}
-	return ""
+	_, ok := c.sent[sentID(obj)]
+	return ok
+}
+
+// sentEntity returns the entity of the object in the last configuration of
+// the gateway that could be sent, or nil.
+func (c *configuration) sentEntity(obj client.Object) any {
+	return c.sent[sentID(obj)]
+}
+
+// sentID returns the id of the entity of the object, or the zero id, which no
+// entity has.
+func sentID(obj client.Object) uuid.UUID {
+	id, _ := entityIDOf(obj)
+	return id
+}
+
+// sentEntities returns the entities of the configuration, by id, or nil when
+// there is none.
+func sentEntities(set *gwadminapi.GatewayEntitySet) map[uuid.UUID]any {
+	if set == nil {
+		return nil
+	}
+	sent := map[uuid.UUID]any{}
+	for _, e := range set.BackendClusters {
+		sent[e.Id] = e
+	}
+	for _, e := range set.TlsTrustBundles {
+		sent[e.Id] = e
+	}
+	for _, e := range set.SchemaRegistries {
+		sent[e.Id] = e
+	}
+	for _, e := range set.StaticKeys {
+		sent[e.Id] = e
+	}
+	for _, e := range set.VirtualClusters {
+		sent[e.Id] = e
+		for _, p := range e.ClusterPolicies {
+			sent[p.Id] = p
+		}
+		for _, p := range e.ConsumePolicies {
+			sent[p.Id] = p
+		}
+		for _, p := range e.ProducePolicies {
+			sent[p.Id] = p
+		}
+	}
+	for _, e := range set.Listeners {
+		sent[e.Id] = e
+		for _, p := range e.Policies {
+			sent[p.Id] = p
+		}
+	}
+	return sent
 }
 
 // policyNameScope is the scope of the names of the policies (see uniqueValue).
@@ -199,22 +369,37 @@ type excludedEntity struct {
 // entities attached to it. An entity that can't be sent as it is left out,
 // with a reason, and stops the configuration from being pushed unless it
 // doesn't belong to it (see exclude, leaveOut and blocked), unless only a
-// Secret it reads is gone or lacks the key read:
-// it is then sent as it was in previous, the entities of the last
-// configuration built for the gateway. The same entities always produce the same configuration: each
+// Secret it reads is gone or lacks the key read: it is then sent as it was in
+// previous, the entities of the last configuration recorded for the gateway.
+// The same entities, after the same configuration sent (see
+// buildConfigurationAfter), always produce the same configuration: each
 // entity has the UID and the creation time of its object. An error reading
 // the cluster, other than an object that doesn't exist, is returned: leaving
 // the entity out would delete it from gw-admin.
 func buildConfiguration(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
 ) (configuration, error) {
+	return buildConfigurationAfter(ctx, cl, gateway, secretHint, previous, nil)
+}
+
+// buildConfigurationAfter builds the configuration of the gateway, as
+// buildConfiguration, after sent, the entities of the last configuration of
+// the gateway that could be sent, the one it records, or nil when they aren't
+// known: an entity sent keeps its unique values, and one that can't stops the
+// push (see reserve and excludeConflict).
+func buildConfigurationAfter(
+	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
+	sent *gwadminapi.GatewayEntitySet,
+) (configuration, error) {
 	cfg := configuration{
-		namespace:  gateway.Namespace,
-		secretHint: secretHint,
-		objects:    map[string]string{},
-		entities:   noEntities(),
-		previous:   previous,
-		built:      map[types.UID]any{},
+		namespace:   gateway.Namespace,
+		secretHint:  secretHint,
+		objects:     map[string]string{},
+		entities:    noEntities(),
+		previous:    previous,
+		sent:        sentEntities(sent),
+		sentUnknown: sent == nil && gateway.Status.ConfigRevision != 0,
+		built:       map[types.UID]any{},
 	}
 	backendClusters, err := cfg.addGatewayEntities(ctx, cl, gateway)
 	if err != nil {
@@ -225,20 +410,26 @@ func buildConfiguration(
 	if err != nil {
 		return configuration{}, err
 	}
-	// A policy name belongs to the oldest policy naming it, whatever its kind.
-	if err := cfg.reservePolicyNames(ctx, cl, gateway, virtualClusters); err != nil {
-		return configuration{}, err
-	}
 	// The policies reference the entities added so far.
 	targets := referenceTargetsOf(&cfg, resolver.read)
-	if err := cfg.addVirtualClusterPolicies(ctx, resolver, virtualClusters, targets); err != nil {
+	vcPolicies, err := cfg.convertVirtualClusterPolicies(ctx, resolver, virtualClusters, targets)
+	if err != nil {
+		return configuration{}, err
+	}
+	listeners, listenerPolicies, err := cfg.addListeners(ctx, resolver, gateway, targets)
+	if err != nil {
+		return configuration{}, err
+	}
+	// A policy name belongs to one policy of the gateway, whatever its kind:
+	// the names are reserved among every policy before any is added.
+	cfg.reserve(slices.Concat(vcPolicies.claimants, listenerPolicies.claimants))
+	if err := vcPolicies.add(); err != nil {
 		return configuration{}, err
 	}
 	if err := cfg.addClusterPolicyChains(ctx, cl, virtualClusters); err != nil {
 		return configuration{}, err
 	}
-	listeners, err := cfg.addListeners(ctx, resolver, gateway, targets)
-	if err != nil {
+	if err := listenerPolicies.add(); err != nil {
 		return configuration{}, err
 	}
 	if err := cfg.addListenerPolicyChains(ctx, cl, listeners); err != nil {
@@ -275,10 +466,6 @@ type entityKind[PT entityObject, E any] struct {
 	// unique, when set, returns the values of an entity no other entity of
 	// the gateway may have, whatever its kind (see uniqueValue).
 	unique func(E) []uniqueValue
-	// conflictLeftOut tells an entity whose name or unique value an older one
-	// of the gateway has is only left out (see leaveOut): the older one keeps
-	// running, so leaving the newer out doesn't change what the gateway does.
-	conflictLeftOut bool
 	// list returns the path of the list of the configuration the entity of
 	// an object is added to, e.g. backend_clusters, and the list.
 	list func(PT) (string, *[]E)
@@ -338,43 +525,103 @@ func isLive(obj client.Object) bool {
 	return obj.GetDeletionTimestamp().IsZero() || (isHeldKind(reflect.TypeOf(obj)) && controllerutil.ContainsFinalizer(obj, FinalizerInUse))
 }
 
-// addEntities adds the entities of the objects, from the oldest, and returns
-// the index of the entity of each object added in its list. Two entities of a
-// kind with a name can't have the same name: the oldest one is kept.
-func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, cl client.Client, objs []PT, k entityKind[PT, E]) (map[client.ObjectKey]int, error) {
+// uniqueValues returns the unique values of an entity of the kind: its name
+// among the entities of the kind, and those unique returns.
+func (k entityKind[PT, E]) uniqueValues(e E) []uniqueValue {
+	var values []uniqueValue
+	if k.name != nil {
+		values = append(values, uniqueValue{kind: k.kind, scope: "spec.apiSpec.name", value: k.name(e)})
+	}
+	if k.unique != nil {
+		values = append(values, k.unique(e)...)
+	}
+	return values
+}
+
+// pendingEntity is an object converted into its entity, to add once the unique
+// values are reserved (see reserve).
+type pendingEntity[PT entityObject, E any] struct {
+	obj  PT
+	conv converted[E]
+	// ok tells it converted. Otherwise, excluded tells why it is left out,
+	// recorded once it is added: one whose parent policy isn't added goes
+	// along with its parent instead (see excludeOrphans).
+	ok       bool
+	excluded []excludedEntity
+}
+
+// convertEntities converts the objects into their entities, from the oldest.
+func convertEntities[PT entityObject, E any](ctx context.Context, c *configuration, cl client.Client, objs []PT, k entityKind[PT, E]) ([]pendingEntity[PT, E], error) {
 	objs = slices.Clone(objs)
 	slices.SortFunc(objs, byCreation[PT])
-
-	index := map[client.ObjectKey]int{}
-	names := map[string]struct{}{}
+	pending := make([]pendingEntity[PT, E], 0, len(objs))
 	for _, obj := range objs {
+		before := len(c.excluded)
 		conv, ok, err := convertObject[PT, E](ctx, c, cl, obj, k.kind, k.request, k.adjust)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
+		pending = append(pending, pendingEntity[PT, E]{obj: obj, conv: conv, ok: ok, excluded: slices.Clone(c.excluded[before:])})
+		c.excluded = c.excluded[:before]
+	}
+	return pending, nil
+}
+
+// claimantsOf returns the objects converted as claimants of the unique values
+// of their entities. parentOf, when set, returns the parent policy of an
+// object, of its own kind.
+func claimantsOf[PT entityObject, E any](c *configuration, pending []pendingEntity[PT, E], k entityKind[PT, E], parentOf func(PT) (client.ObjectKey, bool)) []claimant {
+	claimants := make([]claimant, 0, len(pending))
+	for _, p := range pending {
+		if !p.ok {
 			continue
 		}
-		if k.name != nil {
-			name := k.name(conv.entity)
-			if _, ok := names[name]; ok {
-				c.excludeConflict(conv.status, k.conflictLeftOut, fmt.Sprintf("another %s of the gateway is named %q", k.what, name))
-				continue
-			}
-			names[name] = struct{}{}
+		next := claimant{key: ownerOf(k.kind, p.obj), kind: k.kind, obj: p.obj, values: k.uniqueValues(p.conv.entity)}
+		if last, ok := c.sentEntity(p.obj).(E); ok {
+			next.sent = k.uniqueValues(last)
 		}
-		if k.unique != nil {
-			if message := c.claim(obj, k.kind, k.unique(conv.entity)); message != "" {
-				c.excludeConflict(conv.status, k.conflictLeftOut, message)
-				continue
+		if parentOf != nil {
+			if parent, ok := parentOf(p.obj); ok {
+				next.requires = k.kind + " " + parent.String()
 			}
 		}
-		path, entities := k.list(obj)
-		index[client.ObjectKeyFromObject(obj)] = len(*entities)
-		c.record(fmt.Sprintf("%s.%d", path, len(*entities)), k.kind, conv.status, conv.entity)
-		*entities = append(*entities, conv.entity)
+		claimants = append(claimants, next)
 	}
-	return index, nil
+	return claimants
+}
+
+// addPending adds the entities of the objects converted, but those that can't
+// have their unique values (see reserve), and returns the index of the entity
+// of each object added in its list.
+func addPending[PT entityObject, E any](c *configuration, pending []pendingEntity[PT, E], k entityKind[PT, E]) map[client.ObjectKey]int {
+	index := map[client.ObjectKey]int{}
+	for _, p := range pending {
+		c.excluded = append(c.excluded, p.excluded...)
+		if !p.ok {
+			continue
+		}
+		if message := c.conflicts[ownerOf(k.kind, p.obj)]; message != "" {
+			c.excludeConflict(p.conv.status, message)
+			continue
+		}
+		path, entities := k.list(p.obj)
+		index[client.ObjectKeyFromObject(p.obj)] = len(*entities)
+		c.record(fmt.Sprintf("%s.%d", path, len(*entities)), k.kind, p.conv.status, p.conv.entity)
+		*entities = append(*entities, p.conv.entity)
+	}
+	return index
+}
+
+// addEntities adds the entities of the objects, from the oldest, and returns
+// the index of the entity of each object added in its list. An entity can't
+// have a unique value another one has (see reserve and excludeConflict).
+func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, cl client.Client, objs []PT, k entityKind[PT, E]) (map[client.ObjectKey]int, error) {
+	pending, err := convertEntities(ctx, c, cl, objs, k)
+	if err != nil {
+		return nil, err
+	}
+	c.reserve(claimantsOf(c, pending, k, nil))
+	return addPending(c, pending, k), nil
 }
 
 // parents are the objects of a kind other entities are the children of. A
@@ -437,61 +684,91 @@ func childrenOf[T any, PT interface {
 	return children, parentIndex, keys, nil
 }
 
-// addChildren adds the objects of a kind whose parent, by the index field, is
-// one of the parents, listed into list, whose items are items. listOf returns
-// the path and the list of the entities of the children of the parent at an
-// index in its list, e.g. listeners.0.policies. A child of its own kind, of
-// the parent parentOf returns when set, is added after its parent.
-func addChildren[T any, PT interface {
+// policyGroup are policies converted into their entities, to add once their
+// names are reserved among every policy of the gateway (see reserve).
+type policyGroup struct {
+	claimants []claimant
+	adds      []func() error
+}
+
+// join adds policies of a kind to the group.
+func (g *policyGroup) join(claimants []claimant, add func() error) {
+	g.claimants = append(g.claimants, claimants...)
+	g.adds = append(g.adds, add)
+}
+
+// add adds the policies of the group.
+func (g policyGroup) add() error {
+	for _, add := range g.adds {
+		if err := add(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// convertChildren converts the objects of a kind whose parent, by the index
+// field, is one of the parents, listed into list, whose items are items, and
+// returns them as claimants, with the function adding them. listOf returns the
+// path and the list of the entities of the children of the parent at an index
+// in its list, e.g. listeners.0.policies. A child of its own kind, of the
+// parent parentOf returns when set, is added after its parent.
+func convertChildren[T any, PT interface {
 	*T
 	entityObject
 }, E any](
 	ctx context.Context, c *configuration, cl client.Client, p parents, list client.ObjectList, items *[]T, field string,
 	listOf func(parent int) (string, *[]E), parentOf func(PT) (client.ObjectKey, bool), k entityKind[PT, E],
-) error {
+) ([]claimant, func() error, error) {
 	children, parentIndex, _, err := childrenOf[T, PT](ctx, c, cl, list, items, field, p)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	k.list = func(obj PT) (string, *[]E) { return listOf(parentIndex[client.ObjectKeyFromObject(obj)]) }
+	pending, err := convertEntities(ctx, c, cl, children, k)
+	if err != nil {
+		return nil, nil, err
+	}
 	// A parent policy must be attached to the same entity, e.g. virtual
 	// cluster, as its children: Konnect refuses a parent of another one.
 	sameParent := func(child, parent client.ObjectKey) bool { return parentIndex[child] == parentIndex[parent] }
-	return addParentsFirst[PT, E](ctx, c, cl, children, parentOf, sameParent, k)
+	return claimantsOf(c, pending, k, parentOf), func() error {
+		return addParentsFirst(ctx, c, cl, pending, parentOf, sameParent, k)
+	}, nil
 }
 
-// addParentsFirst adds the objects, a parent, of their own kind, before its
-// children: those without a parent first, then their children, and so on.
-// One whose parent isn't added, or is attached to another entity than it,
-// sameParent telling, is left out. parentOf, when set, returns the parent of
-// an object.
+// addParentsFirst adds the objects converted, a parent, of their own kind,
+// before its children: those without a parent first, then their children, and
+// so on. One whose parent isn't added, or is attached to another entity than
+// it, sameParent telling, is left out. parentOf, when set, returns the parent
+// of an object.
 func addParentsFirst[PT entityObject, E any](
-	ctx context.Context, c *configuration, cl client.Client, objs []PT, parentOf func(PT) (client.ObjectKey, bool),
+	ctx context.Context, c *configuration, cl client.Client, pending []pendingEntity[PT, E], parentOf func(PT) (client.ObjectKey, bool),
 	sameParent func(child, parent client.ObjectKey) bool, k entityKind[PT, E],
 ) error {
 	added := map[client.ObjectKey]int{}
-	for pending := objs; len(pending) > 0; {
-		var ready, waiting []PT
-		for _, obj := range pending {
+	for len(pending) > 0 {
+		var ready, waiting []pendingEntity[PT, E]
+		for _, p := range pending {
 			if parentOf != nil {
-				if parent, ok := parentOf(obj); ok {
+				if parent, ok := parentOf(p.obj); ok {
 					_, isAdded := added[parent]
-					if !isAdded || !sameParent(client.ObjectKeyFromObject(obj), parent) {
-						waiting = append(waiting, obj)
+					if !isAdded || !sameParent(client.ObjectKeyFromObject(p.obj), parent) {
+						waiting = append(waiting, p)
 						continue
 					}
 				}
 			}
-			ready = append(ready, obj)
+			ready = append(ready, p)
 		}
 		if len(ready) == 0 {
-			return excludeOrphans(ctx, c, cl, waiting, parentOf, added)
+			orphans := make([]PT, 0, len(waiting))
+			for _, p := range waiting {
+				orphans = append(orphans, p.obj)
+			}
+			return excludeOrphans(ctx, c, cl, orphans, parentOf, added)
 		}
-		index, err := addEntities(ctx, c, cl, ready, k)
-		if err != nil {
-			return err
-		}
-		maps.Copy(added, index)
+		maps.Copy(added, addPending(c, ready, k))
 		pending = waiting
 	}
 	return nil
@@ -712,7 +989,7 @@ func (c *configuration) refreshResourceVersions(versions map[reportedEntity]stri
 // record records the object an entity of the configuration comes from, at
 // the path of the entity, and includes the object in the configuration.
 func (c *configuration) record(path, kind string, status entityStatus, entity any) {
-	c.objects[path] = kind + " " + client.ObjectKeyFromObject(status.obj).String()
+	c.objects[path] = ownerOf(kind, status.obj)
 	c.built[status.obj.GetUID()] = entity
 	c.included = append(c.included, status)
 }
@@ -730,21 +1007,25 @@ func (c *configuration) exclude(status entityStatus, reason kcfgconsts.Condition
 // leaveOut leaves the object out of the configuration, with the reason,
 // without stopping the configuration from being pushed: the object doesn't
 // belong to it, e.g. it is in another namespace no KongReferenceGrant lets in,
-// which must not hold back the
-// gateway, or it is left out along with its parent, which tells why.
+// which must not hold back the gateway, it is left out along with its parent,
+// which tells why, or it was never sent and conflicts with another (see
+// excludeConflict).
 func (c *configuration) leaveOut(status entityStatus, message string) {
 	c.addExcluded(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message, false)
 }
 
-// excludeConflict leaves out an object conflicting with an older one: it
-// stops the configuration from being pushed, unless leftOut (see exclude and
-// leaveOut).
-func (c *configuration) excludeConflict(status entityStatus, leftOut bool, message string) {
-	if leftOut {
-		c.leaveOut(status, message)
+// excludeConflict leaves out an object with a unique value another object
+// owns (see reserve). Only when its entity was sent does it stop the
+// configuration from being pushed (see exclude): leaving it out would take it
+// off the gateway. Never sent, it is only left out (see leaveOut): the gateway
+// keeps running as it does, so anyone able to create an entity of the gateway
+// can't hold back its configuration with a name taken already.
+func (c *configuration) excludeConflict(status entityStatus, message string) {
+	if c.wasSent(status.obj) {
+		c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 		return
 	}
-	c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
+	c.leaveOut(status, message)
 }
 
 // leaveOutNotPermitted leaves out, like leaveOut, an object of another
@@ -865,7 +1146,7 @@ func (c *configuration) parentNotGranted(ctx context.Context, cl client.Client, 
 	if parent.Namespace == obj.GetNamespace() {
 		return "", nil
 	}
-	self := kind + " " + client.ObjectKeyFromObject(obj).String()
+	self := ownerOf(kind, obj)
 	if message, ok := c.parentsNotGranted[self]; ok {
 		return message, nil
 	}

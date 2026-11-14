@@ -1106,7 +1106,7 @@ spec:
         - name: gateway_ref_namespace
           value: (`null`)
     - name: 69-assert-bc-n-gateway-not-held-back
-      description: "[N, its name] The conflicting EventGatewayVirtualCluster is only left out. witness-5, created after it, is pushed."
+      description: "[N, its name] The conflicting EventGatewayVirtualCluster, never sent, is only left out. witness-5, created after it, is pushed."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:

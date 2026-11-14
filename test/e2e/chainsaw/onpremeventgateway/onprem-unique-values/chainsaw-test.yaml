@@ -1,0 +1,174 @@
+# Unique values of the entities of an OnPremEventGateway: the name of an entity
+# among its kind, the DNS label of a virtual cluster and the name of a policy
+# among every policy. A value stays with the entity sent with it: an entity
+# never sent that takes it is only left out, and the rest is still pushed to
+# gw-admin, across a restart of Kong Operator; an entity sent that takes it
+# stops the push.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-unique-values
+spec:
+  description: |
+    1. A backend cluster, a virtual cluster with a consume policy named
+       headers, and a listener are sent to gw-admin.
+    2. A backend cluster with the same name, a virtual cluster with the same
+       DNS label and a listener policy named headers are left out, naming the
+       entity holding the value, and the gateway stays Programmed.
+    3. A new consume policy is still pushed.
+    4. Kong Operator restarts: the duplicates are still only left out, and a
+       new consume policy is pushed.
+    5. A second backend cluster is sent, then renamed into the name of the
+       first: the push stops, and gw-admin keeps both backend clusters.
+    6. Kong Operator restarts: the push is still stopped.
+    7. Renamed back, it is pushed again.
+  # Restarts the operator.
+  concurrent: false
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+
+    - name: 1-Entities-sent
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name)) == ["backend"] and (.entities.virtual_clusters | map(.dns_label)) == ["vcluster"] and (.entities.virtual_clusters[0].consume_policies | map(.name)) == ["headers"]'
+
+    - name: 2-Duplicates-never-sent-left-out
+      try:
+        - apply:
+            file: 02-duplicates.yaml
+        - assert:
+            file: assert-duplicates-left-out.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+
+    - name: 3-Push-goes-on
+      try:
+        - apply:
+            file: policy.yaml
+            bindings:
+              - name: policy_name
+                value: before-restart
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.virtual_clusters[0].consume_policies | map(.name) | sort) == ["before-restart", "headers"] and (.entities.backend_clusters | length) == 1 and (.entities.virtual_clusters | length) == 1 and (.entities.listeners[0].policies | length) == 0'
+
+    - name: 4-Operator-restarted
+      try:
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh restart-operator 180
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-operator-idle 150
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: assert-duplicates-left-out.yaml
+        - apply:
+            file: policy.yaml
+            bindings:
+              - name: policy_name
+                value: after-restart
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.virtual_clusters[0].consume_policies | map(.name) | sort) == ["after-restart", "before-restart", "headers"] and (.entities.backend_clusters | length) == 1'
+
+    - name: 5-Sent-entity-renamed-into-a-taken-name
+      try:
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: second
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: backend
+        - assert:
+            file: assert-gateway-blocked.yaml
+        - assert:
+            resource: &second-left-out
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              metadata:
+                name: second
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: Invalid
+        # gw-admin keeps what it has.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+
+    - name: 6-Still-stopped-after-a-restart
+      try:
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh restart-operator 180
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-operator-idle 150
+        - assert:
+            file: assert-gateway-blocked.yaml
+        - assert:
+            resource: *second-left-out
+
+    - name: 7-Renamed-back
+      try:
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: second
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
