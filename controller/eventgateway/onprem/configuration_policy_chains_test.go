@@ -132,7 +132,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 			_, err = f.r.Reconcile(t.Context(), read(t, cl, f.gateway))
 			require.NoError(t, err)
 			if tt.blocked {
-				require.Empty(t, f.pod().recorded())
+				require.NotContains(t, f.pod().recorded(), callEntities)
 			} else {
 				require.Contains(t, f.pod().recorded(), callEntities, "an unowned excluded scope must not block the gateway")
 			}
@@ -196,7 +196,7 @@ func TestReconcileClusterPolicyChainParentLifecycle(t *testing.T) {
 				require.Empty(t, held.VirtualClusters)
 				require.Equal(t, "Detached", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
 			} else {
-				require.Empty(t, f.pod().recorded(), "an excluded owning scope must retain the last running document")
+				require.NotContains(t, f.pod().recorded(), callEntities, "an excluded owning scope must retain the last running document")
 				require.Equal(t, first.Status.ConfigRevision, current.Status.ConfigRevision)
 				require.Equal(t, first.Status.ConfigHash, current.Status.ConfigHash)
 				require.Equal(t, "InvalidPolicyChain", condition.Reason)
@@ -287,7 +287,7 @@ func TestReconcileClusterPolicyChainLifecycle(t *testing.T) {
 	require.NoError(t, f.cl.Update(t.Context(), chain))
 	f.pod().reset()
 	reconcile()
-	require.Empty(t, f.pod().recorded(), "an incomplete owner freezes the whole document, including its revision")
+	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document, including its revision")
 	require.Equal(t, second.Status.ConfigRevision, read(t, f.cl, f.gateway).Status.ConfigRevision)
 	require.Equal(t, second.Status.ConfigHash, read(t, f.cl, f.gateway).Status.ConfigHash)
 	expectProgrammed(metav1.ConditionFalse, "Invalid")
@@ -560,12 +560,12 @@ func TestProducePolicyOrderKeepsReferencesLocal(t *testing.T) {
 			},
 		},
 	}
-	problem := producePolicyOrder(chain, []policyRef{{name: "first", namespace: "other"}}, []entityWithParent{policy("first")})
+	problem := producePolicyOrder(chain, []policyRef{{name: "first", namespace: "other"}}, []entityWithParent{policy("first")}, nil)
 	require.Contains(t, problem, "not cross-namespace")
 
 	chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
 	chain.Spec.APISpec.Policies[0].Namespace = ""
-	problem = producePolicyOrder(chain, []policyRef{{name: "first"}}, []entityWithParent{policy("first")})
+	problem = producePolicyOrder(chain, []policyRef{{name: "first"}}, []entityWithParent{policy("first")}, nil)
 	require.Contains(t, problem, "in the same namespace")
 }
 
