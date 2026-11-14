@@ -355,6 +355,79 @@ func TestUniquePolicyNames(t *testing.T) {
 	})
 }
 
+// An entity whose parent, never sent, is left out as it can't have a unique
+// value goes along with it, and stops the push when it was sent: it would be
+// taken off the gateway.
+func TestUniqueValuesParentLeftOut(t *testing.T) {
+	// The fixture has the backend cluster bc and its virtual cluster vc.
+	f := newUniqueFixture(t)
+	listener := f.listenerNamed("listener", "listener", 0)
+	// movedOf is a virtual cluster of the backend cluster bc.
+	movedOf := func(bc string) *configurationv1alpha1.EventGatewayVirtualCluster {
+		return fromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, f.at(3), `
+metadata: {name: moved}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: `+bc+`}}
+  apiSpec: {name: moved, aclMode: passthrough, authentication: [{type: anonymous}], dnsLabel: moved}
+`)
+	}
+	// produceOf is a produce policy of the virtual cluster vc.
+	produceOf := func(vc string) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
+		return fromYAML[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](t, f.at(3), `
+metadata: {name: produce}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: `+vc+`}}
+  apiSpec:
+`+modifyHeaders("produce", ""))
+	}
+
+	for _, tc := range []struct {
+		name string
+		// before is the entity as sent, with others, and after the same
+		// entity moved to parent, which, never sent, can't have a unique
+		// value.
+		before, after, parent client.Object
+		others                []client.Object
+		out, parentOut        string
+	}{
+		{
+			name:   "a virtual cluster moved to a backend cluster that can't have its name",
+			before: movedOf("bc"), after: movedOf("bc2"),
+			parent: f.backendCluster("bc2", "bc", 2),
+			out:    "EventGatewayVirtualCluster moved", parentOut: "EventGatewayBackendCluster bc2",
+		},
+		{
+			name:   "a policy moved to a virtual cluster that can't have its DNS label",
+			before: produceOf("vc"), after: produceOf("vc2"),
+			parent: f.virtualCluster("vc2", "vc2", "vc", 2),
+			out:    "EventGatewayVirtualClusterProducePolicy produce", parentOut: "EventGatewayVirtualCluster vc2",
+		},
+		{
+			name:   "a listener policy moved to a listener that can't have its name",
+			before: f.forward("forward", "listener", "forward", 3), after: f.forward("forward", "duplicate", "forward", 3),
+			parent: f.listenerNamed("duplicate", "listener", 2), others: []client.Object{listener},
+			out: "EventGatewayListenerPolicy forward", parentOut: "EventGatewayListener duplicate",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.after.SetUID(tc.before.GetUID())
+			objs := append(slices.Clone(tc.others), tc.parent, tc.after)
+			t.Run("never sent, goes along with its parent", func(t *testing.T) {
+				cfg := f.build(f.sent(), objs...)
+				assert.Equal(t, map[string]bool{tc.parentOut: false, tc.out: false}, excludedBlocking(cfg))
+				require.NoError(t, cfg.blocked())
+			})
+			t.Run("sent, stops the push", func(t *testing.T) {
+				cfg := f.build(f.sent(append(slices.Clone(tc.others), tc.before)...), objs...)
+				assert.Equal(t, map[string]bool{tc.parentOut: false, tc.out: true}, excludedBlocking(cfg),
+					"left out, it would be taken off the gateway")
+				assert.Contains(t, excludedMessages(cfg)[tc.out], "isn't in the configuration")
+				assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason, failureReason(cfg.blocked()))
+			})
+		})
+	}
+}
+
 // A virtual cluster that can't have its DNS label has none of its unique
 // values: a newer one may take its name.
 func TestUniqueValuesAllOrNothing(t *testing.T) {

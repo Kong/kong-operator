@@ -26,6 +26,11 @@ spec:
        is taken: the parent, never sent, is only left out, but the child
        stops the push, and gw-admin keeps it.
     9. The parent policy renamed, both are pushed.
+    10. A consume policy is sent, then, while another entity stops the push,
+        moved to the virtual cluster whose DNS label is taken: the virtual
+        cluster, never sent, is only left out, but the policy stops the push,
+        and gw-admin keeps it.
+    11. Moved back, it is pushed again.
   # Restarts the operator.
   concurrent: false
   bindings:
@@ -225,6 +230,69 @@ spec:
               apiVersion: configuration.konghq.com/v1alpha1
               kind: EventGatewayVirtualClusterConsumePolicy
               name: parent
+
+    - name: 10-Sent-policy-moved-to-a-virtual-cluster-left-out
+      try:
+        - apply:
+            file: moved-policy.yaml
+            bindings:
+              - name: virtual_cluster
+                value: vcluster
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null'
+        # A programmed policy can't change its virtual cluster: the backend
+        # cluster second, renamed into a taken name, stops the push, and the
+        # policy is no longer programmed.
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: backend
+        - assert:
+            file: assert-gateway-blocked.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: moved
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: GatewayNotProgrammed
+        - apply:
+            file: moved-policy.yaml
+            bindings:
+              - name: virtual_cluster
+                value: vcluster-duplicate
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: second
+        - assert:
+            file: assert-gateway-blocked-by-moved.yaml
+        # gw-admin keeps the policy, in its virtual cluster.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.virtual_clusters | map(.name)) == ["vcluster"] and ([.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null)'
+
+    - name: 11-Moved-back
+      try:
+        - apply:
+            file: moved-policy.yaml
+            bindings:
+              - name: virtual_cluster
+                value: vcluster
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null'
 
   catch:
     - description: Capture debug snapshot on test failure.

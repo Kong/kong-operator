@@ -1,0 +1,23 @@
+# The push of the OnPremEventGateway gateway_name is stopped by the consume
+# policy moved, sent, whose new virtual cluster is left out.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: InvalidEntities
+      (contains(message, 'EventGatewayVirtualClusterConsumePolicy')): true
+      (contains(message, '/moved')): true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: moved
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: Invalid
+      (contains(message, 'its EventGatewayVirtualCluster')): true
+      (contains(message, '/vcluster-duplicate')): true

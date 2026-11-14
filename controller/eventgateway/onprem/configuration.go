@@ -363,8 +363,8 @@ type excludedEntity struct {
 	// left out, it would change what the gateway does, e.g. a policy no
 	// longer applied (see configuration.blocked).
 	blocks bool
-	// conflict tells the object, never sent, is only left out as it or its
-	// parent policy can't have a unique value (see excludeConflict).
+	// conflict tells the object, never sent, is only left out as it, or a
+	// parent of it, can't have a unique value (see leaveOutWithParent).
 	conflict bool
 }
 
@@ -496,7 +496,7 @@ func addAttached[T any, PT interface {
 	if err != nil {
 		return parents{}, err
 	}
-	p := parents{kind: k.kind, index: index}
+	p := parents{kind: k.kind, typ: reflect.TypeFor[PT](), index: index}
 	for _, obj := range objs {
 		p.keys = append(p.keys, client.ObjectKeyFromObject(obj))
 	}
@@ -629,6 +629,8 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 // child is in the configuration only when its parent is.
 type parents struct {
 	kind string
+	// typ is the type of the parents, e.g. *EventGatewayVirtualCluster.
+	typ reflect.Type
 	// keys are every parent of the gateway, in the configuration or not.
 	keys []client.ObjectKey
 	// index is the index of each parent in the configuration in its list.
@@ -674,8 +676,8 @@ func childrenOf[T any, PT interface {
 			i, ok := p.index[parent]
 			if !ok {
 				// The parent is left out, and tells why: whether it holds back
-				// the configuration is up to it.
-				c.leaveOut(entityStatus{obj: child}, fmt.Sprintf("its %s %s isn't in the configuration", p.kind, parent))
+				// the configuration is up to it (see leaveOutWithParent).
+				c.leaveOutWithParent(child, p.typ, parent, fmt.Sprintf("its %s %s isn't in the configuration", p.kind, parent))
 				continue
 			}
 			parentIndex[key] = i
@@ -780,13 +782,10 @@ func addParentsFirst[PT entityObject, E any](
 // another entity, in another namespace reports it, as when its parent is in
 // the configuration, and stops the configuration from being pushed (see
 // siblingsNotGranted). One whose parent is left out, directly or through its
-// own parent, goes along with it: the parent tells why. When the parent, never
-// sent, is left out as it can't have a unique value, one that was sent stops
-// the configuration from being pushed instead, as excludeConflict does:
-// leaving it out would take it off the gateway. One whose parent
-// doesn't exist, is being deleted, or is in a cycle of parents stops the
-// configuration from being pushed: without its parent, it isn't applied, e.g.
-// fields are no longer encrypted.
+// own parent, goes along with it: the parent tells why (see
+// leaveOutWithParent). One whose parent doesn't exist, is being deleted, or is
+// in a cycle of parents stops the configuration from being pushed: without its
+// parent, it isn't applied, e.g. fields are no longer encrypted.
 func excludeOrphans[PT entityObject](
 	ctx context.Context, c *configuration, cl client.Client, objs []PT, parentOf func(PT) (client.ObjectKey, bool), added map[client.ObjectKey]int,
 ) error {
@@ -810,15 +809,7 @@ func excludeOrphans[PT entityObject](
 			if !c.isExcluded(reflect.TypeOf(obj), parent) {
 				continue
 			}
-			message := fmt.Sprintf("its parent policy %s isn't in the configuration", parent)
-			switch {
-			case !c.leftOutConflict(reflect.TypeOf(obj), parent):
-				c.leaveOut(entityStatus{obj: obj}, message)
-			case c.wasSent(obj):
-				c.exclude(entityStatus{obj: obj}, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
-			default:
-				c.leaveOutConflict(entityStatus{obj: obj}, message)
-			}
+			c.leaveOutWithParent(obj, reflect.TypeOf(obj), parent, fmt.Sprintf("its parent policy %s isn't in the configuration", parent))
 			pending = slices.Delete(pending, i, i+1)
 			i--
 			changed = true
@@ -1041,14 +1032,31 @@ func (c *configuration) excludeConflict(status entityStatus, message string) {
 }
 
 // leaveOutConflict leaves out, like leaveOut, an object never sent that can't
-// have a unique value, or whose parent policy can't (see excludeConflict).
+// have a unique value, or whose parent can't (see excludeConflict).
 func (c *configuration) leaveOutConflict(status entityStatus, message string) {
 	c.leaveOut(status, message)
 	c.excluded[len(c.excluded)-1].conflict = true
 }
 
-// leftOutConflict tells the object is only left out as it, or its parent
-// policy, can't have a unique value (see leaveOutConflict).
+// leaveOutWithParent leaves out, with the message, an object whose parent, of
+// the type, is left out: the parent tells why. When the parent, never sent, is
+// only left out as it, or its own parent, can't have a unique value, one that
+// was sent stops the configuration from being pushed instead, as
+// excludeConflict does: leaving it out would take it off the gateway. One never
+// sent goes along with it, as only left out for a unique value.
+func (c *configuration) leaveOutWithParent(obj entityObject, parentType reflect.Type, parent client.ObjectKey, message string) {
+	switch {
+	case !c.leftOutConflict(parentType, parent):
+		c.leaveOut(entityStatus{obj: obj}, message)
+	case c.wasSent(obj):
+		c.exclude(entityStatus{obj: obj}, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
+	default:
+		c.leaveOutConflict(entityStatus{obj: obj}, message)
+	}
+}
+
+// leftOutConflict tells the object is only left out as it, or a parent of it,
+// can't have a unique value (see leaveOutConflict).
 func (c *configuration) leftOutConflict(t reflect.Type, key client.ObjectKey) bool {
 	return slices.ContainsFunc(c.excluded, func(e excludedEntity) bool {
 		return e.conflict && reflect.TypeOf(e.obj) == t && client.ObjectKeyFromObject(e.obj) == key

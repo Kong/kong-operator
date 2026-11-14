@@ -19,6 +19,7 @@ package onprem
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -70,7 +71,7 @@ func (c *configuration) addVirtualClusters(ctx context.Context, cl uidResolver, 
 		vc.ConsumePolicies = []gwadminapi.EventGatewayConsumePolicyOnPrem{}
 		vc.ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
 	}
-	return parents{kind: "EventGatewayVirtualCluster", keys: keys, index: vcIndex}, nil
+	return parents{kind: "EventGatewayVirtualCluster", typ: reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster](), keys: keys, index: vcIndex}, nil
 }
 
 // convertVirtualClusterPolicies converts the cluster, consume and produce
