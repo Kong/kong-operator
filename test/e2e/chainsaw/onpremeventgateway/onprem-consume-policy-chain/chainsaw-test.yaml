@@ -1,0 +1,347 @@
+# Real gw-admin acceptance of on-prem Consume policy-chain ordering.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-consume-policy-chain
+spec:
+  description: |
+    A schemaValidation root, modifyHeaders and skipRecord children, and a
+    separate root exercise complete flat Consume ordering in real gw-admin.
+    Every order check also checks policy IDs against Kubernetes UIDs and both
+    child parent_policy_id values against the schemaValidation parent's UID.
+    Sibling reorder, whole-group movement, a competing owner, invalid parent
+    order, an incomplete list, correction and chain-only deletion preserve the
+    policy identities. No Konnect credentials, data plane or Kafka traffic is
+    needed; this does not verify Kafka data-path behavior.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+    - name: 1-The-chain-orders-the-complete-consume-list
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              spec:
+                eventGatewayVirtualClusterRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: vcluster
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+                    - name: first
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              (status.conditions[?type == 'Programmed'].observedGeneration == [metadata.generation]): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                (conditions[?type == 'PolicyChainOwnerValid']):
+                  - status: "True"
+                    reason: Owner
+                (id == null || id == ''): true
+                (gatewayID == null && virtualClusterID == null): true
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" parse second first root
+    - name: 2-Siblings-reorder-within-the-parent-group
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: first
+                    - name: second
+                    - name: root
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" parse first second root
+    - name: 3-The-whole-parent-group-moves
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: root
+                    - name: parse
+                    - name: first
+                    - name: second
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" root parse first second
+    - name: 4-A-competing-chain-cannot-replace-the-owner
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: competitor
+              spec:
+                eventGatewayVirtualClusterRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: vcluster
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+                    - name: first
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: competitor
+              (status.conditions[?type == 'Programmed'].observedGeneration == [metadata.generation]): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                (conditions[?type == 'PolicyChainOwnerValid']):
+                  - status: "False"
+                    reason: ConflictingChain
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" root parse first second
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              name: competitor
+    - name: 5-A-child-before-its-parent-retains-the-last-good-list
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: first
+                    - name: parse
+                    - name: second
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              (status.conditions[?type == 'Programmed'].observedGeneration == [metadata.generation]): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidPolicyChain
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" root parse first second
+    - name: 6-An-incomplete-list-also-blocks-the-complete-push
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              (status.conditions[?type == 'Programmed'].observedGeneration == [metadata.generation]): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidPolicyChain
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" root parse first second
+    - name: 7-Correcting-the-chain-resumes-application
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+                    - name: first
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              metadata:
+                name: chain
+              (status.conditions[?type == 'Programmed'].observedGeneration == [metadata.generation]): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                (id == null || id == ''): true
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" parse second first root
+    - name: 8-Deleting-only-the-chain-restores-parent-first-defaults
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicyChain
+              name: chain
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        # Ordinary assembly adds both roots before the children, each in
+        # creation/name order, rather than retaining the declared chain order.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: bash assert-order.sh "$GATEWAY" parse root first second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: vcluster
+                (annotations == null || annotations."gateway-operator.konghq.com/consume-policy-chain-owner" == null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: parse
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: first
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: root
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
