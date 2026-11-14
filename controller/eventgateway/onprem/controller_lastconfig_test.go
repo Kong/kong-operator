@@ -192,7 +192,7 @@ func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
 				{"id":"00000000-0000-4000-8000-000000000011","type":"acls"}]}
 		]
 	}`), &entities))
-	ordered := []uuid.UUID{entities.VirtualClusters[0].Id}
+	ordered := []orderedPolicyScope{{entities.VirtualClusters[0].Id, clusterPolicyChains.policyKind}}
 	last := &lastGoodConfig{
 		revision:        3,
 		config:          gatewayConfig{Entities: entities},

@@ -30,8 +30,7 @@ func (e invalidPolicyChainsError) Error() string {
 	return "Policy chains prevent applying the complete gateway configuration: " + strings.Join(e.problems, "; ")
 }
 
-// chainObject is a policy chain: an EventGatewayVirtualClusterPolicyChain or
-// an EventGatewayListenerPolicyChain.
+// chainObject is a policy chain ordering one policy scope.
 type chainObject interface {
 	policychain.Chain
 	entityObject
@@ -61,6 +60,10 @@ type policyChainScope[C chainObject, E any] struct {
 	// policies returns the policies the chain orders, nil when it doesn't
 	// supply them.
 	policies func(C) []policyRef
+	// validateReferences preserves any narrower API reference boundary.
+	validateReferences func(C) string
+	// validateOrder checks groups using the same resolved policy snapshots.
+	validateOrder func([]entityWithParent) string
 	// listPolicies lists the policies of the parent.
 	listPolicies func(ctx context.Context, cl client.Client, parent client.ObjectKey) ([]entityWithParent, error)
 	// entities returns the path, and the list, of the policies of the parent
@@ -101,6 +104,61 @@ var clusterPolicyChains = policyChainScope[*configurationv1alpha1.EventGatewayVi
 		return fmt.Sprintf("virtual_clusters.%d.cluster_policies", i), &vc.ClusterPolicies, vc.Id
 	},
 	id: func(p gwadminapi.EventGatewayClusterPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id },
+}
+
+var producePolicyChains = policyChainScope[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, gwadminapi.EventGatewayProducePolicyOnPrem]{
+	policyKind: "EventGatewayVirtualClusterProducePolicy",
+	parentWhat: "virtual cluster",
+	policyWhat: "produce policy",
+	listWhat:   "produce policy",
+	newPolicy:  func() entityWithParent { return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{} },
+	chains: func(ctx context.Context, c *configuration, cl client.Client, p parents) ([]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, map[client.ObjectKey]int, error) {
+		var list configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainList
+		chains, parentIndex, _, err := childrenOf(ctx, c, cl, &list, &list.Items,
+			index.IndexFieldEventGatewayVirtualClusterProducePolicyChainOnEventGatewayVirtualClusterRef, p)
+		return chains, parentIndex, err
+	},
+	policies: func(chain *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) []policyRef {
+		return policyRefs(chain.Spec.APISpec.Policies, func(r configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef) policyRef {
+			return policyRef{kind: r.Kind, name: r.Name, namespace: r.Namespace}
+		})
+	},
+	validateReferences: func(chain *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) string {
+		parent, ok := policychain.ParentKey(chain)
+		if !ok || parent.Namespace != chain.Namespace {
+			return "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"
+		}
+		for i, ref := range chain.Spec.APISpec.Policies {
+			if ref.Namespace != "" && ref.Namespace != chain.Namespace {
+				return fmt.Sprintf("spec.apiSpec.policies[%d] must reference a produce policy in the same namespace as this chain", i)
+			}
+		}
+		return ""
+	},
+	validateOrder: func(policies []entityWithParent) string {
+		ordered := make([]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, 0, len(policies))
+		for _, policy := range policies {
+			ordered = append(ordered, policy.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy))
+		}
+		if err := configurationv1alpha1.ValidateProducePolicyChainOrder(ordered); err != nil {
+			return err.Error()
+		}
+		return ""
+	},
+	listPolicies: func(ctx context.Context, cl client.Client, parent client.ObjectKey) ([]entityWithParent, error) {
+		var policies configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList
+		if err := cl.List(ctx, &policies, client.MatchingFields{
+			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef: parent.String(),
+		}); err != nil {
+			return nil, err
+		}
+		return entityWithParents(policies.Items), nil
+	},
+	entities: func(c *configuration, i int) (string, *[]gwadminapi.EventGatewayProducePolicyOnPrem, gwadminapi.UUIDv4) {
+		vc := &c.entities.VirtualClusters[i]
+		return fmt.Sprintf("virtual_clusters.%d.produce_policies", i), &vc.ProducePolicies, vc.Id
+	},
+	id: func(p gwadminapi.EventGatewayProducePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id },
 }
 
 // listenerPolicyChains order the policies of listeners.
@@ -164,6 +222,10 @@ func entityWithParents[T any, PT interface {
 
 func (c *configuration) addClusterPolicyChains(ctx context.Context, cl client.Client, virtualClusters parents) error {
 	return addPolicyChains(ctx, c, cl, virtualClusters, clusterPolicyChains)
+}
+
+func (c *configuration) addProducePolicyChains(ctx context.Context, cl client.Client, virtualClusters parents) error {
+	return addPolicyChains(ctx, c, cl, virtualClusters, producePolicyChains)
 }
 
 func (c *configuration) addListenerPolicyChains(ctx context.Context, cl client.Client, listeners parents) error {
@@ -233,6 +295,18 @@ func addPolicyChains[C chainObject, E any](ctx context.Context, c *configuration
 			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, err.Error())
 			continue
 		}
+		if s.validateReferences != nil {
+			if message := s.validateReferences(chain); message != "" {
+				c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
+				problem := client.ObjectKeyFromObject(chain).String() + ": " + message
+				notPermitted[parent] = append(notPermitted[parent], problem)
+				if activeClaims[parent] == policychain.ClaimValue(chain) {
+					owned[parent] = true
+					c.invalidChains = append(c.invalidChains, problem)
+				}
+				continue
+			}
+		}
 		// Policies of another namespace no KongReferenceGrant lets it
 		// reference: reported as such, like for any other entity. As against
 		// Konnect, such a chain doesn't claim its parent.
@@ -285,7 +359,7 @@ func addPolicyChains[C chainObject, E any](ctx context.Context, c *configuration
 			c.objects[fmt.Sprintf("%s.%d", path, j)] = sources[s.id(p)]
 		}
 		*list = ordered
-		c.orderedPolicies = append(c.orderedPolicies, parentID)
+		c.orderedPolicies = append(c.orderedPolicies, orderedPolicyScope{parentID, s.policyKind})
 		c.included = append(c.included, status)
 	}
 	// A chain that can't order its policies holds back the configuration of a
@@ -345,6 +419,11 @@ func policyOrder[C chainObject, E any](
 	if !ok {
 		return nil, "the chain must reference an " + chain.GetParentGVK().Kind, nil
 	}
+	if s.validateReferences != nil {
+		if message := s.validateReferences(chain); message != "" {
+			return nil, message, nil
+		}
+	}
 	refs := s.policies(chain)
 	if refs == nil {
 		return nil, "spec.apiSpec.policies must be supplied explicitly", nil
@@ -359,7 +438,8 @@ func policyOrder[C chainObject, E any](
 		return nil, message, nil
 	}
 	ordered := make([]E, 0, len(refs))
-	seen := make(map[client.ObjectKey]struct{}, len(refs))
+	resolved := make([]entityWithParent, 0, len(refs))
+	seen := make(map[client.ObjectKey]entityWithParent, len(refs))
 	for i, ref := range refs {
 		path := fmt.Sprintf("spec.apiSpec.policies[%d]", i)
 		if ref.name == "" || (ref.kind != "" && ref.kind != s.policyKind) {
@@ -372,7 +452,6 @@ func policyOrder[C chainObject, E any](
 		if _, duplicate := seen[key]; duplicate {
 			return nil, path + " duplicates policy " + key.String(), nil
 		}
-		seen[key] = struct{}{}
 		policy := s.newPolicy()
 		if err := cl.Get(ctx, key, policy); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -390,7 +469,17 @@ func policyOrder[C chainObject, E any](
 		if !included {
 			return nil, fmt.Sprintf("%s references policy %s, which is not in the valid configuration", path, key), nil
 		}
+		if s.validateOrder != nil {
+			snapshot := slices.IndexFunc(c.included, func(status entityStatus) bool {
+				return status.obj.GetUID() == policy.GetUID()
+			})
+			if snapshot < 0 || c.included[snapshot].obj.GetResourceVersion() != policy.GetResourceVersion() {
+				return nil, fmt.Sprintf("policy %s changed during configuration assembly; waiting for a consistent configuration", key), nil
+			}
+		}
+		seen[key] = policy
 		ordered = append(ordered, entity)
+		resolved = append(resolved, policy)
 	}
 
 	// Every policy of the parent, of any namespace, in the configuration
@@ -401,12 +490,18 @@ func policyOrder[C chainObject, E any](
 	if err != nil {
 		return nil, "", fmt.Errorf("listing the complete %s set of %s: %w", s.policyWhat, parentKey, err)
 	}
+	matched := 0
 	for _, policy := range policies {
-		if !policy.GetDeletionTimestamp().IsZero() {
+		key := client.ObjectKeyFromObject(policy)
+		if snapshot, declared := seen[key]; declared {
+			if snapshot.GetUID() != policy.GetUID() || snapshot.GetResourceVersion() != policy.GetResourceVersion() ||
+				!policy.GetDeletionTimestamp().IsZero() {
+				return nil, fmt.Sprintf("policy %s changed during configuration assembly; waiting for a consistent configuration", key), nil
+			}
+			matched++
 			continue
 		}
-		key := client.ObjectKeyFromObject(policy)
-		if _, declared := seen[key]; declared {
+		if !policy.GetDeletionTimestamp().IsZero() {
 			continue
 		}
 		message, err := c.parentNotGranted(ctx, cl, policy, s.policyKind)
@@ -415,6 +510,14 @@ func policyOrder[C chainObject, E any](
 		}
 		if message == "" {
 			return nil, fmt.Sprintf("spec.apiSpec.policies must list every %s exactly once; policy %s is missing", s.listWhat, policychain.NameIn(key, parentKey.Namespace)), nil
+		}
+	}
+	if matched != len(seen) {
+		return nil, "the " + s.policyWhat + " set changed during configuration assembly; waiting for a consistent configuration", nil
+	}
+	if s.validateOrder != nil {
+		if message := s.validateOrder(resolved); message != "" {
+			return nil, message, nil
 		}
 	}
 	return ordered, "", nil

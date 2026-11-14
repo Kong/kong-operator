@@ -31,7 +31,7 @@ func (obj *EventGatewayVirtualClusterProducePolicyChain) ResolveValidatedPolicyI
 
 	var errs []error
 	ids := make([]string, 0, len(obj.Spec.APISpec.Policies))
-	policies := make(map[string]*EventGatewayVirtualClusterProducePolicy, len(obj.Spec.APISpec.Policies))
+	policies := make([]*EventGatewayVirtualClusterProducePolicy, 0, len(obj.Spec.APISpec.Policies))
 	seenNames := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
 	seenIDs := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
 	for i, ref := range obj.Spec.APISpec.Policies {
@@ -72,17 +72,29 @@ func (obj *EventGatewayVirtualClusterProducePolicyChain) ResolveValidatedPolicyI
 			continue
 		}
 		seenIDs[policy.GetKonnectID()] = struct{}{}
-		policies[ref.Name] = &policy
+		policies = append(policies, &policy)
 		ids = append(ids, policy.GetKonnectID())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
+	if err := ValidateProducePolicyChainOrder(policies); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// ValidateProducePolicyChainOrder checks root and child groups from an ordered
+// snapshot, without depending on backend IDs or readiness conditions.
+func ValidateProducePolicyChainOrder(ordered []*EventGatewayVirtualClusterProducePolicy) error {
+	policies := make(map[string]*EventGatewayVirtualClusterProducePolicy, len(ordered))
+	for _, policy := range ordered {
+		policies[policy.Name] = policy
+	}
 	currentRoot := ""
-	for _, ref := range obj.Spec.APISpec.Policies {
-		policy := policies[ref.Name]
+	for _, policy := range ordered {
 		if err := validateProducePolicyChainConfig(policy); err != nil {
-			return nil, err
+			return err
 		}
 		parentRef := policy.Spec.APISpec.ParentPolicyRef
 		if parentRef.Name == "" {
@@ -90,16 +102,16 @@ func (obj *EventGatewayVirtualClusterProducePolicyChain) ResolveValidatedPolicyI
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate {
-				return nil, PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
+				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
 			}
 			currentRoot = policy.Name
 			continue
 		}
 		if err := validateProducePolicyChainParent(policy, policies, currentRoot); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return ids, nil
+	return nil
 }
 
 func validateProducePolicyChainConfig(policy *EventGatewayVirtualClusterProducePolicy) error {

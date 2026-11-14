@@ -265,6 +265,14 @@
 
 ### Added
 
+- `EventGatewayVirtualClusterProducePolicyChain` now orders the complete Produce
+  policy list of an `OnPremEventGateway` virtual cluster using Kubernetes UIDs,
+  preserving root groups, child links and declared sibling order without Konnect
+  credentials or IDs. Produce ownership and drift detection are independent of
+  other policy scopes. Invalid owning declarations hold complete configuration
+  updates; deleting the chain resumes parent-first assembly without deleting
+  policy entities. This covers gw-admin configuration ordering, not Kafka
+  data-path guarantees.
 - Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect-only
   Consume policy-chain ordering using Kubernetes references to the complete set
   of root and nested policies on one virtual cluster. Parent groups remain

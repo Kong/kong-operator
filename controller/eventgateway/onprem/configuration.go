@@ -70,10 +70,8 @@ type configuration struct {
 	// pushedKey is entities as they are compared with the entities gw-admin
 	// holds (see sameEntities), encoded once for every gw-admin pod.
 	pushedKey []byte
-	// orderedPolicies are the virtual clusters and listeners whose policies
-	// a chain orders: their order must also be compared when checking
-	// gw-admin for drift.
-	orderedPolicies []uuid.UUID
+	// orderedPolicies identifies each independently ordered policy list.
+	orderedPolicies []orderedPolicyScope
 	// invalidChains prevent pushing a partial document or falling back to
 	// implicit ordering while an owning declaration cannot be fulfilled.
 	invalidChains []string
@@ -235,6 +233,9 @@ func buildConfiguration(
 		return configuration{}, err
 	}
 	if err := cfg.addClusterPolicyChains(ctx, cl, virtualClusters); err != nil {
+		return configuration{}, err
+	}
+	if err := cfg.addProducePolicyChains(ctx, cl, virtualClusters); err != nil {
 		return configuration{}, err
 	}
 	listeners, err := cfg.addListeners(ctx, resolver, gateway, targets)

@@ -470,15 +470,16 @@ policies of a listener a chain owns. Deleting the chain releases its claim and
 rebuilds the document with the default order of the policies, creation
 timestamp then resource name, deleting neither policies nor their entities.
 
-## Produce policy chains (Konnect only)
+## Produce policy chains (Konnect and on-prem)
 
 `configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterProducePolicyChain`
 declares the execution order of all `EventGatewayVirtualClusterProducePolicy`
 resources in one virtual cluster. The Konnect controller resolves the declaration
 and reorders the complete remote chain without creating or deleting policies.
-This is Konnect management-plane ordering, not a Kafka execution or traffic-routing
-guarantee. Consume ordering is separate, and on-prem Produce chain support is not
-included or registered.
+For an `OnPremEventGateway`, the same declaration orders the complete gw-admin
+configuration (see [On-prem Produce-chain reconciliation](#on-prem-produce-chain-reconciliation)).
+Neither backend integration guarantees Kafka execution or traffic routing.
+Consume ordering is separate.
 
 `spec.eventGatewayVirtualClusterRef` must use `namespacedRef` and reference an
 `EventGatewayVirtualCluster` in the chain's namespace. The reference is immutable
@@ -539,7 +540,7 @@ Update it when policies are created or deleted. The example's
 the observed backend requires a validation action despite incomplete OAS
 requiredness.
 
-### Reconciliation and lifecycle
+### Reconciliation and lifecycle (Konnect)
 
 Admission validates the declaration's shape, kinds, immutable parent reference,
 and absent independent ID; it cannot resolve policy resources or remote sets.
@@ -583,6 +584,74 @@ GET and PUT are not atomic against concurrent external policy-set changes.
 A GET failure, including `404`, must remain an error rather than an empty chain;
 a changed or incomplete set blocks programming until the declaration and remote
 set agree. A successful PUT response must return exactly the requested order.
+
+### On-prem Produce-chain reconciliation
+
+An `EventGatewayVirtualClusterProducePolicyChain` whose virtual cluster descends
+through its backend cluster from an `OnPremEventGateway` uses no Konnect
+authentication, API call, organization ID, remote policy ID, or previous
+`Programmed` condition. The chain's own `status.id` remains unset.
+Policies and parent links use the Kubernetes policies' UIDs.
+
+The document representation is the pinned gw-admin OpenAPI **1.11.0** contract
+(`Kong/platform-api`, commit `b3733c63`, as recorded in
+`internal/gwadmin/gwadminapi/doc.go`): `GatewayEntitySet.virtual_clusters[]`
+contains separate `cluster_policies`, `produce_policies`, and `consume_policies`
+arrays. `EventGatewayProducePolicyOnPrem` is the complete Produce policy-create
+union plus `id` and `created_at`. Children are entries in the same flat
+`produce_policies` array, connected by `parent_policy_id`, not nested arrays.
+The operator preserves those links while placing each root immediately before
+its contiguous child group; whole groups and siblings may move.
+This document-schema integration is distinct from real backend lifecycle
+acceptance and Kafka data-path verification.
+
+List every eligible Produce policy exactly once, including each root and child.
+`schemaValidation` and `encrypt` are roots; `encryptFields`, `maskFields`, and
+`transcode` require a root `schemaValidation` parent; `modifyHeaders` may be a
+root or its child. Existing parent-reference immutability, kind and scope
+validation are unchanged. Unsupported types/configurations, wrong parents,
+child-first order, split/interleaved groups, duplicate, missing, deleting,
+wrong-kind, and wrong-virtual-cluster policies cannot form a successful chain.
+Group validation reuses the resolved policy snapshots; a UID or resource-version
+change during assembly holds the configuration until it is consistent.
+
+The chain, its virtual cluster, and every declared policy must remain in the
+same namespace, even with `KongReferenceGrant` permission. Granted cross-namespace
+ancestry and entity references continue to work; this integration does not
+expand the chain's own reference boundaries. A granted Produce policy of another
+namespace that belongs to the same virtual cluster still belongs to the complete
+policy set, but cannot be listed by this chain: move the policy into the chain's
+namespace or remove the declaration rather than silently omit that policy.
+Policies that cannot reference their parent because a grant is absent remain
+outside the gateway configuration, as before.
+
+The UID-bound `gateway-operator.konghq.com/produce-policy-chain-owner` claim is
+independent of cluster and Consume claims on the same virtual cluster.
+An older competitor cannot displace a live owner; conflicts report
+`PolicyChainOwnerValid=False` with `ConflictingChain`. Stale, malformed, recreated,
+or terminating owners release their claims with optimistic locking. A terminating
+chain does not wait for its finalizers before handing over order management.
+An active owner on an excluded virtual cluster still holds the complete document;
+an unclaimed excluded chain does not acquire a claim or block other scopes.
+
+An invalid owning declaration reports `Programmed=False` with `Invalid`, and the
+gateway reports `InvalidPolicyChain`. The operator does not apply a shortened
+chain or default-order fallback: the last valid gateway document, hash and
+revision remain intact, including unrelated pending changes. Restart follows
+the existing complete-document retention/recovery mechanism. Successful order
+edits change the configuration hash/revision; drift comparison preserves only
+the lists their own chains order, leaving unowned cluster/Consume lists unchanged.
+Policy edits, deletions, UID-changing recreation, chain changes, parent changes
+and claim changes rebuild the affected gateway, including references to a policy
+whose virtual-cluster reference is wrong.
+
+An explicit `policies: []` is valid only for an empty eligible policy set.
+Omitted/null or incomplete lists are invalid. Update the declaration when a
+policy is created or deleted. Deleting only the chain releases its claim without
+deleting any policy entity or calling a remote chain endpoint. Normal deterministic
+parent-first assembly resumes; this does not retain the last declared order as
+Konnect deletion does. Deleting the virtual cluster removes its document scope
+without its surviving chain blocking other scopes.
 
 ## Consume policy-chain API (Konnect only)
 

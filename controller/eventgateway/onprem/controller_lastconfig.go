@@ -55,11 +55,10 @@ type lastGoodConfig struct {
 	// inUse are the entities its policies use (see entitiesInUse): they stay
 	// held while it is pushed in place of the current configuration.
 	inUse map[reportedEntity][]reportedEntity
-	// orderedPolicies are the virtual clusters and listeners whose policies
-	// it orders explicitly (see configuration.orderedPolicies): what
+	// orderedPolicies are the policy scopes it orders explicitly: what
 	// gw-admin holds is compared with it in that order, which the current
 	// configuration may no longer have.
-	orderedPolicies []uuid.UUID
+	orderedPolicies []orderedPolicyScope
 }
 
 // rememberConfig remembers the configuration of the gateway, recorded with

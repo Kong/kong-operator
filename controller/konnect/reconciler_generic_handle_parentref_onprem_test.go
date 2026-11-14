@@ -197,6 +197,30 @@ func TestHandleParentRef_OnPremEventGatewayAncestor(t *testing.T) {
 	require.Empty(t, updated.Finalizers, "cleanup finalizer must be removed")
 }
 
+func TestProducePolicyChainSkipsKonnectForOnPrem(t *testing.T) {
+	backend := newTestOnPremEventGatewayBackendCluster("default", "backend", "onprem-gw")
+	virtualCluster := newTestEventGatewayVirtualCluster("default", "virtual-cluster", backend.Name)
+	chain := testProducePolicyChain("chain")
+	chain.Spec.EventGatewayVirtualClusterRef = testNamespacedObjectRef(virtualCluster.Name)
+	cl := newFakeClientBuilder(scheme.Get()).
+		WithStatusSubresource(chain).
+		WithObjects(backend, virtualCluster, chain).
+		Build()
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+	version := chain.ResourceVersion
+	reconciler := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain](nil, logging.DevelopmentMode, cl)
+	result, err := reconciler.Reconcile(t.Context(), chain)
+	require.NoError(t, err)
+	require.True(t, result.IsZero())
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(chain), chain))
+	require.Equal(t, version, chain.ResourceVersion, "an on-prem chain requires no Konnect client or writes")
+	require.Empty(t, chain.Finalizers)
+	require.Empty(t, chain.Status.Conditions)
+	require.Empty(t, chain.GetKonnectID())
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(virtualCluster), virtualCluster))
+	require.Empty(t, virtualCluster.Annotations, "the Konnect reconciler must not acquire the on-prem claim")
+}
+
 // TestSkipsKonnectReconciliation_OtherKinds covers the kinds outside the Event
 // Gateway that go through the same parent handling: AI Gateway entities, which
 // can be attached to an OnPremAIGateway, and Portal entities, which can't.

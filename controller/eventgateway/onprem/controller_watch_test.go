@@ -112,6 +112,29 @@ func TestListenerPolicyChainNotifications(t *testing.T) {
 	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}), "a terminating chain releases its claim")
 }
 
+func TestProducePolicyChainNotifications(t *testing.T) {
+	gateway, chain, policies, objects := producePolicyChainObjects(t)
+	cl := newFakeClient(t, append(objects, chain)...)
+	policy := policies["first"].DeepCopy()
+	policy.Spec.EventGatewayVirtualClusterRef = namespacedRef("other-vc")
+	require.Equal(t, requestsFor(gateway), mapPolicyToChainGateways(cl)(t.Context(), policy),
+		"a referenced policy with a wrong or changed parent still rebuilds the owning chain's gateway")
+	require.Equal(t, requestsFor(gateway), mapEntityToOnPremEventGateway(cl)(t.Context(), chain))
+	pred := entityChanged()
+	changed := policy.DeepCopy()
+	changed.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	require.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: changed}))
+	changed.DeletionTimestamp = new(metav1.Now())
+	require.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: changed}))
+	newChain := chain.DeepCopy()
+	newChain.DeletionTimestamp = new(metav1.Now())
+	require.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}))
+	parent := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+	newParent := parent.DeepCopy()
+	newParent.Annotations = map[string]string{policychain.ProduceOwnerAnnotation: policychain.ClaimValue(chain)}
+	require.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}))
+}
+
 func onPremGatewayRef(name string) *commonv1alpha1.GatewayRef {
 	return &commonv1alpha1.GatewayRef{
 		Group: "eventgateway.konghq.com",
@@ -382,10 +405,8 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 	for gvk := range s.AllKnownTypes() {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
-		// Produce and consume policy chains are Konnect-only.
-		switch obj.(type) {
-		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
-			*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		// Consume policy chains are Konnect-only.
+		if _, konnectOnly := obj.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain); konnectOnly {
 			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
 			continue
 		}

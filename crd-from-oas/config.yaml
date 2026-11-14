@@ -1793,7 +1793,7 @@ apiGroupVersions:
               policies:
                 _description: >-
                   Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order.
-                  This API declares Konnect-only ordering.
+                  This API declares ordering for Konnect and OnPremEventGateway virtual clusters.
                   The parent virtual cluster and every policy must be in the same namespace as this chain.
                   Namespace defaults to this chain's namespace and may be set explicitly
                   to that same namespace; cross-namespace references are not supported.
@@ -1802,9 +1802,11 @@ apiGroupVersions:
                   A parent must precede its children, and each parent's group must remain contiguous.
                   Root groups may move and sibling children may reorder within their group.
                   Ordering does not change parentPolicyRef or move children between parents.
-                  An explicit empty list is valid only when the remote chain has no policies;
-                  it does not clear an existing chain. Omitted and null lists are invalid.
-                  When a policy is created or deleted, update this list to match the complete remote set.
+                  An explicit empty list is valid only when the policy set is empty;
+                  it does not delete policy entities. Omitted and null lists are invalid.
+                  When a policy is created or deleted, update this list to match the complete policy set.
+                  An invalid owning on-prem declaration holds the complete gateway configuration.
+                  Deleting an on-prem chain releases ownership and resumes normal parent-first assembly.
                 _validations:
                   - "+listType=atomic"
         ops:
@@ -1816,7 +1818,6 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterProducePolicyChainRequest
         reconciler:
-          skipOnPremEventGateway: true
           parentEntityGVK:
             kind: EventGatewayVirtualCluster
           parentRef:

@@ -2,6 +2,7 @@ package onprem
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"testing"
 
@@ -34,7 +35,7 @@ func TestComparisonPreservesOnlyExplicitClusterPolicyOrder(t *testing.T) {
 			{"id":"00000000-0000-4000-8000-000000000051","type":"tls_server"},
 			{"id":"00000000-0000-4000-8000-000000000052","type":"tls_server"}]}]
 	}`), &entities))
-	parentID := entities.VirtualClusters[0].Id
+	scope := orderedPolicyScope{entities.VirtualClusters[0].Id, clusterPolicyChains.policyKind}
 	encoded, err := json.Marshal(entities)
 	require.NoError(t, err)
 	var held gwadminapi.GatewayEntitySet
@@ -44,17 +45,17 @@ func TestComparisonPreservesOnlyExplicitClusterPolicyOrder(t *testing.T) {
 	slices.Reverse(held.VirtualClusters[1].ClusterPolicies)
 	slices.Reverse(held.Listeners[0].Policies)
 	slices.Reverse(held.VirtualClusters)
-	key, err := comparisonKey(entities, parentID)
+	key, err := comparisonKey(entities, scope)
 	require.NoError(t, err)
-	same, err := sameEntities(held, key, parentID)
+	same, err := sameEntities(held, key, scope)
 	require.NoError(t, err)
 	require.True(t, same, "ordering remains insignificant outside the explicitly managed scope")
 
 	slices.Reverse(held.VirtualClusters[1].ClusterPolicies)
-	same, err = sameEntities(held, key, parentID)
+	same, err = sameEntities(held, key, scope)
 	require.NoError(t, err)
 	require.False(t, same, "remote reordering of the managed chain is drift")
-	changedKey, err := comparisonKey(held, parentID)
+	changedKey, err := comparisonKey(held, scope)
 	require.NoError(t, err)
 	require.NotEqual(t, key, changedKey)
 
@@ -95,9 +96,9 @@ func TestComparisonAccountsForClusterPolicyDefaults(t *testing.T) {
 
 	for _, managed := range []bool{false, true} {
 		t.Run(map[bool]string{false: "implicit order", true: "explicit chain"}[managed], func(t *testing.T) {
-			var scopes []uuid.UUID
+			var scopes []orderedPolicyScope
 			if managed {
-				scopes = []uuid.UUID{pushed.VirtualClusters[0].Id}
+				scopes = []orderedPolicyScope{{pushed.VirtualClusters[0].Id, clusterPolicyChains.policyKind}}
 			}
 			key, err := comparisonKey(withGWAdminDefaults(pushed), scopes...)
 			require.NoError(t, err)
@@ -141,20 +142,65 @@ func TestComparisonPreservesOnlyExplicitListenerPolicyOrder(t *testing.T) {
 				{"id":"00000000-0000-4000-8000-000000000061","type":"tls_server"},
 				{"id":"00000000-0000-4000-8000-000000000062","type":"tls_server"}]}]
 	}`), &entities))
-	listenerID := entities.Listeners[0].Id
+	scope := orderedPolicyScope{entities.Listeners[0].Id, listenerPolicyChains.policyKind}
 	encoded, err := json.Marshal(entities)
 	require.NoError(t, err)
 	var held gwadminapi.GatewayEntitySet
 	require.NoError(t, json.Unmarshal(encoded, &held))
 	slices.Reverse(held.Listeners[1].Policies)
-	key, err := comparisonKey(entities, listenerID)
+	key, err := comparisonKey(entities, scope)
 	require.NoError(t, err)
-	same, err := sameEntities(held, key, listenerID)
+	same, err := sameEntities(held, key, scope)
 	require.NoError(t, err)
 	require.True(t, same, "the order of the policies of a listener without a chain is insignificant")
 
 	slices.Reverse(held.Listeners[0].Policies)
-	same, err = sameEntities(held, key, listenerID)
+	same, err = sameEntities(held, key, scope)
 	require.NoError(t, err)
 	require.False(t, same, "remote reordering of the policies a chain orders is drift")
+}
+
+func TestComparisonPreservesIndependentProducePolicyOrder(t *testing.T) {
+	var entities gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"virtual_clusters": [{
+			"id":"00000000-0000-4000-8000-000000000001",
+			"cluster_policies":[
+				{"id":"00000000-0000-4000-8000-000000000011","type":"acls"},
+				{"id":"00000000-0000-4000-8000-000000000012","type":"acls"}],
+			"consume_policies":[
+				{"id":"00000000-0000-4000-8000-000000000021","type":"skip_record"},
+				{"id":"00000000-0000-4000-8000-000000000022","type":"skip_record"}],
+			"produce_policies":[
+				{"id":"00000000-0000-4000-8000-000000000031","type":"modify_headers"},
+				{"id":"00000000-0000-4000-8000-000000000032","type":"modify_headers"}]
+		}]
+	}`), &entities))
+	for _, clusterOrdered := range []bool{false, true} {
+		t.Run(fmt.Sprintf("cluster also ordered=%t", clusterOrdered), func(t *testing.T) {
+			scopes := []orderedPolicyScope{{entities.VirtualClusters[0].Id, producePolicyChains.policyKind}}
+			if clusterOrdered {
+				scopes = append(scopes, orderedPolicyScope{entities.VirtualClusters[0].Id, clusterPolicyChains.policyKind})
+			}
+			data, err := json.Marshal(entities)
+			require.NoError(t, err)
+			var held gwadminapi.GatewayEntitySet
+			require.NoError(t, json.Unmarshal(data, &held))
+			slices.Reverse(held.VirtualClusters[0].ConsumePolicies)
+			slices.Reverse(held.VirtualClusters[0].ClusterPolicies)
+			key, err := comparisonKey(withGWAdminDefaults(entities), scopes...)
+			require.NoError(t, err)
+			same, err := sameEntities(withGWAdminDefaults(held), key, scopes...)
+			require.NoError(t, err)
+			require.Equal(t, !clusterOrdered, same,
+				"Produce must not make the unowned cluster or Consume lists order-sensitive; coexistence must retain cluster drift")
+			if clusterOrdered {
+				slices.Reverse(held.VirtualClusters[0].ClusterPolicies)
+			}
+			slices.Reverse(held.VirtualClusters[0].ProducePolicies)
+			same, err = sameEntities(withGWAdminDefaults(held), key, scopes...)
+			require.NoError(t, err)
+			require.False(t, same, "Produce drift is independently significant")
+		})
+	}
 }

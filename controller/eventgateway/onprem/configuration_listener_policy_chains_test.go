@@ -115,7 +115,7 @@ func TestBuildListenerPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, []string{string(policies[1].UID), string(policies[0].UID)}, policyIDs(cfg))
 	require.Equal(t, "EventGatewayListenerPolicy "+ns+"/z-second", cfg.objects["listeners.0.policies.0"])
 	require.Equal(t, "EventGatewayListenerPolicy "+ns+"/a-first", cfg.objects["listeners.0.policies.1"])
-	require.Equal(t, []uuid.UUID{uuid.MustParse(string(listener.UID))}, cfg.orderedPolicies)
+	require.Equal(t, []orderedPolicyScope{{uuid.MustParse(string(listener.UID)), listenerPolicyChains.policyKind}}, cfg.orderedPolicies)
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(listener), listener))
 	require.Equal(t, policychain.ClaimValue(chain), listener.Annotations[policychain.ListenerOwnerAnnotation])
 	i := slices.IndexFunc(cfg.included, func(s entityStatus) bool { return s.obj.GetName() == chain.Name && s.obj.GetUID() == chain.UID })
@@ -142,7 +142,7 @@ func TestBuildListenerPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, []string{string(policies[0].UID), string(policies[1].UID)}, policyIDs(cfg))
 	// The competitor's order is also the default one: the listener being
 	// ordered tells it is applied.
-	require.Equal(t, []uuid.UUID{uuid.MustParse(string(listener.UID))}, cfg.orderedPolicies)
+	require.Equal(t, []orderedPolicyScope{{uuid.MustParse(string(listener.UID)), listenerPolicyChains.policyKind}}, cfg.orderedPolicies)
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(listener), listener))
 	require.Equal(t, policychain.ClaimValue(competitor), listener.Annotations[policychain.ListenerOwnerAnnotation])
 
