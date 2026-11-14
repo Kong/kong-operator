@@ -41,7 +41,7 @@ func (c *configuration) addVirtualClusters(ctx context.Context, cl uidResolver, 
 		return parents{}, err
 	}
 	vcIndex, err := addEntities(ctx, c, cl, virtualClusters, entityKind[*configurationv1alpha1.EventGatewayVirtualCluster, gwadminapi.EventGatewayVirtualClusterOnPrem]{
-		kind: "EventGatewayVirtualCluster", what: "virtual cluster",
+		kind: "EventGatewayVirtualCluster",
 		request: func(_ context.Context, _ client.Client, vc *configurationv1alpha1.EventGatewayVirtualCluster) (any, error) {
 			// The conversion sets the destination to the id of the backend
 			// cluster it finds in the status of the virtual cluster.

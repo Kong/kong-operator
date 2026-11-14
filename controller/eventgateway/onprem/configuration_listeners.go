@@ -40,7 +40,7 @@ func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gatewa
 	var listeners configurationv1alpha1.EventGatewayListenerList
 	parentsOfPolicies, err := addAttached(ctx, c, cl, gateway, &listeners, &listeners.Items, index.IndexFieldEventGatewayListenerOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewayListener, gwadminapi.EventGatewayListenerOnPrem]{
-			kind: "EventGatewayListener", what: "listener",
+			kind: "EventGatewayListener",
 			request: func(_ context.Context, _ client.Client, l *configurationv1alpha1.EventGatewayListener) (any, error) {
 				return l.Spec.APISpec.ToCreateEventGatewayListenerRequest()
 			},

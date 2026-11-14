@@ -69,8 +69,6 @@ spec:` + onPremEventGatewayParentRef(gateway) + `
 `
 }
 
-// backendClusterNames returns the names of the backend clusters the pod
-// holds for the gateway.
 // programmedOf reads the object again and returns its Programmed condition,
 // or nil when it can't be read or has none.
 func programmedOf(ctx context.Context, ct *assert.CollectT, cl client.Client, obj interface {
@@ -86,6 +84,8 @@ func programmedOf(ctx context.Context, ct *assert.CollectT, cl client.Client, ob
 	return cond
 }
 
+// backendClusterNames returns the names of the backend clusters the pod
+// holds for the gateway.
 func backendClusterNames(ct *assert.CollectT, pod *fakeGWAdmin, gateway *eventgatewayv1alpha1.OnPremEventGateway) []string {
 	g, ok, _ := pod.state(gatewayID(ct, gateway))
 	if !assert.True(ct, ok, "the gw-admin pod doesn't know the gateway") {

@@ -454,8 +454,6 @@ func buildConfigurationAfter(
 type entityKind[PT entityObject, E any] struct {
 	// kind is the kind of the objects, e.g. EventGatewayBackendCluster.
 	kind string
-	// what names an entity of the kind in messages, e.g. "backend cluster".
-	what string
 	// request returns the Konnect SDK request of an object, reading what it
 	// references with the client: its entity is converted from it.
 	request func(context.Context, client.Client, PT) (any, error)
