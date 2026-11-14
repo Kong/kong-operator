@@ -397,12 +397,32 @@ func resolveEntityNames[T any, PT interface {
 	client.Object
 	GetKonnectName() string
 }](ctx context.Context, cl client.Client, defaultNamespace string, refs []namespacedRef) ([]string, error) {
+	return resolveEntityNamesWith[T, PT](ctx, cl, defaultNamespace, refs, false)
+}
+
+// resolveEntityNamesCrossNamespace is resolveEntityNames for the sibling references that
+// support cross-namespace references: the consumer group ACL references
+// (AIGatewayACLRef). The caller must check the KongReferenceGrant before calling, see
+// CheckCrossNamespaceConsumerGroupRefsGranted.
+func resolveEntityNamesCrossNamespace[T any, PT interface {
+	*T
+	client.Object
+	GetKonnectName() string
+}](ctx context.Context, cl client.Client, defaultNamespace string, refs []namespacedRef) ([]string, error) {
+	return resolveEntityNamesWith[T, PT](ctx, cl, defaultNamespace, refs, true)
+}
+
+func resolveEntityNamesWith[T any, PT interface {
+	*T
+	client.Object
+	GetKonnectName() string
+}](ctx context.Context, cl client.Client, defaultNamespace string, refs []namespacedRef, crossNamespace bool) ([]string, error) {
 	if len(refs) == 0 {
 		return nil, nil
 	}
 	names := make([]string, 0, len(refs))
 	for _, ref := range refs {
-		name, err := resolveEntityName[T, PT](ctx, cl, defaultNamespace, ref.Namespace, ref.Name)
+		name, err := resolveEntityNameWith[T, PT](ctx, cl, defaultNamespace, ref.Namespace, ref.Name, crossNamespace)
 		if err != nil {
 			return nil, err
 		}
@@ -424,7 +444,15 @@ func resolveEntityName[T any, PT interface {
 	client.Object
 	GetKonnectName() string
 }](ctx context.Context, cl client.Client, defaultNamespace, refNamespace, refName string) (string, error) {
-	p, err := getReferencedEntity[T, PT](ctx, cl, defaultNamespace, refNamespace, refName)
+	return resolveEntityNameWith[T, PT](ctx, cl, defaultNamespace, refNamespace, refName, false)
+}
+
+func resolveEntityNameWith[T any, PT interface {
+	*T
+	client.Object
+	GetKonnectName() string
+}](ctx context.Context, cl client.Client, defaultNamespace, refNamespace, refName string, crossNamespace bool) (string, error) {
+	p, err := getReferencedEntity[T, PT](ctx, cl, defaultNamespace, refNamespace, refName, crossNamespace)
 	if err != nil {
 		return "", err
 	}
@@ -468,7 +496,7 @@ func resolveEntityNameTargeting[T any, PT interface {
 	GetKonnectName() string
 	GetAIGatewayRef() AIGatewayRef
 }](ctx context.Context, cl client.Client, defaultNamespace, gatewayKey, refNamespace, refName string) (string, error) {
-	p, err := getReferencedEntity[T, PT](ctx, cl, defaultNamespace, refNamespace, refName)
+	p, err := getReferencedEntity[T, PT](ctx, cl, defaultNamespace, refNamespace, refName, false)
 	if err != nil {
 		return "", err
 	}
@@ -486,17 +514,18 @@ func resolveEntityNameTargeting[T any, PT interface {
 	return p.GetKonnectName(), nil
 }
 
-// getReferencedEntity loads the sibling AI Gateway entity a reference points at, rejecting
-// cross-namespace references.
+// getReferencedEntity loads the sibling AI Gateway entity a reference points at. A reference
+// to another namespace is rejected unless crossNamespace is set: only the consumer group ACL
+// references support it, and only after their KongReferenceGrant check.
 func getReferencedEntity[T any, PT interface {
 	*T
 	client.Object
-}](ctx context.Context, cl client.Client, defaultNamespace, refNamespace, refName string) (PT, error) {
+}](ctx context.Context, cl client.Client, defaultNamespace, refNamespace, refName string, crossNamespace bool) (PT, error) {
 	ns := refNamespace
 	if ns == "" {
 		ns = defaultNamespace
 	}
-	if ns != defaultNamespace {
+	if ns != defaultNamespace && !crossNamespace {
 		return nil, fmt.Errorf("cross-namespace reference to %s/%s is not supported", ns, refName)
 	}
 	var obj T
