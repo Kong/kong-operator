@@ -60,6 +60,9 @@ type lastGoodConfig struct {
 	// gw-admin holds is compared with it in that order, which the current
 	// configuration may no longer have.
 	orderedPolicies []uuid.UUID
+	// orderedProducePolicies are the virtual clusters whose produce policies
+	// it orders explicitly (see configuration.orderedProducePolicies).
+	orderedProducePolicies []uuid.UUID
 }
 
 // rememberConfig remembers the configuration of the gateway, recorded with
@@ -74,7 +77,7 @@ func (r *Reconciler) rememberConfig(
 	}
 	r.lastConfigs.Store(gateway.UID, &lastGoodConfig{
 		revision: gateway.Status.ConfigRevision, hash: hash, config: config, inUse: cfg.entitiesInUse,
-		orderedPolicies: slices.Clone(cfg.orderedPolicies),
+		orderedPolicies: slices.Clone(cfg.orderedPolicies), orderedProducePolicies: slices.Clone(cfg.orderedProducePolicies),
 	})
 	return nil
 }
@@ -162,7 +165,7 @@ func (r *Reconciler) recoverLastConfig(
 		// The entities are as the pod returns them: whatever the virtual
 		// clusters and listeners taken as ordered, a pod holding them
 		// compares the same.
-		orderedPolicies: slices.Clone(cfg.orderedPolicies),
+		orderedPolicies: slices.Clone(cfg.orderedPolicies), orderedProducePolicies: slices.Clone(cfg.orderedProducePolicies),
 	}
 	r.lastConfigs.Store(gateway.UID, last)
 	return last, nil
@@ -245,15 +248,22 @@ func (last *lastGoodConfig) pushedAs(cfg configuration) (gatewayConfig, configur
 	config.Version = configVersion(&eventgatewayv1alpha1.OnPremEventGateway{
 		Status: eventgatewayv1alpha1.OnPremEventGatewayStatus{ConfigRevision: last.revision},
 	})
-	key, err := comparisonKey(withGWAdminDefaults(last.config.Entities), last.orderedPolicies...)
+	key, err := comparisonKeyFor(withGWAdminDefaults(last.config.Entities), last.orderedPolicyLists())
 	if err != nil {
 		return gatewayConfig{}, configuration{}, fmt.Errorf("failed to encode the last entities of the gateway: %w", err)
 	}
 	pushing := cfg
 	pushing.pushedKey = key
 	pushing.orderedPolicies = last.orderedPolicies
+	pushing.orderedProducePolicies = last.orderedProducePolicies
 	// The paths gw-admin reports name the last entities, not those of the
 	// current objects.
 	pushing.objects = map[string]string{}
 	return config, pushing, nil
+}
+
+// orderedPolicyLists returns the parents whose policy lists the configuration
+// orders (see configuration.orderedPolicyLists).
+func (last *lastGoodConfig) orderedPolicyLists() orderedPolicyLists {
+	return orderedPolicyLists{clusterAndListener: last.orderedPolicies, produce: last.orderedProducePolicies}
 }

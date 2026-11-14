@@ -274,12 +274,19 @@
   [#6573](https://github.com/Kong/kong-operator/pull/6573)
   [#6575](https://github.com/Kong/kong-operator/pull/6575)
 - Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
-  Helm installation artifacts, to declare Konnect produce-policy ordering with
+  Helm installation artifacts, to declare produce-policy ordering with
   Kubernetes references to the complete set of root and nested policies.
-  The operator now reconciles this ordering in Konnect; on-prem support is not included.
+  The operator reconciles this ordering in Konnect, and applies the declared
+  order to the gw-admin configuration of an `OnPremEventGateway` with the
+  Kubernetes UIDs of the policies. A produce chain owns only the produce list of
+  its virtual cluster: cluster-level, consume and listener ordering stay
+  independent. An invalid or incomplete owning declaration pauses the gateway's
+  configuration updates instead of applying a shortened chain, and deleting the
+  chain restores the default policy order without deleting policy entities.
   [#6534](https://github.com/Kong/kong-operator/pull/6534)
   [#6537](https://github.com/Kong/kong-operator/pull/6537)
   [#6538](https://github.com/Kong/kong-operator/pull/6538)
+  [#6593](https://github.com/Kong/kong-operator/issues/6593)
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.

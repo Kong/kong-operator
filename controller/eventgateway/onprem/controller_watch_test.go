@@ -112,6 +112,53 @@ func TestListenerPolicyChainNotifications(t *testing.T) {
 	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}), "a terminating chain releases its claim")
 }
 
+func TestProducePolicyChainNotifications(t *testing.T) {
+	backend := backendCluster(ns, "backend", onPremGatewayRef("gateway"))
+	parent := &configurationv1alpha1.EventGatewayVirtualCluster{
+		Name: "vc", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
+			EventGatewayBackendClusterRef: namespacedRef("backend"),
+		},
+	}
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainSpec{
+			EventGatewayVirtualClusterRef: namespacedRef(parent.Name),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{{Name: "policy"}},
+			},
+		},
+	}
+	cl := newFakeClient(t, backend, parent, chain)
+	policy := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
+		Name: "policy", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
+			EventGatewayVirtualClusterRef: namespacedRef("other-vc"),
+		},
+	}
+	require.Equal(t, requestsFor(&eventgatewayv1alpha1.OnPremEventGateway{Namespace: ns, Name: "gateway"}),
+		mapPolicyToChainGateways(cl)(t.Context(), policy),
+		"references must trigger the chain gateway even when the policy has the wrong parent")
+	unreferenced := policy.DeepCopy()
+	unreferenced.Name = "unreferenced"
+	require.Empty(t, mapPolicyToChainGateways(cl)(t.Context(), unreferenced))
+
+	pred := entityChanged()
+	newPolicy := policy.DeepCopy()
+	newPolicy.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newPolicy.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}), "deletion cannot wait for finalizer removal")
+	newChain := chain.DeepCopy()
+	newChain.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}), "a terminating chain releases its claim")
+
+	newParent := parent.DeepCopy()
+	newParent.Annotations = map[string]string{policychain.ProduceOwnerAnnotation: "chain/uid"}
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}),
+		"a produce claim is metadata-only, and independent of the cluster chain claim")
+}
+
 func onPremGatewayRef(name string) *commonv1alpha1.GatewayRef {
 	return &commonv1alpha1.GatewayRef{
 		Group: "eventgateway.konghq.com",
@@ -382,10 +429,8 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 	for gvk := range s.AllKnownTypes() {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
-		// Produce and consume policy chains are Konnect-only.
-		switch obj.(type) {
-		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
-			*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		// Consume policy chains are Konnect-only.
+		if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain); ok {
 			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
 			continue
 		}

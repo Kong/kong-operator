@@ -78,11 +78,27 @@ func (obj *EventGatewayVirtualClusterProducePolicyChain) ResolveValidatedPolicyI
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	currentRoot := ""
+	order := make([]string, 0, len(obj.Spec.APISpec.Policies))
 	for _, ref := range obj.Spec.APISpec.Policies {
-		policy := policies[ref.Name]
+		order = append(order, ref.Name)
+	}
+	if err := ValidateProducePolicyChainOrder(order, policies); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// ValidateProducePolicyChainOrder checks the declared order of a complete
+// produce policy set: policies are the objects the names of order name, all
+// of them. A parent is a root schemaValidation policy, precedes its children,
+// and each parent's group is contiguous. It is the order gw-admin accepts as
+// well as Konnect, so both backends share it.
+func ValidateProducePolicyChainOrder(order []string, policies map[string]*EventGatewayVirtualClusterProducePolicy) error {
+	currentRoot := ""
+	for _, name := range order {
+		policy := policies[name]
 		if err := validateProducePolicyChainConfig(policy); err != nil {
-			return nil, err
+			return err
 		}
 		parentRef := policy.Spec.APISpec.ParentPolicyRef
 		if parentRef.Name == "" {
@@ -90,16 +106,16 @@ func (obj *EventGatewayVirtualClusterProducePolicyChain) ResolveValidatedPolicyI
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate {
-				return nil, PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
+				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
 			}
 			currentRoot = policy.Name
 			continue
 		}
 		if err := validateProducePolicyChainParent(policy, policies, currentRoot); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return ids, nil
+	return nil
 }
 
 func validateProducePolicyChainConfig(policy *EventGatewayVirtualClusterProducePolicy) error {

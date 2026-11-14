@@ -74,6 +74,10 @@ type configuration struct {
 	// a chain orders: their order must also be compared when checking
 	// gw-admin for drift.
 	orderedPolicies []uuid.UUID
+	// orderedProducePolicies are the virtual clusters whose produce policies
+	// a produce chain orders, independently of the cluster-level policies a
+	// cluster chain orders on the same virtual cluster.
+	orderedProducePolicies []uuid.UUID
 	// invalidChains prevent pushing a partial document or falling back to
 	// implicit ordering while an owning declaration cannot be fulfilled.
 	invalidChains []string
@@ -237,6 +241,9 @@ func buildConfiguration(
 	if err := cfg.addClusterPolicyChains(ctx, cl, virtualClusters); err != nil {
 		return configuration{}, err
 	}
+	if err := cfg.addProducePolicyChains(ctx, cl, virtualClusters); err != nil {
+		return configuration{}, err
+	}
 	listeners, err := cfg.addListeners(ctx, resolver, gateway, targets)
 	if err != nil {
 		return configuration{}, err
@@ -248,12 +255,22 @@ func buildConfiguration(
 	if err := cfg.addCertificates(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
-	key, err := comparisonKey(withGWAdminDefaults(cfg.entities), cfg.orderedPolicies...)
+	key, err := comparisonKeyFor(withGWAdminDefaults(cfg.entities), cfg.orderedPolicyLists())
 	if err != nil {
 		return configuration{}, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
 	}
 	cfg.pushedKey = key
 	return cfg, nil
+}
+
+// orderedPolicyLists returns the parents whose policy lists a chain orders, by
+// kind of policy: cluster-level and listener policies together, as their ids
+// are those of the parents, and produce policies apart.
+func (c *configuration) orderedPolicyLists() orderedPolicyLists {
+	return orderedPolicyLists{
+		clusterAndListener: c.orderedPolicies,
+		produce:            c.orderedProducePolicies,
+	}
 }
 
 // entityKind is a kind of entity of the configuration.
