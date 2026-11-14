@@ -1,0 +1,304 @@
+# On-prem Event Gateway produce policy chain lifecycle.
+#
+# Kong Operator orders the produce policies of a virtual cluster of an
+# OnPremEventGateway as its EventGatewayVirtualClusterProducePolicyChain
+# declares, in what it pushes to gw-admin. The produce list is independent of
+# the cluster-level policy list of the same virtual cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-produce-policy-chain
+spec:
+  description: |
+    A virtual cluster of an OnPremEventGateway with a root schemaValidation
+    parent, two sibling children and a separate root policy. Every check reads
+    the entities gw-admin serves for the gateway.
+    1. A chain lists parent, second, first, root: gw-admin holds that order,
+       keeps parent_policy_id of the children, and the chain has no ID.
+    2. Siblings reorder, the root group moves as a whole: gw-admin follows.
+    3. A second chain of the virtual cluster can't claim it: ConflictingChain,
+       and gw-admin keeps the order of the first.
+    4. A child before its parent: the chain isn't Programmed, the gateway holds
+       back its configuration with InvalidPolicyChain, and gw-admin keeps the
+       last order pushed.
+    5. A partial list: same, the complete set is required.
+    6. The chain is deleted: the gateway pushes again, the policies in their
+       default order, and the policies are kept.
+    No data plane or Kafka cluster is needed.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+    - name: 1-The-chain-orders-the-produce-policies
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              spec:
+                eventGatewayVirtualClusterRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: vcluster
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+                    - name: first
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                (conditions[?type == 'PolicyChainOwnerValid']):
+                  - status: "True"
+                    reason: Owner
+                (id == null || id == ''): true
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["parse", "second", "first", "root"]'
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[] | select(.name == "first" or .name == "second") | .parent_policy_id] | unique | length == 1'
+    - name: 2-Siblings-reorder-and-the-root-group-moves
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: root
+                    - name: parse
+                    - name: first
+                    - name: second
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["root", "parse", "first", "second"]'
+    - name: 3-Another-chain-cant-claim-the-virtual-cluster
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: competitor
+              spec:
+                eventGatewayVirtualClusterRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: vcluster
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+                    - name: first
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: competitor
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                (conditions[?type == 'PolicyChainOwnerValid']):
+                  - status: "False"
+                    reason: ConflictingChain
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["root", "parse", "first", "second"]'
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              name: competitor
+    - name: 4-A-child-before-its-parent-holds-back-the-gateway
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: first
+                    - name: parse
+                    - name: second
+                    - name: root
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidPolicyChain
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["root", "parse", "first", "second"]'
+    - name: 5-An-incomplete-chain-holds-back-the-gateway
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              spec:
+                apiSpec:
+                  policies:
+                    - name: parse
+                    - name: second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              metadata:
+                name: chain
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidPolicyChain
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["root", "parse", "first", "second"]'
+    - name: 6-Deleting-the-chain-restores-the-default-order
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicyChain
+              name: chain
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        # Default order: creation, then name. parse, first and second are
+        # created in that order, and root last.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '([.entities.virtual_clusters[0].produce_policies[].name] | sort) == ["first", "parse", "root", "second"]'
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              metadata:
+                name: vcluster
+                (annotations == null || annotations."gateway-operator.konghq.com/produce-policy-chain-owner" == null): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: first
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: second
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: parse
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: root
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
