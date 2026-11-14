@@ -487,10 +487,9 @@ func (sc *scenarios) scenarioN(a axis) {
 	// The reconcile reporting the conflict of the other one gave the name to
 	// the first, which it reports first.
 	first := "The first " + sc.res.kind + " keeps its name."
-	switch {
-	case sc.gw == onprem:
+	if sc.gw == onprem {
 		sc.assertCond("assert-"+tag+"-first-kept", first, b.referrer, condition{"Programmed", "True", "Programmed"})
-	default:
+	} else {
 		sc.ready("assert-"+tag+"-first-kept", first, b.referrer)
 	}
 	sc.deleteObject("delete-"+tag+"-conflicting", "Delete the conflicting "+sc.res.kind+".", dup)
