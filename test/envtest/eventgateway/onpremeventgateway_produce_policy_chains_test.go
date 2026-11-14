@@ -305,7 +305,7 @@ spec:
 }
 
 // TestOnPremEventGatewayProduceChainKeepsClusterChainOrderIndependent checks
-// that the produce list and the cluster-level list of the same virtual cluster
+// that the produce, consume and cluster-level lists of the same virtual cluster
 // are ordered and compared independently.
 func TestOnPremEventGatewayProduceChainKeepsClusterChainOrderIndependent(t *testing.T) {
 	t.Parallel()
@@ -362,8 +362,22 @@ spec:
         actions: [{op: remove, remove: {key: x-header}}]
 `)
 	}
+	consumePolicy := func(name string) *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
+		return objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](t, ns.Name, `
+metadata: {name: `+name+`}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: consume-`+name+`
+      config:
+        actions: [{op: remove, remove: {key: x-consume}}]
+`)
+	}
 	clusterFirst, clusterSecond := clusterPolicy("cluster-first"), clusterPolicy("cluster-second")
 	first, second := producePolicy("first"), producePolicy("second")
+	consumeFirst, consumeSecond := consumePolicy("first"), consumePolicy("second")
 	clusterChain := objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](t, ns.Name, `
 metadata: {name: cluster-chain}
 spec:
@@ -378,13 +392,20 @@ spec:
   apiSpec:
     policies: [{name: second}, {name: first}]
 `)
-	for _, obj := range []client.Object{gateway, backend, parent, clusterFirst, clusterSecond, first, second, clusterChain, produceChain} {
+	consumeChain := objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain](t, ns.Name, `
+metadata: {name: consume-chain}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    policies: [{name: first}, {name: second}]
+`)
+	for _, obj := range []client.Object{gateway, backend, parent, clusterFirst, clusterSecond, first, second, consumeFirst, consumeSecond, clusterChain, produceChain, consumeChain} {
 		require.NoError(t, cl.Create(ctx, obj))
 	}
 	expectProgrammed := func() {
 		t.Helper()
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			for _, obj := range []client.Object{clusterChain, produceChain} {
+			for _, obj := range []client.Object{clusterChain, produceChain, consumeChain} {
 				if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
 					return
 				}
@@ -397,7 +418,7 @@ spec:
 			}
 		}, waitTime, tickTime)
 	}
-	expectOrders := func(produce, cluster []string, after int) int {
+	expectOrders := func(produce, consume, cluster []string, after int) int {
 		t.Helper()
 		version := 0
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -410,11 +431,16 @@ spec:
 			for _, p := range vc.ProducePolicies {
 				gotProduce = append(gotProduce, p.Id.String())
 			}
+			gotConsume := make([]string, 0, len(vc.ConsumePolicies))
+			for _, p := range vc.ConsumePolicies {
+				gotConsume = append(gotConsume, p.Id.String())
+			}
 			gotCluster := make([]string, 0, len(vc.ClusterPolicies))
 			for _, p := range vc.ClusterPolicies {
 				gotCluster = append(gotCluster, p.Id.String())
 			}
 			assert.Equal(ct, produce, gotProduce)
+			assert.Equal(ct, consume, gotConsume)
 			assert.Equal(ct, cluster, gotCluster)
 			version = g.version.DataVersion
 			if after > 0 {
@@ -424,11 +450,12 @@ spec:
 		return version
 	}
 	clusterOrder := []string{string(clusterSecond.UID), string(clusterFirst.UID)}
+	consumeOrder := []string{string(consumeFirst.UID), string(consumeSecond.UID)}
 	expectProgrammed()
-	version := expectOrders([]string{string(second.UID), string(first.UID)}, clusterOrder, 0)
+	version := expectOrders([]string{string(second.UID), string(first.UID)}, consumeOrder, clusterOrder, 0)
 
-	// Reordering the produce list must not make the cluster-level list order
-	// significant.
+	// Reordering the produce list must not make the consume or cluster-level
+	// list order significant.
 	require.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := cl.Get(ctx, client.ObjectKeyFromObject(produceChain), produceChain); err != nil {
 			return err
@@ -437,10 +464,22 @@ spec:
 		return cl.Update(ctx, produceChain)
 	}))
 	expectProgrammed()
-	version = expectOrders([]string{string(first.UID), string(second.UID)}, clusterOrder, version)
+	version = expectOrders([]string{string(first.UID), string(second.UID)}, consumeOrder, clusterOrder, version)
 
-	// Reordering the cluster-level list must not make the produce list order
-	// significant.
+	// Reordering the consume list must not make the produce or cluster-level
+	// list order significant.
+	require.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(consumeChain), consumeChain); err != nil {
+			return err
+		}
+		slices.Reverse(consumeChain.Spec.APISpec.Policies)
+		return cl.Update(ctx, consumeChain)
+	}))
+	expectProgrammed()
+	version = expectOrders([]string{string(first.UID), string(second.UID)}, []string{string(consumeSecond.UID), string(consumeFirst.UID)}, clusterOrder, version)
+
+	// Reordering the cluster-level list must not make the produce or consume
+	// list order significant.
 	require.NoError(t, retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := cl.Get(ctx, client.ObjectKeyFromObject(clusterChain), clusterChain); err != nil {
 			return err
@@ -449,5 +488,5 @@ spec:
 		return cl.Update(ctx, clusterChain)
 	}))
 	expectProgrammed()
-	expectOrders([]string{string(first.UID), string(second.UID)}, []string{string(clusterFirst.UID), string(clusterSecond.UID)}, version)
+	expectOrders([]string{string(first.UID), string(second.UID)}, []string{string(consumeSecond.UID), string(consumeFirst.UID)}, []string{string(clusterFirst.UID), string(clusterSecond.UID)}, version)
 }
