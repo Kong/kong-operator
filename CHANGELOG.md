@@ -393,18 +393,21 @@
   [#6492](https://github.com/Kong/kong-operator/pull/6492)
 - `OnPremEventGateway`: an entity that can't be sent stops the push of its
   gateway instead of being left out, e.g. a policy whose reference, parent
-  policy or Secret doesn't exist, an empty Secret value, a duplicate policy
-  name, or a parent policy of another virtual cluster. The gateway reports
+  policy or Secret doesn't exist, an empty Secret value, or a parent policy
+  of another virtual cluster. The gateway reports
   `InvalidEntities`, naming them, and gw-admin keeps the last configuration
   that could be sent until they are fixed or deleted. Every other change of the gateway, deletions included, waits too:
   only a data plane certificate deleted or replaced stops being trusted right
   away. A gw-admin pod that restarts meanwhile gets the last configuration
   again, also after a restart of the operator, read back from a pod that holds
-  it. Entities of other namespaces are still only left out, and so are a
-  virtual cluster whose name or DNS label an older one has, which keeps
-  running, and a cluster policy chain competing for a virtual cluster another
-  chain owns.
+  it. Entities of other namespaces are still only left out, and so is a
+  cluster policy chain competing for a virtual cluster another chain owns.
+  A name, virtual cluster DNS label or policy name used by two entities of
+  the gateway goes to the one sent with it, otherwise the oldest; the other
+  is left out, reporting `Invalid` and naming the holder, and stops the
+  push only if it was sent before.
   [#6495](https://github.com/Kong/kong-operator/pull/6495)
+  [#6671](https://github.com/Kong/kong-operator/pull/6671)
 - On-prem AI Gateway: an `AIGatewayConsumerCredential` of one namespace can
   reference an `AIGatewayConsumer` of another namespace, as on a
   `KonnectAIGateway`. A `KongReferenceGrant` in the consumer's namespace must
