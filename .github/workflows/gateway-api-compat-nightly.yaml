@@ -1,0 +1,194 @@
+name: Gateway API compatibility tests (nightly)
+
+# Compatibility of the nightly operator image against Gateway API CRD versions
+# the operator claims to support but does not ship itself (issue #5822).
+# The operator is compiled against the Gateway API version pinned in go.mod
+# (the "pin"). The docs compatibility table announces support for the last 5
+# Gateway API minor versions, counting back from the pin.
+# Runs the chainsaw `gateway` e2e suite against the upstream *standard* channel
+# CRDs of each version, with the chart's own Gateway API CRD subcharts disabled.
+# The standard channel has no TLSRoute/TCPRoute/UDPRoute CRDs, so a run against
+# it exercises the missing-route-CRDs handling (#6443, #6447): tests requiring
+# those CRDs are excluded from the run.
+# Requires the route-CRD absence fixes to land before the suite can pass.
+on:
+  schedule:
+    # After the nightly image build (03:30) and nightly chart publish (04:30).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      gateway-api-versions:
+        description: "JSON array of Gateway API versions to test against (standard channel CRDs)."
+        type: string
+        required: false
+        # Last 5 Gateway API minor versions, counting back from the go.mod pin
+        # (v1.7.0 at the time of writing), latest patch of each minor.
+        # Retirement rule: when the go.mod pin is bumped to a new Gateway API
+        # minor, drop the oldest version from this list and update the docs
+        # compatibility table
+        # (developer.konghq.com/operator/reference/version-compatibility) in
+        # the same PR.
+        default: '["v1.3.0", "v1.4.1", "v1.5.1", "v1.6.3", "v1.7.0"]'
+      operator-image:
+        description: "Operator image (repository:tag) to test. Defaults to the nightly image."
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  gateway-api-compat:
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
+    runs-on: ubuntu-latest
+    name: GWAPI ${{ matrix.gateway-api-version }}
+    env:
+      IMG: kong-operator
+      TAG: gwapi-compat
+      CLUSTER_NAME: gwapi-compat
+    strategy:
+      fail-fast: false
+      # On schedule, overridable via the KO_GWAPI_COMPAT_VERSIONS repo variable
+      # (JSON array). workflow_dispatch input takes precedence over both.
+      # Keep in sync with the dispatch input default: last 5 Gateway API minor
+      # versions counting back from the go.mod pin.
+      matrix:
+        gateway-api-version: ${{ fromJSON(inputs.gateway-api-versions || vars.KO_GWAPI_COMPAT_VERSIONS || '["v1.3.0", "v1.4.1", "v1.5.1", "v1.6.3", "v1.7.0"]') }}
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Resolve operator image
+      env:
+        OPERATOR_IMAGE_INPUT: ${{ inputs.operator-image }}
+        NIGHTLY_IMAGE_REPOSITORY: ${{ vars.DOCKERHUB_NIGHTLY_IMAGE_REPOSITORY }}
+      run: |
+        IMAGE="$OPERATOR_IMAGE_INPUT"
+        if [ -z "$IMAGE" ]; then
+          IMAGE="$NIGHTLY_IMAGE_REPOSITORY:nightly"
+        fi
+        echo "OPERATOR_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+    - name: Pull operator image
+      run: docker pull "$OPERATOR_IMAGE" && docker tag "$OPERATOR_IMAGE" "$IMG:$TAG"
+
+    - uses: ./.github/actions/setup-mise
+      with:
+        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
+
+    - uses: ./.github/actions/kong-license
+      id: license
+      with:
+        cached-license: ${{ secrets.KONG_LICENSE_DATA }}
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+    - uses: ./.github/actions/bump-inotify
+
+    - name: Create k8s KinD Cluster with ktf
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        ktf environments create \
+          --name "$CLUSTER_NAME" \
+          --addon metallb \
+          --addon cert-manager \
+          --kubernetes-version "v1.34.11"
+
+    - name: Load image to kind cluster
+      run: kind load docker-image "$IMG:$TAG" --name "$CLUSTER_NAME"
+
+    - name: Install Gateway API standard CRDs
+      env:
+        GWAPI_VERSION: ${{ matrix.gateway-api-version }}
+      run: |
+        # Some CRDs exceed the annotation size limit, so --server-side is required.
+        kubectl apply --server-side \
+          -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GWAPI_VERSION}/standard-install.yaml"
+        kubectl wait --for=condition=Established crds --all --timeout=2m
+
+    - name: Deploy operator with Helm
+      run: |
+        # Disable the chart's own Gateway API CRD subcharts: the cluster already
+        # carries the matrix version's standard-channel CRDs.
+        helm install kong-operator charts/kong-operator \
+          --namespace kong-system \
+          --create-namespace \
+          --set image.repository="$IMG" \
+          --set image.tag="$TAG" \
+          --set gwapi-standard-crds.enabled=false \
+          --set gwapi-experimental-crds.enabled=false \
+          --wait
+
+    - name: Compute excluded tests
+      # Chainsaw (v0.2) has no per-test conditional skip, so tests that require
+      # an experimental route CRD absent from the cluster are excluded here.
+      # Konnect tests are always excluded: they need Konnect credentials and are
+      # irrelevant to Gateway API compatibility.
+      # Keep the kind->test-name mapping in sync with the test names in
+      # test/e2e/chainsaw/gateway/ when adding suites to this workflow.
+      run: |
+        EXCLUDE=(konnect)
+        for kind in tcproute tlsroute udproute grpcroute; do
+          if ! kubectl get crd "${kind}s.gateway.networking.k8s.io" >/dev/null 2>&1; then
+            EXCLUDE+=("$kind")
+          fi
+        done
+        joined=$(IFS='|'; echo "${EXCLUDE[*]}")
+        echo "CHAINSAW_EXCLUDE_REGEX=gateway-(${joined})" >> "$GITHUB_ENV"
+
+    - name: Apply chainsaw suite prerequisites
+      env:
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+      run: make test.e2e.chainsaw.prereq DIRNAME="gateway"
+
+    - name: run chainsaw e2e tests
+      id: chainsaw-tests
+      run: |
+        make test.e2e.chainsaw \
+          CHAINSAW_TEST_DIR=./test/e2e/chainsaw/gateway \
+          CHAINSAW_TEST_FLAGS="--exclude-test-regex $CHAINSAW_EXCLUDE_REGEX"
+
+    - name: Dump cluster diagnostics on failure or cancellation
+      if: ${{ failure() || cancelled() }}
+      env:
+        SUITE: gateway-${{ matrix.gateway-api-version }}
+      run: |
+        NAMESPACES=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+          | grep -vE '^(kube-(system|node-lease|public)|cert-manager|metallb-system|local-path-storage)$' | tr '\n' ' ')
+        TEST_NAME="${SUITE}" \
+        NAMESPACE="$(echo "${NAMESPACES}" | awk '{print $1}')" \
+        ADDITIONAL_NAMESPACES="$(echo "${NAMESPACES}" | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
+        SKIP_RESOURCE_COUNTS=1 \
+        timeout 4m bash test/e2e/chainsaw/common/scripts/debug_snapshot.sh || true
+
+    - name: Upload debug snapshots as artifacts
+      if: ${{ failure() || cancelled() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: chainsaw-debug-snapshots-gwapi-${{ matrix.gateway-api-version }}-${{ github.run_id }}
+        path: /tmp/chainsaw/
+        if-no-files-found: ignore
+        retention-days: 3
+
+    - name: Send slack notification on failure
+      if: failure() && vars.GWAPI_COMPAT_SEND_SLACK_NOTIFICATION == 'true'
+      uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TEAM_ID: ${{ secrets.SLACK_TEAM_ID }}
+      with:
+        webhook: ${{ env.SLACK_WEBHOOK_URL }}
+        webhook-type: webhook-trigger
+        payload: |
+          status: "failure"
+          option: "false"
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: ":red_circle: Gateway API compatibility tests failed (GWAPI ${{ matrix.gateway-api-version }}) cc: <!subteam^${{ env.SLACK_TEAM_ID }}>"

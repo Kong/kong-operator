@@ -69,8 +69,9 @@ func deployCRDs(ctx context.Context, cluster clusters.Cluster) error {
 	kubectlFlags := []string{"--server-side", "-v5"}
 
 	// CRDs for gateway APIs.
-	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", GatewayAPIExperimentalCRDsPath())
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, GatewayAPIExperimentalCRDsPath(), kubectlFlags...); err != nil {
+	gwapiCRDsPath := GatewayAPICRDsPath()
+	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", gwapiCRDsPath)
+	if err := clusters.KustomizeDeployForCluster(ctx, cluster, gwapiCRDsPath, kubectlFlags...); err != nil {
 		return err
 	}
 

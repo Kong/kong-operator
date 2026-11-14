@@ -9,6 +9,15 @@ make test.e2e.chainsaw                                                        # 
 make test.e2e.chainsaw CHAINSAW_TEST_DIR=./test/e2e/chainsaw/konnect          # Run specific test suite
 ```
 
+`CHAINSAW_TEST_FLAGS` passes extra flags to `chainsaw test` (e.g.
+`--exclude-test-regex gateway-udproute` to skip tests whose route CRD is not
+installed on the cluster, as with standard-channel Gateway API CRDs). The
+[Gateway API compatibility nightly
+workflow](../../../.github/workflows/gateway-api-compat-nightly.yaml) uses this
+to run the `gateway` suite against the standard-channel CRDs of older Gateway
+API versions, excluding tests that need experimental route CRDs and the
+Konnect-credential tests.
+
 ### GWAdmin license prerequisites
 
 `gwadmin`, `onpremeventgateway`, and the onprem tests of
