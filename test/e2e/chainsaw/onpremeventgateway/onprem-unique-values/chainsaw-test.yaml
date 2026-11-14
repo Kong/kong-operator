@@ -22,6 +22,10 @@ spec:
        first: the push stops, and gw-admin keeps both backend clusters.
     6. Kong Operator restarts: the push is still stopped.
     7. Renamed back, it is pushed again.
+    8. A consume policy is sent, then given a new parent policy whose name
+       is taken: the parent, never sent, is only left out, but the child
+       stops the push, and gw-admin keeps it.
+    9. The parent policy renamed, both are pushed.
   # Restarts the operator.
   concurrent: false
   bindings:
@@ -159,6 +163,68 @@ spec:
             env: *env
             timeout: 90s
             content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+
+    - name: 8-Sent-policy-given-a-parent-left-out
+      try:
+        - apply:
+            file: child-policy.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("child") != null'
+        - apply:
+            file: parent-policy.yaml
+            bindings:
+              - name: parent_api_name
+                value: headers
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: parent
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: Invalid
+                    (contains(message, 'its policy name "headers" is already the one of EventGatewayVirtualClusterConsumePolicy')): true
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - apply:
+            file: child-policy-with-parent.yaml
+        - assert:
+            file: assert-gateway-blocked-by-child.yaml
+        # gw-admin keeps the child, without the parent.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | (index("child") != null) and (index("headers") != null) and (length == 4)'
+
+    - name: 9-Parent-policy-renamed
+      try:
+        - apply:
+            file: parent-policy.yaml
+            bindings:
+              - name: parent_api_name
+                value: parent
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | (index("child") != null) and (index("parent") != null) and (length == 5)'
+        # The child first: the in-use finalizer holds its parent until it is
+        # gone, and the cleanup would delete the parent first.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: child
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: parent
 
   catch:
     - description: Capture debug snapshot on test failure.

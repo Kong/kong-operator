@@ -323,6 +323,35 @@ func TestUniquePolicyNames(t *testing.T) {
 			"EventGatewayVirtualClusterConsumePolicy child":  `its parent policy default/parent isn't in the configuration`,
 		}, excludedMessages(cfg), "other keeps the name of the child")
 		require.NoError(t, cfg.blocked())
+
+		t.Run("one sent stops the push when its new parent policy, never sent, can't have its name", func(t *testing.T) {
+			// The child ran without a parent policy, and now names one that
+			// can't have its name.
+			before := child.DeepCopy()
+			before.Spec.APISpec.ParentPolicyRef = configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{}
+			cfg := f.build(f.sent(produce, before), produce, parent, child)
+			assert.Equal(t, map[string]string{
+				"EventGatewayVirtualClusterConsumePolicy parent": `its policy name "same" is already the one of EventGatewayVirtualClusterProducePolicy default/produce`,
+				"EventGatewayVirtualClusterConsumePolicy child":  `its parent policy default/parent isn't in the configuration`,
+			}, excludedMessages(cfg))
+			assert.Equal(t, map[string]bool{
+				"EventGatewayVirtualClusterConsumePolicy parent": false,
+				"EventGatewayVirtualClusterConsumePolicy child":  true,
+			}, excludedBlocking(cfg), "left out, the child would be taken off the gateway")
+			assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason, failureReason(cfg.blocked()))
+		})
+
+		t.Run("one sent stops the push when such a parent policy is out through its own parent", func(t *testing.T) {
+			grandchild := f.consumePolicy("grandchild", modifyHeaders("grandchild-name", "child"), 7)
+			before := grandchild.DeepCopy()
+			before.Spec.APISpec.ParentPolicyRef = configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{}
+			cfg := f.build(f.sent(produce, before), produce, parent, child, grandchild)
+			assert.Equal(t, map[string]bool{
+				"EventGatewayVirtualClusterConsumePolicy parent":     false,
+				"EventGatewayVirtualClusterConsumePolicy child":      false,
+				"EventGatewayVirtualClusterConsumePolicy grandchild": true,
+			}, excludedBlocking(cfg), "only the grandchild was sent")
+		})
 	})
 }
 
