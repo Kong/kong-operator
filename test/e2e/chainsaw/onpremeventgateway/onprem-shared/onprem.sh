@@ -149,18 +149,23 @@ cp_config_status_is() {
 
 # operator_idle: the Kong Operator has reconciled at least once since it started
 # the data planes and the gateways, and nothing of those is queued or running.
-# Its first reconciles are all queued before its first worker starts. Other
-# tests running at once only delay this.
+# Its first reconciles are all queued before its first worker starts. A kind
+# without objects in the cluster gets no reconcile: only nothing queued or
+# running counts for it, e.g. KegDataPlanes for a test without a data plane,
+# running alone. Other tests running at once only delay this.
 operator_idle() {
-  local pod metrics controller
+  local pod metrics controller resource objects
   pod=$(kubectl get pods -n kong-system -l app.kubernetes.io/name=kong-operator -o json |
     jq -er '[.items[] | select(.metadata.deletionTimestamp == null and .status.phase == "Running")][0].metadata.name')
   metrics=$(kubectl get --raw "/api/v1/namespaces/kong-system/pods/$pod:8080/proxy/metrics")
   for controller in kegdataplane onpremeventgateway; do
-    printf '%s\n' "$metrics" | awk -v label="controller=\"$controller\"" '
+    resource="${controller}s.eventgateway.konghq.com"
+    objects=$(kubectl get "$resource" -A -o name) || return 1
+    objects=$(printf '%s' "$objects" | grep -c . || true)
+    printf '%s\n' "$metrics" | awk -v label="controller=\"$controller\"" -v objects="$objects" '
       /^(workqueue_depth|controller_runtime_active_workers)\{/ && index($0, label) { busy += $NF }
       /^controller_runtime_reconcile_total\{/ && index($0, label) { done += $NF }
-      END { exit !(busy == 0 && done > 0) }' || return 1
+      END { exit !(busy == 0 && (done > 0 || objects == 0)) }' || return 1
   done
 }
 
