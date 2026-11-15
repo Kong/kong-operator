@@ -67,6 +67,7 @@ local_resources() {
   "$1" eventgatewayvirtualclusterproducepolicychains.configuration.konghq.com produce-chain
   "$1" eventgatewayvirtualclusterpolicychains.configuration.konghq.com cluster-chain
   "$1" eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com decrypted first second skip pending extra root parse-a parse-b
+  "$1" eventgatewaystatickeys.configuration.konghq.com chain-key
   "$1" eventgatewayvirtualclusters.configuration.konghq.com chain-vc empty-vc
   "$1" eventgatewaybackendclusters.configuration.konghq.com chain-backend
   "$1" konnecteventgateways.konnect.konghq.com "${GATEWAY_NAME}"
@@ -94,6 +95,7 @@ while IFS= read -r id; do
     delete_collection "${path}/cluster-policies"
     delete_remote "${path}"
   done <<<"${vc_ids}"
+  delete_collection "${gateway}/static-keys"
   delete_collection "${gateway}/backend-clusters"
   delete_remote "${gateway}"
   API_PATH="${gateway}" EXPECTED_STATUS=404 RETRY_COUNT=3 \
@@ -119,6 +121,7 @@ finish_local() {
 local_resources finish_local
 delete_local konnectapiauthconfigurations.konnect.konghq.com "${AUTH_NAME}"
 kubectl wait --for=delete "konnectapiauthconfigurations.konnect.konghq.com/${AUTH_NAME}" -n "${NAMESPACE}" --timeout=30s >/dev/null
-delete_local secret "${AUTH_SECRET_NAME}"
-kubectl wait --for=delete "secret/${AUTH_SECRET_NAME}" -n "${NAMESPACE}" --timeout=30s >/dev/null
+delete_local secret chain-key "${AUTH_SECRET_NAME}"
+kubectl wait --for=delete secret/chain-key "secret/${AUTH_SECRET_NAME}" -n "${NAMESPACE}" --timeout=30s >/dev/null
+test -z "$(kubectl get secret chain-key "${AUTH_SECRET_NAME}" -n "${NAMESPACE}" --ignore-not-found -o name)"
 echo "Exact-name/test-labeled gateway absent remotely; named local resources removed."

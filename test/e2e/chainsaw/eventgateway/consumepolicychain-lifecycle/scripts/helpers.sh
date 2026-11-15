@@ -45,6 +45,20 @@ delete_resource() {
   kubectl delete "$1" "$2" -n "${NAMESPACE}" --wait=false >/dev/null || return "$?"
   kubectl wait --for=delete "$1/$2" -n "${NAMESPACE}" --timeout=120s >/dev/null
 }
+create_static_key() {
+  # Public test-only key material, not the Konnect credential.
+  jq -n --arg ns "${NAMESPACE}" --arg gateway "${GATEWAY_NAME}" '
+    {apiVersion: "v1", kind: "Secret",
+     metadata: {name: "chain-key", namespace: $ns, labels: {"konghq.com/secret": "true"}},
+     stringData: {key: "Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE="}},
+    {apiVersion: "configuration.konghq.com/v1alpha1", kind: "EventGatewayStaticKey",
+     metadata: {name: "chain-key", namespace: $ns},
+     spec: {parentRef: {group: "konnect.konghq.com", kind: "KonnectEventGateway", name: $gateway},
+       apiSpec: {name: "chain-key", value: {type: "secretRef", secretRef: {name: "chain-key", key: "key"}}}}}
+  ' | kubectl apply -f - >/dev/null
+  wait_resource eventgatewaystatickeys.configuration.konghq.com chain-key \
+    '.metadata.generation as $g | any(.status.conditions[]?; .type == "Programmed" and .status == "True" and .observedGeneration == $g)'
+}
 create_policy() {
   local name="$1" type="$2" parent="${3:-}" remote_name="${4:-$1}"
   jq -n --arg name "${name}" --arg type "${type}" --arg parent "${parent}" --arg remote "${remote_name}" \

@@ -136,8 +136,8 @@ The `consumepolicychain-lifecycle` scenario creates a dedicated test-labeled
 gateway and two virtual clusters. Its nonempty scope contains two
 `schemaValidation` groups, sibling `modifyHeaders` policies, a `decryptFields`
 child, a `skipRecord` child, and independent roots. It uses Consume's explicit
-JSON `valueValidationAction: skip` and static decryption key sources; no Produce
-static-key fixture is required.
+JSON `valueValidationAction: skip`, and creates a gateway static key for the
+decryption key source.
 
 The scenario verifies the exact complete flat ID sequence and every remote
 `parent_policy_id`, whole-group and sibling reordering, out-of-band drift repair,

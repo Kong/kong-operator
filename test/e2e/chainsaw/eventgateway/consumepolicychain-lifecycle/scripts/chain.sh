@@ -9,6 +9,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=helpers.sh
 source "${SCRIPT_DIR}/helpers.sh"
 
+# decryptFields needs a gateway static key to resolve its key source.
+create_static_key
+
 create_policy root modifyHeaders; wait_policy root
 create_policy parse-b schemaValidation; wait_policy parse-b
 create_policy skip skipRecord parse-b; wait_policy skip
