@@ -19,6 +19,7 @@ package onprem
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"reflect"
 	"slices"
@@ -30,6 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -225,15 +227,14 @@ func TestBuildConfigurationStaticKeyValueChanged(t *testing.T) {
 	require.Empty(t, cfg.excluded)
 	inputs := cfg.keyInputs[k.UID]
 	require.NotEmpty(t, inputs.hash)
-	assert.False(t, inputs.changed)
 
 	t.Run("not recorded before the push", func(t *testing.T) {
-		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), inputs, false)
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), inputs, "")
 		assert.Empty(t, hash)
 		assert.Nil(t, cond)
 	})
 	t.Run("recorded once pushed", func(t *testing.T) {
-		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), inputs, true)
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), inputs, inputs.hash)
 		assert.Equal(t, inputs.hash, hash)
 		require.NotNil(t, cond)
 		assert.Equal(t, metav1.ConditionTrue, cond.Status)
@@ -246,7 +247,7 @@ func TestBuildConfigurationStaticKeyValueChanged(t *testing.T) {
 	t.Run("unchanged, it is sent", func(t *testing.T) {
 		cfg, k := build()
 		require.Empty(t, cfg.excluded)
-		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], true)
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], cfg.keyInputs[k.UID].hash)
 		assert.Equal(t, inputs.hash, hash)
 		require.NotNil(t, cond)
 		assert.Equal(t, konnectv1alpha1.CreateInputsReasonUnchanged, cond.Reason)
@@ -261,7 +262,7 @@ func TestBuildConfigurationStaticKeyValueChanged(t *testing.T) {
 		assert.True(t, out["EventGatewayStaticKey key"].blocks, "left out, gw-admin would drop the key")
 		assert.Equal(t, "its value "+keyValueChanged, out["EventGatewayStaticKey key"].message)
 		assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason, failureReason(cfg.blocked()))
-		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], false)
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], "")
 		assert.Equal(t, inputs.hash, hash, "the fingerprint of the value pushed is kept")
 		require.NotNil(t, cond)
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
@@ -281,7 +282,7 @@ func TestBuildConfigurationStaticKeyValueChanged(t *testing.T) {
 			require.NoError(t, cl.Create(t.Context(), restored))
 		}()
 		cfg, k := build()
-		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], false)
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], "")
 		assert.Equal(t, inputs.hash, hash)
 		require.NotNil(t, cond)
 		assert.Equal(t, metav1.ConditionUnknown, cond.Status)
@@ -336,7 +337,7 @@ func TestBuildConfigurationStaticKeyValueChangedBeingDeleted(t *testing.T) {
 			assert.Empty(t, excluded(cfg))
 			require.NoError(t, cfg.blocked())
 			require.Len(t, cfg.entities.StaticKeys, 1)
-			hash, cond := keyInputsStatus(deleted, deleted.GetCreateInputsHash(), cfg.keyInputs[deleted.UID], true)
+			hash, cond := keyInputsStatus(deleted, deleted.GetCreateInputsHash(), cfg.keyInputs[deleted.UID], cfg.keyInputs[deleted.UID].hash)
 			assert.Equal(t, pushed, hash, "the fingerprint stays until the key is gone")
 			require.NotNil(t, cond)
 			assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
@@ -363,7 +364,7 @@ func TestBuildConfigurationStaticKeyHashNotCachedYet(t *testing.T) {
 	cfg, err = buildConfigurationWith(t.Context(), newFakeClient(t, append(objects, key, changed)...), gateway, "", nil, nil, &recorded)
 	require.NoError(t, err)
 	require.Error(t, cfg.blocked(), "the value changed since it was pushed")
-	hash, cond := keyInputsStatus(key, cfg.recordedHash(key), cfg.keyInputs[key.UID], false)
+	hash, cond := keyInputsStatus(key, cfg.recordedHash(key), cfg.keyInputs[key.UID], "")
 	assert.Equal(t, pushed, hash, "the fingerprint of the value pushed is kept")
 	require.NotNil(t, cond)
 	assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
@@ -462,6 +463,26 @@ func TestStatusAppliesKeepRecordedInputsHash(t *testing.T) {
 	assert.Equal(t, recorded, got.Status.CreateInputsHash)
 }
 
+// TestStatusWriteFailureKeepsInputsHash checks the fingerprint of a static key
+// is remembered even when writing it in its status fails: a pod may already
+// hold its value, and the next reconcile must not push another one in its
+// place.
+func TestStatusWriteFailureKeepsInputsHash(t *testing.T) {
+	const pushed = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	gateway, key, _, _ := staticKeyObjects(t)
+	cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+		SubResourceApply: func(context.Context, client.Client, string, runtime.ApplyConfiguration, ...client.SubResourceApplyOption) error {
+			return errors.New("the API server is unavailable")
+		},
+	}, gateway, key)
+	r := &Reconciler{Client: cl, TypeConverter: testTypeConverter}
+	cond := entityCondition(key, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue,
+		eventgatewayv1alpha1.OnPremEntityProgrammedReason, "pushed")
+	applied := entityCondition(key, konnectv1alpha1.CreateInputsAppliedConditionType, metav1.ConditionTrue, konnectv1alpha1.CreateInputsReasonApplied, "recorded")
+	require.Error(t, r.setEntityStatus(t.Context(), entityStatus{obj: key, inputsHash: pushed, inputsApplied: &applied}, cond))
+	assert.Equal(t, pushed, r.recordedInputsHash(key))
+}
+
 // TestStaticKeyFingerprintIsOfItsValue checks the fingerprint of a static key
 // is of its value only: unlike in Konnect, its name, description and labels
 // are updated in place, and its value may move from a Secret inline.
@@ -521,34 +542,80 @@ func TestPushResultReachedAPod(t *testing.T) {
 		"a configuration stopped from being pushed isn't, but the pods get the last one that could be sent")
 }
 
-// TestWithKeyInputsBlocked checks a static key of the last configuration that
-// could be sent, pushed in place of a blocked one, records the fingerprint of
-// the value it has there, not the one it has now: that is the one the pods
-// got.
-func TestWithKeyInputsBlocked(t *testing.T) {
+// TestWithKeyInputs checks a static key records the fingerprint of the value
+// it has among the entities pushed, once they may have reached a gw-admin pod,
+// not the one it reads now: an entity kept, or the last configuration pushed
+// in place of a blocked one, has the value it had.
+func TestWithKeyInputs(t *testing.T) {
 	key := &configurationv1alpha1.EventGatewayStaticKey{Namespace: "default", Name: "key", UID: "key-uid"}
-	held, err := keyValueHash("aGVsZC1zZWNyZXQta2V5LTEyMzQ1Njc4OTA=")
+	pushed, err := keyValueHash("cHVzaGVkLXNlY3JldC1rZXktMTIzNDU2Nzg5MA==")
 	require.NoError(t, err)
 	now, err := keyValueHash("bm93LXNlY3JldC1rZXktMTIzNDU2Nzg5MA==")
 	require.NoError(t, err)
-	blocked := configuration{
-		excluded:      []excludedEntity{{obj: &configurationv1alpha1.EventGatewayTLSTrustBundle{}, blocks: true}},
-		keyInputs:     map[types.UID]keyInputs{key.UID: {hash: now}},
-		lastKeyHashes: map[uuid.UUID]string{staticKeyID(client.ObjectKeyFromObject(key)): held},
+	cfg := configuration{
+		keyInputs:       map[types.UID]keyInputs{key.UID: {hash: now}},
+		pushedKeyHashes: map[uuid.UUID]string{staticKeyID(client.ObjectKeyFromObject(key)): pushed},
 	}
 
-	for _, included := range []bool{true, false} {
-		e := withKeyInputs(blocked, entityStatus{obj: key}, true, included)
-		assert.Equal(t, held, e.inputsHash, "the value the pods got, the key in the configuration or not: %v", included)
-		require.NotNil(t, e.inputsApplied)
-		assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, e.inputsApplied.Reason, "it has another value now")
-	}
+	e := withKeyInputs(cfg, entityStatus{obj: key}, true)
+	assert.Equal(t, pushed, e.inputsHash, "the value the pods got")
+	require.NotNil(t, e.inputsApplied)
+	assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, e.inputsApplied.Reason, "it reads another value now")
 
-	assert.Empty(t, withKeyInputs(blocked, entityStatus{obj: key}, false, true).inputsHash, "no pod got it")
-	withoutKey := blocked
-	withoutKey.lastKeyHashes = nil
-	assert.Empty(t, withKeyInputs(withoutKey, entityStatus{obj: key}, true, true).inputsHash,
-		"the pods got the last configuration, without the key: its value now wasn't pushed")
+	unreadable := cfg
+	unreadable.keyInputs = map[types.UID]keyInputs{}
+	e = withKeyInputs(unreadable, entityStatus{obj: key}, true)
+	assert.Equal(t, pushed, e.inputsHash, "kept, e.g. its Secret is gone: the value the pods got")
+	require.NotNil(t, e.inputsApplied)
+	assert.Equal(t, konnectv1alpha1.CreateInputsReasonInputsUnavailable, e.inputsApplied.Reason)
+
+	assert.Empty(t, withKeyInputs(cfg, entityStatus{obj: key}, false).inputsHash, "no pod got it")
+	withoutKey := cfg
+	withoutKey.pushedKeyHashes = nil
+	assert.Empty(t, withKeyInputs(withoutKey, entityStatus{obj: key}, true).inputsHash,
+		"the entities pushed don't have the key: its value now wasn't pushed")
+}
+
+// TestKeptPushRecordsKeyValuePushed checks the fingerprint of a static key
+// whose Secret is gone, kept as it was last, is recorded once that entity
+// reaches a gw-admin pod: its value may then be served, so that another one
+// read once the Secret is back can't replace it under the same id.
+func TestKeptPushRecordsKeyValuePushed(t *testing.T) {
+	_, key, secret, objects := staticKeyObjects(t)
+	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+		return append(append(f.gwAdmin.Objects(), f.gateway, key, secret), objects...)
+	})
+	pushed, err := keyValueHash(string(secret.Data["key"]))
+	require.NoError(t, err)
+
+	// Revision 1 reaches no pod: gw-admin rejects its entities.
+	f.pod().respond = failing(callEntities, http.StatusBadRequest)
+	_, _ = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+	require.Empty(t, read(t, f.cl, key).GetCreateInputsHash(), "no pod got its value")
+
+	// Its Secret is gone: it is kept as it was last, and reaches the pods.
+	f.pod().respond = nil
+	f.r.backoff.Forget(f.gateway.UID) // Once its backoff is over.
+	require.NoError(t, f.cl.Delete(t.Context(), secret))
+	_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+	require.NoError(t, err)
+	require.NotEmpty(t, f.pod().gateways[f.gatewayID].StaticKeys, "the pods got the key")
+	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded")
+
+	// The Secret is back with another value: it is detected as changed.
+	back := secret.DeepCopy()
+	back.ResourceVersion = ""
+	back.Data = map[string][]byte{"key": []byte("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")}
+	require.NoError(t, f.cl.Create(t.Context(), back))
+	_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+	require.NoError(t, err)
+	held := f.pod().gateways[f.gatewayID].StaticKeys
+	require.Len(t, held, 1)
+	assert.Equal(t, string(secret.Data["key"]), held[0].Value, "the pods keep the value they got")
+	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash())
+	inputsApplied := apimeta.FindStatusCondition(read(t, f.cl, key).Status.Conditions, konnectv1alpha1.CreateInputsAppliedConditionType)
+	require.NotNil(t, inputsApplied)
+	assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, inputsApplied.Reason)
 }
 
 // TestBlockedPushRecordsKeyValuePushed checks the fingerprint of a static key
@@ -569,15 +636,20 @@ func TestBlockedPushRecordsKeyValuePushed(t *testing.T) {
 	require.Equal(t, int64(1), read(t, f.cl, f.gateway).Status.ConfigRevision)
 	require.Empty(t, read(t, f.cl, key).GetCreateInputsHash(), "no pod got its value")
 
-	// A policy that can't be sent blocks the configuration: the pods get
-	// revision 1, with the value of the key.
+	// A policy that can't be sent blocks the configuration, and the Secret
+	// is rotated: the pods get revision 1, with the value of the key there.
 	f.pod().respond = nil
 	f.r.backoff.Forget(f.gateway.UID) // Once its backoff is over.
 	require.NoError(t, f.cl.Create(t.Context(), newSchemaRegistryFixture(t).validateWith("validate", `{name: missing}`, 3)))
+	rotated := read(t, f.cl, secret)
+	rotated.Data = map[string][]byte{"key": []byte("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")}
+	require.NoError(t, f.cl.Update(t.Context(), rotated))
 	_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
 	require.NoError(t, err)
-	require.NotEmpty(t, f.pod().gateways[f.gatewayID].StaticKeys, "the pods got the key")
-	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded")
+	held := f.pod().gateways[f.gatewayID].StaticKeys
+	require.Len(t, held, 1, "the pods got the key")
+	require.Equal(t, string(secret.Data["key"]), held[0].Value, "with the value of revision 1")
+	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded, not the one read now")
 }
 
 // TestEntitiesInUseBySentStaticKeyLeftOut checks a static key the last

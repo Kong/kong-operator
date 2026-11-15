@@ -317,7 +317,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		// A static key pushed to a gw-admin pod may be served to data planes,
 		// whether or not the push to the others failed: its fingerprint is
 		// recorded then.
-		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e, result.reachedAPod(cfg), true), cond))
+		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e, result.reachedAPod(cfg)), cond))
 	}
 	for _, e := range cfg.excluded {
 		what := "Left out of the configuration of the OnPremEventGateway %s: %s"
@@ -326,7 +326,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
 			fmt.Sprintf(what, gatewayKey, e.message))
-		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e.entityStatus, result.reachedAPod(cfg), false), cond))
+		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e.entityStatus, result.reachedAPod(cfg)), cond))
 	}
 	errs = append(errs, r.reportDetached(ctx, gateway, cfg))
 	return errors.Join(errs...)
@@ -487,13 +487,12 @@ func (r *Reconciler) setEntityStatus(ctx context.Context, e entityStatus, progra
 			inputsHash = e.inputsHash
 		}
 	}
-	if err := r.setEntityStatusFields(ctx, e.obj, inputsHash, removed, append(conditions, programmed)...); err != nil {
-		return err
-	}
+	// Remembered before it is written: a write that fails mustn't lose the
+	// fingerprint of a value a pod may already hold.
 	if isKey && inputsHash != "" && inputsHash != recordedInputsHash(e.obj) {
 		r.inputsHashes.Store(client.ObjectKeyFromObject(e.obj), recordedKeyHash{uid: e.obj.GetUID(), hash: inputsHash})
 	}
-	return nil
+	return r.setEntityStatusFields(ctx, e.obj, inputsHash, removed, append(conditions, programmed)...)
 }
 
 // recordedInputsHash returns the fingerprint recorded for the object, when it
@@ -518,23 +517,18 @@ func (r *Reconciler) recordedInputsHash(obj client.Object) string {
 // withKeyInputs returns the status of the entity with, for a static key, the
 // fingerprint to record and its CreateInputsApplied condition (see
 // keyInputsStatus). reached tells the entities pushed may have reached a
-// gw-admin pod (see pushResult.reachedAPod), and included that the entity is
-// in the configuration. A blocked configuration isn't pushed: the pods get the
-// last one that could be sent, and a key in it the value it has there, whose
-// fingerprint is recorded then, whatever the value of the key now.
-func withKeyInputs(cfg configuration, e entityStatus, reached, included bool) entityStatus {
+// gw-admin pod (see pushResult.reachedAPod): the fingerprint recorded then is
+// the one of the value of the key among them, whatever it reads now.
+func withKeyInputs(cfg configuration, e entityStatus, reached bool) entityStatus {
 	k, ok := e.obj.(*configurationv1alpha1.EventGatewayStaticKey)
 	if !ok {
 		return e
 	}
-	recorded, inputs, pushed := cfg.recordedHash(k), cfg.keyInputs[k.UID], reached && included
-	if cfg.blocked() != nil {
-		pushed = false
-		if held, inLast := cfg.lastKeyHashes[staticKeyID(client.ObjectKeyFromObject(k))]; inLast && reached && recorded == "" {
-			recorded, inputs.changed = held, inputs.hash != "" && inputs.hash != held
-		}
+	var pushed string
+	if reached {
+		pushed = cfg.pushedKeyHashes[staticKeyID(client.ObjectKeyFromObject(k))]
 	}
-	e.inputsHash, e.inputsApplied = keyInputsStatus(k, recorded, inputs, pushed)
+	e.inputsHash, e.inputsApplied = keyInputsStatus(k, cfg.recordedHash(k), cfg.keyInputs[k.UID], pushed)
 	return e
 }
 

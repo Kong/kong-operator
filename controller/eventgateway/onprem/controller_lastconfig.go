@@ -238,20 +238,6 @@ func entitiesInUseBySent(sent gwadminapi.GatewayEntitySet, cfg configuration) ma
 	return inUse
 }
 
-// keyHashes returns, by id, the fingerprints of the values of the static
-// keys of the configuration (see keyValueHash).
-func (last *lastGoodConfig) keyHashes() (map[uuid.UUID]string, error) {
-	hashes := make(map[uuid.UUID]string, len(last.config.Entities.StaticKeys))
-	for _, k := range last.config.Entities.StaticKeys {
-		hash, err := keyValueHash(k.Value)
-		if err != nil {
-			return nil, err
-		}
-		hashes[k.Id] = hash
-	}
-	return hashes, nil
-}
-
 // pushedAs returns the last configuration as it is pushed, at its own
 // revision, and the configuration pushing it: the current one, for its data
 // plane certificates, which a stopped push still makes current, e.g. to stop

@@ -31,6 +31,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
 )
 
@@ -121,13 +122,25 @@ func keyValueHash(value string) (string, error) {
 	return createinputs.Hash(data)
 }
 
-// keyInputs is the fingerprint of the value of a static key, as it reads now,
-// and whether it differs from the one recorded.
+// keyHashes returns, by id, the fingerprints of the values of the static
+// keys (see keyValueHash).
+func keyHashes(keys []gwadminapi.EventGatewayStaticKeyOnPrem) (map[uuid.UUID]string, error) {
+	hashes := make(map[uuid.UUID]string, len(keys))
+	for _, k := range keys {
+		hash, err := keyValueHash(k.Value)
+		if err != nil {
+			return nil, err
+		}
+		hashes[k.Id] = hash
+	}
+	return hashes, nil
+}
+
+// keyInputs is the fingerprint of the value of a static key, as it reads now.
 type keyInputs struct {
 	// hash is the fingerprint, or "" when it can't be computed, e.g. as the
 	// Secret it reads is gone.
-	hash    string
-	changed bool
+	hash string
 }
 
 // staticKeyRequest returns the request of a static key, checking its
@@ -145,7 +158,7 @@ func (c *configuration) staticKeyRequest(ctx context.Context, cl client.Client, 
 	}
 	recorded := c.recordedHash(k)
 	changed := recorded != "" && hash != recorded
-	c.keyInputs[k.UID] = keyInputs{hash: hash, changed: changed}
+	c.keyInputs[k.UID] = keyInputs{hash: hash}
 	// One being deleted, held while the configuration sent uses it, is sent
 	// with the value it has: its deletion is the way out of a value that
 	// changed, and accepts that the records it encrypted are no longer
@@ -203,21 +216,22 @@ func recordedInputsHash(obj client.Object) string {
 
 // keyInputsStatus returns the fingerprint to record in the status of a static
 // key, and its CreateInputsApplied condition, or nil when it has none: the
-// fingerprint recorded, or, once pushed, the one of its value. pushed tells it
-// is in the configuration gw-admin holds.
-func keyInputsStatus(k *configurationv1alpha1.EventGatewayStaticKey, recorded string, inputs keyInputs, pushed bool) (string, *metav1.Condition) {
+// fingerprint recorded, or else pushed: the one of the value gw-admin may
+// hold, or "" when it holds none. Its value now, in inputs, is compared with
+// it.
+func keyInputsStatus(k *configurationv1alpha1.EventGatewayStaticKey, recorded string, inputs keyInputs, pushed string) (string, *metav1.Condition) {
 	hash := recorded
 	reason, status := konnectv1alpha1.CreateInputsReasonUnchanged, metav1.ConditionTrue
 	message := "Current inputs match the recorded create-input fingerprint"
 	if hash == "" {
-		if !pushed || inputs.hash == "" {
+		if pushed == "" {
 			return "", nil
 		}
-		hash = inputs.hash
+		hash = pushed
 		reason, message = konnectv1alpha1.CreateInputsReasonApplied, "The value pushed is recorded: it can't change while this static key exists"
 	}
 	switch {
-	case inputs.changed:
+	case inputs.hash != "" && inputs.hash != hash:
 		reason, status = konnectv1alpha1.CreateInputsReasonValueChanged, metav1.ConditionFalse
 		message = "The value " + keyValueChanged
 	case inputs.hash == "":
@@ -225,7 +239,7 @@ func keyInputsStatus(k *configurationv1alpha1.EventGatewayStaticKey, recorded st
 		// Not converted: its value can't be read, e.g. its Secret is gone, or
 		// it isn't read at all, e.g. a grant is missing. Programmed and
 		// SecretRefValid tell which.
-		message = "Cannot compare its value with the recorded fingerprint, as it can't be read now (see Programmed and SecretRefValid); the recorded fingerprint is unchanged"
+		message = "Cannot compare its value with the recorded fingerprint, as it can't be read now (see Programmed and SecretRefValid)"
 	}
 	cond := entityCondition(k, konnectv1alpha1.CreateInputsAppliedConditionType, status, reason, message)
 	return hash, &cond

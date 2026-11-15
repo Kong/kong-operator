@@ -330,15 +330,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		if config, pushing, err = last.pushedAs(cfg); err != nil {
 			return requeueOnConflict(logger, ctrl.Result{}, err)
 		}
-		// The pods may get the static keys it holds, with their values then.
-		if cfg.lastKeyHashes, err = last.keyHashes(); err != nil {
-			return requeueOnConflict(logger, ctrl.Result{}, err)
-		}
 		invalid, _ := errors.AsType[invalidEntitiesError](blocked)
 		invalid.serving = last.revision
 		blocked = invalid
 	}
 
+	// A static key records the fingerprint of the value the pods get, which
+	// may not be the one it reads now: an entity kept, or the last
+	// configuration pushed in place of a blocked one, has the value it had.
+	if cfg.pushedKeyHashes, err = keyHashes(config.Entities.StaticKeys); err != nil {
+		return requeueOnConflict(logger, ctrl.Result{}, err)
+	}
 	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config, pushing, blocked)
 	if blocked != nil {
 		// The push is stopped, whatever the pods were pushed.
