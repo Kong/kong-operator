@@ -57,7 +57,7 @@ create_policy() {
      elif $type == "encryptFields" then
        {name: $remote, config: {failureMode: "reject", encryptFields: [{
          paths: {type: "array", array: [{match: "$.secret"}]},
-         encryptionKey: {type: "static", static: {key: {namespacedRef: {name: "chain-key"}}}}}]}}
+         encryptionKey: {type: "static", static: {key: {name: "chain-key"}}}}]}}
      else {name: $remote, config: {actions: [{op: "set", set: {key: "x-chain", value: $name}}]}} end) as $config |
     {apiVersion: "configuration.konghq.com/v1alpha1", kind: "EventGatewayVirtualClusterProducePolicy",
      metadata: {name: $name, namespace: $ns},
