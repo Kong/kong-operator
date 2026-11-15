@@ -29,6 +29,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&EventGatewayVirtualClusterList{},
 		&EventGatewayVirtualClusterConsumePolicy{},
 		&EventGatewayVirtualClusterConsumePolicyList{},
+		&EventGatewayVirtualClusterConsumePolicyChain{},
+		&EventGatewayVirtualClusterConsumePolicyChainList{},
 		&EventGatewayVirtualClusterPolicy{},
 		&EventGatewayVirtualClusterPolicyList{},
 		&EventGatewayVirtualClusterPolicyChain{},

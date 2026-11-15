@@ -1906,6 +1906,48 @@ apiGroupVersions:
               group: konnect.konghq.com
           parentRef:
             fieldName: eventGatewayVirtualClusterRef
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policy-chain
+        name: EventGatewayVirtualClusterConsumePolicyChain
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [EventGatewayVirtualClusterConsumePolicy]
+            resolvesTo: id
+            # The generated EventGatewayVirtualClusterConsumePolicyRef type is
+            # shared with parentPolicyRef, which supports cross-namespace
+            # references. The chain keeps its policies in its namespace, which
+            # its reference validation enforces.
+            supportCrossNamespaceReference: true
+        cel:
+          _validations:
+            - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable",fieldPath=".spec.eventGatewayVirtualClusterRef"'
+            - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef''",message="spec.eventGatewayVirtualClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayVirtualClusterRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.id) || size(self.status.id) == 0",message="status.id must be unset because policy chains have no independent Konnect ID",fieldPath=".status.id"'
+          spec:
+            _validations:
+              - "+required"
+            apiSpec:
+              _validations:
+                - "+required"
+              policies:
+                _description: >-
+                  Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order.
+                  This API declares Konnect-only ordering.
+                  The parent virtual cluster and every policy must be in the same namespace as this chain.
+                  An omitted or empty namespace defaults to this chain's namespace; an explicit
+                  namespace must be the same, regardless of KongReferenceGrant permissions.
+                  Each policy must belong to the referenced EventGatewayVirtualCluster.
+                  List every consume policy exactly once, including roots and nested children.
+                  A root schemaValidation parent must precede its immediately contiguous children.
+                  Root groups may move and sibling children may reorder within their group.
+                  Deeper nesting is not supported. Ordering never changes parentPolicyRef.
+                  Existing parent requirements remain: decryptFields, maskFields and transcode
+                  require a schemaValidation parent; modifyHeaders and skipRecord may reference one.
+                  No other consume policy type accepts parentPolicyRef.
+                  An explicit empty list is valid only when the remote chain has no policies;
+                  it does not clear an existing chain. Omitted and null lists are invalid.
+                  When a policy is created or deleted, update this list to match the complete remote set.
+                _validations:
+                  - "+listType=atomic"
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policies
         name: EventGatewayVirtualClusterPolicy
         # The parent reference is immutable once the entity has been created in

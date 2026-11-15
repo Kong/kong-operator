@@ -1,7 +1,8 @@
 # Event Gateway parent policies
 
-`encryptFields` produce policies and `decryptFields` consume policies operate
-on records parsed by a `schemaValidation` policy. Set
+Produce `encryptFields`, `maskFields`, and `transcode` policies and Consume
+`decryptFields`, `maskFields`, and `transcode` policies operate on records parsed
+by a `schemaValidation` policy. Set
 `spec.apiSpec.parentPolicyRef.name` to the Kubernetes name of that parent policy.
 The operator resolves the reference to Konnect's `parent_policy_id`.
 
@@ -15,7 +16,9 @@ reference resolution (`KonnectReferencesResolved=False`).
 | Child policy type | `parentPolicyRef` |
 | ----------------- | ----------------- |
 | Produce `encryptFields` | Required |
+| Produce `maskFields` or `transcode` | Required |
 | Consume `decryptFields` | Required |
+| Consume `maskFields` or `transcode` | Required |
 | Produce or consume `modifyHeaders` | Optional |
 | Consume `skipRecord` | Optional |
 | Other policy types | Not supported |
@@ -123,7 +126,8 @@ Parents and children may be applied together. A child reports
 `KonnectReferencesResolved=False` until its parent exists in Konnect. Changes
 to the parent trigger reconciliation of referencing children.
 
-New `encryptFields` and `decryptFields` policies must have a parent reference.
+New Produce `encryptFields`, `maskFields`, and `transcode` policies and Consume
+`decryptFields`, `maskFields`, and `transcode` policies must have a parent reference.
 Existing parent-less policies from an older operator version can still be
 updated or deleted after an upgrade, so their finalizers can be removed.
 They remain unprogrammable until a parent reference is added. Once repaired,
@@ -579,3 +583,85 @@ GET and PUT are not atomic against concurrent external policy-set changes.
 A GET failure, including `404`, must remain an error rather than an empty chain;
 a changed or incomplete set blocks programming until the declaration and remote
 set agree. A successful PUT response must return exactly the requested order.
+
+## Consume policy-chain API (Konnect only)
+
+`configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterConsumePolicyChain`
+declares the execution order of all `EventGatewayVirtualClusterConsumePolicy`
+resources in one virtual cluster. This layer supplies the API, CRD, Helm
+installation artifacts, and admission contract only. Consume-chain controller
+registration and runtime reconciliation are not included yet. This is a
+Konnect management-plane declaration, not on-prem Consume-chain support or a
+guarantee about Kafka data-path execution.
+
+`spec.eventGatewayVirtualClusterRef` must use `namespacedRef` for a virtual
+cluster in the chain's namespace and is immutable from creation, even before
+programming. An omitted or empty namespace defaults locally; an explicit
+namespace must be the same as the chain's, even if a `KongReferenceGrant` permits
+cross-namespace access. The chain is singleton configuration on that parent:
+there is no independent chain ID or chain-ID printer column. `status.id` must
+remain unset; shared status retains conditions, organization/server information,
+`gatewayID`, and `virtualClusterID`.
+
+Supply `spec`, `spec.apiSpec`, and `spec.apiSpec.policies` explicitly.
+`policies` is one atomic ordered list of Kubernetes references, not Konnect IDs.
+Each entry requires a distinct `name`; `kind` defaults to and must be
+`EventGatewayVirtualClusterConsumePolicy`. An omitted or empty `namespace`
+defaults to the chain's namespace, and an explicit namespace must match it.
+Every policy must belong to the referenced virtual cluster. Resource names,
+creation order, and YAML document order do not declare execution order.
+
+### Complete-set and nested Consume ordering
+
+The pinned SDK v0.82.2 supplies `GetEventGatewayVirtualClusterConsumePolicyChain`
+and `UpdateEventGatewayVirtualClusterConsumePolicyChain` at
+`/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policy-chain`.
+The shared `UpdateEventGatewayPolicyChainRequest` contains `policies: []string`.
+There is no independent chain POST, list-for-UID, or DELETE operation.
+
+The declaration must include every root and nested Consume policy exactly once
+in one flat list. An explicit `policies: []` is valid only for an already-empty
+remote scope; it is not a request to clear policies. Omitted and null lists are
+invalid. Additions and recreations append their new remote IDs; deletion removes
+only that ID. Update the declaration whenever the complete policy set changes.
+
+A root `schemaValidation` parent precedes its immediately contiguous children.
+Whole root/parent groups may move, and siblings may reorder within their group.
+Children cannot precede their parent, interleave another parent's children, or
+be separated from their parent by a root policy. Roots-only and children-only
+declarations are incomplete. Only root parents and their direct children are
+supported; cycles and deeper nesting are outside this contract.
+
+Ordering never changes `parentPolicyRef` or reparents policies. Current Consume
+policy validation is unchanged: `decryptFields`, `maskFields`, and `transcode`
+require a same-kind, same-namespace, same-virtual-cluster `schemaValidation`
+parent. `modifyHeaders` and `skipRecord` may reference one; no other Consume
+variant accepts `parentPolicyRef`. Once the policy exists in Konnect, its parent
+reference cannot be added, changed, or removed. Recreate a child to change its
+parent.
+
+The [self-contained Consume example](../config/samples/konnect_eventgateway_virtualcluster_consume_policy_chain.yaml)
+includes placeholder authentication, gateway, backend, virtual cluster, two
+schema-validation parents, nested header/decryption/skip policies, a separate
+root, and the complete group-aware ordering. Its explicit
+`schemaValidation.config.json.valueValidationAction: skip` is needed for the
+observed Consume backend contract, despite incomplete OAS requiredness.
+Replace the token and Kafka bootstrap address before use; anonymous
+authentication and disabled TLS are demonstration settings only.
+
+Consume-specific development-backend probes confirmed singleton GET/PUT,
+complete-set permutations, and empty-scope GET/PUT with `[]`. Nonempty-scope
+empty lists, incomplete lists, duplicates, unknown IDs, wrong-parent IDs,
+missing/null lists, child-before-parent order, split groups, and cross-parent
+interleaving were rejected with `400` without changing the order. Reordering
+siblings and moving whole groups preserved `parent_policy_id`. The nested probe
+covered two schema-validation parents with `modifyHeaders`, `decryptFields`,
+and `skipRecord` children; it did not establish backend behavior for nested
+`maskFields` or `transcode`. These observations do not verify Operator
+reconciliation or guarantee behavior in every backend version or region.
+
+Admission validates required fields, reference shape/kind, immutable parent
+reference and `namespacedRef` form, and absence of an independent ID. It cannot
+resolve other resources, enforce same-namespace or distinct-reference semantics,
+verify parent groups, or check the remote complete set. Those checks belong to
+the subsequent controller layer; this API-only layer does not apply the declaration.
