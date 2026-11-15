@@ -102,7 +102,7 @@ spec:
         - script:
             env: *env
             timeout: 3m
-            content: ../gwadmin-shared/gwadmin.sh peers-stop 90
+            content: ../gwadmin-shared/gwadmin.sh peers-stop "$GWADMIN" 90
         - script:
             env: *env
             timeout: 3m
@@ -179,7 +179,7 @@ spec:
         - script:
             env: *env
             timeout: 3m
-            content: ../gwadmin-shared/gwadmin.sh peers-start 120
+            content: ../gwadmin-shared/gwadmin.sh peers-start "$GWADMIN" 120
     - name: 4-Rotation-completes
       try:
         - script:

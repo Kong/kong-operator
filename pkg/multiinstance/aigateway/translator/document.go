@@ -706,11 +706,11 @@ func BuildDocument(
 			continue
 		}
 		var creds aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
-		// The same listing the consumer's own translation does. A failure here cannot be
-		// reported on the credentials it failed to read: the consumer's error is already
-		// reported, and the next sync retries.
+		// The same listing the consumer's own translation does, across namespaces: a
+		// credential of another namespace renders through its consumer too. A failure
+		// here cannot be reported on the credentials it failed to read: the consumer's
+		// error is already reported, and the next sync retries.
 		if err := cl.List(ctx, &creds,
-			client.InNamespace(consumer.Namespace),
 			client.MatchingFields{
 				index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef: consumer.Namespace + "/" + consumer.Name,
 			},

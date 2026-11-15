@@ -198,7 +198,7 @@ spec:
         - script:
             env: *env
             timeout: 3m
-            content: ../gwadmin-shared/gwadmin.sh peers-stop 90
+            content: ../gwadmin-shared/gwadmin.sh peers-stop "$GWADMIN" 90
         # A CA no earlier CAPublished event names.
         - script:
             env: *env
@@ -237,7 +237,7 @@ spec:
         - script:
             env: *env
             timeout: 3m
-            content: ../gwadmin-shared/gwadmin.sh peers-start 120
+            content: ../gwadmin-shared/gwadmin.sh peers-start "$GWADMIN" 120
     - name: 5-Rotation-to-manual-completes
       try:
         # The first rollout trusting ca-one-renewed completes: it is

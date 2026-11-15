@@ -77,10 +77,12 @@ func TestMapCredentialToConsumer(t *testing.T) {
 			want: &types.NamespacedName{Namespace: "default", Name: consumerName},
 		},
 		{
-			// The translation only renders credentials living in the consumer's namespace.
-			name: "cross-namespace reference is skipped",
+			// A cross-namespace reference renders like any other: a KongReferenceGrant in
+			// the consumer's namespace decides access.
+			name: "cross-namespace consumer is enqueued",
 			obj:  credentialReferencing(credName, "default", &commonv1alpha1.NamespacedRef{Name: consumerName, Namespace: new("other")}),
 			objs: []client.Object{consumerTargeting(consumerName, "other", "gw", false)},
+			want: &types.NamespacedName{Namespace: "other", Name: consumerName},
 		},
 		{
 			name: "konnect-targeted consumer is skipped",

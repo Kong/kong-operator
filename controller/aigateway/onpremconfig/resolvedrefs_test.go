@@ -39,8 +39,9 @@ func referenceGrant(namespace, fromNamespace, fromKind string, to configurationv
 }
 
 var (
-	toSecret          = configurationv1alpha1.ReferenceGrantTo{Group: "core", Kind: "Secret"}
-	toOnPremAIGateway = configurationv1alpha1.ReferenceGrantTo{Group: "aigateway.konghq.com", Kind: "OnPremAIGateway"}
+	toSecret            = configurationv1alpha1.ReferenceGrantTo{Group: "core", Kind: "Secret"}
+	toOnPremAIGateway   = configurationv1alpha1.ReferenceGrantTo{Group: "aigateway.konghq.com", Kind: "OnPremAIGateway"}
+	toAIGatewayConsumer = configurationv1alpha1.ReferenceGrantTo{Group: "aiconfiguration.konghq.com", Kind: "AIGatewayConsumer"}
 )
 
 // secretReferenceGrant returns a KongReferenceGrant in secretNamespace that allows
@@ -84,6 +85,15 @@ func authStrategyWithSecretRefNamespace(name string, ns *string) *aiconfiguratio
 
 func resolvedRefsCondition(conditions []metav1.Condition) *metav1.Condition {
 	return apimeta.FindStatusCondition(conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+}
+
+// otherNamespaceCredential returns a credential of the "other" namespace referencing the
+// consumer consumer in the namespace ns.
+func otherNamespaceCredential(consumer string, ns *string) *aiconfigurationv1alpha1.AIGatewayConsumerCredential {
+	cred := consumerCredential("cred", consumer, "api-key")
+	cred.Namespace = "other"
+	cred.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = ns
+	return cred
 }
 
 func TestEnsureResolvedRefsCondition(t *testing.T) {
@@ -190,6 +200,29 @@ func TestEnsureResolvedRefsCondition(t *testing.T) {
 			wantStatus:  metav1.ConditionTrue,
 			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
 		},
+		{
+			name:        "same-namespace consumerRef removes a stale condition",
+			obj:         otherNamespaceCredential("consumer", new("other")),
+			conditions:  []metav1.Condition{staleCondition},
+			wantChanged: true,
+		},
+		{
+			name:        "cross-namespace consumerRef without grant is not permitted",
+			obj:         otherNamespaceCredential("consumer", new("consumers")),
+			wantChanged: true,
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+			wantMessage: "cross-namespace reference to AIGatewayConsumer consumer in namespace consumers",
+		},
+		{
+			name:        "cross-namespace consumerRef allowed by a grant is resolved",
+			obj:         otherNamespaceCredential("consumer", new("consumers")),
+			grants:      []client.Object{referenceGrant("consumers", "other", "AIGatewayConsumerCredential", toAIGatewayConsumer)},
+			wantChanged: true,
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+			wantMessage: "KongReferenceGrants allow the cross-namespace references",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -230,12 +263,14 @@ func TestMapKongReferenceGrantToEntities(t *testing.T) {
 	}
 	cred := consumerCredential("cred", "consumer", "api-key")
 	cred.Spec.APISpec.APIKey.SecretRef.Namespace = new("secrets")
+	crossNamespaceConsumerCred := otherNamespaceCredential("consumer", new("consumers"))
 	cl := newReconcilerClient(t,
 		authStrategyWithSecretRefNamespace("cross-ns-strat", new("secrets")),
 		authStrategyWithSecretRefNamespace("same-ns-strat", nil),
 		authStrategyWithSecretRefNamespace("other-ns-strat", new("elsewhere")),
 		konnectStrategy,
 		cred,
+		crossNamespaceConsumerCred,
 		otherNamespaceModel("cross-ns-model"),
 		onPremModelFixture("same-ns-model", 1),
 	)
@@ -247,6 +282,11 @@ func TestMapKongReferenceGrantToEntities(t *testing.T) {
 	// A credential has no aiGatewayRef: its reconciler checks the ownership itself.
 	creds := mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl)(t.Context(), grant)
 	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cred"}}, creds)
+
+	// A grant in the referenced consumer's namespace governs the credential referencing it.
+	consumerGrant := referenceGrant("consumers", "other", "AIGatewayConsumerCredential", toAIGatewayConsumer)
+	creds = mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl)(t.Context(), consumerGrant)
+	require.Equal(t, []reconcile.Request{{Namespace: "other", Name: "cred"}}, creds)
 
 	// A grant in the gateway's namespace governs the entities of another namespace
 	// that reference the gateway, not the ones of the gateway's namespace.

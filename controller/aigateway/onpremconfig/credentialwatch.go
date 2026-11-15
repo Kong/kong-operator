@@ -83,18 +83,17 @@ func (r *AIGatewayConsumerReconciler) mapCredentialToConsumer(
 }
 
 // credentialConsumer returns the AIGatewayConsumer a credential references, or nil when the
-// reference cannot be resolved: an unresolvable one either points at another namespace (the
-// translation only renders credentials living in the consumer's namespace), carries no
-// namespacedRef (the CRD also admits type: konnectID), or names a consumer that is gone, or
-// that the cache does not serve yet.
+// reference cannot be resolved: an unresolvable one carries no namespacedRef (the CRD also
+// admits type: konnectID), or names a consumer that is gone, or that the cache does not serve
+// yet. A reference to a consumer of another namespace resolves like any other: a
+// KongReferenceGrant there decides access, checked by the translation and the reconciler.
 func credentialConsumer(
 	ctx context.Context,
 	cl client.Client,
 	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 ) *aiconfigurationv1alpha1.AIGatewayConsumer {
 	consumerNN, ok := cred.ConsumerNamespacedName()
-	// The translation only renders credentials living in the consumer's namespace.
-	if !ok || consumerNN.Namespace != cred.GetNamespace() {
+	if !ok {
 		return nil
 	}
 
@@ -125,10 +124,9 @@ func credentialOnPremManaged(
 }
 
 // credentialOrphaned reports whether the credential's consumer is gone. It is deliberately
-// narrower than "not managed by on-prem": a credential whose ref is not a namespacedRef, or
-// points at another namespace, may be Konnect-managed, and the Konnect reconciler owns
-// correcting the status of those. Only a consumer that should exist in the credential's own
-// namespace and does not leaves the credential rendered by nothing.
+// narrower than "not managed by on-prem": a credential whose ref is not a namespacedRef may be
+// Konnect-managed, and the Konnect reconciler owns correcting the status of those. Only a
+// consumer that should exist and does not leaves the credential rendered by nothing.
 //
 // Only a definitive NotFound counts as gone; a read error of another kind leaves the
 // condition alone. A consumer that was just recreated can still read as NotFound from a
@@ -147,7 +145,7 @@ func credentialOrphaned(
 		return false
 	}
 	consumerNN, ok := cred.ConsumerNamespacedName()
-	if !ok || consumerNN.Namespace != cred.GetNamespace() {
+	if !ok {
 		return false
 	}
 	var consumer aiconfigurationv1alpha1.AIGatewayConsumer

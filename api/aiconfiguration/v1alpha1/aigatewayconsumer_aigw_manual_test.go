@@ -408,6 +408,71 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 	}
 }
 
+// TestAIGatewayConsumer_ToAIGWConsumer_CredentialOrder pins the order the listed
+// credentials come in: the list spans namespaces, so two credentials sharing a name
+// in different namespaces keep a stable order, sorted by namespace and then name.
+func TestAIGatewayConsumer_ToAIGWConsumer_CredentialOrder(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	// Both credentials are named "cred" and reference the consumer of the default
+	// namespace: the one of the default namespace renders, the one of team-a has its
+	// cross-namespace reference left ungranted and is reported instead.
+	credIn := func(namespace string) *AIGatewayConsumerCredential {
+		return &AIGatewayConsumerCredential{
+			Name: "cred", Namespace: namespace,
+			Spec: AIGatewayConsumerCredentialSpec{
+				AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{
+						Name:      "sample-ai-gw-consumer",
+						Namespace: new("default"),
+					},
+				},
+				APISpec: AIGatewayConsumerCredentialAPISpec{
+					Name: "cred-1",
+					Type: "api-key",
+					APIKey: SensitiveDataSource{
+						Type: SensitiveDataSourceTypeSecretRef,
+						SecretRef: &SensitiveDataSecretRef{
+							Name: "consumer-api-key",
+							Key:  "key",
+						},
+					},
+				},
+			},
+		}
+	}
+	secret := &corev1.Secret{
+		Name: "consumer-api-key", Namespace: "default",
+		Data: map[string][]byte{"key": []byte("s3cr3t")},
+	}
+	// Listed in reverse order: the cache order must not decide the rendered order.
+	cl := fake.NewClientBuilder().WithScheme(scheme).
+		WithRuntimeObjects(credIn("team-a"), credIn("default"), secret).
+		WithIndex(&AIGatewayConsumerCredential{}, testCredIndexField, testCredIndexExtractor).
+		Build()
+
+	consumer := &AIGatewayConsumer{
+		Name: "sample-ai-gw-consumer", Namespace: "default",
+		Spec: AIGatewayConsumerSpec{
+			APISpec: AIGatewayConsumerAPISpec{Name: "sample-consumer", Type: "api-key"},
+		},
+	}
+	got, translations, err := consumer.ToAIGWConsumer(t.Context(), cl, testCredIndexField)
+	require.NoError(t, err)
+	require.Len(t, got.Credentials, 1)
+	require.Len(t, translations, 2)
+	require.Equal(t, "default", translations[0].Obj.Namespace)
+	require.NoError(t, translations[0].Err)
+	require.Equal(t, "team-a", translations[1].Obj.Namespace)
+	require.ErrorContains(t, translations[1].Err, "is not granted by any KongReferenceGrant")
+}
+
 // TestAIGatewayConsumer_ToAIGWConsumer_StrictRoundTrip guards against a dropped or renamed
 // field: it decodes marshalAIGWConsumerPayload's output with yaml.v3's KnownFields(true),
 // which errors on any key aigw.Consumer doesn't recognize. See

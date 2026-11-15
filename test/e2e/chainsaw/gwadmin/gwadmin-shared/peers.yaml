@@ -16,6 +16,10 @@
 #     published cp client CA, is rejected by a client verifying with the cp
 #     server trust bundle: whoever issues data plane certificates can't
 #     impersonate gw-admin.
+# They also set the condition of the readiness gate e2e.konghq.com/peers on
+# every gw-admin pod carrying it: the GWAdmins of the tests stalling a
+# rollout carry it, so that their new pods only turn Ready while the peers
+# run (gwadmin.sh peers-stop).
 # Every connection presents a client certificate, so it fails if any side
 # doesn't trust the other. The trust material is read through the API on
 # every round, like Kong Operator does.
@@ -77,6 +81,14 @@ rules:
   - apiGroups: [""]
     resources: [configmaps]
     verbs: [get]
+  # The condition of the readiness gate e2e.konghq.com/peers (peers.sh admit):
+  # kubectl patch reads the object first.
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [list]
+  - apiGroups: [""]
+    resources: [pods/status]
+    verbs: [get, patch]
   - apiGroups: [apps]
     resources: [deployments]
     verbs: [get, patch]

@@ -59,6 +59,37 @@ func TestKongReferenceGrantReconcilerNotifiesCrossNamespaceReferrers(t *testing.
 	requireNoChange(t, ch)
 }
 
+// TestKongReferenceGrantReconcilerNotifiesConsumerOfCrossNamespaceCredential pins the
+// third reason a grant matters: a grant in a consumer's namespace decides whether a
+// credential of another namespace may reference it, so the consumer's document must
+// re-render.
+func TestKongReferenceGrantReconcilerNotifiesConsumerOfCrossNamespaceCredential(t *testing.T) {
+	consumer := onPremConsumer("consumer", "gw")
+	consumer.Namespace = "consumers"
+	cred := consumerCredential("cred", "consumer", "api-key")
+	cred.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = new("consumers")
+	// A credential of the consumer's own namespace needs no grant there.
+	sameNamespaceCred := consumerCredential("same-ns-cred", "consumer", "api-key")
+	sameNamespaceCred.Namespace = "consumers"
+	// A credential referencing another namespace is not governed by this grant.
+	otherNamespaceCred := consumerCredential("other-ns-cred", "consumer", "api-key")
+	otherNamespaceCred.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = new("elsewhere")
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t, consumer, cred, sameNamespaceCred, otherNamespaceCred)
+	r := &KongReferenceGrantReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	ch := cn.NotifyChannel()
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "consumers", Name: "allow-credential"})
+	require.NoError(t, err)
+
+	change := waitForChange(t, ch)
+	require.Equal(t, types.NamespacedName{Namespace: "consumers", Name: "consumer"}, client.ObjectKeyFromObject(change.Object))
+	require.Equal(t, types.NamespacedName{Namespace: "consumers", Name: "gw"}, *change.ParentNN)
+	requireNoChange(t, ch)
+}
+
 // onPremGatewayFixture returns the OnPremAIGateway object the grant reconciler lists when
 // a grant of that namespace changes.
 func onPremGatewayFixture(name, namespace string) *aigatewayv1alpha1.OnPremAIGateway {

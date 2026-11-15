@@ -106,6 +106,7 @@ plugins:
     config:
       allow:
         - mock-group
+      always_use_authenticated_groups: true
       include_consumer_groups: true
     route:
       id: b0c773b3-3c36-5795-b1d5-0e133270c2e2
@@ -232,6 +233,7 @@ plugins:
     config:
       allow:
         - mock-group
+      always_use_authenticated_groups: true
       include_consumer_groups: true
     route:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
