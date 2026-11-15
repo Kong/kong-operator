@@ -287,6 +287,7 @@
   As in Konnect, anyone who can read the `EventGatewayStaticKey` can check
   guesses of its value offline against its fingerprint: use random 256-bit
   keys, never a passphrase.
+  [#6677](https://github.com/Kong/kong-operator/pull/6677)
 
 ### Added
 
