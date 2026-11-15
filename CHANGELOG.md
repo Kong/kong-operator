@@ -323,6 +323,7 @@
   - a push blocked by more than one problem reports them all;
   - a gw-admin pod is never pushed an older revision of a gateway than the
     one it holds.
+  [#6680](https://github.com/Kong/kong-operator/pull/6680)
 
 ### Added
 
