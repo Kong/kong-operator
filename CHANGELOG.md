@@ -262,6 +262,31 @@
   this is not a breaking change: records a rapid build encrypted name the key
   by its UID and are no longer decrypted.
   [#6644](https://github.com/Kong/kong-operator/pull/6644)
+- `OnPremEventGateway`: the value of a static key no longer changes under the
+  records it encrypted. Once pushed, the fingerprint of its value is recorded
+  in `status.createInputsHash`, as for a key created in Konnect, and:
+  - its inline value can no longer be changed;
+  - a value read otherwise that changes, e.g. its Secret rotated in place, or
+    its reference pointed at a Secret with another value, stops the push of
+    the gateway: gw-admin and keg keep the value pushed, so the records it
+    encrypted are still decrypted. The key reports it in `Programmed`, and in
+    `CreateInputsApplied` with reason `ValueChanged`, and every other change
+    of the gateway waits until it is resolved;
+  - its gateway (`parentRef`) can no longer be changed either, as in Konnect,
+    until that gateway is deleted. Deleting the gateway drops the fingerprint:
+    a gateway deleted and created again, e.g. by a GitOps tool or a restore,
+    pushes the value its static keys have then, so keep their Secrets as they
+    are meanwhile;
+  - its name, description and labels are still updated in place.
+
+  Don't rotate the Secret of a static key in place, e.g. with External Secrets
+  or Vault: to rotate a key, create a new `EventGatewayStaticKey`, point the
+  encrypt policies at it, and delete the old one once no record needs it.
+  Decrypt policies follow, as each record names the key it was encrypted
+  with. Deleting a key, then creating it again with another value, also works.
+  As in Konnect, anyone who can read the `EventGatewayStaticKey` can check
+  guesses of its value offline against its fingerprint: use random 256-bit
+  keys, never a passphrase.
 
 ### Added
 

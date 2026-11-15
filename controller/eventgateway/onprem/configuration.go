@@ -30,6 +30,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,6 +86,13 @@ type configuration struct {
 	// gateway, by the UID of their object, and built those of this one: an
 	// entity reading a Secret that is gone is sent as it was last.
 	previous, built map[types.UID]any
+	// keyInputs holds, by the UID of their object, the fingerprints of the
+	// static keys of the configuration (see staticKeyRequest).
+	keyInputs map[types.UID]keyInputs
+	// inputsHashes holds the fingerprints recorded that the cache may not
+	// show yet, by the UID of their static key, or is nil (see
+	// Reconciler.inputsHashes).
+	inputsHashes *sync.Map
 	// namespace is the namespace of the gateway. An entity of another
 	// namespace belongs to the gateway only when KongReferenceGrants allow
 	// its references up to the gateway (see parentNotGranted).
@@ -376,6 +384,11 @@ type entityStatus struct {
 	// unusable.
 	kept       bool
 	conditions []metav1.Condition
+	// inputsHash and inputsApplied are, for a static key, the fingerprint to
+	// record in its status and its CreateInputsApplied condition, or nil (see
+	// keyInputsStatus).
+	inputsHash    string
+	inputsApplied *metav1.Condition
 }
 
 // dataPlaneCertificate is a data plane certificate of the gateway.
@@ -427,6 +440,16 @@ func buildConfigurationAfter(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
 	sent *gwadminapi.GatewayEntitySet,
 ) (configuration, error) {
+	return buildConfigurationWith(ctx, cl, gateway, secretHint, previous, sent, nil)
+}
+
+// buildConfigurationWith builds the configuration of the gateway, as
+// buildConfigurationAfter does, with the fingerprints of static keys recorded
+// that the cache may not show yet (see Reconciler.inputsHashes).
+func buildConfigurationWith(
+	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
+	sent *gwadminapi.GatewayEntitySet, inputsHashes *sync.Map,
+) (configuration, error) {
 	cfg := configuration{
 		namespace:   gateway.Namespace,
 		secretHint:  secretHint,
@@ -436,6 +459,9 @@ func buildConfigurationAfter(
 		sent:        sentEntities(sent),
 		sentUnknown: sent == nil && gateway.Status.ConfigRevision != 0,
 		built:       map[types.UID]any{},
+		keyInputs:   map[types.UID]keyInputs{},
+
+		inputsHashes: inputsHashes,
 	}
 	backendClusters, err := cfg.addGatewayEntities(ctx, cl, gateway)
 	if err != nil {

@@ -17,13 +17,21 @@ limitations under the License.
 package onprem
 
 import (
+	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"sync"
 
 	"github.com/google/uuid"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
 )
 
 // The id of a static key is not the UID of its object, unlike the id of any
@@ -84,4 +92,140 @@ func entityIDKey(obj client.Object) string {
 		return id.String()
 	}
 	return string(obj.GetUID())
+}
+
+// The value of a static key never changes under its id once it was pushed:
+// keg would hold the new value under the id the records encrypted with the old
+// one name, and those records would no longer be decrypted. The first push
+// records a fingerprint of its value in its status, in the field of the
+// fingerprint of a key created in Konnect (status.createInputsHash, see
+// handleCreateInputs in controller/konnect), and the CRD then refuses a change
+// of its inline value. A change of the value it reads otherwise, e.g. of its
+// Secret, or its reference to another one, can't be refused: the key then stops the push,
+// so that gw-admin keeps the value pushed, until the value is put back, or the
+// key is deleted: one being deleted is sent as it is, and a new one starts
+// with no fingerprint. gw-admin never returns the value of a key, so the value
+// pushed can't be sent again in its place, e.g. after a restart of the
+// operator.
+
+// keyValueHash returns the fingerprint of the value of a static key, as
+// status.createInputsHash records it. Only the value: unlike in Konnect, its
+// name, description and labels are updated in place, under the same id, and
+// change nothing of what the records it encrypted need.
+func keyValueHash(value string) (string, error) {
+	data, err := json.Marshal(map[string]string{"value": value})
+	if err != nil {
+		return "", err
+	}
+	return createinputs.Hash(data)
+}
+
+// keyInputs is the fingerprint of the value of a static key, as it reads now,
+// and whether it differs from the one recorded.
+type keyInputs struct {
+	// hash is the fingerprint, or "" when it can't be computed, e.g. as the
+	// Secret it reads is gone.
+	hash    string
+	changed bool
+}
+
+// staticKeyRequest returns the request of a static key, checking its
+// fingerprint against the one recorded: one whose value changed can't be
+// sent (see keyInputs).
+func (c *configuration) staticKeyRequest(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
+	req, err := k.ToEventGatewayStaticKeyCreate(ctx, cl)
+	var hash string
+	if err == nil {
+		hash, err = keyValueHash(req.Value)
+	}
+	if err != nil {
+		c.keyInputs[k.UID] = keyInputs{}
+		return nil, err
+	}
+	recorded := c.recordedHash(k)
+	changed := recorded != "" && hash != recorded
+	c.keyInputs[k.UID] = keyInputs{hash: hash, changed: changed}
+	// One being deleted, held while the configuration sent uses it, is sent
+	// with the value it has: its deletion is the way out of a value that
+	// changed, and accepts that the records it encrypted are no longer
+	// decrypted. Stopping the push, it would keep the configuration sent, and
+	// so the hold, forever; left out, the configuration without it could be
+	// stopped too, e.g. by a decrypt policy needing a static key.
+	if changed && k.GetDeletionTimestamp().IsZero() {
+		return nil, errors.New("its value " + keyValueChanged)
+	}
+	return req, nil
+}
+
+// keyValueChanged tells why a static key whose value changed since it was
+// pushed can't be sent, and how to change it.
+const keyValueChanged = "changed since it was pushed, and records encrypted with the value pushed " +
+	"would no longer be decrypted: put the value back, or create a new EventGatewayStaticKey, point the policies at it and delete this one, " +
+	"or, when no record needs the value pushed, delete the policies using this static key and the key, and create them again"
+
+// recordedHash returns the fingerprint recorded for the static key: in its
+// status, or, when the cache doesn't show it yet, the one the controller
+// recorded (see Reconciler.inputsHashes).
+func (c *configuration) recordedHash(k *configurationv1alpha1.EventGatewayStaticKey) string {
+	return inputsHashOf(c.inputsHashes, k)
+}
+
+// recordedKeyHash is a fingerprint the controller recorded in the status of
+// the static key of its UID (see Reconciler.inputsHashes).
+type recordedKeyHash struct {
+	uid  types.UID
+	hash string
+}
+
+// inputsHashOf returns the fingerprint recorded for the object, when it is a
+// static key: in its status, or, when the cache doesn't show it yet, in
+// recorded, which may be nil, for that object: not for another one of the same
+// name, e.g. one created again.
+func inputsHashOf(recorded *sync.Map, obj client.Object) string {
+	if hash := recordedInputsHash(obj); hash != "" || recorded == nil {
+		return hash
+	}
+	if r, ok := recorded.Load(client.ObjectKeyFromObject(obj)); ok && r.(recordedKeyHash).uid == obj.GetUID() {
+		return r.(recordedKeyHash).hash
+	}
+	return ""
+}
+
+// recordedInputsHash returns the fingerprint recorded in the status of the
+// object, when it is a static key, or "".
+func recordedInputsHash(obj client.Object) string {
+	if k, ok := obj.(*configurationv1alpha1.EventGatewayStaticKey); ok {
+		return k.GetCreateInputsHash()
+	}
+	return ""
+}
+
+// keyInputsStatus returns the fingerprint to record in the status of a static
+// key, and its CreateInputsApplied condition, or nil when it has none: the
+// fingerprint recorded, or, once pushed, the one of its value. pushed tells it
+// is in the configuration gw-admin holds.
+func keyInputsStatus(k *configurationv1alpha1.EventGatewayStaticKey, recorded string, inputs keyInputs, pushed bool) (string, *metav1.Condition) {
+	hash := recorded
+	reason, status := konnectv1alpha1.CreateInputsReasonUnchanged, metav1.ConditionTrue
+	message := "Current inputs match the recorded create-input fingerprint"
+	if hash == "" {
+		if !pushed || inputs.hash == "" {
+			return "", nil
+		}
+		hash = inputs.hash
+		reason, message = konnectv1alpha1.CreateInputsReasonApplied, "The value pushed is recorded: it can't change while this static key exists"
+	}
+	switch {
+	case inputs.changed:
+		reason, status = konnectv1alpha1.CreateInputsReasonValueChanged, metav1.ConditionFalse
+		message = "The value " + keyValueChanged
+	case inputs.hash == "":
+		reason, status = konnectv1alpha1.CreateInputsReasonInputsUnavailable, metav1.ConditionUnknown
+		// Not converted: its value can't be read, e.g. its Secret is gone, or
+		// it isn't read at all, e.g. a grant is missing. Programmed and
+		// SecretRefValid tell which.
+		message = "Cannot compare its value with the recorded fingerprint, as it can't be read now (see Programmed and SecretRefValid); the recorded fingerprint is unchanged"
+	}
+	cond := entityCondition(k, konnectv1alpha1.CreateInputsAppliedConditionType, status, reason, message)
+	return hash, &cond
 }

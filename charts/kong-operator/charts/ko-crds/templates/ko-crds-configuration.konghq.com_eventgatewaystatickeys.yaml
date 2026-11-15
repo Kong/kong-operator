@@ -299,6 +299,21 @@ spec:
             instead'
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec
             == oldSelf.spec.apiSpec'
+        - fieldPath: .spec.apiSpec.value
+          message: 'the inline value is immutable once the static key has been pushed:
+            records encrypted with it would no longer be decrypted, create a new EventGatewayStaticKey
+            and point the policies at it, or delete this one and create it again'
+          rule: '!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != ''OnPremEventGateway''
+            || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(oldSelf.spec.apiSpec.value.value)
+            || !has(self.spec.apiSpec.value.value) || self.spec.apiSpec.value.value
+            == oldSelf.spec.apiSpec.value.value'
+        - fieldPath: .spec.parentRef
+          message: 'parentRef is immutable once the static key has been pushed: create
+            a new EventGatewayStaticKey for the other gateway, or delete this one
+            and create it again'
+          rule: '!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != ''OnPremEventGateway''
+            || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(self.spec.parentRef)
+            || self.spec.parentRef == oldSelf.spec.parentRef'
     served: true
     storage: true
     subresources:

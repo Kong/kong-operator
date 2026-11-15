@@ -341,6 +341,13 @@ func newCertificateOutcome() *certificateOutcome {
 	return &certificateOutcome{heldBy: map[uuid.UUID]map[string]bool{}, rejectedBy: map[uuid.UUID]map[string]string{}, failedOn: map[string]bool{}}
 }
 
+// failed tells the push to the pod failed.
+func (o *certificateOutcome) failed(pod gwadminsync.Pod) bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.failedOn[pod.Key()]
+}
+
 // fail tells the push to the pod failed.
 func (o *certificateOutcome) fail(pod gwadminsync.Pod) {
 	if o == nil {

@@ -17,9 +17,11 @@ limitations under the License.
 package onprem
 
 import (
+	"context"
 	"encoding/json"
 	"reflect"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,13 +29,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 )
 
 func TestStaticKeyID(t *testing.T) {
@@ -181,6 +188,329 @@ func TestBuildConfigurationStaticKeyRecreated(t *testing.T) {
 	fourth := build(third.built)
 	assert.Equal(t, id, fourth.entities.StaticKeys[0].Id)
 	assert.Equal(t, id.String(), encryptionKeyID(t, fourth))
+}
+
+// TestBuildConfigurationStaticKeyValueChanged checks a static key whose value
+// changed since it was pushed stops the push, so that gw-admin keeps the value
+// the records were encrypted with, until the value is put back or the key is
+// created again.
+func TestBuildConfigurationStaticKeyValueChanged(t *testing.T) {
+	gateway, key, secret, objects := staticKeyObjects(t)
+	cl := newFakeClient(t, append(objects, key, secret)...)
+	build := func() (configuration, *configurationv1alpha1.EventGatewayStaticKey) {
+		t.Helper()
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		var k configurationv1alpha1.EventGatewayStaticKey
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: "key"}, &k))
+		return cfg, &k
+	}
+	setValue := func(value string) {
+		t.Helper()
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(secret), secret))
+		secret.Data = map[string][]byte{"key": []byte(value)}
+		require.NoError(t, cl.Update(t.Context(), secret))
+	}
+	excluded := func(cfg configuration) map[string]excludedEntity {
+		out := map[string]excludedEntity{}
+		for _, e := range cfg.excluded {
+			out[reflect.TypeOf(e.obj).Elem().Name()+" "+e.obj.GetName()] = e
+		}
+		return out
+	}
+	const pushedValue = "c2VjcmV0LWtleS0xMjM0NTY3ODkwMTIzNDU2"
+
+	cfg, k := build()
+	require.Empty(t, cfg.excluded)
+	inputs := cfg.keyInputs[k.UID]
+	require.NotEmpty(t, inputs.hash)
+	assert.False(t, inputs.changed)
+
+	t.Run("not recorded before the push", func(t *testing.T) {
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), inputs, false)
+		assert.Empty(t, hash)
+		assert.Nil(t, cond)
+	})
+	t.Run("recorded once pushed", func(t *testing.T) {
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), inputs, true)
+		assert.Equal(t, inputs.hash, hash)
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		assert.Equal(t, konnectv1alpha1.CreateInputsReasonApplied, cond.Reason)
+	})
+
+	k.SetCreateInputsHash(inputs.hash)
+	require.NoError(t, cl.Status().Update(t.Context(), k))
+
+	t.Run("unchanged, it is sent", func(t *testing.T) {
+		cfg, k := build()
+		require.Empty(t, cfg.excluded)
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], true)
+		assert.Equal(t, inputs.hash, hash)
+		require.NotNil(t, cond)
+		assert.Equal(t, konnectv1alpha1.CreateInputsReasonUnchanged, cond.Reason)
+	})
+
+	t.Run("changed, it stops the push", func(t *testing.T) {
+		setValue("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")
+		defer setValue(pushedValue)
+		cfg, k := build()
+		out := excluded(cfg)
+		require.Contains(t, out, "EventGatewayStaticKey key")
+		assert.True(t, out["EventGatewayStaticKey key"].blocks, "left out, gw-admin would drop the key")
+		assert.Equal(t, "its value "+keyValueChanged, out["EventGatewayStaticKey key"].message)
+		assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason, failureReason(cfg.blocked()))
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], false)
+		assert.Equal(t, inputs.hash, hash, "the fingerprint of the value pushed is kept")
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
+	})
+
+	t.Run("put back, it is sent again", func(t *testing.T) {
+		cfg, _ := build()
+		assert.Empty(t, cfg.excluded)
+	})
+
+	t.Run("its Secret gone, it can't be compared", func(t *testing.T) {
+		require.NoError(t, cl.Delete(t.Context(), secret))
+		defer func() {
+			restored := secret.DeepCopy()
+			restored.ResourceVersion = ""
+			require.NoError(t, cl.Create(t.Context(), restored))
+		}()
+		cfg, k := build()
+		hash, cond := keyInputsStatus(k, k.GetCreateInputsHash(), cfg.keyInputs[k.UID], false)
+		assert.Equal(t, inputs.hash, hash)
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionUnknown, cond.Status)
+		assert.Equal(t, konnectv1alpha1.CreateInputsReasonInputsUnavailable, cond.Reason)
+	})
+
+	t.Run("created again with another value, it is sent", func(t *testing.T) {
+		setValue("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")
+		_, k := build()
+		require.NoError(t, cl.Delete(t.Context(), k))
+		recreated := key.DeepCopy()
+		recreated.UID, recreated.ResourceVersion = types.UID(uuid.NewString()), ""
+		require.NoError(t, cl.Create(t.Context(), recreated))
+		cfg, _ := build()
+		assert.Empty(t, cfg.excluded, "a new object starts with no fingerprint")
+	})
+}
+
+// TestBuildConfigurationStaticKeyValueChangedBeingDeleted checks a static key
+// whose value changed, held while being deleted, is sent as it is: stopping
+// the push, it would keep the configuration sent, which holds it, and could
+// never be deleted.
+func TestBuildConfigurationStaticKeyValueChangedBeingDeleted(t *testing.T) {
+	gateway, key, secret, objects := staticKeyObjects(t)
+	cfg, err := buildConfiguration(t.Context(), newFakeClient(t, append(objects, key, secret)...), gateway, "", nil)
+	require.NoError(t, err)
+	pushed := cfg.keyInputs[key.UID].hash
+	require.NotEmpty(t, pushed)
+
+	deleted := key.DeepCopy()
+	deleted.SetCreateInputsHash(pushed)
+	deleted.Finalizers = []string{FinalizerInUse}
+	deleted.DeletionTimestamp = &metav1.Time{Time: time.Date(2026, 11, 15, 10, 0, 0, 0, time.UTC)}
+	changed := secret.DeepCopy()
+	changed.Data = map[string][]byte{"key": []byte("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")}
+	excluded := func(cfg configuration) map[string]excludedEntity {
+		out := map[string]excludedEntity{}
+		for _, e := range cfg.excluded {
+			out[reflect.TypeOf(e.obj).Elem().Name()+" "+e.obj.GetName()] = e
+		}
+		return out
+	}
+
+	for name, objs := range map[string][]client.Object{
+		// The encrypt policy deleted: only the backend and virtual clusters.
+		"its policies gone":       {objects[0], objects[1], deleted, changed},
+		"a policy still using it": append(slices.Clone(objects), deleted, changed),
+	} {
+		t.Run(name+", the push goes on", func(t *testing.T) {
+			cfg, err := buildConfiguration(t.Context(), newFakeClient(t, objs...), gateway, "", nil)
+			require.NoError(t, err)
+			assert.Empty(t, excluded(cfg))
+			require.NoError(t, cfg.blocked())
+			require.Len(t, cfg.entities.StaticKeys, 1)
+			hash, cond := keyInputsStatus(deleted, deleted.GetCreateInputsHash(), cfg.keyInputs[deleted.UID], true)
+			assert.Equal(t, pushed, hash, "the fingerprint stays until the key is gone")
+			require.NotNil(t, cond)
+			assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
+		})
+	}
+}
+
+// TestBuildConfigurationStaticKeyHashNotCachedYet checks a static key read
+// from a cache that doesn't show the fingerprint just recorded yet is checked
+// against the one recorded: its value changed meanwhile, it stops the push,
+// and the fingerprint of the value pushed is kept.
+func TestBuildConfigurationStaticKeyHashNotCachedYet(t *testing.T) {
+	gateway, key, secret, objects := staticKeyObjects(t)
+	cfg, err := buildConfiguration(t.Context(), newFakeClient(t, append(objects, key, secret)...), gateway, "", nil)
+	require.NoError(t, err)
+	pushed := cfg.keyInputs[key.UID].hash
+	require.NotEmpty(t, pushed)
+
+	// The cache shows the key without its fingerprint, and the new value.
+	changed := secret.DeepCopy()
+	changed.Data = map[string][]byte{"key": []byte("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")}
+	var recorded sync.Map
+	recorded.Store(client.ObjectKeyFromObject(key), recordedKeyHash{uid: key.UID, hash: pushed})
+	cfg, err = buildConfigurationWith(t.Context(), newFakeClient(t, append(objects, key, changed)...), gateway, "", nil, nil, &recorded)
+	require.NoError(t, err)
+	require.Error(t, cfg.blocked(), "the value changed since it was pushed")
+	hash, cond := keyInputsStatus(key, cfg.recordedHash(key), cfg.keyInputs[key.UID], false)
+	assert.Equal(t, pushed, hash, "the fingerprint of the value pushed is kept")
+	require.NotNil(t, cond)
+	assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
+}
+
+// TestReconcilerRecordedInputsHash checks the controller uses the fingerprint
+// it recorded while the cache doesn't show it, for that key only, and forgets
+// it once the cache shows one, or once the key is deleted: it holds at most
+// one by static key, and none for a static key gone.
+func TestReconcilerRecordedInputsHash(t *testing.T) {
+	gateway, key, _, _ := staticKeyObjects(t)
+	cl := newFakeClient(t, gateway, key)
+	r := &Reconciler{Client: cl}
+	assert.Empty(t, r.recordedInputsHash(key))
+	remembered := func() bool {
+		_, ok := r.inputsHashes.Load(client.ObjectKeyFromObject(key))
+		return ok
+	}
+
+	r.inputsHashes.Store(client.ObjectKeyFromObject(key), recordedKeyHash{uid: key.UID, hash: "sha256:recorded"})
+	assert.Equal(t, "sha256:recorded", r.recordedInputsHash(key), "the cache doesn't show it yet")
+
+	recreated := key.DeepCopy()
+	recreated.UID = types.UID(uuid.NewString())
+	assert.Empty(t, r.recordedInputsHash(recreated), "the key created again isn't the one it was recorded for")
+	assert.False(t, remembered(), "forgotten then")
+	r.inputsHashes.Store(client.ObjectKeyFromObject(key), recordedKeyHash{uid: key.UID, hash: "sha256:recorded"})
+
+	shown := key.DeepCopy()
+	shown.SetCreateInputsHash("sha256:recorded")
+	assert.Equal(t, "sha256:recorded", r.recordedInputsHash(shown))
+	assert.False(t, remembered(), "forgotten once the cache shows it")
+
+	r.inputsHashes.Store(client.ObjectKeyFromObject(key), recordedKeyHash{uid: key.UID, hash: "sha256:recorded"})
+	require.NoError(t, cl.Delete(t.Context(), key))
+	require.NoError(t, r.reportUnreachable(t.Context(), client.ObjectKeyFromObject(key), &configurationv1alpha1.EventGatewayStaticKey{}))
+	assert.False(t, remembered(), "forgotten once the key is deleted")
+
+	other := &configurationv1alpha1.EventGatewayTLSTrustBundle{}
+	assert.Empty(t, r.recordedInputsHash(other), "only static keys have one")
+}
+
+// TestStatusAppliesKeepRecordedInputsHash checks every status write of a static
+// key read from a cache that doesn't show its fingerprint yet applies the one
+// recorded: the field manager owns it once applied, so an apply leaving it out
+// would delete it, and the CRD would let apiSpec change again.
+func TestStatusAppliesKeepRecordedInputsHash(t *testing.T) {
+	const recorded = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	gateway, key, _, _ := staticKeyObjects(t)
+	var applied []string
+	cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+		SubResourceApply: func(ctx context.Context, cl client.Client, sub string, obj runtime.ApplyConfiguration, opts ...client.SubResourceApplyOption) error {
+			data, err := json.Marshal(obj)
+			require.NoError(t, err)
+			var u struct {
+				Status struct {
+					CreateInputsHash string `json:"createInputsHash"`
+				} `json:"status"`
+			}
+			require.NoError(t, json.Unmarshal(data, &u))
+			applied = append(applied, u.Status.CreateInputsHash)
+			return cl.SubResource(sub).Apply(ctx, obj, opts...)
+		},
+	}, gateway, key)
+	r := &Reconciler{Client: cl, TypeConverter: testTypeConverter}
+	r.inputsHashes.Store(client.ObjectKeyFromObject(key), recordedKeyHash{uid: key.UID, hash: recorded})
+	// stale is the key as a cache not showing the fingerprint reads it.
+	stale := func() *configurationv1alpha1.EventGatewayStaticKey {
+		k := key.DeepCopy()
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(k), k))
+		k.Status.CreateInputsHash = ""
+		return k
+	}
+	cond := func(k *configurationv1alpha1.EventGatewayStaticKey, message string) metav1.Condition {
+		return entityCondition(k, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse,
+			eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message)
+	}
+
+	k := stale()
+	require.NoError(t, r.setEntityStatus(t.Context(), entityStatus{obj: k}, cond(k, "left out")))
+	k = stale()
+	require.NoError(t, r.setEntityConditions(t.Context(), k, cond(k, "gateway gone")))
+	k = stale()
+	require.NoError(t, r.setUnownedEntityConditions(t.Context(), k, nil, cond(k, "detached")))
+
+	require.Len(t, applied, 3)
+	for i, hash := range applied {
+		assert.Equal(t, recorded, hash, "apply %d", i)
+	}
+	var got configurationv1alpha1.EventGatewayStaticKey
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(key), &got))
+	assert.Equal(t, recorded, got.Status.CreateInputsHash)
+}
+
+// TestStaticKeyFingerprintIsOfItsValue checks the fingerprint of a static key
+// is of its value only: unlike in Konnect, its name, description and labels
+// are updated in place, and its value may move from a Secret inline.
+func TestStaticKeyFingerprintIsOfItsValue(t *testing.T) {
+	gateway, key, secret, objects := staticKeyObjects(t)
+	fingerprint := func(k *configurationv1alpha1.EventGatewayStaticKey) string {
+		t.Helper()
+		cfg, err := buildConfiguration(t.Context(), newFakeClient(t, append(slices.Clone(objects), k, secret)...), gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.excluded)
+		return cfg.keyInputs[k.UID].hash
+	}
+	pushed := fingerprint(key)
+	require.NotEmpty(t, pushed)
+
+	edited := key.DeepCopy()
+	edited.Spec.APISpec.Description = "rotated yearly"
+	edited.Spec.APISpec.Labels = configurationv1alpha1.Labels{"team": "a"}
+	assert.Equal(t, pushed, fingerprint(edited), "its description and labels aren't part of it")
+
+	inline := key.DeepCopy()
+	inline.Spec.APISpec.Value = configurationv1alpha1.SensitiveDataSource{
+		Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new(string(secret.Data["key"])),
+	}
+	assert.Equal(t, pushed, fingerprint(inline), "the same value inline")
+
+	other := inline.DeepCopy()
+	other.Spec.APISpec.Value.Value = new("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")
+	assert.NotEqual(t, pushed, fingerprint(other))
+}
+
+// TestPushResultReachedAPod checks the fingerprint of a static key is
+// recorded once its value reached a gw-admin pod, even when the push to
+// another one failed, so that the gateway isn't Programmed.
+func TestPushResultReachedAPod(t *testing.T) {
+	ok, failing, pending := gwadminsync.Pod{Name: "ok", UID: "ok"}, gwadminsync.Pod{Name: "failing", UID: "failing"}, gwadminsync.Pod{Name: "pending", UID: "pending"}
+	target := &gwadminsync.Target{Pods: []gwadminsync.Pod{ok, failing, pending}}
+	outcome := func(failed ...gwadminsync.Pod) *certificateOutcome {
+		o := newCertificateOutcome()
+		for _, pod := range failed {
+			o.fail(pod)
+		}
+		return o
+	}
+	var cfg configuration
+	assert.True(t, pushResult{target: target, pending: []gwadminsync.Pod{pending}, certificates: outcome(failing)}.reachedAPod(cfg),
+		"one pod holds it, though the push to another failed")
+	assert.False(t, pushResult{target: target, pending: []gwadminsync.Pod{pending}, certificates: outcome(ok, failing)}.reachedAPod(cfg),
+		"the push failed on every pod pushed to")
+	assert.False(t, pushResult{target: target}.reachedAPod(cfg), "nothing pushed, e.g. waiting for the backoff")
+
+	blocked := configuration{excluded: []excludedEntity{{obj: &configurationv1alpha1.EventGatewayStaticKey{}, blocks: true}}}
+	assert.False(t, pushResult{target: target, certificates: outcome()}.reachedAPod(blocked),
+		"a configuration stopped from being pushed isn't: the pods get the last one sent")
 }
 
 // TestEntitiesInUseBySentStaticKeyLeftOut checks a static key the last
