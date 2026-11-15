@@ -52,6 +52,11 @@ func (*EventGatewayVirtualClusterConsumePolicy) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether EventGatewayVirtualClusterConsumePolicyChain persists a Konnect ID in status.
+func (*EventGatewayVirtualClusterConsumePolicyChain) PersistsKonnectID() bool {
+	return false
+}
+
 // PersistsKonnectID reports whether EventGatewayVirtualClusterPolicy persists a Konnect ID in status.
 func (*EventGatewayVirtualClusterPolicy) PersistsKonnectID() bool {
 	return true

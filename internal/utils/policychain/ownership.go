@@ -25,6 +25,9 @@ const ListenerOwnerAnnotation = "gateway-operator.konghq.com/listener-policy-cha
 // ProduceOwnerAnnotation records a virtual-cluster produce claim independently of other chains.
 const ProduceOwnerAnnotation = "gateway-operator.konghq.com/produce-policy-chain-owner"
 
+// ConsumeOwnerAnnotation records a virtual-cluster consume claim independently of other chains.
+const ConsumeOwnerAnnotation = "gateway-operator.konghq.com/consume-policy-chain-owner"
+
 // Chain declares singleton configuration on a namespaced parent.
 type Chain interface {
 	client.Object
@@ -40,6 +43,8 @@ func Scope(chain Chain) (parent client.Object, owner Chain, annotation string, e
 		return &configurationv1alpha1.EventGatewayListener{}, &configurationv1alpha1.EventGatewayListenerPolicyChain{}, ListenerOwnerAnnotation, nil
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
 		return &configurationv1alpha1.EventGatewayVirtualCluster{}, &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{}, ProduceOwnerAnnotation, nil
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		return &configurationv1alpha1.EventGatewayVirtualCluster{}, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{}, ConsumeOwnerAnnotation, nil
 	default:
 		return nil, nil, "", fmt.Errorf("unsupported policy chain type %T", chain)
 	}
