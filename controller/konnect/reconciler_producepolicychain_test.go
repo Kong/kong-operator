@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -242,6 +243,36 @@ func TestProducePolicyChainLiveOwnership(t *testing.T) {
 			owned, _, err := claimPolicyChain(t.Context(), policyChainLiveGetClient{Client: cached, apiReader: live}, chain, consts.DefaultKonnectSyncPeriod)
 			require.NoError(t, err)
 			require.Equal(t, claim != policychain.ClaimValue(owner), owned, "a live owner missing only from cache is not stale")
+		})
+	}
+}
+
+func TestProducePolicyChainStaleSelfCannotClaim(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name   string
+		change func(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain)
+	}{
+		{name: "recreated", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) { c.UID = "new-uid" }},
+		{name: "new declaration", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) { c.Generation++ }},
+		{name: "terminating", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain) {
+			c.DeletionTimestamp = new(metav1.Now())
+			c.Finalizers = []string{KonnectCleanupFinalizer}
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			chain := testProducePolicyChain("chain")
+			parent := &configurationv1alpha1.EventGatewayVirtualCluster{Name: "vc", Namespace: chain.Namespace}
+			current := chain.DeepCopy()
+			tt.change(current)
+			cached := newFakeClientBuilder(scheme.Get()).WithObjects(chain, parent).Build()
+			live := newFakeClientBuilder(scheme.Get()).WithObjects(current, parent).Build()
+			owned, result, err := claimPolicyChain(t.Context(), policyChainLiveGetClient{Client: cached, apiReader: live}, chain, consts.DefaultKonnectSyncPeriod)
+			require.NoError(t, err)
+			require.False(t, owned)
+			require.True(t, result.Requeue)
+			require.NoError(t, cached.Get(t.Context(), client.ObjectKeyFromObject(parent), parent))
+			require.NotContains(t, parent.Annotations, policychain.ProduceOwnerAnnotation)
 		})
 	}
 }
