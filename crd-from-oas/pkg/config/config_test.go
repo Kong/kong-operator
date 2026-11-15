@@ -1472,6 +1472,19 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "reverseWatch requires exactly one kind",
 		},
 		{
+			name: "watchSameParent on a single-kind reference accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.WatchSameParent = true }),
+		},
+		{
+			name: "watchSameParent on a multi-kind reference rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+				rc.RefTypeName = "AIGatewayACLRef"
+				rc.WatchSameParent = true
+			}),
+			wantErr: "watchSameParent requires exactly one kind",
+		},
+		{
 			name: "two reverseWatch references to the same kind accepted",
 			cfg: func() *APIGroupVersionConfig {
 				cfg := base(func(rc *ReferenceConfig) { rc.ReverseWatch = true })

@@ -137,6 +137,10 @@ type ReferenceConfig struct {
 	// the InjectInto target to the referenced object's Konnect name on the
 	// same gateway. Requires a single kind.
 	ReverseWatch bool `yaml:"reverseWatch,omitempty"`
+	// WatchSameParent also enqueues referring objects sharing the referenced
+	// object's namespaced parent, even when they do not list that object.
+	// Both kinds must configure the same parent GVK and ObjectRef parent.
+	WatchSameParent bool `yaml:"watchSameParent,omitempty"`
 }
 
 // TypeName returns the Go type name of the generated ref struct.
@@ -1083,6 +1087,9 @@ func (tc *TypeConfig) validate() error {
 		}
 		if ref.ReverseWatch && len(ref.Kinds) != 1 {
 			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)
+		}
+		if ref.WatchSameParent && len(ref.Kinds) != 1 {
+			return fmt.Errorf("reference %q: watchSameParent requires exactly one kind", ref.Path)
 		}
 	}
 	// Several reverseWatch references to a kind share one generated

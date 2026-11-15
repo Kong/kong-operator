@@ -73842,6 +73842,7 @@ rules:
   - eventgatewayvirtualclusterpolicies
   - eventgatewayvirtualclusterpolicychains
   - eventgatewayvirtualclusterproducepolicies
+  - eventgatewayvirtualclusterproducepolicychains
   - eventgatewayvirtualclusters
   - kongcacertificates
   - kongconsumergroups
@@ -73883,6 +73884,8 @@ rules:
   - eventgatewayvirtualclusterpolicychains/status
   - eventgatewayvirtualclusterproducepolicies/finalizers
   - eventgatewayvirtualclusterproducepolicies/status
+  - eventgatewayvirtualclusterproducepolicychains/finalizers
+  - eventgatewayvirtualclusterproducepolicychains/status
   - eventgatewayvirtualclusters/finalizers
   - eventgatewayvirtualclusters/status
   - kongcacertificates/finalizers
