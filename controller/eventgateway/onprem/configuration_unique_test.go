@@ -319,9 +319,28 @@ func TestUniquePolicyNames(t *testing.T) {
 		other := f.consumePolicy("other", modifyHeaders("same", ""), 3)
 		cfg := f.build(nil, child, parent, other)
 		assert.Equal(t, map[string]string{
-			"EventGatewayVirtualClusterConsumePolicy child": `its parent policy EventGatewayVirtualClusterConsumePolicy default/parent can't have its policy name "same" while EventGatewayVirtualClusterConsumePolicy default/child has it`,
+			"EventGatewayVirtualClusterConsumePolicy child": `its policy name "same" is the one of its parent policy EventGatewayVirtualClusterConsumePolicy default/parent`,
 			"EventGatewayVirtualClusterConsumePolicy other": `its policy name "same" is already the one of EventGatewayVirtualClusterConsumePolicy default/parent`,
 		}, excludedMessages(cfg), "the parent, older than other, keeps the name")
+		require.NoError(t, cfg.blocked())
+	})
+
+	t.Run("a sibling of such a policy, with a name of its own, goes in with their parent", func(t *testing.T) {
+		// Only the child holds the name its parent loses: the sibling, whose
+		// parent loses the name to the child too, but holds a name nobody
+		// else claims, goes in once the child is out and the parent has it.
+		child := f.consumePolicy("child", modifyHeaders("same", "parent"), 1)
+		parent := f.consumePolicy("parent", `
+    type: schemaValidation
+    schemaValidation:
+      name: same
+      config: {type: json, json: {valueValidationAction: mark}}
+`, 2)
+		other := f.consumePolicy("other", modifyHeaders("unique", "parent"), 3)
+		cfg := f.build(nil, child, parent, other)
+		assert.Equal(t, map[string]string{
+			"EventGatewayVirtualClusterConsumePolicy child": `its policy name "same" is the one of its parent policy EventGatewayVirtualClusterConsumePolicy default/parent`,
+		}, excludedMessages(cfg), "the parent and the sibling are in")
 		require.NoError(t, cfg.blocked())
 	})
 

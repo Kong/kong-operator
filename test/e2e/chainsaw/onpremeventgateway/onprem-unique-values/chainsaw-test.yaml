@@ -302,9 +302,8 @@ spec:
       try:
         - apply:
             file: loop-policies.yaml
-        # The child either can't have the name along with its parent or, once
-        # the parent was sent with it before loop-c-other came, loses it to
-        # the parent: the message depends on when the gateway reconciles.
+        # The child has the name of its parent: it can't be in, whatever the
+        # order the gateway sees them in.
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -314,7 +313,8 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: "False"
-                    (contains(message, 'policy name "loop"')): true
+                    (contains(message, 'its policy name "loop" is the one of its parent policy EventGatewayVirtualClusterConsumePolicy')): true
+                    (contains(message, '/loop-b-parent')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
