@@ -1,0 +1,359 @@
+# Unique values of the entities of an OnPremEventGateway: the name of an entity
+# among its kind, the DNS label of a virtual cluster and the name of a policy
+# among every policy. A value stays with the entity sent with it: an entity
+# never sent that takes it is only left out, and the rest is still pushed to
+# gw-admin, across a restart of Kong Operator; an entity sent that takes it
+# stops the push.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-unique-values
+spec:
+  description: |
+    1. A backend cluster, a virtual cluster with a consume policy named
+       headers, and a listener are sent to gw-admin.
+    2. A backend cluster with the same name, a virtual cluster with the same
+       DNS label and a listener policy named headers are left out, naming the
+       entity holding the value, and the gateway stays Programmed.
+    3. A new consume policy is still pushed.
+    4. Kong Operator restarts: the duplicates are still only left out, and a
+       new consume policy is pushed.
+    5. A second backend cluster is sent, then renamed into the name of the
+       first: the push stops, and gw-admin keeps both backend clusters.
+    6. Kong Operator restarts: the push is still stopped.
+    7. Renamed back, it is pushed again.
+    8. A consume policy is sent, then given a new parent policy whose name
+       is taken: the parent, never sent, is only left out, but the child
+       stops the push, and gw-admin keeps it.
+    9. The parent policy renamed, both are pushed.
+    10. A consume policy is sent, then, while another entity stops the push,
+        moved to the virtual cluster whose DNS label is taken: the virtual
+        cluster, never sent, is only left out, but the policy stops the push,
+        and gw-admin keeps it.
+    11. Moved back, it is pushed again.
+    12. Three consume policies never sent take the same policy name: a child,
+        the oldest, its parent, and another one. The child can't be in, so
+        it doesn't keep the name: the parent has it and is pushed, the other
+        is only left out, and the gateway stays Programmed.
+  # Restarts the operator.
+  concurrent: false
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+
+    - name: 1-Entities-sent
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name)) == ["backend"] and (.entities.virtual_clusters | map(.dns_label)) == ["vcluster"] and (.entities.virtual_clusters[0].consume_policies | map(.name)) == ["headers"]'
+
+    - name: 2-Duplicates-never-sent-left-out
+      try:
+        - apply:
+            file: 02-duplicates.yaml
+        - assert:
+            file: assert-duplicates-left-out.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+
+    - name: 3-Push-goes-on
+      try:
+        - apply:
+            file: policy.yaml
+            bindings:
+              - name: policy_name
+                value: before-restart
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.virtual_clusters[0].consume_policies | map(.name) | sort) == ["before-restart", "headers"] and (.entities.backend_clusters | length) == 1 and (.entities.virtual_clusters | length) == 1 and (.entities.listeners[0].policies | length) == 0'
+
+    - name: 4-Operator-restarted
+      try:
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh restart-operator 180
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-operator-idle 150
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: assert-duplicates-left-out.yaml
+        - apply:
+            file: policy.yaml
+            bindings:
+              - name: policy_name
+                value: after-restart
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.virtual_clusters[0].consume_policies | map(.name) | sort) == ["after-restart", "before-restart", "headers"] and (.entities.backend_clusters | length) == 1'
+
+    - name: 5-Sent-entity-renamed-into-a-taken-name
+      try:
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: second
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: backend
+        - assert:
+            file: assert-gateway-blocked.yaml
+        - assert:
+            resource: &second-left-out
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              metadata:
+                name: second
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: Invalid
+        # gw-admin keeps what it has.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+
+    - name: 6-Still-stopped-after-a-restart
+      try:
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../../gwadmin/gwadmin-shared/gwadmin.sh restart-operator 180
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh wait-operator-idle 150
+        - assert:
+            file: assert-gateway-blocked.yaml
+        - assert:
+            resource: *second-left-out
+
+    - name: 7-Renamed-back
+      try:
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: second
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.backend_clusters | map(.name) | sort) == ["backend", "second"]'
+
+    - name: 8-Sent-policy-given-a-parent-left-out
+      try:
+        - apply:
+            file: child-policy.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("child") != null'
+        - apply:
+            file: parent-policy.yaml
+            bindings:
+              - name: parent_api_name
+                value: headers
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: parent
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: Invalid
+                    (contains(message, 'its policy name "headers" is already the one of EventGatewayVirtualClusterConsumePolicy')): true
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - apply:
+            file: child-policy-with-parent.yaml
+        - assert:
+            file: assert-gateway-blocked-by-child.yaml
+        # gw-admin keeps the child, without the parent.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | (index("child") != null) and (index("headers") != null) and (length == 4)'
+
+    - name: 9-Parent-policy-renamed
+      try:
+        - apply:
+            file: parent-policy.yaml
+            bindings:
+              - name: parent_api_name
+                value: parent
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | (index("child") != null) and (index("parent") != null) and (length == 5)'
+        # The child first: the in-use finalizer holds its parent until it is
+        # gone, and the cleanup would delete the parent first.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: child
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: parent
+
+    - name: 10-Sent-policy-moved-to-a-virtual-cluster-left-out
+      try:
+        - apply:
+            file: moved-policy.yaml
+            bindings:
+              - name: virtual_cluster
+                value: vcluster
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null'
+        # A programmed policy can't change its virtual cluster: the backend
+        # cluster second, renamed into a taken name, stops the push, and the
+        # policy is no longer programmed.
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: backend
+        - assert:
+            file: assert-gateway-blocked.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: moved
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: GatewayNotProgrammed
+        - apply:
+            file: moved-policy.yaml
+            bindings:
+              - name: virtual_cluster
+                value: vcluster-duplicate
+        - apply:
+            file: second-backend.yaml
+            bindings:
+              - name: second_name
+                value: second
+        - assert:
+            file: assert-gateway-blocked-by-moved.yaml
+        # gw-admin keeps the policy, in its virtual cluster.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '(.entities.virtual_clusters | map(.name)) == ["vcluster"] and ([.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null)'
+
+    - name: 11-Moved-back
+      try:
+        - apply:
+            file: moved-policy.yaml
+            bindings:
+              - name: virtual_cluster
+                value: vcluster
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null'
+
+    - name: 12-Policy-with-the-name-of-its-parent
+      try:
+        - apply:
+            file: loop-policies.yaml
+        # The child has the name of its parent: it can't be in, whatever the
+        # order the gateway sees them in.
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: loop-a-child
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'its policy name "loop" is the one of its parent policy EventGatewayVirtualClusterConsumePolicy')): true
+                    (contains(message, '/loop-b-parent')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: loop-c-other
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'is already the one of EventGatewayVirtualClusterConsumePolicy')): true
+                    (contains(message, '/loop-b-parent')): true
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        # gw-admin has the parent alone under the name.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | select(.name == "loop") | .type] == ["schema_validation"]'
+        # The child first: its parent policy can't go before it.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: loop-a-child
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: loop-b-parent
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

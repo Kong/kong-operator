@@ -1120,27 +1120,51 @@ spec:
           value: Invalid
         - name: message_part
           value: "\"key-gw-n\""
-    - name: 65-assert-gw-n-gateway-held-back
-      description: "[N, its name] The conflicting EventGatewayStaticKey can't be sent: the gateway doesn't push its configuration."
+    - name: 65-create-witness-4
+      description: "[N, its name] Create witness-4, a backend cluster of the gateway used as a witness: it is programmed only once a push including it succeeds."
+      use:
+        template: ../../_step_templates/apply-eventGatewayBackendCluster.yaml
+      bindings:
+        - name: backend_cluster_name
+          value: witness-4
+        - name: backend_cluster_namespace
+          value: ($namespace)
+        - name: gateway_ref_namespace
+          value: (`null`)
+    - name: 66-assert-gw-n-gateway-not-held-back
+      description: "[N, its name] The conflicting EventGatewayStaticKey, never sent, is only left out. witness-4, created after it, is pushed."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:
         - name: object_api_version
-          value: eventgateway.konghq.com/v1alpha1
+          value: configuration.konghq.com/v1alpha1
         - name: object_kind
-          value: OnPremEventGateway
+          value: EventGatewayBackendCluster
         - name: object_name
-          value: ($gateway_name)
+          value: witness-4
         - name: object_namespace
           value: ($namespace)
         - name: condition_type
           value: Programmed
         - name: condition_status
-          value: "False"
+          value: "True"
         - name: condition_reason
-          value: InvalidEntities
-    - name: 66-assert-gw-n-first-kept
-      description: "[N, its name] The first EventGatewayStaticKey keeps its name. It stays in the configuration, which isn't pushed."
+          value: Programmed
+    - name: 67-delete-witness-4
+      description: "[N, its name] Delete witness-4."
+      use:
+        template: ../../_step_templates/delete-and-wait.yaml
+      bindings:
+        - name: object_api_version
+          value: configuration.konghq.com/v1alpha1
+        - name: object_kind
+          value: EventGatewayBackendCluster
+        - name: object_name
+          value: witness-4
+        - name: object_namespace
+          value: ($namespace)
+    - name: 68-assert-gw-n-first-kept
+      description: "[N, its name] The first EventGatewayStaticKey keeps its name."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:
@@ -1155,10 +1179,10 @@ spec:
         - name: condition_type
           value: Programmed
         - name: condition_status
-          value: "False"
+          value: "True"
         - name: condition_reason
-          value: GatewayNotProgrammed
-    - name: 67-delete-gw-n-conflicting
+          value: Programmed
+    - name: 69-delete-gw-n-conflicting
       description: "[N, its name] Delete the conflicting EventGatewayStaticKey."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -1171,26 +1195,7 @@ spec:
           value: key-gw-n
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 68-assert-gw-n-gateway-pushes
-      description: "[N, its name] The gateway pushes its configuration again."
-      use:
-        template: ../../_step_templates/assert-condition.yaml
-      bindings:
-        - name: object_api_version
-          value: eventgateway.konghq.com/v1alpha1
-        - name: object_kind
-          value: OnPremEventGateway
-        - name: object_name
-          value: ($gateway_name)
-        - name: object_namespace
-          value: ($namespace)
-        - name: condition_type
-          value: Programmed
-        - name: condition_status
-          value: "True"
-        - name: condition_reason
-          value: Programmed
-    - name: 69-grant-backend-h-to-gateway
+    - name: 70-grant-backend-h-to-gateway
       description: "[H, the Secret of a static key being deleted] Let the EventGatewayBackendCluster backend-h reference its gateway in another namespace."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -1208,7 +1213,7 @@ spec:
           value:
             - group: ($gateway_group)
               kind: ($gateway_kind)
-    - name: 70-grant-key-h-to-secrets
+    - name: 71-grant-key-h-to-secrets
       description: "[H, the Secret of a static key being deleted] Let the EventGatewayStaticKey key-h reference the Secret in another namespace. The KongReferenceGrant names it: it allows that object only."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -1227,7 +1232,7 @@ spec:
             - group: core
               kind: Secret
               name: key-h
-    - name: 71-create-backend-cluster-backend-h
+    - name: 72-create-backend-cluster-backend-h
       description: "[H, the Secret of a static key being deleted] Create the EventGatewayBackendCluster backend-h."
       use:
         template: ../../_step_templates/apply-eventGatewayBackendCluster.yaml
@@ -1238,7 +1243,7 @@ spec:
           value: ($referrer_namespace)
         - name: gateway_ref_namespace
           value: ($namespace)
-    - name: 72-create-virtual-cluster-vc-h
+    - name: 73-create-virtual-cluster-vc-h
       description: "[H, the Secret of a static key being deleted] Create the EventGatewayVirtualCluster vc-h."
       use:
         template: ../../_step_templates/apply-eventGatewayVirtualCluster.yaml
@@ -1253,7 +1258,7 @@ spec:
           value: backend-h
         - name: backend_cluster_namespace
           value: (`null`)
-    - name: 73-create-static-key-key-h
+    - name: 74-create-static-key-key-h
       description: "[H, the Secret of a static key being deleted] Create the EventGatewayStaticKey key-h."
       use:
         template: ../../_step_templates/apply-eventGatewayStaticKey.yaml
@@ -1270,7 +1275,7 @@ spec:
           value: ($target_namespace)
         - name: secret_ref_namespace
           value: ($target_namespace)
-    - name: 74-create-virtual-cluster-produce-policy-encrypt-h
+    - name: 75-create-virtual-cluster-produce-policy-encrypt-h
       description: "[H, the Secret of a static key being deleted] Create the EventGatewayVirtualClusterProducePolicy encrypt-h."
       use:
         template: ../../_step_templates/apply-eventGatewayVirtualClusterProducePolicy-encrypt.yaml
@@ -1287,7 +1292,7 @@ spec:
           value: key-h
         - name: static_key_namespace
           value: (`null`)
-    - name: 75-assert-h-programmed
+    - name: 76-assert-h-programmed
       description: "[H, the Secret of a static key being deleted] The policy using the static key is pushed."
       use:
         template: ../../_step_templates/assert-condition-status.yaml
@@ -1304,7 +1309,7 @@ spec:
           value: Programmed
         - name: condition_status
           value: "True"
-    - name: 76-assert-h-key-held
+    - name: 77-assert-h-key-held
       description: "[H, the Secret of a static key being deleted] The static key the pushed policy uses has the in-use finalizer."
       use:
         template: ../../_step_templates/assert-finalizer.yaml
@@ -1321,7 +1326,7 @@ spec:
           value: gateway-operator.konghq.com/onprem-eventgateway-in-use
         - name: being_deleted
           value: false
-    - name: 77-delete-h-key
+    - name: 78-delete-h-key
       description: "[H, the Secret of a static key being deleted] Delete the static key, still used by the policy."
       use:
         template: ../../_step_templates/delete-no-wait.yaml
@@ -1332,7 +1337,7 @@ spec:
           value: key-h
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 78-assert-h-key-held-deleted
+    - name: 79-assert-h-key-held-deleted
       description: "[H, the Secret of a static key being deleted] Being deleted, the static key is still held by the in-use finalizer while the policy uses it."
       use:
         template: ../../_step_templates/assert-finalizer.yaml
@@ -1349,7 +1354,7 @@ spec:
           value: gateway-operator.konghq.com/onprem-eventgateway-in-use
         - name: being_deleted
           value: true
-    - name: 79-revoke-key-h-to-secrets
+    - name: 80-revoke-key-h-to-secrets
       description: "[H, the Secret of a static key being deleted] Delete the KongReferenceGrant letting the static key read its Secret."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -1362,19 +1367,19 @@ spec:
           value: key-h-to-secrets
         - name: object_namespace
           value: ($target_namespace)
-    - name: 80-create-witness-4
-      description: "[H, the Secret of a static key being deleted] Create witness-4, a backend cluster of the gateway used as a witness: it is programmed only once a push including it succeeds."
+    - name: 81-create-witness-5
+      description: "[H, the Secret of a static key being deleted] Create witness-5, a backend cluster of the gateway used as a witness: it is programmed only once a push including it succeeds."
       use:
         template: ../../_step_templates/apply-eventGatewayBackendCluster.yaml
       bindings:
         - name: backend_cluster_name
-          value: witness-4
+          value: witness-5
         - name: backend_cluster_namespace
           value: ($namespace)
         - name: gateway_ref_namespace
           value: (`null`)
-    - name: 81-assert-h-gateway-not-held-back
-      description: "[H, the Secret of a static key being deleted] The static key being deleted is sent as it was last, without reading its Secret: the gateway still pushes its configuration. witness-4, created after it, is pushed."
+    - name: 82-assert-h-gateway-not-held-back
+      description: "[H, the Secret of a static key being deleted] The static key being deleted is sent as it was last, without reading its Secret: the gateway still pushes its configuration. witness-5, created after it, is pushed."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:
@@ -1383,7 +1388,7 @@ spec:
         - name: object_kind
           value: EventGatewayBackendCluster
         - name: object_name
-          value: witness-4
+          value: witness-5
         - name: object_namespace
           value: ($namespace)
         - name: condition_type
@@ -1392,8 +1397,8 @@ spec:
           value: "True"
         - name: condition_reason
           value: Programmed
-    - name: 82-delete-witness-4
-      description: "[H, the Secret of a static key being deleted] Delete witness-4."
+    - name: 83-delete-witness-5
+      description: "[H, the Secret of a static key being deleted] Delete witness-5."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
       bindings:
@@ -1402,10 +1407,10 @@ spec:
         - name: object_kind
           value: EventGatewayBackendCluster
         - name: object_name
-          value: witness-4
+          value: witness-5
         - name: object_namespace
           value: ($namespace)
-    - name: 83-delete-h-policy
+    - name: 84-delete-h-policy
       description: "[H, the Secret of a static key being deleted] Delete the policy using the static key."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -1418,7 +1423,7 @@ spec:
           value: encrypt-h
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 84-assert-h-key-gone
+    - name: 85-assert-h-key-gone
       description: "[H, the Secret of a static key being deleted] The push dropping the policy releases the static key."
       use:
         template: ../../_step_templates/assert-gone.yaml
@@ -1431,7 +1436,7 @@ spec:
           value: key-h
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 85-assert-h-gateway-programmed
+    - name: 86-assert-h-gateway-programmed
       description: "[H, the Secret of a static key being deleted] The gateway pushes its configuration."
       use:
         template: ../../_step_templates/assert-condition.yaml

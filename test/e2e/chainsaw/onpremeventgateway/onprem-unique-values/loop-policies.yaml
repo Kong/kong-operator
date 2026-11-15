@@ -1,0 +1,60 @@
+# Three consume policies with the policy name loop, from the oldest: the child
+# of loop-b-parent, loop-b-parent, and loop-c-other. Created in the same
+# second, their names keep that order.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: loop-a-child
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    parentPolicyRef:
+      name: loop-b-parent
+    type: modifyHeaders
+    modifyHeaders:
+      name: loop
+      config:
+        actions:
+          - op: remove
+            remove:
+              key: x-loop
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: loop-b-parent
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: loop
+      config:
+        type: json
+        json:
+          valueValidationAction: mark
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: loop-c-other
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: loop
+      config:
+        actions:
+          - op: remove
+            remove:
+              key: x-loop

@@ -2008,7 +2008,7 @@ spec:
         - name: gateway_ref_namespace
           value: (`null`)
     - name: 123-assert-vc-n-gateway-not-held-back
-      description: "[N, its name] The conflicting EventGatewayVirtualClusterPolicyChain is only left out. witness-5, created after it, is pushed."
+      description: "[N, its name] The conflicting EventGatewayVirtualClusterPolicyChain, never sent, is only left out. witness-5, created after it, is pushed."
       use:
         template: ../../_step_templates/assert-condition.yaml
       bindings:

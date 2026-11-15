@@ -1,0 +1,19 @@
+# A consume policy named moved, of the virtual cluster virtual_cluster.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: moved
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster)
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: moved
+      config:
+        actions:
+          - op: remove
+            remove:
+              key: x-moved

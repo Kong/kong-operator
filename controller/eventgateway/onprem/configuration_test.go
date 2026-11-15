@@ -201,7 +201,7 @@ spec:
 		assert.Len(t, excluded, 5, "excluded: %v", cfg.excluded)
 		invalid := eventgatewayv1alpha1.OnPremEntityInvalidReason
 		assert.Equal(t, invalid, excluded["default/duplicate"].reason)
-		assert.Contains(t, excluded["default/duplicate"].message, `another backend cluster of the gateway is named "backend-cluster"`)
+		assert.Contains(t, excluded["default/duplicate"].message, `its spec.apiSpec.name "backend-cluster" is already the one of EventGatewayBackendCluster default/backend-cluster`)
 		assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, excluded["other/other-namespace"].reason)
 		assert.Equal(t, "no KongReferenceGrant allows it to reference the OnPremEventGateway default/gateway", excluded["other/other-namespace"].message)
 		assert.Equal(t, invalid, excluded["default/not-v4"].reason)
@@ -478,7 +478,7 @@ spec:
 			reasons[e.obj.GetName()] = e.message
 		}
 		assert.Len(t, reasons, 2, "excluded: %v", cfg.excluded)
-		assert.Contains(t, reasons["duplicate-registry"], `another schema registry of the gateway is named "registry"`)
+		assert.Contains(t, reasons["duplicate-registry"], `its spec.apiSpec.name "registry" is already the one of EventGatewaySchemaRegistry default/registry`)
 		assert.Contains(t, reasons["missing-secret"], "the Secret default/missing doesn't exist")
 	})
 

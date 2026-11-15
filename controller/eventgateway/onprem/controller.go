@@ -101,7 +101,7 @@ type Reconciler struct {
 	// they aren't told again on every change of the GWAdmin.
 	removedFromGWAdmin sync.Map
 	// lastEntities holds, by gateway UID, the entities of the last
-	// configuration built for the gateway, by the UID of their object (see
+	// configuration recorded for the gateway, by the UID of their object (see
 	// buildConfiguration).
 	//
 	// It is kept in memory: after a restart of the operator, an entity whose
@@ -225,7 +225,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 
 	// The revision of the configuration is recorded before it is pushed.
 	previous, _ := r.lastEntities.Load(gateway.UID)
-	cfg, err := buildConfiguration(ctx, r.Client, gateway, gwadminref.SecretHint(r.GWAdminSync.SecretLabelSelector), asEntities(previous))
+	secretHint := gwadminref.SecretHint(r.GWAdminSync.SecretLabelSelector)
+	// An entity of the last configuration that could be sent keeps its unique
+	// values (see reserve): it is the one the gateway records, when known.
+	var sent *gwadminapi.GatewayEntitySet
+	if known, err := r.lastGoodConfigOf(gateway); err == nil {
+		sent = &known.config.Entities
+	}
+	cfg, err := buildConfigurationAfter(ctx, r.Client, gateway, secretHint, asEntities(previous), sent)
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
@@ -248,7 +255,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 				notPushable = fmt.Errorf("%w, and it can't be read back: %w", notPushable, err)
 			}
 		}
-		if notPushable == nil {
+		// What was sent is known once read back, e.g. after a restart of the
+		// operator: the configuration is built again after it, so that an
+		// entity never sent that conflicts with another is only left out (see
+		// excludeConflict), rather than holding back the gateway for good.
+		if notPushable == nil && cfg.sentUnknown {
+			if cfg, err = buildConfigurationAfter(ctx, r.Client, gateway, secretHint, asEntities(previous), &last.config.Entities); err != nil {
+				return requeueOnConflict(logger, ctrl.Result{}, err)
+			}
+			blocked = cfg.blocked()
+		}
+		if blocked != nil && notPushable == nil {
 			cfg.entitiesInUse = mergeEntitiesInUse(cfg.entitiesInUse, last.inUse)
 		}
 	}
@@ -272,10 +289,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		// A configuration with invalid policy chains isn't recorded either:
 		// pushConfiguration doesn't push it.
 		if len(cfg.invalidChains) == 0 {
-			r.lastEntities.Store(gateway.UID, cfg.built)
 			if err := r.recordRevision(ctx, gateway, config); err != nil {
 				return requeueOnConflict(logger, ctrl.Result{}, err)
 			}
+			// Once recorded: a configuration that isn't, e.g. on a conflict,
+			// is built again.
+			r.lastEntities.Store(gateway.UID, cfg.built)
 			// Remembered before any pod is pushed, like the revision.
 			if err := r.rememberConfig(gateway, config, cfg); err != nil {
 				return requeueOnConflict(logger, ctrl.Result{}, err)

@@ -33,7 +33,7 @@ func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client
 	var backendClusters configurationv1alpha1.EventGatewayBackendClusterList
 	bcs, err := addAttached(ctx, c, cl, gateway, &backendClusters, &backendClusters.Items, index.IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewayBackendCluster, gwadminapi.EventGatewayBackendClusterOnPrem]{
-			kind: "EventGatewayBackendCluster", what: "backend cluster",
+			kind: "EventGatewayBackendCluster",
 			request: func(ctx context.Context, cl client.Client, bc *configurationv1alpha1.EventGatewayBackendCluster) (any, error) {
 				return bc.ToCreateBackendClusterRequest(ctx, cl)
 			},
@@ -47,7 +47,7 @@ func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client
 	var bundles configurationv1alpha1.EventGatewayTLSTrustBundleList
 	if _, err := addAttached(ctx, c, cl, gateway, &bundles, &bundles.Items, index.IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewayTLSTrustBundle, gwadminapi.EventGatewayTLSTrustBundleOnPrem]{
-			kind: "EventGatewayTLSTrustBundle", what: "TLS trust bundle",
+			kind: "EventGatewayTLSTrustBundle",
 			request: func(ctx context.Context, cl client.Client, b *configurationv1alpha1.EventGatewayTLSTrustBundle) (any, error) {
 				return b.ToCreateTLSTrustBundleRequest(ctx, cl)
 			},
@@ -60,7 +60,7 @@ func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client
 	var registries configurationv1alpha1.EventGatewaySchemaRegistryList
 	if _, err := addAttached(ctx, c, cl, gateway, &registries, &registries.Items, index.IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewaySchemaRegistry, gwadminapi.EventGatewaySchemaRegistryOnPrem]{
-			kind: "EventGatewaySchemaRegistry", what: "schema registry",
+			kind: "EventGatewaySchemaRegistry",
 			request: func(ctx context.Context, cl client.Client, r *configurationv1alpha1.EventGatewaySchemaRegistry) (any, error) {
 				return r.ToSchemaRegistryCreate(ctx, cl)
 			},
@@ -73,7 +73,7 @@ func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client
 	var keys configurationv1alpha1.EventGatewayStaticKeyList
 	if _, err := addAttached(ctx, c, cl, gateway, &keys, &keys.Items, index.IndexFieldEventGatewayStaticKeyOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewayStaticKey, gwadminapi.EventGatewayStaticKeyOnPrem]{
-			kind: "EventGatewayStaticKey", what: "static key",
+			kind: "EventGatewayStaticKey",
 			request: func(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
 				return k.ToEventGatewayStaticKeyCreate(ctx, cl)
 			},
