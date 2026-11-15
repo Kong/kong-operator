@@ -1,0 +1,92 @@
+# A virtual cluster of the OnPremEventGateway other_gateway_name, with two
+# cluster policies the chain chain_name orders: every one of them when
+# chain_policies is both, only the first otherwise, which makes it invalid.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: other-backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($other_gateway_name)
+  apiSpec:
+    name: other-backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: other-vcluster
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: other-backend
+  apiSpec:
+    name: other-vcluster
+    dnsLabel: other-vcluster
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: first
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: other-vcluster
+  apiSpec:
+    type: acls
+    acls:
+      name: first
+      enabled: Enabled
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations: [{name: read}]
+            resourceNames: {type: stat, stat: [{match: first}]}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: second
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: other-vcluster
+  apiSpec:
+    type: acls
+    acls:
+      name: second
+      enabled: Enabled
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations: [{name: read}]
+            resourceNames: {type: stat, stat: [{match: second}]}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicyChain
+metadata:
+  name: chain
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: other-vcluster
+  apiSpec:
+    policies: ($chain_policies)

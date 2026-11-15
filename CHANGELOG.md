@@ -308,6 +308,21 @@
   uses the old spelling stops working. This CRD has only shipped in rapid
   channel builds, so the change is not breaking for a stable release.
   [#5803](https://github.com/Kong/kong-operator/issues/5803)
+- `OnPremEventGateway`: a restarted or new gw-admin pod no longer stays
+  unready, cutting off the control plane of every gateway of its `GWAdmin`,
+  because of one gateway it can't be given whole: one with no data plane
+  certificate, all of them rejected, a configuration gw-admin refuses, or
+  nothing to push. Such a gateway is left out of the gateways the pod waits
+  for, and is never left registered on a pod with no entities, which keg
+  would apply by dropping its configuration. A transient failure keeps the
+  gateway waited for. Also:
+  - an invalid policy chain now stops the push like invalid entities: the
+    gateway, its data plane certificates and the last configuration that
+    could be sent are still pushed, so a deleted certificate stops being
+    trusted;
+  - a push blocked by more than one problem reports them all;
+  - a gw-admin pod is never pushed an older revision of a gateway than the
+    one it holds.
 
 ### Added
 

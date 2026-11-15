@@ -117,20 +117,27 @@ const itemExpected = "expected"
 // its name and creation time, which don't change. Every call is idempotent.
 // What the pod holds of each certificate once pushed is told to outcome.
 //
-// The certificates come before the entities: an entity gw-admin rejects
-// doesn't keep them from being trusted, nor reported Programmed. The expected
-// gateways come last: a gw-admin pod turns ready once they are set, as long
-// as each has a data plane certificate, so a pod restarted must hold the
-// entities and the certificates of the gateway by then. A certificate
-// gw-admin rejects is trusted by no pod, and only reported on it (see
-// certificateOutcome): it doesn't fail the push, which the rest of the
+// The certificates come before the entities: on a pod serving the gateway, an
+// entity gw-admin rejects doesn't keep them from being trusted, nor reported
+// Programmed. The expected
+// gateways come last: a gw-admin pod turns ready once each of them is
+// registered with its entities and a data plane certificate, and stays ready.
+// A gateway the pod can't be given both is left out of them, so that it
+// doesn't keep the pod, and the other gateways it serves, from turning ready.
+// A certificate gw-admin rejects is trusted by no pod, and only reported on
+// it (see certificateOutcome): it doesn't fail the push, which the rest of the
 // configuration doesn't depend on.
 //
+// A pod holding nothing of the gateway is given it whole, or not at all: when
+// it can't be given the entities, as there are none to push or a pod refused
+// them already, or as a call fails, the gateway is kept off it (see offPod),
+// rather than left registered with no entities. A configuration a pod refused
+// isn't pushed to such a pod again until it changes.
+//
 // Without withEntities, the entities the pod holds are left as they are, e.g.
-// while the push is stopped with no configuration to push: the gateway, its
-// data plane certificates and the expected gateways are still pushed, so that
-// a certificate deleted stops being trusted, and a restarted pod serves the
-// gateway, with no entities, and turns ready.
+// while the push is stopped with no configuration to push: the gateway and
+// its data plane certificates are still pushed to a pod holding it, so that a
+// certificate deleted stops being trusted.
 func (r *Reconciler) push(
 	ctx context.Context,
 	target *gwadminsync.Target,
@@ -147,11 +154,46 @@ func (r *Reconciler) push(
 	if err != nil {
 		return err
 	}
+	// holds tells the pod holds entities of the gateway, posted with the
+	// version of their configuration, which always names the operator.
+	holds := found && held.ConfigVersion != (gwadminapi.GatewayConfigVersion{})
+	if !holds && !withEntities {
+		// Nothing to give a pod holding nothing, e.g. one restarted while the
+		// push is stopped with no configuration to push: the gateway is kept
+		// off it (see offPod), for good while the push is stopped.
+		if err := offPod(ctx, gwAdmin, pod, gatewayID, found, outcome, true); err != nil {
+			return err
+		}
+		// Told again only while it may have lost them: a pod serving passed
+		// the readiness gate already, and keeps the gateway off on every
+		// reconcile of a gateway whose push is stopped.
+		return r.setExpectedOn(ctx, target, pod, gwAdmin, without(expected, gatewayID), !found && !pod.Serving)
+	}
+	// fail returns the error of a push to a pod that held nothing of the
+	// gateway: the gateway is taken off it again, rather than left there
+	// with no entities. Only gw-admin refusing what it was pushed keeps the
+	// gateway from being given to a pod for good: the pod is then told the
+	// gateways it serves but this one, so that it can turn ready for them.
+	// Any other error, e.g. a timeout, is tried again, and the pod waits for
+	// the gateway, as for any other.
+	fail := func(err error) error {
+		if holds {
+			return err
+		}
+		refused := isRefusal(err)
+		if offErr := offPod(ctx, gwAdmin, pod, gatewayID, true, outcome, refused); offErr != nil {
+			return errors.Join(err, offErr)
+		}
+		if !refused {
+			return err
+		}
+		return errors.Join(err, r.setExpectedOn(ctx, target, pod, gwAdmin, without(expected, gatewayID), true))
+	}
 	if !found {
 		if err := gwadminsync.Call("register the gateway", func() (*http.Response, error) {
 			return gwAdmin.UpdateEventGateway(ctx, gatewayID, config.Gateway)
 		}); err != nil {
-			return err
+			return fail(err)
 		}
 	}
 	// A gateway just registered holds no certificates: gw-admin deletes
@@ -160,27 +202,43 @@ func (r *Reconciler) push(
 	var certificates map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem
 	if found {
 		if certificates, err = getCertificates(ctx, gwAdmin, gatewayID); err != nil {
-			return err
+			return fail(err)
 		}
 	}
 	if err := pushCertificates(ctx, pod, gwAdmin, gatewayID, cfg, certificates, outcome); err != nil {
-		return err
+		return fail(err)
 	}
 	same, err := sameEntitiesFor(held.Entities, cfg.pushedKey, cfg.orderedPolicyLists())
 	if err != nil {
-		return err
+		return fail(err)
+	}
+	// A pod is never pushed an older revision than it holds: a keg it serves
+	// would drop its whole configuration. The gateway records an older
+	// revision than the pod holds only when its status was lost, e.g.
+	// restored from a backup: the push fails, and tells.
+	if withEntities && holds && held.ConfigVersion.DataVersion > config.Version.DataVersion {
+		return fmt.Errorf("the gw-admin pod holds revision %d of the gateway, newer than the one recorded, %d: it isn't pushed an older one",
+			held.ConfigVersion.DataVersion, config.Version.DataVersion)
 	}
 	if withEntities && (!found || !same || held.ConfigVersion != config.Version) {
-		if err := gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
-			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, gwadminapi.GatewayEntities{ConfigVersion: config.Version, Entities: config.Entities})
-		}); err != nil {
+		if err := putEntities(ctx, gwAdmin, gatewayID, config, cfg); err != nil {
 			// A call gw-admin didn't answer, or answered with a server error,
 			// may have been applied: a static key it held may be served.
 			if respErr, ok := errors.AsType[gwadminsync.ResponseError](err); !ok || respErr.StatusCode >= http.StatusInternalServerError {
 				outcome.sentEntities(pod)
 			}
-			return err
+			return fail(err)
 		}
+		holds = true
+	}
+	// A pod turns ready once every gateway it is told it serves has its
+	// entities and a data plane certificate there, e.g. one gw-admin
+	// rejected: one it lacks either is left out, so that it doesn't keep the
+	// pod from serving the others.
+	served := expected
+	if !holds || !outcome.holdsCertificate(pod, cfg.certificates) {
+		served = without(expected, gatewayID)
+		outcome.incomplete(pod)
 	}
 	// The pod holds the entities now, whether or not what follows fails: a
 	// static key pushed may be served to data planes.
@@ -189,12 +247,65 @@ func (r *Reconciler) push(
 	}
 	// A pod that doesn't know the gateway may have lost the expected gateways
 	// too.
-	if !found || r.GWAdminSync.Recorded(target, pod, itemExpected) != idsKey(expected) {
-		if err := r.setExpected(ctx, target, pod, gwAdmin, expected); err != nil {
-			return err
-		}
+	return r.setExpectedOn(ctx, target, pod, gwAdmin, served, !found)
+}
+
+// setExpectedOn sets the gateways the gw-admin pod serves, unless they are the
+// ones it was last told, and always when the pod may have lost them.
+func (r *Reconciler) setExpectedOn(
+	ctx context.Context, target *gwadminsync.Target, pod gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface, expected []uuid.UUID, lost bool,
+) error {
+	if !lost && r.GWAdminSync.Recorded(target, pod, itemExpected) == idsKey(expected) {
+		return nil
 	}
+	return r.setExpected(ctx, target, pod, gwAdmin, expected)
+}
+
+// putEntities pushes the entities of the configuration to the gw-admin pod.
+func putEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID, config gatewayConfig, cfg configuration) error {
+	return gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
+		return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, gwadminapi.GatewayEntities{ConfigVersion: config.Version, Entities: config.Entities})
+	})
+}
+
+// offPod keeps the gateway off the gw-admin pod, which holds no entities of it:
+// registered there, it would serve it to the data planes as an empty
+// configuration, and a keg pulling it would drop every listener and virtual
+// cluster it runs. Unknown to the pod, the gateway is refused to them, and keg
+// keeps running the configuration it has. registered tells the pod may know
+// it, which is then deleted, with the certificates registered with it.
+// lasting tells the pod can't be given the gateway until its configuration
+// changes, e.g. as gw-admin refused it, rather than until the push is tried
+// again (see Reconciler.unservable).
+func offPod(
+	ctx context.Context, gwAdmin gwadminapi.ClientInterface, pod gwadminsync.Pod, gatewayID uuid.UUID, registered bool, outcome *certificateOutcome, lasting bool,
+) error {
+	if lasting {
+		outcome.incomplete(pod)
+	}
+	if !registered {
+		return nil
+	}
+	err := gwadminsync.Call("delete the gateway", func() (*http.Response, error) {
+		return gwAdmin.DeleteEventGateway(ctx, gatewayID)
+	})
+	if err != nil && !gwadminsync.IsNotFound(err) {
+		return err
+	}
+	outcome.drop(pod)
 	return nil
+}
+
+// isRefusal tells the gw-admin pod refused what it was pushed, e.g. entities
+// it doesn't validate, rather than failed to take it.
+func isRefusal(err error) bool {
+	respErr, ok := errors.AsType[gwadminsync.ResponseError](err)
+	return ok && (respErr.StatusCode == http.StatusBadRequest || respErr.StatusCode == http.StatusUnprocessableEntity)
+}
+
+// without returns the ids but the one.
+func without(ids []uuid.UUID, id uuid.UUID) []uuid.UUID {
+	return slices.DeleteFunc(slices.Clone(ids), func(other uuid.UUID) bool { return other == id })
 }
 
 // pushCertificates makes the gw-admin pod hold the data plane certificates
@@ -348,10 +459,58 @@ type certificateOutcome struct {
 	// entitiesOn holds, by key, the pods that may hold the entities of the
 	// configuration, even when their push failed.
 	entitiesOn map[string]bool
+	// incompleteOn holds, by key, the pods that can't be given the gateway
+	// whole, with its entities and a data plane certificate (see push).
+	incompleteOn map[string]bool
 }
 
 func newCertificateOutcome() *certificateOutcome {
-	return &certificateOutcome{heldBy: map[uuid.UUID]map[string]bool{}, rejectedBy: map[uuid.UUID]map[string]string{}, failedOn: map[string]bool{}, entitiesOn: map[string]bool{}}
+	return &certificateOutcome{
+		heldBy: map[uuid.UUID]map[string]bool{}, rejectedBy: map[uuid.UUID]map[string]string{},
+		failedOn: map[string]bool{}, entitiesOn: map[string]bool{}, incompleteOn: map[string]bool{},
+	}
+}
+
+// drop tells the pod holds no certificate of the gateway anymore, e.g. as the
+// gateway was deleted from it.
+func (o *certificateOutcome) drop(pod gwadminsync.Pod) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	for _, pods := range o.heldBy {
+		delete(pods, pod.Key())
+	}
+}
+
+// incomplete tells the pod can't be given the gateway whole.
+func (o *certificateOutcome) incomplete(pod gwadminsync.Pod) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.incompleteOn[pod.Key()] = true
+}
+
+// anyIncomplete tells a pod can't be given the gateway whole.
+func (o *certificateOutcome) anyIncomplete() bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return len(o.incompleteOn) > 0
+}
+
+// holdsCertificate tells the pod holds one of the certificates, when there are
+// any: a gateway with none is left out of the expected gateways already (see
+// expectedFor).
+func (o *certificateOutcome) holdsCertificate(pod gwadminsync.Pod, certificates []dataPlaneCertificate) bool {
+	if o == nil || len(certificates) == 0 {
+		return true
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return slices.ContainsFunc(certificates, func(cert dataPlaneCertificate) bool { return o.heldBy[cert.id][pod.Key()] })
 }
 
 // fail tells the push to the pod failed.

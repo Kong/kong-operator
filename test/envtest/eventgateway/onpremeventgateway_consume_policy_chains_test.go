@@ -75,6 +75,9 @@ spec:
 	for _, obj := range []client.Object{f.gateway, backend, f.vc, f.chain} {
 		require.NoError(t, cl.Create(ctx, obj))
 	}
+	// Without a data plane certificate, a gw-admin pod isn't told to wait for
+	// the gateway.
+	withDataPlaneCertificate(t, ctx, cl, f.gateway)
 	return f
 }
 
@@ -507,8 +510,9 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 	})
 
 	// Restart the operator with only the surviving pod as last-good storage. A
-	// pod started while the chain is invalid is still registered, but receives
-	// no entity document until the whole declaration is valid again.
+	// pod started while the chain is invalid is given the last-good document,
+	// never a partial one, and nothing newer until the whole declaration is
+	// valid again.
 	stop()
 	f.start()
 	f.editChain("parse", "mask", "other", "headers", "skip")
@@ -519,15 +523,14 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		g, ok, expected := fresh.state(id)
 		if assert.True(ct, ok, "the restarted pod must be registered") {
-			assert.Empty(ct, g.entities.VirtualClusters, "an invalid chain must not be pushed as a partial document")
+			assert.Equal(ct, good.entities, g.entities, "an invalid chain pushes the last-good document, not a partial one")
 		}
 		assert.Contains(ct, expected, id)
 	}, waitTime, tickTime)
 	writes := fresh.writeCount()
 	require.Never(t, func() bool {
-		g, _, _ := fresh.state(id)
-		return len(g.entities.VirtualClusters) != 0 || fresh.writeCount() != writes
-	}, time.Second, tickTime, "invalid ownership must not push entities to the new pod")
+		return fresh.writeCount() != writes
+	}, time.Second, tickTime, "nothing new is pushed to the new pod while the chain is invalid")
 	held, ok, _ = f.pod.state(id)
 	require.True(t, ok)
 	require.Equal(t, good.entities, held.entities)

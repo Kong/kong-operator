@@ -103,6 +103,32 @@ gwadmin_replaced() {
   [ "$ready" = "$want" ]
 }
 
+# no_operator_pod: no Kong Operator pod runs.
+no_operator_pod() {
+  [ -z "$(kubectl get pods -n "$OPERATOR_NAMESPACE" -l "$OPERATOR_SELECTOR" -o name)" ]
+}
+
+# pods_deleted ns pod...: none of the pods exists anymore.
+pods_deleted() {
+  local pod_ns=$1 p
+  shift
+  for p in "$@"; do
+    if kubectl get pod -n "$pod_ns" "$p" >/dev/null 2>&1; then return 1; fi
+  done
+}
+
+# keg_log_since dp since: prints the log of the data plane since the time.
+keg_log_since() { kubectl logs -n "$(ns)" "deploy/$1" --since-time="$2" 2>/dev/null; }
+
+# keg_refused_since dp since: the control plane refused the data plane since
+# the time, e.g. as the gw-admin pod it reached doesn't serve its gateway.
+keg_refused_since() { keg_log_since "$1" "$2" | grep -q '401 Unauthorized'; }
+
+# keg_dropped_since dp since: the data plane removed a listener or a virtual
+# cluster since the time, as when a control plane serves it an empty
+# configuration.
+keg_dropped_since() { keg_log_since "$1" "$2" | grep -qE '"removing (listener|virtual cluster)"'; }
+
 # cp_config_status cert_dir gateway: prints the HTTP status gw-admin answers
 # the request of the configuration of the gateway with the client
 # certificate in cert_dir (see save-dp-cert), through the cp Service of its
@@ -374,6 +400,30 @@ gwadmin-replace-pods) # gwadmin_ns gwadmin one|all timeout: deletes one, or ever
   kubectl delete pod -n "$1" "${pods[@]}" --wait=false >/dev/null
   until_true "$4" "the gw-admin pods ${pods[*]} are replaced by Ready ones" gwadmin_replaced "$1" "$2" "${pods[@]}"
   until_result gwadmin "$2" replaced_pods "${pods[*]}"
+  ;;
+gwadmin-replace-pods-operator-stopped) # gwadmin_ns gwadmin dp timeout: with Kong Operator stopped, so that nothing of the gateways of the GWAdmin is remembered, deletes every gw-admin pod of the GWAdmin, then starts Kong Operator again and waits for the replacements to be Ready. The data plane dp, of a gateway with no configuration to push, must then be refused by the new pods, and keep the configuration it runs: it removes no listener nor virtual cluster
+  op=$(kubectl get deployment -n "$OPERATOR_NAMESPACE" -l "$OPERATOR_SELECTOR" -o jsonpath='{.items[0].metadata.name}')
+  replicas=$(kubectl get deployment -n "$OPERATOR_NAMESPACE" "$op" -o jsonpath='{.spec.replicas}')
+  # Kong Operator runs again whatever happens: other tests share it.
+  trap 'kubectl scale deployment -n "$OPERATOR_NAMESPACE" "$op" --replicas="$replicas" >/dev/null' EXIT
+  kubectl scale deployment -n "$OPERATOR_NAMESPACE" "$op" --replicas=0 >/dev/null
+  until_true "$4" "no Kong Operator pod runs" no_operator_pod
+  sel=$(kubectl get deployment -n "$1" "$2" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
+  pods=()
+  while IFS= read -r p; do pods+=("$p"); done < <(kubectl get pods -n "$1" -l "$sel" -o json | jq -r '.items[] | select(.metadata.deletionTimestamp == null) | .metadata.name')
+  [ "${#pods[@]}" -gt 0 ] || { echo "no gw-admin pod" >&2; exit 1; }
+  kubectl delete pod -n "$1" "${pods[@]}" --wait=false >/dev/null
+  until_true "$4" "the gw-admin pods ${pods[*]} are gone" pods_deleted "$1" "${pods[@]}"
+  since=$(date -u +%FT%TZ)
+  kubectl scale deployment -n "$OPERATOR_NAMESPACE" "$op" --replicas="$replicas" >/dev/null
+  trap - EXIT
+  until_true "$4" "the gw-admin pods ${pods[*]} are replaced by Ready ones" gwadmin_replaced "$1" "$2" "${pods[@]}"
+  until_true "$4" "the new gw-admin pods refuse the data plane $3 its gateway" keg_refused_since "$3" "$since"
+  if keg_dropped_since "$3" "$since"; then
+    echo "the data plane $3 dropped the configuration it ran: $(keg_log_since "$3" "$since" | grep -E '"removing (listener|virtual cluster)"' | head -2)" >&2
+    exit 1
+  fi
+  until_result gwadmin "$2" replaced_pods "${pods[*]}" data_plane "$3"
   ;;
 save-dp-cert) # dp dir: saves the client certificate the Deployment of the data plane mounts to dir/tls.crt and dir/tls.key, and the keg version it runs, which keg sends along, to dir/version
   d=$(kubectl get deployment -n "$(ns)" "$1" -o json)

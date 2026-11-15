@@ -395,8 +395,9 @@ spec:
 	require.Equal(t, "InvalidPolicyChain", apimeta.FindStatusCondition(gateway.Status.Conditions, "ConfigurationPushed").Reason)
 	require.True(t, apimeta.IsStatusConditionFalse(read(t, f.cl, chain).Status.Conditions, "Programmed"))
 
-	// An invalid chain skips only the entity write: a certificate deleted now
-	// still stops being trusted.
+	// An invalid chain stops the push like invalid entities: the gateway and
+	// its certificates are still pushed, so a certificate deleted now still
+	// stops being trusted.
 	require.NoError(t, f.cl.Delete(t.Context(), cert))
 	reconcile()
 	require.NotContains(t, f.pod().holds(f.gatewayID), certID)
@@ -422,8 +423,8 @@ spec:
 	f.pod().restart()
 	reconcile()
 	state, registered := f.pod().gateways[f.gatewayID]
-	require.True(t, registered, "an invalid chain skips only the entity write: the restarted pod is still registered")
-	require.Empty(t, state.VirtualClusters, "an invalid chain must not push a shortened entity document")
+	require.True(t, registered, "the restarted pod is still registered")
+	require.Equal(t, held.VirtualClusters, state.VirtualClusters, "the restarted pod gets the last configuration that could be sent, not a shortened one")
 
 	chain = read(t, f.cl, chain)
 	chain.Spec.APISpec.Policies = append(chain.Spec.APISpec.Policies, configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{Name: "root"})

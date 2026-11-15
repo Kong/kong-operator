@@ -49,8 +49,9 @@ func newLastConfigFixture(t *testing.T) lastConfigFixture {
 	s := newSchemaRegistryFixture(t)
 	policy := s.validateWith("validate", `{name: orders}`, 3)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
-		return append(append(f.gwAdmin.Objects(), f.gateway),
-			append(s.virtualCluster(), s.registry("orders", "gateway", 1), s.registry("other", "gateway", 2), policy)...)
+		return slices.Concat(f.gwAdmin.Objects(), []client.Object{f.gateway},
+			s.virtualCluster(), []client.Object{s.registry("orders", "gateway", 1), s.registry("other", "gateway", 2), policy},
+			dataPlaneCertificateObjects(t))
 	})
 	lf := lastConfigFixture{pushFixture: f, s: s, policy: policy}
 	lf.reconcile(t)
@@ -135,10 +136,9 @@ func TestLastGoodConfig(t *testing.T) {
 		f.pod().restart()
 		f.reconcile(t)
 		_, registered := f.pod().gateways[f.gatewayID]
-		assert.True(t, registered, "a restarted pod serves the gateway, with no entities")
-		assert.Empty(t, f.pod().gateways[f.gatewayID].VirtualClusters)
-		assert.True(t, slices.ContainsFunc(f.pod().recorded(), func(call string) bool { return call == callExpected+" "+f.gatewayID.String() }),
-			"and is told the gateways it serves")
+		assert.False(t, registered, "a restarted pod isn't given the gateway with no entities, which it would serve empty")
+		assert.True(t, slices.ContainsFunc(f.pod().recorded(), func(call string) bool { return call == callExpected+" " }),
+			"and is told the gateways it serves, but this one, so that it turns ready")
 	})
 
 	t.Run("what it uses stays held while it is pushed in place of the current one", func(t *testing.T) {

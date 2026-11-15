@@ -1,0 +1,233 @@
+# gw-admin pods restarted while another gateway of their GWAdmin can't be
+# served.
+#
+# A gw-admin pod turns Ready only once every gateway it is told it serves is
+# registered there, with its entities and a data plane certificate. A gateway
+# that can't be, with no data plane certificate, a policy chain that can't be
+# applied, or a configuration gw-admin refuses, must not keep the restarted
+# pods from turning Ready: they would serve no gateway of the GWAdmin at all.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-gwadmin-restart-unservable
+spec:
+  description: |
+    A KegDataPlane of an OnPremEventGateway whose GWAdmin runs 2 gw-admin
+    replicas, and a second OnPremEventGateway of the same GWAdmin.
+    1. The second gateway has no data plane, so no data plane certificate:
+       every gw-admin pod is deleted at once, their replacements turn Ready,
+       and keg proxies a round trip.
+    2. The second gateway gets a data plane, and a policy chain ordering
+       both its cluster policies; once pushed, the chain lists only one of
+       them, which it can't be applied as: every gw-admin pod is deleted
+       again, their replacements turn Ready, and keg proxies a round trip.
+    3. With Kong Operator stopped, every gw-admin pod is deleted: once Kong
+       Operator runs again, nothing knows the last configuration of the
+       second gateway that could be sent. The replacements turn Ready, keg
+       proxies a round trip, and the data plane of the second gateway, refused
+       by the new pods, keeps the configuration it runs: it isn't served one
+       with no entities, which it would apply by dropping everything.
+    4. The policy chain of the second gateway is fixed, then its backend
+       cluster gets a bootstrap server without a port, which the CRD accepts
+       and gw-admin refuses: every gw-admin pod is deleted again, their
+       replacements turn Ready, and keg proxies a round trip.
+  # Replaces every gw-admin pod, and stops Kong Operator.
+  concurrent: false
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: other_gateway_name
+      value: other
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+    - name: 1-Data-plane-ready
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: ../onprem-shared/entities.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-dataplane-ready.yaml
+        - assert:
+            timeout: 4m
+            file: ../../gwadmin/gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 2}
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" before-restarts hello-before-restarts
+
+    - name: 2-Gateway-without-certificate
+      try:
+        - apply:
+            file: 02-other-gateway.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+            bindings:
+              - name: gateway_name
+                value: ($other_gateway_name)
+        # Before the fix, the replacements never turned Ready: gw-admin
+        # waited for a data plane certificate of the second gateway.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh gwadmin-replace-pods "$NAMESPACE" "$GWADMIN" all 150
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" without-certificate hello-without-certificate
+
+    - name: 3-Gateway-with-invalid-chain
+      try:
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+            bindings:
+              - name: keg_dp_name
+                value: other-keg
+              - name: gateway_name
+                value: ($other_gateway_name)
+        - apply:
+            file: 03-other-entities.yaml
+            bindings:
+              - name: chain_policies
+                value:
+                  - {kind: EventGatewayVirtualClusterPolicy, name: first}
+                  - {kind: EventGatewayVirtualClusterPolicy, name: second}
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+            bindings:
+              - name: gateway_name
+                value: ($other_gateway_name)
+        - apply:
+            file: 03-other-entities.yaml
+            bindings:
+              - name: chain_policies
+                value:
+                  - {kind: EventGatewayVirtualClusterPolicy, name: first}
+        - assert:
+            file: assert-other-invalid-chain.yaml
+        # Before the fix, the replacements never turned Ready: gw-admin
+        # waited for the second gateway, which the operator didn't push.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh gwadmin-replace-pods "$NAMESPACE" "$GWADMIN" all 150
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: assert-other-invalid-chain.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" invalid-chain hello-invalid-chain
+
+    - name: 4-Nothing-known-of-the-gateway
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 6m
+            content: ../onprem-shared/onprem.sh gwadmin-replace-pods-operator-stopped "$NAMESPACE" "$GWADMIN" other-keg 150
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: assert-other-invalid-chain.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" nothing-known hello-nothing-known
+
+    - name: 5-Configuration-refused
+      try:
+        - apply:
+            file: 03-other-entities.yaml
+            bindings:
+              - name: chain_policies
+                value:
+                  - {kind: EventGatewayVirtualClusterPolicy, name: first}
+                  - {kind: EventGatewayVirtualClusterPolicy, name: second}
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+            bindings:
+              - name: gateway_name
+                value: ($other_gateway_name)
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              metadata:
+                name: other-backend
+              spec:
+                apiSpec:
+                  bootstrapServers:
+                    - kafka-without-a-port
+        - assert:
+            file: assert-other-refused.yaml
+        # Before the fix, the replacements never turned Ready: gw-admin
+        # waited for the second gateway, whose configuration it refuses.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh gwadmin-replace-pods "$NAMESPACE" "$GWADMIN" all 150
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: assert-other-refused.yaml
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" configuration-refused hello-configuration-refused
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

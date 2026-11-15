@@ -1,0 +1,9 @@
+# A second OnPremEventGateway, other_gateway_name, of the GWAdmin: with no
+# data plane, it has no data plane certificate.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($other_gateway_name)
+spec:
+  gwAdminRef:
+    name: ($gwadmin_name)

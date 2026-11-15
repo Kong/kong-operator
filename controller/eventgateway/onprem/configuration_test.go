@@ -857,3 +857,25 @@ func TestByCreationAcrossNamespaces(t *testing.T) {
 	}
 	assert.Equal(t, []string{"a", "b", "c"}, got)
 }
+
+// TestBlockedPushTellsEveryProblem checks a push stopped by invalid policy
+// chains and by entities that can't be sent tells both, the chains giving the
+// reason, and the revision pushed in its place.
+func TestBlockedPushTellsEveryProblem(t *testing.T) {
+	key := &configurationv1alpha1.EventGatewayStaticKey{}
+	key.SetNamespace(ns)
+	key.SetName("key")
+	cfg := configuration{
+		invalidChains: []string{"chain problem"},
+		excluded:      []excludedEntity{{obj: key, message: "entity problem", blocks: true}},
+	}
+	blocked := withServing(cfg.blockedPush(), 3)
+	require.Error(t, blocked)
+	assert.Contains(t, blocked.Error(), "chain problem")
+	assert.Contains(t, blocked.Error(), "entity problem")
+	assert.Equal(t, "InvalidPolicyChain", string(failureReason(blocked)))
+	serving, isBlocked := servingOf(blocked)
+	assert.True(t, isBlocked)
+	assert.Equal(t, int64(3), serving)
+	assert.Contains(t, blocked.Error(), "revision 3", "each tells the revision pushed in its place")
+}

@@ -83,6 +83,7 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 		Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName}},
 	}
 	require.NoError(t, cl.Create(ctx, gateway))
+	withDataPlaneCertificate(t, ctx, cl, gateway)
 	reports(t, gateway, notFound, "The GWAdmin "+gwAdminKey+" does not exist")
 
 	gwAdmin.createGWAdmin(ctx)
@@ -119,6 +120,7 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName, Namespace: new(ns.Name)}},
 		}
 		require.NoError(t, cl.Create(ctx, crossNamespace))
+		withDataPlaneCertificate(t, ctx, cl, crossNamespace)
 		notGranted := "The gateway may not use its GWAdmin: no KongReferenceGrant in namespace " + ns.Name +
 			" allows the OnPremEventGateways of namespace " + other.Name + " to reference the GWAdmin " + gwAdminKey
 		reports(t, crossNamespace, notPermitted, notGranted)
@@ -156,6 +158,7 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName, Namespace: new(ns.Name)}},
 		}
 		require.NoError(t, cl.Create(ctx, crossNamespace))
+		withDataPlaneCertificate(t, ctx, cl, crossNamespace)
 		grant := gwadminreftest.Grant(ns.Name, "gateways-of-"+other.Name, other.Name, "")
 		require.NoError(t, cl.Create(ctx, grant))
 		require.NoError(t, cl.Create(ctx, &corev1.Secret{
