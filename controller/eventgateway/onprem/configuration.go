@@ -147,9 +147,11 @@ func ownerOf(kind string, obj client.Object) string {
 // created after, renamed or fixed, is the one left out, not the entity
 // running with it. A claimant has all its values or none: one that can't have
 // one of them, or whose parent policy is out, is out and claims none, so it
-// doesn't keep another object from a value. Ties go to the claimant whose
-// values all go to claimants having all theirs, so that a value is taken from
-// a claimant out anyway rather than given to it.
+// doesn't keep another object from a value. So is one whose parent policy
+// can't have a value while it has its own, e.g. one with the name of its
+// parent. Ties go to the claimant whose values all go to claimants having all
+// theirs, so that a value is taken from a claimant out anyway rather than
+// given to it.
 func (c *configuration) reserve(claimants []claimant) {
 	if c.conflicts == nil {
 		c.conflicts = map[string]string{}
@@ -202,6 +204,22 @@ func (c *configuration) reserve(claimants []claimant) {
 			seen[key] = true
 			return cand.requires == "" || settled(cand.requires, seen)
 		}
+		// losingParent returns the first parent policy of the claimant, up
+		// its parents, that loses a value, with the value.
+		losingParent := func(cand claimant) (string, uniqueValue, bool) {
+			seen := map[string]bool{cand.key: true}
+			for key := cand.requires; key != "" && !seen[key]; key = byKey[key].requires {
+				parent, ok := byKey[key]
+				if !ok || !active[key] {
+					break
+				}
+				if v, loses := lost(parent); loses {
+					return key, v, true
+				}
+				seen[key] = true
+			}
+			return "", uniqueValue{}, false
+		}
 		var out []claimant
 		for _, cand := range sorted {
 			if active[cand.key] && cand.requires != "" && !active[cand.requires] {
@@ -221,6 +239,21 @@ func (c *configuration) reserve(claimants []claimant) {
 					losers = append(losers, cand)
 					if settled(owners[v], map[string]bool{}) {
 						out = append(out, cand)
+					}
+				}
+			}
+			if len(out) == 0 {
+				// The newest claimant whose parent policy loses a value while
+				// it has its own, e.g. the name of that parent, goes first:
+				// out anyway, it keeps no value from another one.
+				for _, cand := range slices.Backward(sorted) {
+					if _, loses := lost(cand); !active[cand.key] || loses {
+						continue
+					}
+					if parent, v, ok := losingParent(cand); ok {
+						c.conflicts[cand.key] = fmt.Sprintf("its parent policy %s can't have its %s %q while %s has it", parent, v.scope, v.value, owners[v])
+						out = append(out, cand)
+						break
 					}
 				}
 			}

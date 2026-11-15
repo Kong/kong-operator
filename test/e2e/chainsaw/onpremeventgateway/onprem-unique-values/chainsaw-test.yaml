@@ -31,6 +31,10 @@ spec:
         cluster, never sent, is only left out, but the policy stops the push,
         and gw-admin keeps it.
     11. Moved back, it is pushed again.
+    12. Three consume policies never sent take the same policy name: a child,
+        the oldest, its parent, and another one. The child can't be in, so
+        it doesn't keep the name: the parent has it and is pushed, the other
+        is only left out, and the gateway stays Programmed.
   # Restarts the operator.
   concurrent: false
   bindings:
@@ -293,6 +297,53 @@ spec:
             env: *env
             timeout: 90s
             content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | .name] | index("moved") != null'
+
+    - name: 12-Policy-with-the-name-of-its-parent
+      try:
+        - apply:
+            file: loop-policies.yaml
+        # The child either can't have the name along with its parent or, once
+        # the parent was sent with it before loop-c-other came, loses it to
+        # the parent: the message depends on when the gateway reconciles.
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: loop-a-child
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'policy name "loop"')): true
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: loop-c-other
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    (contains(message, 'is already the one of EventGatewayVirtualClusterConsumePolicy')): true
+                    (contains(message, '/loop-b-parent')): true
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        # gw-admin has the parent alone under the name.
+        - script:
+            env: *env
+            timeout: 90s
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 60 '[.entities.virtual_clusters[0].consume_policies | .. | objects | select(has("id")) | select(.name == "loop") | .type] == ["schema_validation"]'
+        # The child first: its parent policy can't go before it.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: loop-a-child
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              name: loop-b-parent
 
   catch:
     - description: Capture debug snapshot on test failure.

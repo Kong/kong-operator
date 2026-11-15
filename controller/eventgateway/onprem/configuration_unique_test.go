@@ -306,6 +306,25 @@ func TestUniquePolicyNames(t *testing.T) {
 		assert.Contains(t, messages, "EventGatewayListenerPolicy of-duplicate")
 	})
 
+	t.Run("a policy with the name of its own parent policy takes no name", func(t *testing.T) {
+		// The child is the oldest, but it can't be in: its parent can't have
+		// the name while it has it. Out anyway, it keeps the name from no one.
+		child := f.consumePolicy("child", modifyHeaders("same", "parent"), 1)
+		parent := f.consumePolicy("parent", `
+    type: schemaValidation
+    schemaValidation:
+      name: same
+      config: {type: json, json: {valueValidationAction: mark}}
+`, 2)
+		other := f.consumePolicy("other", modifyHeaders("same", ""), 3)
+		cfg := f.build(nil, child, parent, other)
+		assert.Equal(t, map[string]string{
+			"EventGatewayVirtualClusterConsumePolicy child": `its parent policy EventGatewayVirtualClusterConsumePolicy default/parent can't have its policy name "same" while EventGatewayVirtualClusterConsumePolicy default/child has it`,
+			"EventGatewayVirtualClusterConsumePolicy other": `its policy name "same" is already the one of EventGatewayVirtualClusterConsumePolicy default/parent`,
+		}, excludedMessages(cfg), "the parent, older than other, keeps the name")
+		require.NoError(t, cfg.blocked())
+	})
+
 	t.Run("a policy whose parent policy is left out takes no name, and goes along with it", func(t *testing.T) {
 		parent := f.consumePolicy("parent", `
     type: schemaValidation
