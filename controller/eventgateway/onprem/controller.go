@@ -339,9 +339,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		// Otherwise, when no pod holds it either (see recoverLastConfig),
 		// they are only pushed the gateway and its data plane certificates,
 		// so that one deleted stops being trusted, and keep the entities they
-		// hold. Invalid policy chains stop the push alike: a gw-admin pod
-		// restarted still gets the gateway and its certificates, so that it
-		// can turn ready for the other gateways it serves.
+		// hold. Invalid policy chains stop the push alike. A gw-admin pod
+		// restarted holds nothing of the gateway: it gets the last
+		// configuration that could be sent, when there is one, and otherwise
+		// is kept off the gateway and left out of those it waits for (see
+		// push), so that it turns ready for the other gateways it serves.
 		if notPushable != nil {
 			log.Debug(logger, "no last configuration of the OnPremEventGateway is pushed", "reason", notPushable.Error())
 			break
@@ -600,10 +602,12 @@ func (r *Reconciler) pushConfiguration(
 	// push. The pushes of the other gateways then leave it out of those the
 	// pods serve. A push failing otherwise, e.g. on a timeout, tells nothing
 	// new: the gateway stays as it was, waited for unless known otherwise.
+	// Nor does one that reached no pod, as each is pending: the pods that
+	// weren't reached can't tell the gateway can be given them whole.
 	switch {
 	case len(cfg.certificates) == 0 || certificates.anyIncomplete():
 		r.unservable.Store(gatewayID, struct{}{})
-	case pushErr == nil:
+	case pushErr == nil && len(pending) == 0:
 		r.unservable.Delete(gatewayID)
 	}
 	if pushErr != nil {

@@ -129,10 +129,10 @@ const itemExpected = "expected"
 // configuration doesn't depend on.
 //
 // A pod holding nothing of the gateway is given it whole, or not at all: when
-// it can't be given the entities, as there are none to push or a pod refused
-// them already, or as a call fails, the gateway is kept off it (see offPod),
-// rather than left registered with no entities. A configuration a pod refused
-// isn't pushed to such a pod again until it changes.
+// it can't be given the entities, as there are none to push, the pod refuses
+// them, or a call fails, the gateway is kept off it (see offPod), rather than
+// left registered with no entities. A configuration the pod refused is pushed
+// again with the backoff of the push.
 //
 // Without withEntities, the entities the pod holds are left as they are, e.g.
 // while the push is stopped with no configuration to push: the gateway and

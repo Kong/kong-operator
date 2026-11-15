@@ -1659,4 +1659,22 @@ func TestPushConfigurationMarksUnservable(t *testing.T) {
 	withCertificate.certificates = []dataPlaneCertificate{testCertificate(uuid.New(), client.ObjectKey{Namespace: ns, Name: "cert"})}
 	push(withCertificate)
 	assert.False(t, unservable(), "with one, and its entities held by every pod")
+
+	push(emptyConfiguration())
+	require.True(t, unservable())
+	// Its only pod restarts, and doesn't listen yet: a push that reaches no
+	// pod tells nothing of it.
+	f.gwAdmin.EndpointSlice = read(t, f.cl, f.gwAdmin.EndpointSlice)
+	f.gwAdmin.EndpointSlice.Endpoints = []discoveryv1.Endpoint{gwadminsynctest.NotServing(endpoint("gw-admin-0", "10.0.0.1", false))}
+	require.NoError(t, f.cl.Update(t.Context(), f.gwAdmin.EndpointSlice))
+	f.pod().respond = func(string) (*reply, error) { return nil, connectionRefused() }
+	result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, pushedConfig(f.gateway, withCertificate), withCertificate, nil)
+	require.NoError(t, err)
+	require.NoError(t, pushErr)
+	require.Len(t, result.pending, 1)
+	assert.True(t, unservable(), "kept while no pod was reached")
+
+	f.pod().respond = nil
+	push(withCertificate)
+	assert.False(t, unservable(), "once the pod is reached")
 }
