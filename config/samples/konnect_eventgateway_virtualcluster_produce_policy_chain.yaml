@@ -1,7 +1,7 @@
 # Replace the placeholder token and Kafka bootstrap address before applying.
 # Anonymous authentication and disabled TLS are for demonstration only.
 # This file includes all Kubernetes prerequisites and has no TLS/sample dependency.
-# Konnect-only API layer: Produce chain reconciliation is not registered yet.
+# Konnect-only Produce ordering; on-prem and Consume chains are not registered.
 # The complete order includes the schema-validation parent, both nested children,
 # and the separate root. Siblings may reorder, but their group stays contiguous.
 # Ordering preserves parentPolicyRef; it cannot reparent a child policy.

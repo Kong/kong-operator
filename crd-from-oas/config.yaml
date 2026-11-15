@@ -1777,6 +1777,8 @@ apiGroupVersions:
             # references. This chain keeps its policies in its namespace, which
             # ResolveValidatedPolicyIDs enforces.
             supportCrossNamespaceReference: true
+            resolverMethod: ResolveValidatedPolicyIDs
+            watchSameParent: true
         cel:
           _validations:
             - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable",fieldPath=".spec.eventGatewayVirtualClusterRef"'
@@ -1805,6 +1807,23 @@ apiGroupVersions:
                   When a policy is created or deleted, update this list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
+            fieldName: EventGatewayVirtualClusterProducePolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterProducePolicyChainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterProducePolicyChainRequest
+        reconciler:
+          skipOnPremEventGateway: true
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
         references:

@@ -4880,7 +4880,7 @@ EventGatewayVirtualClusterProducePolicyChainSpec defines the desired state of Ev
 
 | Field | Description |
 | --- | --- |
-| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent VirtualCluster object. |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
 | `apiSpec` _[EventGatewayVirtualClusterProducePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_

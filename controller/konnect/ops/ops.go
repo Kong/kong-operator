@@ -130,6 +130,8 @@ func Create[
 		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, CreateOp)
 	case *configurationv1alpha1.EventGatewayListenerPolicyChain:
 		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, CreateOp)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		_, err = applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent, CreateOp, true)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
@@ -146,7 +148,8 @@ func Create[
 	var isPolicyChain bool
 	switch any(e).(type) {
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
-		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		*configurationv1alpha1.EventGatewayListenerPolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
 		isPolicyChain = true
 	}
 
@@ -475,7 +478,8 @@ func Delete[
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), e)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
-		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		*configurationv1alpha1.EventGatewayListenerPolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
 		// Deleting the declaration relinquishes management, not remote configuration.
 		break
 	case *konnectv1alpha1.MCPServer:
@@ -574,8 +578,11 @@ func Update[
 ) (ctrl.Result, error) {
 	now := time.Now()
 
-	if ok, res := shouldUpdate(ctx, e, syncPeriod, now); !ok {
-		return res, nil
+	update, res := shouldUpdate(ctx, e, syncPeriod, now)
+	if !update {
+		if _, isProduceChain := any(e).(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain); !isProduceChain {
+			return res, nil
+		}
 	}
 
 	if e.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(e) {
@@ -649,6 +656,14 @@ func Update[
 		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, UpdateOp)
 	case *configurationv1alpha1.EventGatewayListenerPolicyChain:
 		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, UpdateOp)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		// Scope/reference watches must check the complete remote set even within
+		// the sync period, without refreshing status for an unchanged order.
+		var applied bool
+		applied, err = applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent, UpdateOp, update)
+		if err == nil && !applied {
+			return res, nil
+		}
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -710,7 +725,8 @@ func Update[
 
 	switch any(e).(type) {
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
-		*configurationv1alpha1.EventGatewayListenerPolicyChain:
+		*configurationv1alpha1.EventGatewayListenerPolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
 		return ctrl.Result{}, policyChainOperationError(err)
 	}
 	logger := loggerForEntity(ctx, e, UpdateOp)
