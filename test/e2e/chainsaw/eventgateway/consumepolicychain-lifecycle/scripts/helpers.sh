@@ -56,7 +56,7 @@ create_policy() {
          decryptFields: {paths: {type: "array", array: [{match: "secret"}]}},
          keySources: [{type: "static", static: {}}]}}
      elif $type == "skipRecord" then
-       {name: $remote, condition: "record.value.skip == true"}
+       {name: $remote, condition: "record.value.content.skip == true"}
      elif $type == "modifyHeaders" then
        {name: $remote, config: {actions: [{op: "set", set: {key: "x-consume-chain", value: $name}}]}}
      else error("unsupported Consume fixture type: " + $type) end) as $config |
