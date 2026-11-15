@@ -499,8 +499,12 @@ func (r *Reconciler) setEntityStatus(ctx context.Context, e entityStatus, progra
 // recordedInputsHash returns the fingerprint recorded for the object, when it
 // is a static key: in its status, or, when the cache doesn't show it yet, the
 // one the controller recorded, forgotten once the cache shows one, or once
-// another key has its name.
+// another key has its name. Another kind of entity has none: one with the
+// name of a key doesn't touch what is recorded for it.
 func (r *Reconciler) recordedInputsHash(obj client.Object) string {
+	if _, ok := obj.(*configurationv1alpha1.EventGatewayStaticKey); !ok {
+		return ""
+	}
 	key := client.ObjectKeyFromObject(obj)
 	if recordedInputsHash(obj) != "" {
 		r.inputsHashes.Delete(key)

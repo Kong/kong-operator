@@ -158,8 +158,8 @@ func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
 // and with the single ports of a listener as strings, as it returns them.
 // Otherwise they would be pushed again on every reconcile. A default missing
 // here has the same effect. The value
-// of a static key is compared as it is: gw-admin returns it, and a rotated
-// key must be pushed again.
+// of a static key is compared as it is: gw-admin returns it, and a
+// difference in it must still be detected.
 func withGWAdminDefaults(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
 	e.BackendClusters = slices.Clone(e.BackendClusters)
 	for i := range e.BackendClusters {

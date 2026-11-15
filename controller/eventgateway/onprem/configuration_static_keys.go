@@ -104,9 +104,10 @@ func entityIDKey(obj client.Object) string {
 // Secret, or its reference to another one, can't be refused: the key then stops the push,
 // so that gw-admin keeps the value pushed, until the value is put back, or the
 // key is deleted: one being deleted is sent as it is, and a new one starts
-// with no fingerprint. gw-admin never returns the value of a key, so the value
-// pushed can't be sent again in its place, e.g. after a restart of the
-// operator.
+// with no fingerprint. gw-admin returns the value of a key it holds, but a
+// restarted gw-admin pod holds none, so the value pushed can't always be sent
+// again in its place: stopping the push behaves the same whether or not a pod
+// still holds it.
 
 // keyValueHash returns the fingerprint of the value of a static key, as
 // status.createInputsHash records it. Only the value: unlike in Konnect, its

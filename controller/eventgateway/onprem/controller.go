@@ -494,17 +494,16 @@ type pushResult struct {
 	certificates *certificateOutcome
 }
 
-// reachedAPod tells the configuration was pushed to at least one gw-admin pod,
-// which may then serve it to data planes, even when the push to other pods
-// failed. A configuration stopped from being pushed never is: the pods are
-// pushed the last one that could be sent.
+// reachedAPod tells the entities of the configuration may have reached at
+// least one gw-admin pod, which may then serve them to data planes, even when
+// the push to it failed, or the push to other pods failed. A configuration
+// stopped from being pushed never does: the pods are pushed the last one that
+// could be sent.
 func (r pushResult) reachedAPod(cfg configuration) bool {
 	if r.certificates == nil || r.target == nil || len(cfg.invalidChains) > 0 || cfg.blocked() != nil {
 		return false
 	}
-	return slices.ContainsFunc(r.target.Pods, func(pod gwadminsync.Pod) bool {
-		return !slices.Contains(r.pending, pod) && !r.certificates.failed(pod)
-	})
+	return slices.ContainsFunc(r.target.Pods, r.certificates.mayHoldEntities)
 }
 
 // pushConfiguration pushes the configuration of the gateway to every

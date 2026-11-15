@@ -391,6 +391,10 @@ func TestReconcilerRecordedInputsHash(t *testing.T) {
 	assert.False(t, remembered(), "forgotten then")
 	r.inputsHashes.Store(client.ObjectKeyFromObject(key), recordedKeyHash{uid: key.UID, hash: "sha256:recorded"})
 
+	sameName := &configurationv1alpha1.EventGatewayTLSTrustBundle{Namespace: key.Namespace, Name: key.Name, UID: "other"}
+	assert.Empty(t, r.recordedInputsHash(sameName), "another kind of entity has none")
+	assert.True(t, remembered(), "one with the name of the key leaves its fingerprint")
+
 	shown := key.DeepCopy()
 	shown.SetCreateInputsHash("sha256:recorded")
 	assert.Equal(t, "sha256:recorded", r.recordedInputsHash(shown))
@@ -489,27 +493,30 @@ func TestStaticKeyFingerprintIsOfItsValue(t *testing.T) {
 }
 
 // TestPushResultReachedAPod checks the fingerprint of a static key is
-// recorded once its value reached a gw-admin pod, even when the push to
-// another one failed, so that the gateway isn't Programmed.
+// recorded once its value may have reached a gw-admin pod, even when the push
+// to it, or to another one, failed, so that the gateway isn't Programmed.
 func TestPushResultReachedAPod(t *testing.T) {
-	ok, failing, pending := gwadminsync.Pod{Name: "ok", UID: "ok"}, gwadminsync.Pod{Name: "failing", UID: "failing"}, gwadminsync.Pod{Name: "pending", UID: "pending"}
-	target := &gwadminsync.Target{Pods: []gwadminsync.Pod{ok, failing, pending}}
-	outcome := func(failed ...gwadminsync.Pod) *certificateOutcome {
+	ok, failing := gwadminsync.Pod{Name: "ok", UID: "ok"}, gwadminsync.Pod{Name: "failing", UID: "failing"}
+	target := &gwadminsync.Target{Pods: []gwadminsync.Pod{ok, failing}}
+	outcome := func(sent ...gwadminsync.Pod) *certificateOutcome {
 		o := newCertificateOutcome()
-		for _, pod := range failed {
-			o.fail(pod)
+		o.fail(failing)
+		for _, pod := range sent {
+			o.sentEntities(pod)
 		}
 		return o
 	}
 	var cfg configuration
-	assert.True(t, pushResult{target: target, pending: []gwadminsync.Pod{pending}, certificates: outcome(failing)}.reachedAPod(cfg),
+	assert.True(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(cfg),
 		"one pod holds it, though the push to another failed")
-	assert.False(t, pushResult{target: target, pending: []gwadminsync.Pod{pending}, certificates: outcome(ok, failing)}.reachedAPod(cfg),
-		"the push failed on every pod pushed to")
+	assert.True(t, pushResult{target: target, certificates: outcome(failing)}.reachedAPod(cfg),
+		"the push to the pod failed after it may have got the entities")
+	assert.False(t, pushResult{target: target, certificates: outcome()}.reachedAPod(cfg),
+		"no pod got the entities")
 	assert.False(t, pushResult{target: target}.reachedAPod(cfg), "nothing pushed, e.g. waiting for the backoff")
 
 	blocked := configuration{excluded: []excludedEntity{{obj: &configurationv1alpha1.EventGatewayStaticKey{}, blocks: true}}}
-	assert.False(t, pushResult{target: target, certificates: outcome()}.reachedAPod(blocked),
+	assert.False(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(blocked),
 		"a configuration stopped from being pushed isn't: the pods get the last one sent")
 }
 
