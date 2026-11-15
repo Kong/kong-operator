@@ -89,6 +89,10 @@ type configuration struct {
 	// keyInputs holds, by the UID of their object, the fingerprints of the
 	// static keys of the configuration (see staticKeyRequest).
 	keyInputs map[types.UID]keyInputs
+	// lastKeyHashes holds, by id, the fingerprints of the values of the
+	// static keys of the last configuration that could be sent, when the pods
+	// are pushed it in place of this one, blocked (see withKeyInputs).
+	lastKeyHashes map[uuid.UUID]string
 	// inputsHashes holds the fingerprints recorded that the cache may not
 	// show yet, by the UID of their static key, or is nil (see
 	// Reconciler.inputsHashes).

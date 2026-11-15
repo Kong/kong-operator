@@ -330,6 +330,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		if config, pushing, err = last.pushedAs(cfg); err != nil {
 			return requeueOnConflict(logger, ctrl.Result{}, err)
 		}
+		// The pods may get the static keys it holds, with their values then.
+		if cfg.lastKeyHashes, err = last.keyHashes(); err != nil {
+			return requeueOnConflict(logger, ctrl.Result{}, err)
+		}
 		invalid, _ := errors.AsType[invalidEntitiesError](blocked)
 		invalid.serving = last.revision
 		blocked = invalid
@@ -494,13 +498,12 @@ type pushResult struct {
 	certificates *certificateOutcome
 }
 
-// reachedAPod tells the entities of the configuration may have reached at
-// least one gw-admin pod, which may then serve them to data planes, even when
-// the push to it failed, or the push to other pods failed. A configuration
-// stopped from being pushed never does: the pods are pushed the last one that
-// could be sent.
+// reachedAPod tells the entities pushed may have reached at least one gw-admin
+// pod, which may then serve them to data planes, even when the push to it
+// failed, or the push to other pods failed: those of the configuration, or,
+// when it is blocked, those of the last one that could be sent.
 func (r pushResult) reachedAPod(cfg configuration) bool {
-	if r.certificates == nil || r.target == nil || len(cfg.invalidChains) > 0 || cfg.blocked() != nil {
+	if r.certificates == nil || r.target == nil || len(cfg.invalidChains) > 0 {
 		return false
 	}
 	return slices.ContainsFunc(r.target.Pods, r.certificates.mayHoldEntities)

@@ -19,6 +19,7 @@ package onprem
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"reflect"
 	"slices"
 	"sync"
@@ -516,8 +517,67 @@ func TestPushResultReachedAPod(t *testing.T) {
 	assert.False(t, pushResult{target: target}.reachedAPod(cfg), "nothing pushed, e.g. waiting for the backoff")
 
 	blocked := configuration{excluded: []excludedEntity{{obj: &configurationv1alpha1.EventGatewayStaticKey{}, blocks: true}}}
-	assert.False(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(blocked),
-		"a configuration stopped from being pushed isn't: the pods get the last one sent")
+	assert.True(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(blocked),
+		"a configuration stopped from being pushed isn't, but the pods get the last one that could be sent")
+}
+
+// TestWithKeyInputsBlocked checks a static key of the last configuration that
+// could be sent, pushed in place of a blocked one, records the fingerprint of
+// the value it has there, not the one it has now: that is the one the pods
+// got.
+func TestWithKeyInputsBlocked(t *testing.T) {
+	key := &configurationv1alpha1.EventGatewayStaticKey{Namespace: "default", Name: "key", UID: "key-uid"}
+	held, err := keyValueHash("aGVsZC1zZWNyZXQta2V5LTEyMzQ1Njc4OTA=")
+	require.NoError(t, err)
+	now, err := keyValueHash("bm93LXNlY3JldC1rZXktMTIzNDU2Nzg5MA==")
+	require.NoError(t, err)
+	blocked := configuration{
+		excluded:      []excludedEntity{{obj: &configurationv1alpha1.EventGatewayTLSTrustBundle{}, blocks: true}},
+		keyInputs:     map[types.UID]keyInputs{key.UID: {hash: now}},
+		lastKeyHashes: map[uuid.UUID]string{staticKeyID(client.ObjectKeyFromObject(key)): held},
+	}
+
+	for _, included := range []bool{true, false} {
+		e := withKeyInputs(blocked, entityStatus{obj: key}, true, included)
+		assert.Equal(t, held, e.inputsHash, "the value the pods got, the key in the configuration or not: %v", included)
+		require.NotNil(t, e.inputsApplied)
+		assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, e.inputsApplied.Reason, "it has another value now")
+	}
+
+	assert.Empty(t, withKeyInputs(blocked, entityStatus{obj: key}, false, true).inputsHash, "no pod got it")
+	withoutKey := blocked
+	withoutKey.lastKeyHashes = nil
+	assert.Empty(t, withKeyInputs(withoutKey, entityStatus{obj: key}, true, true).inputsHash,
+		"the pods got the last configuration, without the key: its value now wasn't pushed")
+}
+
+// TestBlockedPushRecordsKeyValuePushed checks the fingerprint of a static key
+// is recorded once a blocked configuration pushes the pods the last one that
+// could be sent, holding the key: its value there may then be served, so that
+// a rotation afterwards doesn't replace it under the same id.
+func TestBlockedPushRecordsKeyValuePushed(t *testing.T) {
+	_, key, secret, objects := staticKeyObjects(t)
+	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+		return append(append(f.gwAdmin.Objects(), f.gateway, key, secret), objects...)
+	})
+	pushed, err := keyValueHash(string(secret.Data["key"]))
+	require.NoError(t, err)
+
+	// Revision 1 reaches no pod: gw-admin rejects its entities.
+	f.pod().respond = failing(callEntities, http.StatusBadRequest)
+	_, _ = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+	require.Equal(t, int64(1), read(t, f.cl, f.gateway).Status.ConfigRevision)
+	require.Empty(t, read(t, f.cl, key).GetCreateInputsHash(), "no pod got its value")
+
+	// A policy that can't be sent blocks the configuration: the pods get
+	// revision 1, with the value of the key.
+	f.pod().respond = nil
+	f.r.backoff.Forget(f.gateway.UID) // Once its backoff is over.
+	require.NoError(t, f.cl.Create(t.Context(), newSchemaRegistryFixture(t).validateWith("validate", `{name: missing}`, 3)))
+	_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+	require.NoError(t, err)
+	require.NotEmpty(t, f.pod().gateways[f.gatewayID].StaticKeys, "the pods got the key")
+	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded")
 }
 
 // TestEntitiesInUseBySentStaticKeyLeftOut checks a static key the last
