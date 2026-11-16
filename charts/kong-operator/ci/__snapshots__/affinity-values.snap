@@ -66384,7 +66384,7 @@ spec:
                 properties:
                   config:
                     properties:
-                      oIDC:
+                      oidc:
                         properties:
                           claimMappings:
                             properties:
@@ -66417,7 +66417,7 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      sAML:
+                      saml:
                         properties:
                           idpMetadataURL:
                             maxLength: 253
@@ -66428,8 +66428,8 @@ spec:
                         type: object
                       type:
                         enum:
-                        - oIDC
-                        - sAML
+                        - oidc
+                        - saml
                         minLength: 1
                         type: string
                     required:

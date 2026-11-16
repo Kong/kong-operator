@@ -300,6 +300,14 @@
   guesses of its value offline against its fingerprint: use random 256-bit
   keys, never a passphrase.
   [#6677](https://github.com/Kong/kong-operator/pull/6677)
+- `crd-from-oas`: a union discriminator value built from a variant name now
+  lowercases the whole leading initialism. The variant `OIDCIdentityProviderConfig`
+  gives `oidc` instead of `oIDC`, and the JSON property follows the value, so
+  `config.oIDC` is now `config.oidc`. The enum values of
+  `PortalIdentityProviderRequest` are now `oidc` and `saml`. A manifest that
+  uses the old spelling stops working. This CRD has only shipped in rapid
+  channel builds, so the change is not breaking for a stable release.
+  [#5803](https://github.com/Kong/kong-operator/issues/5803)
 
 ### Added
 

@@ -27,8 +27,8 @@ func TestPortalIdentityProviderRequestConfigUnmarshalJSON_NilReceiver(t *testing
 		name    string
 		payload []byte
 	}{
-		{name: "OIDC", payload: []byte("{\"type\":\"oIDC\",\"oIDC\":{}}")},
-		{name: "SAML", payload: []byte("{\"type\":\"sAML\",\"sAML\":{}}")},
+		{name: "OIDC", payload: []byte("{\"type\":\"oidc\",\"oidc\":{}}")},
+		{name: "SAML", payload: []byte("{\"type\":\"saml\",\"saml\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -58,7 +58,7 @@ func TestPortalIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t 
 	}{
 		{
 			name:    "Config/OIDC",
-			payload: []byte("{\"config\":{\"type\":\"oIDC\",\"oIDC\":{}}}"),
+			payload: []byte("{\"config\":{\"type\":\"oidc\",\"oidc\":{}}}"),
 			assert: func(t *testing.T, target PortalIdentityProviderRequestAPISpec) {
 				t.Helper()
 				if target.Config == nil {
@@ -74,7 +74,7 @@ func TestPortalIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t 
 		},
 		{
 			name:    "Config/SAML",
-			payload: []byte("{\"config\":{\"type\":\"sAML\",\"sAML\":{}}}"),
+			payload: []byte("{\"config\":{\"type\":\"saml\",\"saml\":{}}}"),
 			assert: func(t *testing.T, target PortalIdentityProviderRequestAPISpec) {
 				t.Helper()
 				if target.Config == nil {

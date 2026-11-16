@@ -107,7 +107,7 @@ func getPortalIdentityProviderRequestForUID(
 	}
 
 	switch unionField.Type {
-	case "oIDC":
+	case "oidc":
 		selected := unionField.OIDC
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
@@ -143,7 +143,7 @@ func getPortalIdentityProviderRequestForUID(
 				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
-	case "sAML":
+	case "saml":
 		selected := unionField.SAML
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
