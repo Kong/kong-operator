@@ -238,18 +238,40 @@ func (f *consumeChainFixture) defaultOrder() []string {
 		policies = append(policies, p)
 	}
 	slices.SortFunc(policies, func(a, b *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) int {
-		aRoot, bRoot := a.Spec.APISpec.ParentPolicyRef.Name == "", b.Spec.APISpec.ParentPolicyRef.Name == ""
-		if aRoot != bRoot {
-			if aRoot {
-				return -1
-			}
-			return 1
-		}
 		return cmp.Or(a.CreationTimestamp.Compare(b.CreationTimestamp.Time), cmp.Compare(a.Name, b.Name))
 	})
-	names := make([]string, 0, len(policies))
-	for _, p := range policies {
+	remaining := policies
+	added := map[string]bool{}
+	names := make([]string, 0, len(remaining))
+	// A root opens its group: its children follow it before the next root, as
+	// gw-admin requires a parent's children to stay contiguous.
+	var addChildren func(parent string)
+	addChildren = func(parent string) {
+		for {
+			i := slices.IndexFunc(remaining, func(p *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) bool {
+				return p.Spec.APISpec.ParentPolicyRef.Name == parent
+			})
+			if i < 0 {
+				return
+			}
+			p := remaining[i]
+			remaining = slices.Delete(remaining, i, i+1)
+			names = append(names, p.Name)
+			added[p.Name] = true
+			addChildren(p.Name)
+		}
+	}
+	for len(remaining) > 0 {
+		i := slices.IndexFunc(remaining, func(p *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) bool {
+			parent := p.Spec.APISpec.ParentPolicyRef.Name
+			return parent == "" || added[parent]
+		})
+		require.GreaterOrEqual(f.t, i, 0, "policies must form an acyclic parent group")
+		p := remaining[i]
+		remaining = slices.Delete(remaining, i, i+1)
 		names = append(names, p.Name)
+		added[p.Name] = true
+		addChildren(p.Name)
 	}
 	return names
 }
