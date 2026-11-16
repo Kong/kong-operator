@@ -91,6 +91,43 @@ func TestPush(t *testing.T) {
 			"those recorded before the failed call aren't trusted, even when they are the ones to set")
 	})
 
+	t.Run("a pod that may have got the entities is told so, though its push failed", func(t *testing.T) {
+		for _, tc := range []struct {
+			name    string
+			failing string
+			reply   *reply
+			err     error
+			want    bool
+		}{
+			{name: "setting the expected gateways failed", failing: callExpected, err: errors.New("timeout"), want: true},
+			{name: "the entities call timed out", failing: callEntities, err: errors.New("timeout"), want: true},
+			{name: "the entities call got a server error", failing: callEntities, reply: &reply{status: http.StatusBadGateway}, want: true},
+			{name: "gw-admin rejected the entities", failing: callEntities, reply: &reply{status: http.StatusBadRequest}, want: false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: func(call string) (*reply, error) {
+					if strings.HasPrefix(call, tc.failing) {
+						return tc.reply, tc.err
+					}
+					return nil, nil
+				}}
+				outcome := newCertificateOutcome()
+				require.Error(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, outcome, true))
+				assert.Equal(t, tc.want, outcome.mayHoldEntities(pod))
+			})
+		}
+
+		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: func(call string) (*reply, error) {
+			if strings.HasPrefix(call, callExpected) {
+				return nil, errors.New("timeout")
+			}
+			return nil, nil
+		}}
+		outcome := newCertificateOutcome()
+		require.Error(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, outcome, false))
+		assert.False(t, outcome.mayHoldEntities(pod), "not pushed the entities")
+	})
+
 	t.Run("a read answered with another 2xx than 200 fails", func(t *testing.T) {
 		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: func(call string) (*reply, error) {
 			if call == callGetEntities {

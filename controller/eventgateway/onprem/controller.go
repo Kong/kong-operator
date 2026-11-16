@@ -110,6 +110,20 @@ type Reconciler struct {
 	// lastConfigs holds, by gateway UID, the last configuration of the
 	// gateway that could be sent (see lastGoodConfig). Kept in memory too.
 	lastConfigs sync.Map
+	// inputsHashes holds, by the key of their static key, the fingerprints
+	// the controller recorded in the status of static keys, with the UID of
+	// the key, until the cache shows them: a reconcile reading a key from the
+	// cache before that would otherwise check nothing, and record the
+	// fingerprint of a value changed meanwhile in place of the one pushed.
+	// After a restart, the cache is read from the API server, and shows them
+	// all. It holds at most one entry by static key: one created again
+	// replaces it, and one deleted removes it (see reportUnreachable).
+	inputsHashes sync.Map
+	// keysRecovered holds, by gateway UID, the gateways whose gw-admin pods
+	// were read for the static keys they hold with no fingerprint recorded
+	// (see recoverKeyHashes): once is enough after a start, as every push of
+	// this process records the fingerprints of the values it may give a pod.
+	keysRecovered sync.Map
 	// reported holds, by gateway UID, the objects whose status was last
 	// reported for the gateway (see reportDetached). Kept in memory too.
 	reported sync.Map
@@ -236,9 +250,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if known, err := r.lastGoodConfigOf(gateway); err == nil {
 		sent = &known.config.Entities
 	}
-	cfg, err := buildConfigurationAfter(ctx, r.Client, gateway, secretHint, asEntities(previous), sent)
+	cfg, err := buildConfigurationWith(ctx, r.Client, gateway, secretHint, asEntities(previous), sent, &r.inputsHashes)
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
+	}
+	// A static key a gw-admin pod holds with no fingerprint recorded, e.g. as
+	// the operator stopped before writing it, keeps the value the pod holds.
+	if r.recoverKeyHashes(ctx, gateway, gatewayID, cfg) {
+		if cfg, err = buildConfigurationWith(ctx, r.Client, gateway, secretHint, asEntities(previous), sent, &r.inputsHashes); err != nil {
+			return requeueOnConflict(logger, ctrl.Result{}, err)
+		}
 	}
 	// A configuration with entities that can't be sent isn't pushed, nor
 	// recorded: gw-admin keeps the one it has, and so do the revision and the
@@ -264,7 +285,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		// entity never sent that conflicts with another is only left out (see
 		// excludeConflict), rather than holding back the gateway for good.
 		if notPushable == nil && cfg.sentUnknown {
-			if cfg, err = buildConfigurationAfter(ctx, r.Client, gateway, secretHint, asEntities(previous), &last.config.Entities); err != nil {
+			if cfg, err = buildConfigurationWith(ctx, r.Client, gateway, secretHint, asEntities(previous), &last.config.Entities, &r.inputsHashes); err != nil {
 				return requeueOnConflict(logger, ctrl.Result{}, err)
 			}
 			blocked = cfg.blocked()
@@ -326,6 +347,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		blocked = invalid
 	}
 
+	// A static key records the fingerprint of the value the pods get, which
+	// may not be the one it reads now: an entity kept, or the last
+	// configuration pushed in place of a blocked one, has the value it had.
+	if cfg.pushedKeyHashes, err = keyHashes(config.Entities.StaticKeys); err != nil {
+		return requeueOnConflict(logger, ctrl.Result{}, err)
+	}
 	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config, pushing, blocked)
 	if blocked != nil {
 		// The push is stopped, whatever the pods were pushed.
@@ -483,6 +510,17 @@ type pushResult struct {
 	// plane certificate of the configuration, and which rejected it. It is
 	// nil when nothing was pushed, e.g. while the push waits for its backoff.
 	certificates *certificateOutcome
+}
+
+// reachedAPod tells the entities pushed may have reached at least one gw-admin
+// pod, which may then serve them to data planes, even when the push to it
+// failed, or the push to other pods failed: those of the configuration, or,
+// when it is blocked, those of the last one that could be sent.
+func (r pushResult) reachedAPod(cfg configuration) bool {
+	if r.certificates == nil || r.target == nil || len(cfg.invalidChains) > 0 {
+		return false
+	}
+	return slices.ContainsFunc(r.target.Pods, r.certificates.mayHoldEntities)
 }
 
 // pushConfiguration pushes the configuration of the gateway to every
@@ -760,6 +798,7 @@ func (r *Reconciler) forget(uid types.UID) {
 	r.lastEntities.Delete(uid)
 	r.lastConfigs.Delete(uid)
 	r.reported.Delete(uid)
+	r.keysRecovered.Delete(uid)
 	r.backoff.Forget(uid)
 	r.pendingRetries().Forget(uid)
 }

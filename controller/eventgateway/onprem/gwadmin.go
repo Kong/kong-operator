@@ -174,8 +174,18 @@ func (r *Reconciler) push(
 		if err := gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
 			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, gwadminapi.GatewayEntities{ConfigVersion: config.Version, Entities: config.Entities})
 		}); err != nil {
+			// A call gw-admin didn't answer, or answered with a server error,
+			// may have been applied: a static key it held may be served.
+			if respErr, ok := errors.AsType[gwadminsync.ResponseError](err); !ok || respErr.StatusCode >= http.StatusInternalServerError {
+				outcome.sentEntities(pod)
+			}
 			return err
 		}
+	}
+	// The pod holds the entities now, whether or not what follows fails: a
+	// static key pushed may be served to data planes.
+	if withEntities {
+		outcome.sentEntities(pod)
 	}
 	// A pod that doesn't know the gateway may have lost the expected gateways
 	// too.
@@ -335,10 +345,13 @@ type certificateOutcome struct {
 	// failedOn holds, by key, the pods whose push failed: one that doesn't
 	// hold a certificate may have failed before it got to it.
 	failedOn map[string]bool
+	// entitiesOn holds, by key, the pods that may hold the entities of the
+	// configuration, even when their push failed.
+	entitiesOn map[string]bool
 }
 
 func newCertificateOutcome() *certificateOutcome {
-	return &certificateOutcome{heldBy: map[uuid.UUID]map[string]bool{}, rejectedBy: map[uuid.UUID]map[string]string{}, failedOn: map[string]bool{}}
+	return &certificateOutcome{heldBy: map[uuid.UUID]map[string]bool{}, rejectedBy: map[uuid.UUID]map[string]string{}, failedOn: map[string]bool{}, entitiesOn: map[string]bool{}}
 }
 
 // fail tells the push to the pod failed.
@@ -349,6 +362,23 @@ func (o *certificateOutcome) fail(pod gwadminsync.Pod) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	o.failedOn[pod.Key()] = true
+}
+
+// sentEntities tells the pod may hold the entities of the configuration.
+func (o *certificateOutcome) sentEntities(pod gwadminsync.Pod) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.entitiesOn[pod.Key()] = true
+}
+
+// mayHoldEntities tells the pod may hold the entities of the configuration.
+func (o *certificateOutcome) mayHoldEntities(pod gwadminsync.Pod) bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.entitiesOn[pod.Key()]
 }
 
 // hold tells the pod holds the certificate, as it is.
