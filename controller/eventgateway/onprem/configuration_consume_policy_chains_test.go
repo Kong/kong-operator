@@ -274,8 +274,9 @@ func TestBuildConsumePolicyChainOwnership(t *testing.T) {
 	require.NotContains(t, parent.Annotations, policychain.ConsumeOwnerAnnotation)
 	require.Equal(t, policychain.ClaimValue(produce), parent.Annotations[policychain.ProduceOwnerAnnotation])
 	require.Equal(t, policychain.ClaimValue(cluster), parent.Annotations[policychain.OwnerAnnotation])
-	require.Equal(t, []string{"parse", "other", "root", "headers", "decrypt", "mask", "transcode", "skip"},
-		consumeEntityNames(t, cfg.entities.VirtualClusters[0].ConsumePolicies), "ordinary parent-before-child creation/name order resumes")
+	require.Equal(t, []string{"parse", "headers", "decrypt", "mask", "transcode", "other", "skip", "root"},
+		consumeEntityNames(t, cfg.entities.VirtualClusters[0].ConsumePolicies),
+		"ordinary order resumes: each parent group stays contiguous, in creation/name order")
 }
 
 func TestConsumePolicyChainUsesAssembledSnapshots(t *testing.T) {

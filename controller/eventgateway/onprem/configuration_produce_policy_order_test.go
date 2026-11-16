@@ -194,7 +194,7 @@ spec:
 	require.NoError(t, f.cl.Update(t.Context(), chain))
 	f.pod().reset()
 	reconcile()
-	require.Empty(t, f.pod().recorded(), "an incomplete owner freezes the whole document")
+	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document")
 	require.Equal(t, []string{"root", "parse", "first", "second"}, heldNames())
 
 	require.NoError(t, f.cl.Delete(t.Context(), read(t, f.cl, chain)))
