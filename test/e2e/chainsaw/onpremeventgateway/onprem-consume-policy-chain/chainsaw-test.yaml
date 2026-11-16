@@ -292,8 +292,9 @@ spec:
               name: chain
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
-        # Ordinary assembly adds both roots before the children, each in
-        # creation/name order, rather than retaining the declared chain order.
+        # Ordinary assembly keeps each root and its children contiguous, in
+        # creation/name order, rather than retaining the declared chain order:
+        # parse, first and second, then the separate root.
         - script:
             env:
               - name: NAMESPACE
@@ -301,7 +302,7 @@ spec:
               - name: GATEWAY
                 value: ($gateway_name)
             timeout: 3m
-            content: bash assert-order.sh "$GATEWAY" parse root first second
+            content: bash assert-order.sh "$GATEWAY" parse first second root
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
