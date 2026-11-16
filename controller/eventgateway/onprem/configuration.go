@@ -818,38 +818,72 @@ func convertChildren[T any, PT interface {
 }
 
 // addParentsFirst adds the objects converted, a parent, of their own kind,
-// before its children: those without a parent first, then their children, and
-// so on. One whose parent isn't added, or is attached to another entity than
-// it, sameParent telling, is left out. parentOf, when set, returns the parent
-// of an object.
+// before its children: each object without a parent, then its children, and so
+// on, before the next object without a parent. A parent and its children thus
+// stay contiguous, as gw-admin requires of a produce policy chain: a root
+// inserted between a parent and its children is invalid. One whose parent
+// isn't added, or is attached to another entity than it, sameParent telling,
+// is left out. parentOf, when set, returns the parent of an object.
 func addParentsFirst[PT entityObject, E any](
 	ctx context.Context, c *configuration, cl client.Client, pending []pendingEntity[PT, E], parentOf func(PT) (client.ObjectKey, bool),
 	sameParent func(child, parent client.ObjectKey) bool, k entityKind[PT, E],
 ) error {
 	added := map[client.ObjectKey]int{}
-	for len(pending) > 0 {
-		var ready, waiting []pendingEntity[PT, E]
-		for _, p := range pending {
-			if parentOf != nil {
-				if parent, ok := parentOf(p.obj); ok {
-					_, isAdded := added[parent]
-					if !isAdded || !sameParent(client.ObjectKeyFromObject(p.obj), parent) {
-						waiting = append(waiting, p)
-						continue
-					}
+	// add converts and adds one object.
+	add := func(p pendingEntity[PT, E]) {
+		maps.Copy(added, addPending(c, []pendingEntity[PT, E]{p}, k))
+	}
+	// addChildren adds the children of the object of key that are pending, each
+	// followed by its own children, in the order of pending.
+	var addChildren func(key client.ObjectKey)
+	addChildren = func(key client.ObjectKey) {
+		for {
+			i := slices.IndexFunc(pending, func(p pendingEntity[PT, E]) bool {
+				if parentOf == nil {
+					return false
 				}
+				parent, ok := parentOf(p.obj)
+				return ok && parent == key && sameParent(client.ObjectKeyFromObject(p.obj), parent)
+			})
+			if i < 0 {
+				return
 			}
-			ready = append(ready, p)
+			p := pending[i]
+			pending = slices.Delete(pending, i, i+1)
+			add(p)
+			if _, ok := added[client.ObjectKeyFromObject(p.obj)]; ok {
+				addChildren(client.ObjectKeyFromObject(p.obj))
+			}
 		}
-		if len(ready) == 0 {
-			orphans := make([]PT, 0, len(waiting))
-			for _, p := range waiting {
+	}
+	for len(pending) > 0 {
+		// ready is the first pending object that has no parent or whose parent
+		// was added: a root, or a child whose parent precedes it.
+		i := slices.IndexFunc(pending, func(p pendingEntity[PT, E]) bool {
+			if parentOf == nil {
+				return true
+			}
+			parent, ok := parentOf(p.obj)
+			if !ok {
+				return true
+			}
+			_, isAdded := added[parent]
+			return isAdded && sameParent(client.ObjectKeyFromObject(p.obj), parent)
+		})
+		if i < 0 {
+			orphans := make([]PT, 0, len(pending))
+			for _, p := range pending {
 				orphans = append(orphans, p.obj)
 			}
 			return excludeOrphans(ctx, c, cl, orphans, parentOf, added)
 		}
-		maps.Copy(added, addPending(c, ready, k))
-		pending = waiting
+		p := pending[i]
+		pending = slices.Delete(pending, i, i+1)
+		add(p)
+		key := client.ObjectKeyFromObject(p.obj)
+		if _, ok := added[key]; ok {
+			addChildren(key)
+		}
 	}
 	return nil
 }

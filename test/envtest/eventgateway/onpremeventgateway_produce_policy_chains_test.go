@@ -100,30 +100,44 @@ spec:
 	defaultOrder := func(policies ...*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) []string {
 		t.Helper()
 		remaining := slices.Clone(policies)
+		slices.SortFunc(remaining, func(a, b *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) int {
+			return cmp.Or(
+				a.CreationTimestamp.Compare(b.CreationTimestamp.Time),
+				cmp.Compare(a.Name, b.Name),
+				cmp.Compare(a.Namespace, b.Namespace),
+			)
+		})
 		added := map[string]bool{}
 		ids := make([]string, 0, len(remaining))
-		for len(remaining) > 0 {
-			var ready, waiting []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy
-			for _, p := range remaining {
-				if parent := p.Spec.APISpec.ParentPolicyRef.Name; parent != "" && !added[parent] {
-					waiting = append(waiting, p)
-					continue
+		// A root opens its group: its children follow it before the next root,
+		// as gw-admin requires a parent's children to stay contiguous.
+		var addChildren func(parent string)
+		addChildren = func(parent string) {
+			for {
+				i := slices.IndexFunc(remaining, func(p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) bool {
+					return p.Spec.APISpec.ParentPolicyRef.Name == parent
+				})
+				if i < 0 {
+					return
 				}
-				ready = append(ready, p)
-			}
-			require.NotEmpty(t, ready, "policies must form an acyclic parent group")
-			slices.SortFunc(ready, func(a, b *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) int {
-				return cmp.Or(
-					a.CreationTimestamp.Compare(b.CreationTimestamp.Time),
-					cmp.Compare(a.Name, b.Name),
-					cmp.Compare(a.Namespace, b.Namespace),
-				)
-			})
-			for _, p := range ready {
+				p := remaining[i]
+				remaining = slices.Delete(remaining, i, i+1)
 				ids = append(ids, string(p.UID))
 				added[p.Name] = true
+				addChildren(p.Name)
 			}
-			remaining = waiting
+		}
+		for len(remaining) > 0 {
+			i := slices.IndexFunc(remaining, func(p *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) bool {
+				parent := p.Spec.APISpec.ParentPolicyRef.Name
+				return parent == "" || added[parent]
+			})
+			require.GreaterOrEqual(t, i, 0, "policies must form an acyclic parent group")
+			p := remaining[i]
+			remaining = slices.Delete(remaining, i, i+1)
+			ids = append(ids, string(p.UID))
+			added[p.Name] = true
+			addChildren(p.Name)
 		}
 		return ids
 	}
