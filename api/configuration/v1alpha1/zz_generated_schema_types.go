@@ -460,12 +460,21 @@ type BackendMetadataUpdateIntervalSeconds int
 // * `error` - the batch is not delivered to the client.
 // Use sparingly: erroring on a batch causes clients to get stuck on the
 // problematic offset and requires manual intervention to skip it.
+// A single record that always fails the policy, for example one written by a
+// producer with access to the topic, pins every consumer group on that offset.
+// The error the client receives contains the policy failure reason, which can
+// include runtime-specific configuration details.
 // * `skip` - the record is not delivered to the client.
 // * `passthrough` - passes the record to the client even though policy
 // execution failed.
 // * `mark` - passes the record to the client but marks it with a
 // `kong/policy-failure-<id>` header whose value is the reason for the policy
 // failure (truncated to 512 characters).
+// The failure reason can contain runtime-specific configuration details, such
+// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+// text, JWT issuer and audience data, or expression snippets.
+// If you don't want to share this information with clients, remove the header
+// with a Modify Headers consume policy.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type ConsumeFailureMode string
@@ -1209,12 +1218,21 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -1505,12 +1523,21 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -1566,12 +1593,21 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3232,12 +3268,21 @@ type EventGatewayParsedRecordDecryptFieldsConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3258,6 +3303,12 @@ type EventGatewayParsedRecordDecryptFieldsConfig struct {
 //
 // Note this policy can only be used as a child of a
 // `EventGatewayConsumeSchemaValidationPolicy` policy.
+//
+// This policy only runs on records that the parent schema validation policy
+// successfully parses.
+// If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+// that fail schema validation are delivered to the client without parsing, so
+// this policy doesn't run on them and their fields stay encrypted.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type EventGatewayParsedRecordDecryptFieldsPolicyCreate struct {
@@ -3446,6 +3497,16 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3462,6 +3523,12 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 //
 // Note this policy can only be used as a child of a
 // `EventGatewayProduceSchemaValidationPolicy` policy.
+//
+// This policy only runs on records that the parent schema validation policy
+// successfully parses.
+// If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+// that fail schema validation are sent to the backend cluster without parsing,
+// so this policy doesn't run on them and their fields aren't encrypted.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type EventGatewayParsedRecordEncryptFieldsPolicyCreate struct {
@@ -3773,12 +3840,21 @@ type EventGatewayParsedRecordMaskFieldsConsumeConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3858,6 +3934,16 @@ type EventGatewayParsedRecordMaskFieldsProduceConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -4298,12 +4384,21 @@ type EventGatewayParsedRecordTranscodeConsumeConfigAvro struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -4458,12 +4553,21 @@ type EventGatewayParsedRecordTranscodeConsumeConfigJSON struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -4870,6 +4974,16 @@ type EventGatewayParsedRecordTranscodeProduceConfigAvro struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -5841,6 +5955,16 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -6134,6 +6258,16 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -6192,6 +6326,16 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -7306,6 +7450,15 @@ type NamespaceExactAllowListItem struct {
 // * `mark` - passes the record to the backend cluster but marks it with a
 // `kong/policy-failure-<id>` header whose value is the reason for the policy
 // failure (truncated to 512 characters).
+// The header is stored with the record in the backend cluster, so every
+// consumer of the topic sees it, including systems that never pass through the
+// Event Gateway.
+// The failure reason can contain runtime-specific configuration details, such
+// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+// text, JWT issuer and audience data, or expression snippets, and a producer
+// with access to the topic can trigger policy failures on purpose to expose it.
+// If you don't want to share this information, remove the header with a Modify
+// Headers produce policy, or use a different failure mode.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type ProduceFailureMode string
@@ -7460,6 +7613,10 @@ type SchemaRegistryConfluent struct {
 // Registry](https://github.com/confluentinc/schema-registry)
 type SchemaRegistryConfluentConfig struct {
 	// The authentication configuration for the schema registry.
+	// The Event Gateway only requires read-only access to the schema registry to
+	// fetch schemas for validation, so we recommend using credentials with
+	// read-only scope.
+	//
 	//
 	// +optional
 	Authentication *SchemaRegistryConfluentConfigAuthentication `json:"authentication,omitempty"`
