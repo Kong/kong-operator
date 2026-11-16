@@ -79,6 +79,9 @@ type configuration struct {
 	// a produce chain orders, independently of the cluster-level policies a
 	// cluster chain orders on the same virtual cluster.
 	orderedProducePolicies []uuid.UUID
+	// orderedConsumePolicies orders only the consume list, independently of
+	// other chains of the same virtual cluster.
+	orderedConsumePolicies []uuid.UUID
 	// invalidChains prevent pushing a partial document or falling back to
 	// implicit ordering while an owning declaration cannot be fulfilled.
 	invalidChains []string
@@ -499,6 +502,9 @@ func buildConfigurationWith(
 	if err := cfg.addProducePolicyChains(ctx, cl, virtualClusters); err != nil {
 		return configuration{}, err
 	}
+	if err := cfg.addConsumePolicyChains(ctx, cl, virtualClusters); err != nil {
+		return configuration{}, err
+	}
 	if err := listenerPolicies.add(); err != nil {
 		return configuration{}, err
 	}
@@ -519,11 +525,12 @@ func buildConfigurationWith(
 
 // orderedPolicyLists returns the parents whose policy lists a chain orders, by
 // kind of policy: cluster-level and listener policies together, as their ids
-// are those of the parents, and produce policies apart.
+// are those of the parents, and produce and consume policies apart.
 func (c *configuration) orderedPolicyLists() orderedPolicyLists {
 	return orderedPolicyLists{
 		clusterAndListener: c.orderedPolicies,
 		produce:            c.orderedProducePolicies,
+		consume:            c.orderedConsumePolicies,
 	}
 }
 

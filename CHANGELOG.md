@@ -311,14 +311,19 @@
 
 ### Added
 
-- Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect-only
+- Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect and on-prem
   Consume policy-chain ordering using Kubernetes references to the complete set
   of root and nested policies on one virtual cluster. Parent groups remain
-  contiguous without changing `parentPolicyRef`; on-prem ordering and Kafka
-  data-path guarantees are not included.
+  contiguous without changing `parentPolicyRef`. On-prem assembly uses Kubernetes
+  UIDs, with Consume ordering and ownership independent of other policy lists.
+  Invalid owning declarations pause the complete gateway push and retain the
+  running configuration; deleting a chain restores ordinary parent-before-child
+  assembly without deleting policies. Kafka data-path guarantees are not included.
   [#6572](https://github.com/Kong/kong-operator/pull/6572)
   [#6573](https://github.com/Kong/kong-operator/pull/6573)
   [#6575](https://github.com/Kong/kong-operator/pull/6575)
+  [#6594](https://github.com/Kong/kong-operator/issues/6594)
+  [#6673](https://github.com/Kong/kong-operator/pull/6673)
 - Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
   Helm installation artifacts, to declare produce-policy ordering with
   Kubernetes references to the complete set of root and nested policies.

@@ -63,6 +63,7 @@ type lastGoodConfig struct {
 	// orderedProducePolicies are the virtual clusters whose produce policies
 	// it orders explicitly (see configuration.orderedProducePolicies).
 	orderedProducePolicies []uuid.UUID
+	orderedConsumePolicies []uuid.UUID
 }
 
 // rememberConfig remembers the configuration of the gateway, recorded with
@@ -78,6 +79,7 @@ func (r *Reconciler) rememberConfig(
 	r.lastConfigs.Store(gateway.UID, &lastGoodConfig{
 		revision: gateway.Status.ConfigRevision, hash: hash, config: config, inUse: cfg.entitiesInUse,
 		orderedPolicies: slices.Clone(cfg.orderedPolicies), orderedProducePolicies: slices.Clone(cfg.orderedProducePolicies),
+		orderedConsumePolicies: slices.Clone(cfg.orderedConsumePolicies),
 	})
 	return nil
 }
@@ -166,6 +168,12 @@ func (r *Reconciler) recoverLastConfig(
 		// clusters and listeners taken as ordered, a pod holding them
 		// compares the same.
 		orderedPolicies: slices.Clone(cfg.orderedPolicies), orderedProducePolicies: slices.Clone(cfg.orderedProducePolicies),
+	}
+	// A blocked declaration may no longer supply an ordering marker. Retain
+	// the recovered consume lists exactly during last-good replay, rather
+	// than discarding their order based on the current declaration.
+	for _, vc := range entities.VirtualClusters {
+		last.orderedConsumePolicies = append(last.orderedConsumePolicies, vc.Id)
 	}
 	r.lastConfigs.Store(gateway.UID, last)
 	return last, nil
@@ -256,6 +264,7 @@ func (last *lastGoodConfig) pushedAs(cfg configuration) (gatewayConfig, configur
 	pushing.pushedKey = key
 	pushing.orderedPolicies = last.orderedPolicies
 	pushing.orderedProducePolicies = last.orderedProducePolicies
+	pushing.orderedConsumePolicies = last.orderedConsumePolicies
 	// The paths gw-admin reports name the last entities, not those of the
 	// current objects.
 	pushing.objects = map[string]string{}
@@ -265,5 +274,5 @@ func (last *lastGoodConfig) pushedAs(cfg configuration) (gatewayConfig, configur
 // orderedPolicyLists returns the parents whose policy lists the configuration
 // orders (see configuration.orderedPolicyLists).
 func (last *lastGoodConfig) orderedPolicyLists() orderedPolicyLists {
-	return orderedPolicyLists{clusterAndListener: last.orderedPolicies, produce: last.orderedProducePolicies}
+	return orderedPolicyLists{clusterAndListener: last.orderedPolicies, produce: last.orderedProducePolicies, consume: last.orderedConsumePolicies}
 }

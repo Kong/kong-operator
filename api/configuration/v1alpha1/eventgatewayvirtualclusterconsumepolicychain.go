@@ -87,11 +87,28 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	currentRoot := ""
+	order := make([]string, 0, len(obj.Spec.APISpec.Policies))
 	for _, ref := range obj.Spec.APISpec.Policies {
-		policy := policies[ref.Name]
+		order = append(order, ref.Name)
+	}
+	if err := ValidateConsumePolicyChainOrder(order, policies); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// ValidateConsumePolicyChainOrder checks the complete root/child order shared
+// by Konnect and the on-prem document, without consulting backend status.
+// Each root schemaValidation group is contiguous and precedes its children.
+func ValidateConsumePolicyChainOrder(order []string, policies map[string]*EventGatewayVirtualClusterConsumePolicy) error {
+	currentRoot := ""
+	for _, name := range order {
+		policy := policies[name]
+		if policy == nil {
+			return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s is missing from the complete consume policy set", name)}
+		}
 		if err := validateConsumePolicyChainConfig(policy); err != nil {
-			return nil, err
+			return err
 		}
 		parentRef := policy.Spec.APISpec.ParentPolicyRef
 		if parentRef.Name == "" {
@@ -99,16 +116,16 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate
 			if parentRef.Kind != "" || parentRef.Namespace != "" || required {
-				return nil, PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
+				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
 			}
 			currentRoot = policy.Name
 			continue
 		}
 		if err := validateConsumePolicyChainParent(policy, policies, currentRoot); err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return ids, nil
+	return nil
 }
 
 func validateConsumePolicyChainConfig(policy *EventGatewayVirtualClusterConsumePolicy) error {

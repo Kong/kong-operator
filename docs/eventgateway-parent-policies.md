@@ -628,15 +628,13 @@ The [on-prem produce chain scenario](../test/e2e/chainsaw/onpremeventgateway/onp
 covers ordering, sibling reorder and group moves, conflicting ownership, invalid
 and incomplete declarations, and retained deletion against a real gw-admin.
 
-## Consume policy-chain API (Konnect only)
+## Consume policy chains
 
 `configuration.konghq.com/v1alpha1` `EventGatewayVirtualClusterConsumePolicyChain`
 declares the execution order of all `EventGatewayVirtualClusterConsumePolicy`
-resources in one virtual cluster. This layer supplies the API, CRD, Helm
-installation artifacts, and admission contract only. Consume-chain controller
-registration and runtime reconciliation are not included yet. This is a
-Konnect management-plane declaration, not on-prem Consume-chain support or a
-guarantee about Kafka data-path execution.
+resources in one virtual cluster. Konnect reconciliation reorders its remote
+chain; on-prem reconciliation orders the consume list of the complete gw-admin
+document. Neither provides a guarantee about Kafka data-path execution.
 
 `spec.eventGatewayVirtualClusterRef` must use `namespacedRef` for a virtual
 cluster in the chain's namespace and is immutable from creation, even before
@@ -657,7 +655,7 @@ creation order, and YAML document order do not declare execution order.
 
 ### Complete-set and nested Consume ordering
 
-The pinned SDK v0.82.2 supplies `GetEventGatewayVirtualClusterConsumePolicyChain`
+The SDK supplies `GetEventGatewayVirtualClusterConsumePolicyChain`
 and `UpdateEventGatewayVirtualClusterConsumePolicyChain` at
 `/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policy-chain`.
 The shared `UpdateEventGatewayPolicyChainRequest` contains `policies: []string`.
@@ -707,8 +705,8 @@ reconciliation or guarantee behavior in every backend version or region.
 Admission validates required fields, reference shape/kind, immutable parent
 reference and `namespacedRef` form, and absence of an independent ID. It cannot
 resolve other resources, enforce same-namespace or distinct-reference semantics,
-verify parent groups, or check the remote complete set. Those checks belong to
-the subsequent controller layer; this API-only layer does not apply the declaration.
+verify parent groups, or check the complete set. Runtime reconciliation performs
+those checks before applying the declaration.
 
 ### Consume controller and lifecycle coverage
 
@@ -734,5 +732,67 @@ scenario against an authorized dedicated Konnect scope. Until that acceptance
 run is recorded, no full Operator lifecycle acceptance is implied by the earlier
 backend contract probes. `maskFields` and `transcode` retain typed/admission and
 mocked-controller coverage only; this scenario does not establish their live
-backend contract. The Konnect-only, direct-child and non-atomic GET/PUT boundaries
+backend contract. The direct-child and non-atomic Konnect GET/PUT boundaries
 remain unchanged.
+
+### On-prem Consume application
+
+The existing Consume-chain CR also applies when its virtual cluster's backend
+cluster references an `OnPremEventGateway`. It requires no Konnect authentication,
+API calls, organization, policy ID, or prior `Programmed` condition. The chain
+has no independent gw-admin entity or ID; `status.id` stays unset.
+
+The pinned gw-admin OpenAPI 1.11.0 model represents `consume_policies` as a
+**flat array** of `EventGatewayConsumePolicyOnPrem` entries, including both roots
+and children. Each entry has its policy's Kubernetes UID as `id`; a child keeps
+`parent_policy_id` equal to its schema-validation parent's UID. There is no
+nested children array. Assembly checks the actual included object snapshots and
+parent IDs, rather than validating newer objects against an older payload.
+Ordering does not rewrite parent references or discard children.
+
+List every live Consume policy of the virtual cluster exactly once. An explicit
+empty list is valid only for an empty Consume scope, not as a request to delete
+policies; omitted and null declarations are invalid. The same shared nested
+validator as Konnect requires each root schema-validation parent immediately
+before its contiguous children. Siblings may reorder and whole groups may move.
+`decryptFields`, `maskFields`, and `transcode` require such a parent;
+`modifyHeaders` and `skipRecord` may have one. Root `decrypt` remains supported.
+Children cannot move between groups by changing their position in the chain.
+The virtual cluster, chain, policies, and parent-policy references must stay in
+the chain's namespace; grants do not extend this chain's namespace contract.
+
+The UID-bound `gateway-operator.konghq.com/consume-policy-chain-owner` claim is
+independent of cluster, Produce, and listener ownership. Existing owners survive
+updates and operator restarts; optimistic-lock patches serialize claims.
+Competing chains report `PolicyChainOwnerValid=False` / `ConflictingChain`
+without displacing the owner. Missing, malformed, recreated, and terminating
+owners release their Consume claim; a terminating owner need not finish its
+finalizers before handover. Deleting only the chain releases only that claim,
+keeps policy CRs and entities, and resumes ordinary deterministic assembly:
+creation timestamp then resource name, with parents assembled before children.
+It does not retain historical remote ordering as Konnect does.
+
+Missing, duplicate, terminating, wrong-kind, wrong-virtual-cluster, invalid
+parent/group, and incomplete declarations cannot produce a shortened successful
+chain. An invalid owner reports `Programmed=False`; the gateway reports
+`ConfigurationPushed=False` and `Programmed=False` / `InvalidPolicyChain`.
+No new complete document or revision is pushed until repair or chain removal.
+Running pods retain their last configuration; invalid chains also block pushes
+to new or restarted pods. An excluded parent is handled by the shared on-prem
+ownership rules described above, not claimed by a new competing declaration.
+
+Chain, policy, reference, termination, deletion, recreation, and claim updates
+trigger rebuilding. Same-name recreation resolves the new policy UID. Only the
+Consume list explicitly ordered by a Consume chain becomes order-sensitive for
+hashing and drift comparison; other lists and unchained virtual clusters retain
+their existing comparison behavior. Last-good configurations remember Consume
+ordering separately. Recovery from a surviving gw-admin pod conservatively
+retains its complete Consume-list order for replay, even when the current
+invalid declaration supplies no marker.
+
+Focused builder/controller regressions cover this representation, independent
+ownership, ordered hashes/comparison, invalid-owner blocking, and recovery.
+Dedicated API-server lifecycle/contract and real gw-admin Chainsaw acceptance
+are subsequent layers of [#6594](https://github.com/Kong/kong-operator/issues/6594);
+the pinned model and local regressions alone do not establish a live Consume
+round-trip or Kafka data-path contract.
