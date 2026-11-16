@@ -150,7 +150,7 @@ For a dedicated real server, first run the license preflight above. Supply the
 original file to the server as `GW_ADMIN_ONPREM_LICENSE_FILE`, with
 `GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS=event_gateway`; for a container, these refer
 to its read-only mounted file, not the host path. A licensing-capable image is
-`kong/kong-gw-admin-cp:1.0.0-rc.1`. The preflight is input preparation,
+`kong/kong-gw-admin-cp:1.0.0`. The preflight is input preparation,
 not a check that a remote server actually mounted or accepted that license.
 
 Set `GW_ADMIN_CONTRACT_URL` (including `/v1`),
