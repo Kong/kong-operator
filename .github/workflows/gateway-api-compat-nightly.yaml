@@ -14,13 +14,6 @@ on:
   schedule:
     # Off-peak slot after the nightly image build (03:30) and chart publish (04:30).
     - cron: "0 6 * * *"
-  # TEMPORARY. GitHub only registers workflows that exist on the default
-  # branch. workflow_dispatch cannot start this file before the PR merges.
-  # A push to the validation branch runs the tests. Remove this trigger
-  # before the merge.
-  push:
-    branches:
-      - issue-5822
   workflow_dispatch:
     inputs:
       gateway-api-versions:
