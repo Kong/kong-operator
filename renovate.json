@@ -222,9 +222,9 @@
       "groupSlug": "golang"
     },
     {
-      "description": "Group all OpenTelemetry module updates into one PR (sdk/trace/core must move together to keep govulncheck green)",
+      "description": "Group all go.opentelemetry.io/* module updates (otel core/sdk, contrib, auto, exporters, ...) into one PR: govulncheck fails unless every vulnerable module is fixed together",
       "matchManagers": ["gomod"],
-      "matchPackageNames": ["go.opentelemetry.io/otel", "go.opentelemetry.io/otel/**"],
+      "matchPackageNames": ["go.opentelemetry.io/**"],
       "groupName": "opentelemetry",
       "groupSlug": "opentelemetry"
     },
