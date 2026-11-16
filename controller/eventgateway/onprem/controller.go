@@ -522,9 +522,10 @@ type pushResult struct {
 // reachedAPod tells the entities pushed may have reached at least one gw-admin
 // pod, which may then serve them to data planes, even when the push to it
 // failed, or the push to other pods failed: those of the configuration, or,
-// when it is blocked, those of the last one that could be sent.
-func (r pushResult) reachedAPod(cfg configuration) bool {
-	if r.certificates == nil || r.target == nil || len(cfg.invalidChains) > 0 {
+// when it is blocked, by invalid entities or invalid policy chains, those of
+// the last one that could be sent.
+func (r pushResult) reachedAPod() bool {
+	if r.certificates == nil || r.target == nil {
 		return false
 	}
 	return slices.ContainsFunc(r.target.Pods, r.certificates.mayHoldEntities)

@@ -528,18 +528,13 @@ func TestPushResultReachedAPod(t *testing.T) {
 		}
 		return o
 	}
-	var cfg configuration
-	assert.True(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(cfg),
+	assert.True(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(),
 		"one pod holds it, though the push to another failed")
-	assert.True(t, pushResult{target: target, certificates: outcome(failing)}.reachedAPod(cfg),
+	assert.True(t, pushResult{target: target, certificates: outcome(failing)}.reachedAPod(),
 		"the push to the pod failed after it may have got the entities")
-	assert.False(t, pushResult{target: target, certificates: outcome()}.reachedAPod(cfg),
+	assert.False(t, pushResult{target: target, certificates: outcome()}.reachedAPod(),
 		"no pod got the entities")
-	assert.False(t, pushResult{target: target}.reachedAPod(cfg), "nothing pushed, e.g. waiting for the backoff")
-
-	blocked := configuration{excluded: []excludedEntity{{obj: &configurationv1alpha1.EventGatewayStaticKey{}, blocks: true}}}
-	assert.True(t, pushResult{target: target, certificates: outcome(ok)}.reachedAPod(blocked),
-		"a configuration stopped from being pushed isn't, but the pods get the last one that could be sent")
+	assert.False(t, pushResult{target: target}.reachedAPod(), "nothing pushed, e.g. waiting for the backoff")
 }
 
 // TestWithKeyInputs checks a static key records the fingerprint of the value
@@ -621,35 +616,108 @@ func TestKeptPushRecordsKeyValuePushed(t *testing.T) {
 // TestBlockedPushRecordsKeyValuePushed checks the fingerprint of a static key
 // is recorded once a blocked configuration pushes the pods the last one that
 // could be sent, holding the key: its value there may then be served, so that
-// a rotation afterwards doesn't replace it under the same id.
+// a rotation afterwards doesn't replace it under the same id. Invalid entities
+// and invalid policy chains block it alike.
 func TestBlockedPushRecordsKeyValuePushed(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		blocker func(t *testing.T) []client.Object
+		reason  string
+	}{
+		{
+			name: "a policy that can't be sent",
+			blocker: func(t *testing.T) []client.Object {
+				return []client.Object{newSchemaRegistryFixture(t).validateWith("validate", `{name: missing}`, 3)}
+			},
+			reason: "InvalidEntities",
+		},
+		{
+			name:    "an invalid policy chain",
+			blocker: invalidChainObjects,
+			reason:  "InvalidPolicyChain",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, key, secret, objects := staticKeyObjects(t)
+			f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+				return append(append(f.gwAdmin.Objects(), f.gateway, key, secret), objects...)
+			})
+			pushed, err := keyValueHash(string(secret.Data["key"]))
+			require.NoError(t, err)
+
+			// Revision 1 reaches no pod: gw-admin rejects its entities.
+			f.pod().respond = failing(callEntities, http.StatusBadRequest)
+			_, _ = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+			require.Equal(t, int64(1), read(t, f.cl, f.gateway).Status.ConfigRevision)
+			require.Empty(t, read(t, f.cl, key).GetCreateInputsHash(), "no pod got its value")
+
+			// The configuration is blocked, and the Secret is rotated: the
+			// pods get revision 1, with the value of the key there.
+			f.pod().respond = nil
+			f.r.backoff.Forget(f.gateway.UID) // Once its backoff is over.
+			for _, obj := range tt.blocker(t) {
+				require.NoError(t, f.cl.Create(t.Context(), obj))
+			}
+			rotated := read(t, f.cl, secret)
+			rotated.Data = map[string][]byte{"key": []byte("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")}
+			require.NoError(t, f.cl.Update(t.Context(), rotated))
+			_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+			require.NoError(t, err)
+			require.Equal(t, tt.reason, apimeta.FindStatusCondition(read(t, f.cl, f.gateway).Status.Conditions, "Programmed").Reason)
+			held := f.pod().gateways[f.gatewayID].StaticKeys
+			require.Len(t, held, 1, "the pods got the key")
+			require.Equal(t, string(secret.Data["key"]), held[0].Value, "with the value of revision 1")
+			assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded, not the one read now")
+		})
+	}
+}
+
+// invalidChainObjects returns a cluster policy of the virtual cluster of
+// staticKeyObjects, and a policy chain that can't be applied, as it lists
+// another one.
+func invalidChainObjects(t *testing.T) []client.Object {
+	t.Helper()
+	created := time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC)
+	return []client.Object{
+		fromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicy](t, created, `
+metadata: {name: acls}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    type: acls
+    acls:
+      name: acls
+      config:
+        rules:
+        - action: allow
+          resourceType: topic
+          operations: [{name: read}]
+          resourceNames: {type: stat, stat: [{match: orders}]}
+`),
+		fromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](t, created, `
+metadata: {name: chain}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    policies:
+    - {name: missing}
+`),
+	}
+}
+
+// TestInvalidChainWithNothingToPushRecordsNoKey checks a static key records no
+// fingerprint while an invalid policy chain blocks the only configuration of
+// its gateway: no pod gets its value.
+func TestInvalidChainWithNothingToPushRecordsNoKey(t *testing.T) {
 	_, key, secret, objects := staticKeyObjects(t)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
-		return append(append(f.gwAdmin.Objects(), f.gateway, key, secret), objects...)
+		return slices.Concat(f.gwAdmin.Objects(), []client.Object{f.gateway, key, secret}, objects, invalidChainObjects(t))
 	})
-	pushed, err := keyValueHash(string(secret.Data["key"]))
+	_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
 	require.NoError(t, err)
-
-	// Revision 1 reaches no pod: gw-admin rejects its entities.
-	f.pod().respond = failing(callEntities, http.StatusBadRequest)
-	_, _ = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
-	require.Equal(t, int64(1), read(t, f.cl, f.gateway).Status.ConfigRevision)
-	require.Empty(t, read(t, f.cl, key).GetCreateInputsHash(), "no pod got its value")
-
-	// A policy that can't be sent blocks the configuration, and the Secret
-	// is rotated: the pods get revision 1, with the value of the key there.
-	f.pod().respond = nil
-	f.r.backoff.Forget(f.gateway.UID) // Once its backoff is over.
-	require.NoError(t, f.cl.Create(t.Context(), newSchemaRegistryFixture(t).validateWith("validate", `{name: missing}`, 3)))
-	rotated := read(t, f.cl, secret)
-	rotated.Data = map[string][]byte{"key": []byte("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")}
-	require.NoError(t, f.cl.Update(t.Context(), rotated))
-	_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
-	require.NoError(t, err)
-	held := f.pod().gateways[f.gatewayID].StaticKeys
-	require.Len(t, held, 1, "the pods got the key")
-	require.Equal(t, string(secret.Data["key"]), held[0].Value, "with the value of revision 1")
-	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded, not the one read now")
+	require.Equal(t, "InvalidPolicyChain", apimeta.FindStatusCondition(read(t, f.cl, f.gateway).Status.Conditions, "Programmed").Reason)
+	assert.Empty(t, f.pod().gateways[f.gatewayID].StaticKeys, "no pod got the key")
+	assert.Empty(t, read(t, f.cl, key).GetCreateInputsHash())
 }
 
 // TestOperatorRestartKeepsHeldKeyValue checks a static key pushed whose
