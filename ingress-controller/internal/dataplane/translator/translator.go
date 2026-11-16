@@ -9,6 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -194,6 +195,18 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 		t.ingressRulesFromGRPCRoutes(),
 	)
 
+	// Make the entities translated from Gateway API routes inherit the konghq.com/tags of the
+	// routes' parent Gateways and their GatewayClasses. This has to happen before populateServices,
+	// which computes the Services' tags including the inherited ones.
+	inheritedTagResolver := newInheritedTagResolver(t.logger, t.storer)
+	hasGatewayTags, err := t.hasGatewayTags()
+	if err != nil {
+		t.logger.Error(err, "failed to check if gateways have tags")
+	}
+	if hasGatewayTags {
+		t.applyInheritedTags(&ingressRules, t.buildInheritedTagIndex(inheritedTagResolver))
+	}
+
 	// populate any Kubernetes Service objects relevant objects and get the
 	// services to be skipped because of annotations inconsistency
 	servicesToBeSkipped := ingressRules.populateServices(t.logger, t.storer, t.failuresCollector, t.translatedObjectsCollector)
@@ -257,8 +270,8 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// generate Certificates and SNIs
-	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs)
-	gatewayCerts := t.getGatewayCerts()
+	ingressCerts := t.getCerts(ingressRules.SecretNameToSNIs, ingressRules.ClientCertSecretToServices)
+	gatewayCerts := t.getGatewayCerts(inheritedTagResolver)
 	// note that ingress-derived certificates will take precedence over gateway-derived certificates for SNI assignment
 	var certIDsSeen certIDToMergedCertID
 	result.Certificates, certIDsSeen = mergeCerts(t.logger, ingressCerts, gatewayCerts)
@@ -335,6 +348,29 @@ func (t *Translator) registerSuccessfullyTranslatedObject(obj client.Object) {
 // that have been successfully translated as part of BuildKongConfig() call so far.
 func (t *Translator) popConfiguredKubernetesObjects() []client.Object {
 	return t.translatedObjectsCollector.Pop()
+}
+
+// hasGatewayTags checks if any Gateway or its associated GatewayClass has user-defined tags in annotation `konghq.com/tags`.
+func (t *Translator) hasGatewayTags() (bool, error) {
+	gateways, err := t.storer.ListGateways()
+	if err != nil {
+		return false, err
+	}
+	for _, gw := range gateways {
+		if len(annotations.ExtractUserTags(gw.Annotations)) > 0 {
+			return true, nil
+		}
+
+		gwc, err := t.storer.GetGatewayClass(string(gw.Spec.GatewayClassName))
+		if err != nil {
+			continue
+		}
+		if len(annotations.ExtractUserTags(gwc.Annotations)) > 0 {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // UnavailableSchemaService is a fake schema service used when no gateway admin API clients available.
