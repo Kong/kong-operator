@@ -265,7 +265,7 @@ jobs:
   notify-on-slack:
     needs: [gateway-api-compat]
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
-    if: ${{ !cancelled() && vars.GWAPI_COMPAT_SEND_SLACK_NOTIFICATION == 'true' }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
