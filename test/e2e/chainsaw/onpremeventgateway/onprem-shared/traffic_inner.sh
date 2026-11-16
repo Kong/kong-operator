@@ -29,7 +29,8 @@ done
 # produce can fail with UNKNOWN_TOPIC_OR_PARTITION. A warm-up record, which
 # traffic-check ignores, is produced until it's acknowledged, so that such a
 # failure isn't counted as downtime either.
-until kafkactl -C /tmp/kafkactl.yml --context vc produce "${TOPIC}" --value warmup >/dev/null 2>&1; do
+until out=$(kafkactl -C /tmp/kafkactl.yml --context vc produce "${TOPIC}" --value warmup 2>&1); do
+  echo "warm-up produce failed: ${out}" >&2
   sleep 1
 done
 echo "topic ${TOPIC} ready"

@@ -31,7 +31,8 @@ done
 # produce can fail with UNKNOWN_TOPIC_OR_PARTITION, which would end the
 # producer session. A warm-up record, which long-traffic-check ignores, is
 # produced until it's acknowledged before the sessions start.
-until kafkactl -C /tmp/kafkactl.yml --context vc produce "${TOPIC}" --value warmup >/dev/null 2>&1; do
+until out=$(kafkactl -C /tmp/kafkactl.yml --context vc produce "${TOPIC}" --value warmup 2>&1); do
+  echo "warm-up produce failed: ${out}" >&2
   sleep 1
 done
 
