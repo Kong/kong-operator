@@ -1456,6 +1456,10 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant(t *testing.T)
 		Namespace: new("default"),
 		Name:      "gw",
 	}
+	// A Konnect name unlike the Kubernetes name, so the assertion below tells a resolved
+	// reference apart from the raw reference name the payload carries.
+	const consumerGroupName = "group-other-name"
+	consumerGroup.Spec.APISpec.Name = consumerGroupName
 
 	mcpServer := aiGatewayMCPServerFixture("mcp-a")
 	mcpServer.Spec.APISpec.PassthroughListener.Policies = nil
@@ -1522,7 +1526,7 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant(t *testing.T)
 			}
 			require.NoError(t, mcpStatus.Err)
 			require.Len(t, doc.MCPServers, 1)
-			require.Equal(t, []string{"group-other"}, doc.MCPServers[0].Access.ACLs.Allow)
+			require.Equal(t, []string{consumerGroupName}, doc.MCPServers[0].Access.ACLs.Allow)
 		})
 	}
 }
@@ -1541,6 +1545,10 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel
 		Namespace: new("default"),
 		Name:      "gw",
 	}
+	// A Konnect name unlike the Kubernetes name, so the assertions below tell a resolved
+	// reference apart from the raw reference name the payload carries.
+	const consumerGroupName = "group-other-name"
+	consumerGroup.Spec.APISpec.Name = consumerGroupName
 
 	aclRefs := []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: "other", Name: consumerGroup.Name}}
 
@@ -1551,11 +1559,52 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel
 		Type:  aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
 		Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
 	}
+	agentDeny := agent.DeepCopy()
+	agentDeny.Name = "agent-deny"
+	agentDeny.Spec.APISpec.Name = "agent-deny"
+	agentDeny.Spec.APISpec.Access.Acls = &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+		Type: aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeDeny,
+		Deny: &aiconfigurationv1alpha1.AIGatewayDenyACL{Deny: aclRefs},
+	}
 
 	model := aiGatewayModelFixture("model-a")
 	model.Spec.APISpec.Model.Access.Acls = &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
 		Type:  aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
 		Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+	}
+	modelDeny := model.DeepCopy()
+	modelDeny.Name = "model-deny"
+	modelDeny.Spec.APISpec.Model.Name = "model-deny"
+	modelDeny.Spec.APISpec.Model.Access.Acls = &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+		Type: aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeDeny,
+		Deny: &aiconfigurationv1alpha1.AIGatewayDenyACL{Deny: aclRefs},
+	}
+	// The api variant of the model union carries its own access and route configuration, so
+	// it takes its own fixture rather than a copy of the model variant.
+	modelAPI := &aiconfigurationv1alpha1.AIGatewayModel{
+		Name: "model-api", Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+			AIGatewayRef: agent.Spec.AIGatewayRef,
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelConfigTypeAPI,
+					API: &aiconfigurationv1alpha1.AIGatewayModelAPI{
+						Name:        "model-api",
+						DisplayName: "model-api",
+						Formats:     []aiconfigurationv1alpha1.AIGatewayModelFormat{{Type: "openai"}},
+						Config: aiconfigurationv1alpha1.AIGatewayModelAPIConfig{
+							Route: aiconfigurationv1alpha1.AIGatewayModelRouteConfig{Paths: []string{"/model-api"}},
+						},
+						Access: aiconfigurationv1alpha1.AIGatewayModelAccess{
+							Acls: &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+								Type:  aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
+								Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	// The consumer group references the gateway across namespaces, so it needs its own
@@ -1563,22 +1612,40 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel
 	gatewayGrant := crossNamespaceGrant("AIGatewayConsumerGroup", new("gw"))
 
 	tests := []struct {
-		name     string
-		entity   client.Object
-		kind     string
-		aclAllow func(doc *aigw.Document) []string
+		name   string
+		entity client.Object
+		kind   string
+		acls   func(doc *aigw.Document) []string
 	}{
 		{
-			name:     "agent",
-			entity:   agent,
-			kind:     "AIGatewayAgent",
-			aclAllow: func(doc *aigw.Document) []string { return doc.Agents[0].Access.ACLs.Allow },
+			name:   "agent allow",
+			entity: agent,
+			kind:   "AIGatewayAgent",
+			acls:   func(doc *aigw.Document) []string { return doc.Agents[0].Access.ACLs.Allow },
 		},
 		{
-			name:     "model",
-			entity:   model,
-			kind:     "AIGatewayModel",
-			aclAllow: func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Allow },
+			name:   "agent deny",
+			entity: agentDeny,
+			kind:   "AIGatewayAgent",
+			acls:   func(doc *aigw.Document) []string { return doc.Agents[0].Access.ACLs.Deny },
+		},
+		{
+			name:   "model allow",
+			entity: model,
+			kind:   "AIGatewayModel",
+			acls:   func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Allow },
+		},
+		{
+			name:   "model deny",
+			entity: modelDeny,
+			kind:   "AIGatewayModel",
+			acls:   func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Deny },
+		},
+		{
+			name:   "model api variant",
+			entity: modelAPI,
+			kind:   "AIGatewayModel",
+			acls:   func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Allow },
 		},
 	}
 	for _, tt := range tests {
@@ -1625,7 +1692,7 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel
 						return
 					}
 					require.NoError(t, status.Err)
-					require.Equal(t, []string{"group-other"}, tt.aclAllow(doc))
+					require.Equal(t, []string{consumerGroupName}, tt.acls(doc))
 				})
 			}
 		})

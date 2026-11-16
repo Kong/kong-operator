@@ -75,6 +75,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 		return &AIGatewayConsumerGroup{
 			Name: "ai-gw-consumer-group", Namespace: "default",
 			Spec: AIGatewayConsumerGroupSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
 				APISpec: AIGatewayConsumerGroupAPISpec{
 					Name: "dev-users",
 				},
@@ -129,6 +130,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent", Namespace: "default",
 				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayAgentAPISpec{
 						Name:        "sample-agent",
 						DisplayName: "Sample Agent",
@@ -178,6 +180,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-deny", Namespace: "default",
 				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayAgentAPISpec{
 						Name: "deny-agent",
 						Type: "a2a",
@@ -311,6 +314,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-dangling-acl", Namespace: "default",
 				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayAgentAPISpec{
 						Name: "dangling-acl-agent",
 						Type: "http",
@@ -325,6 +329,33 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 				},
 			},
 			wantErr: "access.acls",
+		},
+		{
+			name: "ACL consumer group targeting a different OnPremAIGateway rejected",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-other-gw-acl", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "other-gw-acl-agent",
+						Type: "http",
+						Access: AIGatewayAgentAccess{
+							Acls: newAgentACLsFixture(),
+						},
+						Config: AIGatewayAgentConfig{URL: "http://upstream:8080"},
+					},
+				},
+			},
+			objects: []runtime.Object{
+				&AIGatewayConsumerGroup{
+					Name: "ai-gw-consumer-group", Namespace: "default",
+					Spec: AIGatewayConsumerGroupSpec{
+						AIGatewayRef: onPremGatewayRef("other-gw"),
+						APISpec:      AIGatewayConsumerGroupAPISpec{Name: "dev-users"},
+					},
+				},
+			},
+			wantErr: "does not target the referencing entity's OnPremAIGateway",
 		},
 		{
 			name: "dangling auth strategy reference",

@@ -108,7 +108,7 @@ func (obj *AIGatewayAgent) resolveAIGWAccess(
 			return fmt.Errorf("AIGatewayAgent %s/%s: unsupported access.acls.type %q", obj.Namespace, obj.Name, acls.Type)
 		}
 		if target != nil {
-			names, err := resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs))
+			names, err := resolveEntityNamesCrossNamespaceTargeting[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, consumerGroupRefs(aclRefs))
 			if err != nil {
 				return fmt.Errorf("resolving AIGatewayAgent %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
 			}

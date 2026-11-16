@@ -51,6 +51,7 @@ func aigwFixtureReferences() []client.Object {
 		&AIGatewayConsumerGroup{
 			Name: "ai-gw-model-consumer-group", Namespace: "default",
 			Spec: AIGatewayConsumerGroupSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
 				APISpec: AIGatewayConsumerGroupAPISpec{
 					Name:        "model-dev-users",
 					DisplayName: "Dev Users Group",
@@ -150,6 +151,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 			obj: &AIGatewayModel{
 				Name: "sample-ai-gw-model-api", Namespace: "default",
 				Spec: AIGatewayModelSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayModelAPISpec{
 						AIGatewayModelConfig: &AIGatewayModelConfig{
 							Type: AIGatewayModelConfigTypeAPI,
@@ -201,6 +203,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 			obj: &AIGatewayModel{
 				Name: "sample-ai-gw-model", Namespace: "default",
 				Spec: AIGatewayModelSpec{
+					AIGatewayRef: onPremGatewayRef("gw"),
 					APISpec: AIGatewayModelAPISpec{
 						AIGatewayModelConfig: &AIGatewayModelConfig{
 							Type: AIGatewayModelConfigTypeModel,

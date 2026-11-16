@@ -464,6 +464,11 @@
   namespace in their ACLs, as on a `KonnectAIGateway`. A `KongReferenceGrant`
   in the consumer group's namespace must permit the reference.
   [#5257](https://github.com/Kong/kong-operator/issues/5257)
+- AI Gateway: on an `OnPremAIGateway`, an ACL reference to a consumer group of
+  another `OnPremAIGateway` now fails the entity's translation. A
+  `KonnectAIGateway` already behaves this way. This covers an `AIGatewayAgent`,
+  an `AIGatewayModel` and an `AIGatewayMCPServer`.
+  [#5257](https://github.com/Kong/kong-operator/issues/5257)
 
 ### Changed
 
