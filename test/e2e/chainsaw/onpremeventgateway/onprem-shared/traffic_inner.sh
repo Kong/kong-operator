@@ -25,6 +25,14 @@ until kafkactl -C /tmp/kafkactl.yml --context vc create topic "${TOPIC}" --parti
   kafkactl -C /tmp/kafkactl.yml --context vc describe topic "${TOPIC}" >/dev/null 2>&1; do
   sleep 1
 done
+# A new topic isn't known to every broker as soon as it's created: a first
+# produce can fail with UNKNOWN_TOPIC_OR_PARTITION. A warm-up record, which
+# traffic-check ignores, is produced until it's acknowledged, so that such a
+# failure isn't counted as downtime either.
+until out=$(kafkactl -C /tmp/kafkactl.yml --context vc produce "${TOPIC}" --value warmup 2>&1); do
+  echo "warm-up produce failed: ${out}" >&2
+  sleep 1
+done
 echo "topic ${TOPIC} ready"
 
 n=0
