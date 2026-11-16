@@ -27,6 +27,13 @@ until kafkactl -C /tmp/kafkactl.yml --context vc create topic "${TOPIC}" --parti
   kafkactl -C /tmp/kafkactl.yml --context vc describe topic "${TOPIC}" >/dev/null 2>&1; do
   sleep 1
 done
+# A new topic isn't known to every broker as soon as it's created: a first
+# produce can fail with UNKNOWN_TOPIC_OR_PARTITION, which would end the
+# producer session. A warm-up record, which long-traffic-check ignores, is
+# produced until it's acknowledged before the sessions start.
+until kafkactl -C /tmp/kafkactl.yml --context vc produce "${TOPIC}" --value warmup >/dev/null 2>&1; do
+  sleep 1
+done
 
 # A consumer whose connection drops, e.g. once its keg pod is replaced,
 # resumes from the offsets its consumer group committed, as a Kafka consumer
