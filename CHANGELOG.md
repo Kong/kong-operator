@@ -324,6 +324,7 @@
   [#6575](https://github.com/Kong/kong-operator/pull/6575)
   [#6594](https://github.com/Kong/kong-operator/issues/6594)
   [#6673](https://github.com/Kong/kong-operator/pull/6673)
+  [#6674](https://github.com/Kong/kong-operator/pull/6674)
 - Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
   Helm installation artifacts, to declare produce-policy ordering with
   Kubernetes references to the complete set of root and nested policies.
