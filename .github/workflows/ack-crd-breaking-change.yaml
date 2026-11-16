@@ -49,13 +49,13 @@ jobs:
 
           # Runs in any state, not only completed ones: a label event can arrive while the check
           # is still running. That job read the label before the removal, so it must be waited
-          # for and then re-run, or the old acknowledgement stays in force.
-          run_refs="$(gh run list \
-            --repo "${GITHUB_REPOSITORY}" \
-            --workflow tests.yaml \
-            --limit 50 \
-            --json createdAt,databaseId,event,headSha,status \
-            --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request")] | sort_by(.createdAt) | reverse | .[] | "\(.databaseId) \(.status)"')"
+          # for and then re-run, or the old acknowledgement stays in force. The head-SHA filter
+          # runs in the API: a bounded list of recent runs can hold no run of this pull request on
+          # a busy repository, and then the label change would be silently ignored.
+          run_refs="$(gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yaml/runs?head_sha=${HEAD_SHA}&event=pull_request&per_page=100" \
+            --jq '.workflow_runs[] | "\(.id) \(.status)"')"
 
           crd_job_id=""
           while read -r candidate_run_id run_status; do

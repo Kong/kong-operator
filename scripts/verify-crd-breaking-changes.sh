@@ -147,11 +147,16 @@ resolve_base_revision() {
 
 base_revision="$(resolve_base_revision)"
 
-# A pull request in a stack targets another pull request's branch, and that branch moves. The
+# A branch base moves, and a pull request in a stack targets another pull request's branch. The
 # checked out tree cannot follow it, so the base tip can hold changes that the tree never had.
 # Anchor both sides at their common ancestor, so that only this pull request's own changes are
 # compared. For a clean pull request the common ancestor is the base tip, so nothing changes.
-comparison_base="$(git merge-base "${base_revision}" HEAD 2>/dev/null || printf '%s\n' "${base_revision}")"
+# An explicit CRD_BREAKING_CHANGES_BASE_SHA is the caller's own choice of baseline, so it is used
+# as given: it need not be an ancestor of HEAD, for example a release tag.
+comparison_base="${base_revision}"
+if [[ -z "${CRD_BREAKING_CHANGES_BASE_SHA:-}" ]]; then
+	comparison_base="$(git merge-base "${base_revision}" HEAD 2>/dev/null || printf '%s\n' "${base_revision}")"
+fi
 echo "Comparing CRDs in ${RELATIVE_CRD_DIR} against ${comparison_base} (base revision ${base_revision})"
 
 tmpdir="$(mktemp -d)"
