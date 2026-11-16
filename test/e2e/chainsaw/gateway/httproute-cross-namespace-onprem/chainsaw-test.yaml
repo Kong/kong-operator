@@ -1,0 +1,130 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-cross-namespace-onprem
+spec:
+  description: |
+    Validates that an operator-managed on-prem Gateway routes HTTP traffic to
+    a backend Service in another namespace through an HTTPRoute and a
+    ReferenceGrant:
+    1. Creating the backend Service in a second namespace.
+    2. Creating a ReferenceGrant that allows HTTPRoutes of the Gateway
+       namespace to reference Services of the backend namespace.
+    3. Creating an HTTPRoute whose backendRef points at the cross-namespace
+       Service and verifying it is accepted with ResolvedRefs=True.
+    4. Verifying end-to-end HTTP traffic to the cross-namespace backend.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: http_route_name
+      value: httproute-cross-namespace-onprem
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: backend_namespace
+      value: (join('-', [($namespace), 'backend']))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: (join('-', [($namespace), 'backend']))
+    - name: echo_deployment_replicas
+      value: 1
+    - name: reference_grant_name
+      value: httproute-cross-namespace-onprem-grant
+    - name: reference_grant_namespace
+      value: (join('-', [($namespace), 'backend']))
+    - name: host_header
+      value: ""
+
+  steps:
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-backend-namespace
+      description: Create the namespace that holds the backend Service.
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+      bindings:
+        - name: namespace_name
+          value: ($backend_namespace)
+
+    - name: Create-echo-backend
+      description: Create the echo Deployment and Service backend in the backend namespace.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+    - name: Create-reference-grant
+      description: Allow HTTPRoutes of the Gateway namespace to reference backend Services.
+      use:
+        template: ../../common/_step_templates/apply-assert-referencegrant.yaml
+      bindings:
+        - name: from
+          value:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+              namespace: ($namespace)
+        - name: to
+          value:
+            - group: ""
+              kind: Service
+
+    - name: Create-gateway
+      description: Create an operator-managed HTTP Gateway and verify it is programmed.
+      # The default 300s is not enough when four DataPlane proxy pods start at
+      # once on a slow CI node: the Kong pod alone then takes over 5 minutes.
+      timeouts:
+        assert: 15m
+      try:
+        - apply:
+            file: 02-gateway.yaml
+        - assert:
+            file: 02-assert-gateway.yaml
+
+    - name: Create-httproute
+      description: Create an HTTPRoute with a cross-namespace backendRef.
+      try:
+        - apply:
+            file: 03-httproute.yaml
+        - assert:
+            file: 03-assert-httproute.yaml
+
+    - name: Verify-http-traffic
+      description: Verify end-to-end HTTP traffic through the Gateway.
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: /echo
+        - name: http_method
+          value: GET
+        - name: listener_http_port
+          value: "80"
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-httproute-cross-namespace-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
