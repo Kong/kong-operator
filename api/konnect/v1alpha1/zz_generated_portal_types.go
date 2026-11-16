@@ -170,6 +170,16 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	SiprEnabled string `json:"siprEnabled,omitzero"`
+
+	// Name of the theme to use for the default content created upon creation of
+	// this portal.
+	// Must match an available theme name; if omitted or unrecognized, the default
+	// theme is used.
+	// Only applies when `create_default_content` is true.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ThemeName string `json:"themeName,omitzero"`
 }
 
 // PortalStatus defines the observed state of Portal.

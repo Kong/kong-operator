@@ -394,11 +394,27 @@ reset to false.
 
 | Field | Description |
 | --- | --- |
+| `aiSearch` _[AISettingsFeaturesAISearch](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesaisearch)_ | AI Search config |
 | `mcpServer` _[AISettingsFeaturesMcpServer](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesmcpserver)_ | AI Features config |
 
 _Appears in:_
 
 - [AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)
+
+#### AISettingsFeaturesAISearch
+
+
+AISettingsFeaturesAISearch AI Search config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether AI Search is enabled or not |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
 
 #### AISettingsFeaturesMcpServer
 
@@ -1954,6 +1970,7 @@ PortalAPISpec defines the API spec fields for Portal.
 | `notificationsDeveloperPiiVisibilityEnabled` _string_ | When enabled, portal registration notifications include the registering developer's identifying information (such as name and email). |
 | `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
 | `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
+| `themeName` _string_ | Name of the theme to use for the default content created upon creation of this portal. Must match an available theme name; if omitted or unrecognized, the default theme is used. Only applies when `create_default_content` is true. |
 
 _Appears in:_
 

@@ -66957,6 +66957,16 @@ spec:
                         type: string
                       features:
                         properties:
+                          aiSearch:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
                           mcpServer:
                             properties:
                               enabled:
@@ -66974,6 +66984,7 @@ spec:
                             - writeOperationsEnabled
                             type: object
                         required:
+                        - aiSearch
                         - mcpServer
                         type: object
                     required:
@@ -67077,6 +67088,9 @@ spec:
                     enum:
                     - Enabled
                     - Disabled
+                    type: string
+                  themeName:
+                    maxLength: 253
                     type: string
                 required:
                 - name
