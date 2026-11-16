@@ -48,7 +48,7 @@ jobs:
       - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
           # renovate: datasource=github-tags depName=jdx/mise-action extractVersion=^v(?<version>.+)$
-          version: 2026.11.1
+          version: 2026.11.8
           install: false
 
       - name: Setup Golang
