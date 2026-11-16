@@ -18,7 +18,6 @@ package onprem
 
 import (
 	"encoding/json"
-	"reflect"
 	"testing"
 	"time"
 
@@ -211,19 +210,19 @@ spec:
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
 
-	excluded := map[string]string{}
+	excluded := excludedMessages(cfg)
 	notBlocking := []string{}
-	for _, e := range cfg.excluded {
-		name := reflect.TypeOf(e.obj).Elem().Name() + " " + e.obj.GetName()
-		excluded[name] = e.message
-		if !e.blocks {
+	for name, blocks := range excludedBlocking(cfg) {
+		if !blocks {
 			notBlocking = append(notBlocking, name)
 		}
 	}
 	// Only those that don't belong to the gateway, go along with their
-	// parent, or are virtual clusters conflicting with an older one, don't
-	// hold back the push.
+	// parent, or were never sent and conflict with an older one, don't hold
+	// back the push.
 	assert.ElementsMatch(t, []string{
+		"EventGatewayBackendCluster bc-duplicate",
+		"EventGatewaySchemaRegistry duplicate-registry",
 		"EventGatewayVirtualCluster vc-duplicate",
 		"EventGatewayVirtualCluster vc-of-duplicate",
 		"EventGatewayVirtualCluster vc-other-namespace",
@@ -231,13 +230,13 @@ spec:
 	require.Error(t, cfg.blocked())
 	assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason, failureReason(cfg.blocked()))
 	assert.Equal(t, map[string]string{
-		"EventGatewayBackendCluster bc-duplicate":                       `another backend cluster of the gateway is named "bc"`,
-		"EventGatewayVirtualCluster vc-duplicate":                       `another virtual cluster of the gateway is named "vc"`,
+		"EventGatewayBackendCluster bc-duplicate":                       `its spec.apiSpec.name "bc" is already the one of EventGatewayBackendCluster default/bc`,
+		"EventGatewayVirtualCluster vc-duplicate":                       `its spec.apiSpec.name "vc" is already the one of EventGatewayVirtualCluster default/vc`,
 		"EventGatewayVirtualCluster vc-of-duplicate":                    "its EventGatewayBackendCluster " + ns + "/bc-duplicate isn't in the configuration",
 		"EventGatewayVirtualClusterConsumePolicy orphan":                "its parent policy " + ns + "/missing doesn't exist, is being deleted, or is in a cycle of parent policies",
 		"EventGatewayVirtualClusterConsumePolicy with-missing-registry": "resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: EventGatewaySchemaRegistry " + ns + "/missing: eventgatewayschemaregistries.configuration.konghq.com \"missing\" not found",
 		"EventGatewayVirtualCluster vc-other-namespace":                 "no KongReferenceGrant allows it to reference the EventGatewayBackendCluster " + ns + "/bc",
-		"EventGatewaySchemaRegistry duplicate-registry":                 `another schema registry of the gateway is named "registry"`,
+		"EventGatewaySchemaRegistry duplicate-registry":                 `its spec.apiSpec.name "registry" is already the one of EventGatewaySchemaRegistry default/registry`,
 		"EventGatewayVirtualClusterConsumePolicy with-other-registry": "it references the EventGatewaySchemaRegistry " + ns +
 			"/other-registry, which isn't in the configuration of the gateway",
 		"EventGatewayVirtualClusterConsumePolicy with-duplicate-registry": "it references the EventGatewaySchemaRegistry " + ns +
@@ -316,16 +315,14 @@ spec:
 	cfg, err := buildConfiguration(t.Context(), f.objects(secondVC, produce, consume, f.listener(), listenerPolicy), f.gateway, "", nil)
 	require.NoError(t, err)
 	assert.Equal(t, map[string]string{
-		"EventGatewayVirtualCluster vc2": `its DNS label "vc" is already the one of EventGatewayVirtualCluster default/vc`,
+		"EventGatewayVirtualCluster vc2": `its spec.apiSpec.dnsLabel "vc" is already the one of EventGatewayVirtualCluster default/vc`,
 		// The oldest policy keeps the name, whatever the order of the kinds.
 		"EventGatewayVirtualClusterConsumePolicy consume": `its policy name "same" is already the one of EventGatewayVirtualClusterProducePolicy default/produce`,
 		"EventGatewayListenerPolicy forward":              `its policy name "same" is already the one of EventGatewayVirtualClusterProducePolicy default/produce`,
 	}, excludedMessages(cfg))
-	// A policy conflicting with an older one stops the push, a virtual
-	// cluster doesn't: the older one keeps running.
-	for _, e := range cfg.excluded {
-		assert.Equal(t, e.obj.GetName() != "vc2", e.blocks, "%s stops the push", e.obj.GetName())
-	}
+	// Never sent, those conflicting with an older one don't stop the push:
+	// the older one keeps running.
+	require.NoError(t, cfg.blocked())
 }
 
 // A policy of another namespace naming a virtual cluster of the gateway,

@@ -1,0 +1,23 @@
+# The push of the OnPremEventGateway gateway_name is stopped by the consume
+# policy child, sent, whose new parent policy is left out.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: InvalidEntities
+      (contains(message, 'EventGatewayVirtualClusterConsumePolicy')): true
+      (contains(message, '/child')): true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: child
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: Invalid
+      (contains(message, 'its parent policy')): true
+      (contains(message, '/parent')): true

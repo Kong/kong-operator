@@ -109,7 +109,7 @@ spec:
 		excluded[reflect.TypeOf(e.obj).Elem().Name()+" "+e.obj.GetName()] = e.message
 	}
 	assert.Equal(t, map[string]string{
-		"EventGatewayListener listener-duplicate": `another listener of the gateway is named "listener"`,
+		"EventGatewayListener listener-duplicate": `its spec.apiSpec.name "listener" is already the one of EventGatewayListener default/listener`,
 		"EventGatewayListenerPolicy forward-unknown": "resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: EventGatewayVirtualCluster " + ns +
 			`/unknown: eventgatewayvirtualclusters.configuration.konghq.com "unknown" not found`,
 		"EventGatewayListenerPolicy forward-of-duplicate":    "its EventGatewayListener " + ns + "/listener-duplicate isn't in the configuration",

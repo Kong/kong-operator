@@ -479,25 +479,17 @@ func (sc *scenarios) scenarioN(a axis) {
 			dup, "Programmed", "False", "FailedToCreate")
 	}
 	if sc.gw == onprem {
-		// A virtual cluster is only left out, as is a chain, which holds back
-		// the configuration only as the owner of its virtual cluster.
-		if chain || dup.Kind == "EventGatewayVirtualCluster" {
-			sc.assertGatewayNotHeldBack("assert-"+tag+"-gateway-not-held-back", "The conflicting "+sc.res.kind+" is only left out.")
-		} else {
-			sc.assertGatewayHeldBack("assert-"+tag+"-gateway-held-back", "The conflicting "+sc.res.kind+" can't be sent: the gateway doesn't push its configuration.", dup)
-		}
+		// The conflicting object was never sent: it is only left out. A chain
+		// holds back the configuration only as the owner of its virtual
+		// cluster or listener.
+		sc.assertGatewayNotHeldBack("assert-"+tag+"-gateway-not-held-back", "The conflicting "+sc.res.kind+", never sent, is only left out.")
 	}
 	// The reconcile reporting the conflict of the other one gave the name to
-	// the first, which it reports first: on-prem, it stays in the
-	// configuration, only not pushed while the gateway is held back.
+	// the first, which it reports first.
 	first := "The first " + sc.res.kind + " keeps its name."
-	switch {
-	case sc.gw == onprem && sc.heldBack:
-		sc.assertCond("assert-"+tag+"-first-kept", first+" It stays in the configuration, which isn't pushed.", b.referrer,
-			condition{"Programmed", "False", "GatewayNotProgrammed"})
-	case sc.gw == onprem:
+	if sc.gw == onprem {
 		sc.assertCond("assert-"+tag+"-first-kept", first, b.referrer, condition{"Programmed", "True", "Programmed"})
-	default:
+	} else {
 		sc.ready("assert-"+tag+"-first-kept", first, b.referrer)
 	}
 	sc.deleteObject("delete-"+tag+"-conflicting", "Delete the conflicting "+sc.res.kind+".", dup)

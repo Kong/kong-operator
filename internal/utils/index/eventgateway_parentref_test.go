@@ -11,6 +11,31 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
+func TestConsumePolicyChainIndexes(t *testing.T) {
+	t.Parallel()
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{
+		Name: "chain", Namespace: "ns",
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainSpec{
+			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "vc", Namespace: new("")},
+			},
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{
+					{Name: "parent"},
+					{Name: "child", Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: "ns"},
+					{Name: "foreign", Namespace: "other"},
+					{Name: "wrong-kind", Kind: "EventGatewayVirtualClusterProducePolicy"},
+				},
+			},
+		},
+	}
+	assert.Equal(t, []string{"ns/vc"}, eventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterRef(chain))
+	assert.Equal(t, []string{"ns/parent", "ns/child", "other/foreign"}, eventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterConsumePolicyRef(chain))
+	assert.Nil(t, eventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterRef(&configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{}))
+	assert.Nil(t, eventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterConsumePolicyRef(&configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{}))
+}
+
 // TestEventGatewayEntitiesKonnectEventGatewayIndex verifies that the entities
 // directly under an Event Gateway are indexed by their KonnectEventGateway
 // whether they reference it through spec.parentRef or the deprecated

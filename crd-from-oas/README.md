@@ -70,6 +70,13 @@ in `ResolveKonnectReferences` and both SDK converters. The method must validate
 every reference and preserve order and explicit empty lists. Entries without
 this setting retain the default generated resolution.
 
+A single-kind reference can set `watchSameParent: true` when reconciliation
+depends on the entire parent scope, not only the listed references. The generated
+watch also enqueues declarations sharing the changed object's namespaced parent.
+Both kinds must configure the same parent GVK and an `ObjectRef` parent.
+Produce policy chains use this to observe additions and removals from the complete
+policy set, including policies not yet listed in the chain.
+
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a
 union struct with a `type` discriminator:

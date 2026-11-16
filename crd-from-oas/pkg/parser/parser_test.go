@@ -243,6 +243,7 @@ func TestParsePaths_SharedRequestBody(t *testing.T) {
 		listenerPath = "/v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policy-chain"
 		clusterPath  = "/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policy-chain"
 		producePath  = "/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policy-chain"
+		consumePath  = "/v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policy-chain"
 	)
 	requestBody := &openapi3.RequestBodyRef{
 		Ref: "#/components/requestBodies/UpdateEventGatewayPolicyChainRequest",
@@ -284,21 +285,30 @@ func TestParsePaths_SharedRequestBody(t *testing.T) {
 					RequestBody: requestBody,
 				},
 			}),
+			openapi3.WithPath(consumePath, &openapi3.PathItem{
+				Put: &openapi3.Operation{
+					OperationID: "update-event-gateway-virtual-cluster-consume-policy-chain",
+					RequestBody: requestBody,
+				},
+			}),
 		),
 		Components: &openapi3.Components{Schemas: openapi3.Schemas{}},
 	}
 	for _, paths := range [][]string{
-		{listenerPath, clusterPath, producePath},
-		{listenerPath, producePath, clusterPath},
-		{clusterPath, listenerPath, producePath},
-		{clusterPath, producePath, listenerPath},
-		{producePath, listenerPath, clusterPath},
-		{producePath, clusterPath, listenerPath},
+		{listenerPath, clusterPath, producePath, consumePath},
+		{listenerPath, producePath, consumePath, clusterPath},
+		{clusterPath, consumePath, listenerPath, producePath},
+		{clusterPath, producePath, listenerPath, consumePath},
+		{producePath, listenerPath, consumePath, clusterPath},
+		{producePath, consumePath, clusterPath, listenerPath},
+		{consumePath, listenerPath, clusterPath, producePath},
+		{consumePath, clusterPath, producePath, listenerPath},
+		{consumePath, producePath, listenerPath, clusterPath},
 	} {
 		t.Run(paths[0]+"/"+paths[1], func(t *testing.T) {
 			result, err := NewParser(doc).ParsePaths(paths)
 			require.NoError(t, err)
-			require.Len(t, result.RequestBodies, 3)
+			require.Len(t, result.RequestBodies, 4)
 
 			byPath := make(map[string]*Schema)
 			for name, schema := range result.RequestBodies {
@@ -311,15 +321,19 @@ func TestParsePaths_SharedRequestBody(t *testing.T) {
 			require.Contains(t, byPath, listenerPath)
 			require.Contains(t, byPath, clusterPath)
 			require.Contains(t, byPath, producePath)
+			require.Contains(t, byPath, consumePath)
 			require.Len(t, byPath[listenerPath].Dependencies, 2)
 			require.Len(t, byPath[clusterPath].Dependencies, 2)
 			require.Len(t, byPath[producePath].Dependencies, 2)
+			require.Len(t, byPath[consumePath].Dependencies, 2)
 			assert.Equal(t, "EventGatewayListener", byPath[listenerPath].Dependencies[1].EntityName)
 			assert.Equal(t, "VirtualCluster", byPath[clusterPath].Dependencies[1].EntityName)
 			assert.Equal(t, "VirtualCluster", byPath[producePath].Dependencies[1].EntityName)
+			assert.Equal(t, "VirtualCluster", byPath[consumePath].Dependencies[1].EntityName)
 			assert.Equal(t, "update-event-gateway-listener-policy-chain", byPath[listenerPath].UpdateOperationID)
 			assert.Equal(t, "update-event-gateway-virtual-cluster-cluster-level-policy-chain", byPath[clusterPath].UpdateOperationID)
 			assert.Equal(t, "update-event-gateway-virtual-cluster-produce-policy-chain", byPath[producePath].UpdateOperationID)
+			assert.Equal(t, "update-event-gateway-virtual-cluster-consume-policy-chain", byPath[consumePath].UpdateOperationID)
 		})
 	}
 

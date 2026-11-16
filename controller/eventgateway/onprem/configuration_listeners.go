@@ -32,14 +32,15 @@ import (
 // policies are their children. A forwarding policy references a virtual cluster
 // of the gateway, and is sent with the id of the virtual cluster.
 
-// addListeners adds the listeners of the gateway, with their policies, which
-// reference the TLS trust bundles and the virtual clusters among the targets,
-// and returns the listeners, for their policy chains.
-func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gateway *eventgatewayv1alpha1.OnPremEventGateway, targets referenceTargets) (parents, error) {
+// addListeners adds the listeners of the gateway, and converts their policies,
+// which reference the TLS trust bundles and the virtual clusters among the
+// targets, to add once their names are reserved. It returns the listeners, for
+// their policy chains, and their policies.
+func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gateway *eventgatewayv1alpha1.OnPremEventGateway, targets referenceTargets) (parents, policyGroup, error) {
 	var listeners configurationv1alpha1.EventGatewayListenerList
 	parentsOfPolicies, err := addAttached(ctx, c, cl, gateway, &listeners, &listeners.Items, index.IndexFieldEventGatewayListenerOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewayListener, gwadminapi.EventGatewayListenerOnPrem]{
-			kind: "EventGatewayListener", what: "listener",
+			kind: "EventGatewayListener",
 			request: func(_ context.Context, _ client.Client, l *configurationv1alpha1.EventGatewayListener) (any, error) {
 				return l.Spec.APISpec.ToCreateEventGatewayListenerRequest()
 			},
@@ -47,7 +48,7 @@ func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gatewa
 			list: in[*configurationv1alpha1.EventGatewayListener]("listeners", &c.entities.Listeners),
 		})
 	if err != nil {
-		return parents{}, err
+		return parents{}, policyGroup{}, err
 	}
 	// gw-admin requires the list of policies.
 	for i := range c.entities.Listeners {
@@ -55,7 +56,7 @@ func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gatewa
 	}
 
 	var policies configurationv1alpha1.EventGatewayListenerPolicyList
-	if err := addChildren(ctx, c, cl, parentsOfPolicies, &policies, &policies.Items, index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef,
+	claimants, add, err := convertChildren(ctx, c, cl, parentsOfPolicies, &policies, &policies.Items, index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef,
 		func(i int) (string, *[]gwadminapi.EventGatewayListenerPolicyOnPrem) {
 			return fmt.Sprintf("listeners.%d.policies", i), &c.entities.Listeners[i].Policies
 		},
@@ -74,8 +75,11 @@ func (c *configuration) addListeners(ctx context.Context, cl uidResolver, gatewa
 				return req.EventGatewayListenerPolicyCreate, nil
 			},
 			adjust: targets.resolveReferences(listenerPolicyReferences),
-		}); err != nil {
-		return parents{}, err
+		})
+	if err != nil {
+		return parents{}, policyGroup{}, err
 	}
-	return parentsOfPolicies, nil
+	var group policyGroup
+	group.join(claimants, add)
+	return parentsOfPolicies, group, nil
 }

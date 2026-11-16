@@ -1,0 +1,19 @@
+# A consume policy named parent, a parent policy, whose policy name is
+# parent_api_name.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: parent
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: ($parent_api_name)
+      config:
+        type: json
+        json:
+          valueValidationAction: mark
