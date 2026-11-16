@@ -23,6 +23,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 		NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 		RBACEnabled: "Enabled",
 		SiprEnabled: "Enabled",
+		ThemeName:   "test-value",
 	}
 	result, err := spec.ToCreatePortal()
 	require.NoError(t, err)
@@ -46,6 +47,7 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.Equal(t, true, payload["notifications_developer_pii_visibility_enabled"])
 	require.Equal(t, true, payload["rbac_enabled"])
 	require.Equal(t, true, payload["sipr_enabled"])
+	require.Equal(t, "test-value", payload["theme_name"])
 }
 
 func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
@@ -62,6 +64,7 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 		NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 		RBACEnabled: "Enabled",
 		SiprEnabled: "Enabled",
+		ThemeName:   "test-value",
 	}
 	result, err := spec.ToUpdatePortal()
 	require.NoError(t, err)
@@ -85,4 +88,5 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.Equal(t, true, payload["notifications_developer_pii_visibility_enabled"])
 	require.Equal(t, true, payload["rbac_enabled"])
 	require.Equal(t, true, payload["sipr_enabled"])
+	require.Equal(t, "test-value", payload["theme_name"])
 }

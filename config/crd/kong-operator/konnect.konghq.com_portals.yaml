@@ -78,6 +78,18 @@ spec:
                           When top-level `enabled` is false, every feature toggle here is
                           automatically reset to false.
                         properties:
+                          aiSearch:
+                            description: AI Search config
+                            properties:
+                              enabled:
+                                description: Whether AI Search is enabled or not
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
                           mcpServer:
                             description: AI Features config
                             properties:
@@ -101,6 +113,7 @@ spec:
                             - writeOperationsEnabled
                             type: object
                         required:
+                        - aiSearch
                         - mcpServer
                         type: object
                     required:
@@ -280,6 +293,15 @@ spec:
                     enum:
                     - Enabled
                     - Disabled
+                    type: string
+                  themeName:
+                    description: |-
+                      Name of the theme to use for the default content created upon creation of
+                      this portal.
+                      Must match an available theme name; if omitted or unrecognized, the default
+                      theme is used.
+                      Only applies when `create_default_content` is true.
+                    maxLength: 253
                     type: string
                 required:
                 - name

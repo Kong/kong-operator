@@ -5981,8 +5981,6 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6013,8 +6011,6 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6278,8 +6274,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6304,8 +6298,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6346,8 +6338,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6376,8 +6366,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -7466,7 +7454,6 @@ type ProduceFailureMode string
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 // to help to identify the clients violating schema.
 type ProduceKeyValidationAction string
 
@@ -7474,7 +7461,6 @@ type ProduceKeyValidationAction string
 // valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 // to help to identify the clients violating schema.
 type ProduceValueValidationAction string
 
@@ -7932,7 +7918,6 @@ type TranscodeOnUnknownField string
 // the gateway.
 // - `enforce_on_gateway` means the gateway enforces its own ACL policies for
 // this virtual cluster
-//
 // and does not forward ACL-related commands to the backend cluster.
 // Note that if there are no ACL policies configured, all access is denied.
 // - `passthrough` tells the gateway to forward all ACL-related commands.
@@ -8030,18 +8015,12 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// Methods to mediate authentication:
 	// * passthrough - pass authentication from the client through proxy to the
 	// backend cluster without any kind of
-	//
-	//
 	// validation
 	// * validate_forward - pass authentication from the client through proxy to
 	// the backend cluster.
-	//
-	//
 	// Proxy does the validation before forwarding it to the client.
 	// * terminate - terminate authentication at the proxy level and originate
 	// authentication to the backend cluster
-	//
-	//
 	// using the configuration defined at BackendCluster's authentication.
 	// SASL auth is not originated if authentication on the backend_cluster is not
 	// configured.
@@ -8337,12 +8316,8 @@ type VirtualClusterNamespace struct {
 	Additional VirtualClusterNamespaceAdditionalProperties `json:"additional,omitzero"`
 	// * hide_prefix - the configured prefix is hidden from clients for topics and
 	// IDs when reading.
-	//
-	//
 	// Created resources are written with the prefix on the backend cluster.
 	// * enforce_prefix - the configured prefix remains visible to clients.
-	//
-	//
 	// Created resources must include the prefix or the request will fail.
 	//
 	//

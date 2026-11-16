@@ -75,10 +75,23 @@ type AISettings struct {
 // When top-level `enabled` is false, every feature toggle here is automatically
 // reset to false.
 type AISettingsFeatures struct {
+	// AI Search config
+	//
+	// +required
+	AISearch AISettingsFeaturesAISearch `json:"aiSearch,omitzero"`
 	// AI Features config
 	//
 	// +required
 	McpServer AISettingsFeaturesMcpServer `json:"mcpServer,omitzero"`
+}
+
+// AISettingsFeaturesAISearch AI Search config
+type AISettingsFeaturesAISearch struct {
+	// Whether AI Search is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
 }
 
 // AISettingsFeaturesMcpServer AI Features config
