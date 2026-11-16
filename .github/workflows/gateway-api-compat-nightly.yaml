@@ -256,7 +256,7 @@ jobs:
         retention-days: 3
 
   notify-on-slack:
-    needs: [gateway-api-compat]
+    needs: [build-operator-image, gateway-api-compat]
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
@@ -271,11 +271,23 @@ jobs:
         SLACK_TEAM_ID: ${{ secrets.SLACK_TEAM_ID }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        # Same priority order as the matrix expression: input, repo variable,
+        # then the default. The run page also shows the per-version matrix.
+        VERSIONS: ${{ join(fromJSON(inputs.gateway-api-versions || vars.KO_GWAPI_COMPAT_VERSIONS || '["v1.3.0", "v1.4.1", "v1.5.1", "v1.6.3", "v1.7.0"]'), ', ') }}
+        COMMIT: ${{ github.sha }}
+        OPERATOR_IMAGE_INPUT: ${{ inputs.operator-image }}
       run: |
-        if [ "$FAILED" = "true" ]; then
-          text=":red_circle: Gateway API compatibility tests failed: <${RUN_URL}|workflow run> cc: <!subteam^${SLACK_TEAM_ID}>"
+        # The tested operator: the input image when given, otherwise the
+        # commit the image was built from.
+        if [ -n "$OPERATOR_IMAGE_INPUT" ]; then
+          version="image ${OPERATOR_IMAGE_INPUT}"
         else
-          text=":white_check_mark: Gateway API compatibility tests passed: <${RUN_URL}|workflow run>"
+          version="commit $(echo "$COMMIT" | cut -c1-7)"
+        fi
+        if [ "$FAILED" = "true" ]; then
+          text=":red_circle: Gateway API compatibility tests failed (GWAPI versions: ${VERSIONS}; ${version}): <${RUN_URL}|workflow run> cc: <!subteam^${SLACK_TEAM_ID}>"
+        else
+          text=":white_check_mark: Gateway API compatibility tests passed (GWAPI versions: ${VERSIONS}; ${version}): <${RUN_URL}|workflow run>"
         fi
         payload=$(jq -n --arg text "${text}" '{text: $text}')
         curl -fsS -X POST -H 'Content-type: application/json' --data "${payload}" "${SLACK_WEBHOOK_URL}"

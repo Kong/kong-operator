@@ -11,7 +11,8 @@ spec:
     2. Creating a ReferenceGrant that allows HTTPRoutes of the Gateway
        namespace to reference Services of the backend namespace.
     3. Creating an HTTPRoute whose backendRef points at the cross-namespace
-       Service and verifying it is accepted with ResolvedRefs=True.
+       Service and verifying it is programmed. The end-to-end traffic step
+       proves that the cross-namespace reference is allowed and reachable.
     4. Verifying end-to-end HTTP traffic to the cross-namespace backend.
 
   bindings:
