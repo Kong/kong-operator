@@ -1,0 +1,113 @@
+# Management-plane fixtures only: no data plane or Kafka traffic is needed.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: backend
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: vcluster
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: backend
+  apiSpec:
+    name: vcluster
+    dnsLabel: vcluster
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: parse
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: schemaValidation
+    schemaValidation:
+      name: parse
+      config:
+        type: json
+        json:
+          valueValidationAction: skip
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: first
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: modifyHeaders
+    parentPolicyRef:
+      name: parse
+    modifyHeaders:
+      name: first
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-consume-stage
+              value: first
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: second
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: skipRecord
+    parentPolicyRef:
+      name: parse
+    skipRecord:
+      name: second
+      condition: "true"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: root
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: root
+      config:
+        actions:
+          - op: set
+            set:
+              key: x-consume-root
+              value: example
