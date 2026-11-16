@@ -25,6 +25,9 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
+	if err := CheckCrossNamespaceConsumerGroupRefsGranted(ctx, cl, obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
 
 	// Resolve secretRefs against a copy: sdkOpsAPISpec deep-copies the spec, so the
 	// caller's object is not mutated.
@@ -121,16 +124,16 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 
 	// The access union's reference surface. Resolved current-key refs come
 	// first, mirroring AIGatewayModel.
-	if mcp.Access.ACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.allow)); err != nil {
+	if mcp.Access.ACLs.Allow, err = resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.allow)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.acls.allow: %w", obj.Namespace, obj.Name, err)
 	}
-	if mcp.Access.ACLs.Deny, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.deny)); err != nil {
+	if mcp.Access.ACLs.Deny, err = resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.deny)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.acls.deny: %w", obj.Namespace, obj.Name, err)
 	}
-	if mcp.Access.DefaultToolACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(defaultToolAcls.Allow)); err != nil {
+	if mcp.Access.DefaultToolACLs.Allow, err = resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(defaultToolAcls.Allow)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.defaultToolAcls.allow: %w", obj.Namespace, obj.Name, err)
 	}
-	if mcp.Access.DefaultToolACLs.Deny, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(defaultToolAcls.Deny)); err != nil {
+	if mcp.Access.DefaultToolACLs.Deny, err = resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(defaultToolAcls.Deny)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.defaultToolAcls.deny: %w", obj.Namespace, obj.Name, err)
 	}
 	authStrategyNames, err := resolveEntityNames[AIGatewayAuthStrategy](ctx, cl, obj.Namespace, authStrategyRefs(authStrategies))
@@ -149,10 +152,10 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: decoded %d tools, expected %d", obj.Namespace, obj.Name, len(mcp.Tools), len(toolACLs))
 	}
 	for i := range mcp.Tools {
-		if mcp.Tools[i].Access.ACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(toolACLs[i].Allow)); err != nil {
+		if mcp.Tools[i].Access.ACLs.Allow, err = resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(toolACLs[i].Allow)); err != nil {
 			return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s tools[%d].access.acls.allow: %w", obj.Namespace, obj.Name, i, err)
 		}
-		if mcp.Tools[i].Access.ACLs.Deny, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(toolACLs[i].Deny)); err != nil {
+		if mcp.Tools[i].Access.ACLs.Deny, err = resolveEntityNamesCrossNamespace[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(toolACLs[i].Deny)); err != nil {
 			return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s tools[%d].access.acls.deny: %w", obj.Namespace, obj.Name, i, err)
 		}
 	}
