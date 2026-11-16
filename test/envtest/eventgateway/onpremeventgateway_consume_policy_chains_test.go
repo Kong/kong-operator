@@ -158,6 +158,31 @@ func (f *consumeChainFixture) condition(obj interface {
 	return got
 }
 
+// conditionMessage waits for a condition of the object to reach the given
+// status and reason with a message containing the text. An invalid chain is
+// reconciled again, so an intermediate message, e.g. while the configuration
+// snapshot catches up, isn't the final one.
+func (f *consumeChainFixture) conditionMessage(obj interface {
+	client.Object
+	GetConditions() []metav1.Condition
+}, typ string, status metav1.ConditionStatus, reason, message string) *metav1.Condition {
+	f.t.Helper()
+	var got *metav1.Condition
+	require.EventuallyWithT(f.t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, f.cl.Get(f.t.Context(), client.ObjectKeyFromObject(obj), obj)) {
+			return
+		}
+		got = apimeta.FindStatusCondition(obj.GetConditions(), typ)
+		if assert.NotNil(ct, got) {
+			assert.Equal(ct, status, got.Status, got.Message)
+			assert.Equal(ct, reason, got.Reason, got.Message)
+			assert.Equal(ct, obj.GetGeneration(), got.ObservedGeneration)
+			assert.Contains(ct, got.Message, message)
+		}
+	}, waitTime, tickTime)
+	return got
+}
+
 func (f *consumeChainFixture) order(pod *fakeGWAdmin, names ...string) fakeGateway {
 	f.t.Helper()
 	var held fakeGateway
@@ -280,8 +305,7 @@ func TestOnPremEventGatewayConsumePolicyChainLifecycle(t *testing.T) {
 	t.Parallel()
 	f := newConsumeChainFixture(t)
 	f.start()
-	missing := f.condition(f.chain, "Programmed", metav1.ConditionFalse, "Invalid")
-	require.Contains(t, missing.Message, "does not exist")
+	f.conditionMessage(f.chain, "Programmed", metav1.ConditionFalse, "Invalid", "does not exist")
 	f.editChain()
 	f.condition(f.chain, "Programmed", metav1.ConditionTrue, "Programmed")
 	f.order(f.pod)
@@ -418,8 +442,7 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 			f := *f
 			f.t = t
 			f.editChain(tt.order...)
-			c := f.condition(f.chain, "Programmed", metav1.ConditionFalse, "Invalid")
-			require.Contains(t, c.Message, tt.message)
+			f.conditionMessage(f.chain, "Programmed", metav1.ConditionFalse, "Invalid", tt.message)
 			f.condition(f.gateway, "ConfigurationPushed", metav1.ConditionFalse, "InvalidPolicyChain")
 			held, ok, _ := f.pod.state(gatewayID(t, f.gateway))
 			require.True(t, ok)
@@ -447,8 +470,7 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 	f.editPolicy("headers", func(p *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy) {
 		p.Spec.APISpec.ParentPolicyRef.Name = "other"
 	})
-	c := f.condition(f.chain, "Programmed", metav1.ConditionFalse, "Invalid")
-	require.Contains(t, c.Message, "contiguous group")
+	f.conditionMessage(f.chain, "Programmed", metav1.ConditionFalse, "Invalid", "contiguous group")
 	f.editChain("parse", "mask", "other", "headers", "skip", "root")
 	f.condition(f.chain, "Programmed", metav1.ConditionTrue, "Programmed")
 	f.order(f.pod, "parse", "mask", "other", "headers", "skip", "root")
@@ -468,8 +490,7 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 	root.Spec.APISpec.ModifyHeadersPolicyCreate.Name = "foreign-root"
 	require.NoError(t, f.cl.Create(t.Context(), root))
 	f.editChain("parse", "mask", "other", "headers", "skip", "foreign-root")
-	c = f.condition(f.chain, "Programmed", metav1.ConditionFalse, "Invalid")
-	require.Contains(t, c.Message, "different virtual cluster")
+	f.conditionMessage(f.chain, "Programmed", metav1.ConditionFalse, "Invalid", "different virtual cluster")
 	f.editChain("parse", "mask", "other", "headers", "skip", "root")
 	f.condition(f.chain, "Programmed", metav1.ConditionTrue, "Programmed")
 	require.NoError(t, f.cl.Delete(t.Context(), root))
@@ -480,8 +501,7 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 		p.Finalizers = append(p.Finalizers, "test.konghq.com/hold")
 	})
 	require.NoError(t, f.cl.Delete(t.Context(), f.policies["mask"]))
-	c = f.condition(f.chain, "Programmed", metav1.ConditionFalse, "Invalid")
-	require.Contains(t, c.Message, "being deleted")
+	f.conditionMessage(f.chain, "Programmed", metav1.ConditionFalse, "Invalid", "being deleted")
 	f.condition(f.gateway, "Programmed", metav1.ConditionFalse, "InvalidPolicyChain")
 	held, ok, _ := f.pod.state(gatewayID(t, f.gateway))
 	require.True(t, ok)
