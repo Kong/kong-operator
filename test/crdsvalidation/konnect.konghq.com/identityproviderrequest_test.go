@@ -64,7 +64,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 					obj.Spec.APISpec.Config.OIDC.ClientID = ""
 					return obj
 				}(),
-				ExpectedErrorMessage: new("spec.apiSpec.config.oIDC.clientID"),
+				ExpectedErrorMessage: new("spec.apiSpec.config.oidc.clientID"),
 			},
 			{
 				Name: "invalid identity provider type fails validation",
