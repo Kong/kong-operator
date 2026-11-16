@@ -368,7 +368,9 @@ func producePolicyOrder(
 ) string {
 	// The produce chain API supports no cross-namespace reference: the
 	// parent and every policy are in the namespace of the chain, whatever a
-	// KongReferenceGrant allows.
+	// KongReferenceGrant allows. CEL can't enforce this: CRD validation rules
+	// expose metadata.name and metadata.generateName, but not the object's
+	// namespace.
 	if ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef; ref != nil &&
 		ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace {
 		return "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"

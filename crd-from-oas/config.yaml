@@ -1775,7 +1775,9 @@ apiGroupVersions:
             # The generated EventGatewayVirtualClusterProducePolicyRef type is
             # shared with parentPolicyRef, which supports cross-namespace
             # references. This chain keeps its policies in its namespace, which
-            # ResolveValidatedPolicyIDs enforces.
+            # ResolveValidatedPolicyIDs enforces. CEL cannot enforce this:
+            # CRD validation rules expose metadata.name and
+            # metadata.generateName, but not metadata.namespace.
             supportCrossNamespaceReference: true
             resolverMethod: ResolveValidatedPolicyIDs
             watchSameParent: true
