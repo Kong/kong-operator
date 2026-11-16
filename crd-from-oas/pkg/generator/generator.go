@@ -8869,7 +8869,8 @@ func jsonName(s string) string {
 // lowerLeadingInitialism lowercases an initialism at the start of an
 // underscore-free name. An all-caps name is fully lowercased ("OIDC" → "oidc").
 // An initialism followed by a word keeps that word's capital ("OIDCConfig" →
-// "oidcConfig"). A name with a single leading capital is unchanged ("Variant1").
+// "oidcConfig"). An initialism ended by a digit is fully lowercased ("OIDC2" →
+// "oidc2"). A name with a single leading capital is unchanged ("Variant1").
 func lowerLeadingInitialism(s string) string {
 	end := 0
 	for end < len(s) && s[end] >= 'A' && s[end] <= 'Z' {
@@ -8882,6 +8883,8 @@ func lowerLeadingInitialism(s string) string {
 		return strings.ToLower(s[:1]) + s[1:]
 	case s[end] >= 'a' && s[end] <= 'z':
 		return strings.ToLower(s[:end-1]) + s[end-1:]
+	case s[end] >= '0' && s[end] <= '9':
+		return strings.ToLower(s[:end]) + s[end:]
 	default:
 		return strings.ToLower(s[:1]) + s[1:]
 	}

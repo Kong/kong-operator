@@ -7479,6 +7479,9 @@ func TestJSONName(t *testing.T) {
 		{"TLSChannelPolicy", "tlsChannelPolicy"},
 		{"Variant1", "variant1"},
 		{"Auth0", "auth0"},
+		// An initialism ended by a digit is fully lowercased (dedup suffixes too).
+		{"OIDC2", "oidc2"},
+		{"OIDC2Config", "oidc2Config"},
 		// Empty string.
 		{"", ""},
 	}
