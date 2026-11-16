@@ -30,8 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
 )
 
@@ -134,6 +136,69 @@ func keyHashes(keys []gwadminapi.EventGatewayStaticKeyOnPrem) (map[uuid.UUID]str
 		hashes[k.Id] = hash
 	}
 	return hashes, nil
+}
+
+// recoverKeyHashes remembers, for each static key of the configuration with no
+// fingerprint recorded, the one of the value a gw-admin pod holds for it, as
+// if it were recorded (see Reconciler.inputsHashes): a value pushed whose
+// fingerprint couldn't be recorded, e.g. as the operator stopped between the
+// push and the write of the status of the key, may be served, and the key
+// keeps it. A key held with another creation time is another object of the
+// same name, e.g. one deleted and created again: its value isn't kept. Only a
+// previous process may have left such a value: the pods of a gateway are read
+// once after a start, until every pod could be read, so that a key deleted and
+// created again within the same second, as its creation time tells, isn't
+// taken for the one it replaces while the operator runs. It tells whether it
+// remembered any: the configuration is then built again.
+func (r *Reconciler) recoverKeyHashes(
+	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, cfg configuration,
+) bool {
+	if _, done := r.keysRecovered.Load(gateway.UID); done {
+		return false
+	}
+	unrecorded := map[uuid.UUID]*configurationv1alpha1.EventGatewayStaticKey{}
+	for _, obj := range cfg.allObjects() {
+		if k, ok := obj.(*configurationv1alpha1.EventGatewayStaticKey); ok && cfg.recordedHash(k) == "" {
+			unrecorded[staticKeyID(client.ObjectKeyFromObject(k))] = k
+		}
+	}
+	if len(unrecorded) == 0 {
+		r.keysRecovered.Store(gateway.UID, struct{}{})
+		return false
+	}
+	target, err := r.resolveGWAdmin(ctx, gateway, true)
+	if err != nil {
+		return false
+	}
+	var mu sync.Mutex
+	held := map[uuid.UUID]string{}
+	pending, err := r.GWAdminSync.ForEachPod(ctx, target, target.Pods,
+		func(ctx context.Context, _ gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface) error {
+			entities, ok, err := getEntities(ctx, gwAdmin, gatewayID)
+			if err != nil || !ok {
+				return err
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			for _, h := range entities.Entities.StaticKeys {
+				k, ok := unrecorded[h.Id]
+				if _, seen := held[h.Id]; seen || !ok || h.Value == "" || !h.CreatedAt.Equal(createdAt(k)) {
+					continue
+				}
+				if hash, err := keyValueHash(h.Value); err == nil {
+					held[h.Id] = hash
+				}
+			}
+			return nil
+		})
+	if err == nil && len(pending) == 0 {
+		r.keysRecovered.Store(gateway.UID, struct{}{})
+	}
+	for id, hash := range held {
+		k := unrecorded[id]
+		r.inputsHashes.Store(client.ObjectKeyFromObject(k), recordedKeyHash{uid: k.GetUID(), hash: hash})
+	}
+	return len(held) > 0
 }
 
 // keyInputs is the fingerprint of the value of a static key, as it reads now.

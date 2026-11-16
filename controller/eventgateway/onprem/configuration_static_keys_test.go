@@ -652,6 +652,138 @@ func TestBlockedPushRecordsKeyValuePushed(t *testing.T) {
 	assert.Equal(t, pushed, read(t, f.cl, key).GetCreateInputsHash(), "the value they got is recorded, not the one read now")
 }
 
+// TestOperatorRestartKeepsHeldKeyValue checks a static key pushed whose
+// fingerprint wasn't recorded, e.g. as the operator stopped between the push
+// and the write of the status of the key, keeps the value a gw-admin pod holds
+// once the operator is back, whatever it reads then, unless it is another
+// object of the same name, e.g. one deleted and created again.
+func TestOperatorRestartKeepsHeldKeyValue(t *testing.T) {
+	const rotated = "b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw"
+	// pushedThenRestarted pushes the key, drops the fingerprint written for
+	// it, and returns the fixture and a reconciler starting afresh.
+	pushedThenRestarted := func(t *testing.T) (*pushFixture, *Reconciler, *configurationv1alpha1.EventGatewayStaticKey, *corev1.Secret) {
+		t.Helper()
+		_, key, secret, objects := staticKeyObjects(t)
+		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+			return append(append(f.gwAdmin.Objects(), f.gateway, key, secret), objects...)
+		})
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+		require.Equal(t, string(secret.Data["key"]), f.pod().gateways[f.gatewayID].StaticKeys[0].Value)
+		k := read(t, f.cl, key)
+		k.Status.CreateInputsHash = ""
+		require.NoError(t, f.cl.Status().Update(t.Context(), k))
+		restarted := newPushFixture(t, interceptor.Funcs{}, nil)
+		restarted.r.Client, restarted.r.GWAdminSync.Client, restarted.r.GWAdminSync.NewClient = f.cl, f.cl, f.pods.newClient
+		return f, restarted.r, key, secret
+	}
+	rotate := func(t *testing.T, f *pushFixture, secret *corev1.Secret) {
+		t.Helper()
+		s := read(t, f.cl, secret)
+		s.Data = map[string][]byte{"key": []byte(rotated)}
+		require.NoError(t, f.cl.Update(t.Context(), s))
+	}
+	inputsApplied := func(t *testing.T, f *pushFixture, key *configurationv1alpha1.EventGatewayStaticKey) *metav1.Condition {
+		t.Helper()
+		cond := apimeta.FindStatusCondition(read(t, f.cl, key).Status.Conditions, konnectv1alpha1.CreateInputsAppliedConditionType)
+		require.NotNil(t, cond)
+		return cond
+	}
+
+	t.Run("its value changed meanwhile: the pods keep the one they hold", func(t *testing.T) {
+		f, restarted, key, secret := pushedThenRestarted(t)
+		held, err := keyValueHash(string(secret.Data["key"]))
+		require.NoError(t, err)
+		rotate(t, f, secret)
+
+		_, err = restarted.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+		assert.Equal(t, string(secret.Data["key"]), f.pod().gateways[f.gatewayID].StaticKeys[0].Value)
+		assert.Equal(t, held, read(t, f.cl, key).GetCreateInputsHash())
+		assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, inputsApplied(t, f, key).Reason)
+	})
+
+	t.Run("its value is the same: it is pushed as before", func(t *testing.T) {
+		f, restarted, key, secret := pushedThenRestarted(t)
+		held, err := keyValueHash(string(secret.Data["key"]))
+		require.NoError(t, err)
+
+		_, err = restarted.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+		assert.Equal(t, held, read(t, f.cl, key).GetCreateInputsHash())
+		assert.Equal(t, metav1.ConditionTrue, inputsApplied(t, f, key).Status)
+		programmed := apimeta.FindStatusCondition(read(t, f.cl, f.gateway).Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
+		require.NotNil(t, programmed)
+		assert.Equal(t, metav1.ConditionTrue, programmed.Status)
+	})
+
+	t.Run("created again meanwhile, with another value: it gets it", func(t *testing.T) {
+		f, restarted, key, secret := pushedThenRestarted(t)
+		old := read(t, f.cl, key)
+		old.Finalizers = nil
+		require.NoError(t, f.cl.Update(t.Context(), old))
+		require.NoError(t, f.cl.Delete(t.Context(), old))
+		recreated := key.DeepCopy()
+		recreated.UID = types.UID(uuid.NewString())
+		recreated.ResourceVersion = ""
+		recreated.CreationTimestamp = metav1.NewTime(key.CreationTimestamp.Add(time.Hour))
+		recreated.Status = configurationv1alpha1.EventGatewayStaticKeyStatus{}
+		require.NoError(t, f.cl.Create(t.Context(), recreated))
+		rotate(t, f, secret)
+
+		_, err := restarted.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+		assert.Equal(t, rotated, f.pod().gateways[f.gatewayID].StaticKeys[0].Value)
+		pushed, err := keyValueHash(rotated)
+		require.NoError(t, err)
+		assert.Equal(t, pushed, read(t, f.cl, recreated).GetCreateInputsHash())
+	})
+
+	t.Run("while the operator runs, one created again within the same second gets its value", func(t *testing.T) {
+		f, _, key, secret := pushedThenRestarted(t)
+		old := read(t, f.cl, key)
+		old.Finalizers = nil
+		require.NoError(t, f.cl.Update(t.Context(), old))
+		require.NoError(t, f.cl.Delete(t.Context(), old))
+		recreated := key.DeepCopy()
+		recreated.UID = types.UID(uuid.NewString())
+		recreated.ResourceVersion = ""
+		recreated.Status = configurationv1alpha1.EventGatewayStaticKeyStatus{}
+		require.NoError(t, f.cl.Create(t.Context(), recreated))
+		rotate(t, f, secret)
+
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+		assert.Equal(t, rotated, f.pod().gateways[f.gatewayID].StaticKeys[0].Value,
+			"the pods were read once, when the operator started")
+	})
+
+	t.Run("a key never given a fingerprint doesn't get the pods read again", func(t *testing.T) {
+		// Its Secret doesn't exist: it is never pushed.
+		_, key, _, objects := staticKeyObjects(t)
+		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
+			return append(append(f.gwAdmin.Objects(), f.gateway, key), objects...)
+		})
+		_, _ = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.Empty(t, read(t, f.cl, key).GetCreateInputsHash())
+		f.pod().reset()
+		f.r.backoff.Forget(f.gateway.UID)
+		_, _ = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		assert.Equal(t, 1, countOf(f.pod().recorded(), callGetEntities), "only the push reads the pod")
+	})
+}
+
+// countOf returns how many times call is in calls.
+func countOf(calls []string, call string) int {
+	n := 0
+	for _, c := range calls {
+		if c == call {
+			n++
+		}
+	}
+	return n
+}
+
 // TestEntitiesInUseBySentStaticKeyLeftOut checks a static key the last
 // configuration sent uses stays held when it is left out of the current one,
 // e.g. once the KongReferenceGrant letting it in is gone: the entities sent
