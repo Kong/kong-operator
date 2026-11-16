@@ -1,0 +1,333 @@
+# AIGatewayAgent and AIGatewayModel -> AIGatewayConsumerGroup cross-namespace
+# ACL reference test on an OnPremAIGateway.
+#
+# AIGatewayAgent.spec.apiSpec.access.acls and
+# AIGatewayModel.spec.apiSpec.model.access.acls hold AIGatewayACLRefs that
+# target an AIGatewayConsumerGroup. Both support cross-namespace references
+# gated by KongReferenceGrant, as they already do on a KonnectAIGateway. This
+# test proves it end-to-end against a real on-prem data plane:
+#
+# 1. The OnPremAIGateway and the AIGatewayConsumerGroup live in the test
+#    namespace. The provider, the agent and the model live in a second
+#    namespace that the gateway watches through a WatchNamespaceGrant.
+# 2. Without a KongReferenceGrant, the provider, the agent and the model report
+#    Programmed=False and ResolvedRefs=False (reason RefNotPermitted); the
+#    gateway stays Ready.
+# 3. Granting only the gateway programs the provider, which has no ACL
+#    reference, but the agent and the model keep reporting Programmed=False with
+#    a message naming AIGatewayConsumerGroup: the grant check of their ACL
+#    reference, not the one of their gateway reference, rejects them.
+# 4. Granting the consumer group too renders the agent and the model again: they
+#    become Programmed=True with ResolvedRefs=True, which means the pushed
+#    configuration carries the consumer group name resolved across namespaces.
+# 5. Deleting the KongReferenceGrant revokes the access: the agent and the model
+#    report Programmed=False and ResolvedRefs=False again, and the gateway stays
+#    Ready.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-cross-namespace-acl
+spec:
+  description: |
+    Creates an OnPremAIGateway and an AIGatewayConsumerGroup in the test
+    namespace, and an AIGatewayModelProvider, an AIGatewayAgent and an
+    AIGatewayModel in another namespace. The agent and the model reference the
+    consumer group in their ACL allow-lists across namespaces. Verifies that
+    the references are rejected until a KongReferenceGrant permits them, that
+    they resolve once granted, and that they revert once the grant is deleted.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: entities_namespace
+      value: (join('-', [($namespace), 'entities']))
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: consumer_group_name
+      value: (join('-', [($test_name), 'consumer-group']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: agent_name
+      value: (join('-', [($test_name), 'agent']))
+    - name: model_name
+      value: (join('-', [($test_name), 'model']))
+    - name: agent_route_path
+      value: /cross-ns-acl/agent
+    - name: model_route_path
+      value: /cross-ns-acl/model
+    - name: kong_reference_grant_name
+      value: allow-aigateway-cross-namespace-acl
+  steps:
+    - name: Create-entities-namespace
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+        with:
+          bindings:
+            - name: namespace_name
+              value: ($entities_namespace)
+    - name: Create-watch-namespace-grant
+      try:
+        - apply:
+            file: 01-entities-namespace.yaml
+    - name: Create-onprem-aigateway-and-consumer-group
+      try:
+        - apply:
+            file: 02-onprem-aigateway.yaml
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: OnPremAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+    - name: Create-entities
+      try:
+        - apply:
+            file: 03-entities.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-not-programmed-without-kong-reference-grant
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              metadata:
+                name: ($provider_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+    - name: Assert-onprem-aigateway-ready-without-kong-reference-grant
+      description: |
+        A reference that no KongReferenceGrant allows only fails its entity, so
+        the gateway stays Ready and its configuration is translated.
+      try:
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: OnPremAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                (conditions[?type == 'ConfigurationTranslated']):
+                  - status: 'True'
+    - name: Create-gateway-kong-reference-grant
+      description: |
+        Grant only the entities' aiGatewayRef to the gateway, and hold back the
+        AIGatewayConsumerGroup target that the agent and the model also need.
+      try:
+        - apply:
+            file: 04-kongreferencegrant.yaml
+    - name: Assert-acl-reference-rejected-while-gateway-reference-granted
+      description: |
+        The gateway reference now resolves: the provider, which has no ACL
+        reference, is Programmed. The agent and the model still fail, and their
+        message names AIGatewayConsumerGroup, so the grant check of their ACL
+        reference is what rejects them.
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              metadata:
+                name: ($provider_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    (contains(message, 'AIGatewayConsumerGroup')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    (contains(message, 'AIGatewayConsumerGroup')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+    - name: Extend-kong-reference-grant-with-consumer-group
+      description: Add the AIGatewayConsumerGroup target that the agent and the model need.
+      try:
+        - apply:
+            file: 05-kongreferencegrant.yaml
+    - name: Assert-programmed-with-kong-reference-grant
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              metadata:
+                name: ($provider_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+    - name: Delete-kong-reference-grant
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: ($kong_reference_grant_name)
+              namespace: ($namespace)
+    - name: Assert-not-programmed-after-kong-reference-grant-deletion
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    (contains(message, 'KongReferenceGrant')): true
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($entities_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'False'
+                    reason: RefNotPermitted
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: OnPremAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                (conditions[?type == 'ConfigurationTranslated']):
+                  - status: 'True'
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-cross-namespace-acl
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($entities_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

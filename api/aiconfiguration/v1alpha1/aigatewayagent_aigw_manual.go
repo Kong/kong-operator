@@ -24,6 +24,9 @@ func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
+	if err := CheckCrossNamespaceConsumerGroupRefsGranted(ctx, cl, obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
 
 	// Resolve secretRefs against a copy: sdkOpsAPISpec deep-copies the spec, so the
 	// caller's object is not mutated.
@@ -105,7 +108,7 @@ func (obj *AIGatewayAgent) resolveAIGWAccess(
 			return fmt.Errorf("AIGatewayAgent %s/%s: unsupported access.acls.type %q", obj.Namespace, obj.Name, acls.Type)
 		}
 		if target != nil {
-			names, err := resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs))
+			names, err := resolveEntityNamesCrossNamespaceTargeting[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, consumerGroupRefs(aclRefs))
 			if err != nil {
 				return fmt.Errorf("resolving AIGatewayAgent %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
 			}
