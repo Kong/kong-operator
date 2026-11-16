@@ -41,10 +41,12 @@ jobs:
           # Returns "<id> <status> <conclusion>" of the CRD job of a run, or nothing when the run
           # has no such job (a docs-only pull request skips the whole verify job).
           crd_job_state() {
-            gh api \
+            # Every page: a tests.yaml run holds far more jobs than the default 30, and a job
+            # off the first page would be invisible.
+            gh api --paginate \
               -H "Accept: application/vnd.github+json" \
-              "repos/${GITHUB_REPOSITORY}/actions/runs/$1/jobs?filter=latest" \
-              --jq '.jobs[] | select(.name == "verify / crd-breaking-changes") | "\(.id) \(.status) \(.conclusion)"' | head -n 1
+              "repos/${GITHUB_REPOSITORY}/actions/runs/$1/jobs?filter=latest&per_page=100" \
+              --jq '.jobs[] | select(.name == "verify / crd-breaking-changes") | "\(.id) \(.status) \(.conclusion)"'
           }
 
           # Runs in any state, not only completed ones: a label event can arrive while the check
