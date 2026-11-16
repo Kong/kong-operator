@@ -8842,9 +8842,10 @@ func jsonName(s string) string {
 	if s == "" {
 		return s
 	}
-	// No underscores: already camelCase or single word — only lowercase first char.
+	// No underscores: already camelCase or a PascalCase variant name. Lowercase
+	// a leading initialism so "OIDC" becomes "oidc" instead of "oIDC".
 	if !strings.Contains(s, "_") {
-		return strings.ToLower(s[:1]) + s[1:]
+		return lowerLeadingInitialism(s)
 	}
 	parts := strings.Split(s, "_")
 	result := make([]string, len(parts))
@@ -8863,6 +8864,27 @@ func jsonName(s string) string {
 		}
 	}
 	return strings.Join(result, "")
+}
+
+// lowerLeadingInitialism lowercases an initialism at the start of an
+// underscore-free name. An all-caps name is fully lowercased ("OIDC" → "oidc").
+// An initialism followed by a word keeps that word's capital ("OIDCConfig" →
+// "oidcConfig"). A name with a single leading capital is unchanged ("Variant1").
+func lowerLeadingInitialism(s string) string {
+	end := 0
+	for end < len(s) && s[end] >= 'A' && s[end] <= 'Z' {
+		end++
+	}
+	switch {
+	case end == len(s):
+		return strings.ToLower(s)
+	case end <= 1:
+		return strings.ToLower(s[:1]) + s[1:]
+	case s[end] >= 'a' && s[end] <= 'z':
+		return strings.ToLower(s[:end-1]) + s[end-1:]
+	default:
+		return strings.ToLower(s[:1]) + s[1:]
+	}
 }
 
 // lowerCamelCase converts a PascalCase or ALL_CAPS string to lowerCamelCase.

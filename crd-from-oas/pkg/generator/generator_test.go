@@ -2692,8 +2692,8 @@ func TestBuildSchemaCursors_RootOneOfVariant(t *testing.T) {
 		Schemas:       map[string]*parser.Schema{"TLSChannelPolicy": variantSchema},
 	}
 
-	// jsonName("TLSChannelPolicy") = "tLSChannelPolicy" (only first char lowercased,
-	// no underscore conversion for PascalCase without underscores).
+	// jsonName("TLSChannelPolicy") = "tlsChannelPolicy" (a leading initialism is
+	// lowercased, no underscore conversion for PascalCase without underscores).
 	fieldCfg := &config.Config{
 		Entities: map[string]*config.EntityConfig{
 			"ChannelPolicy": {
@@ -2702,7 +2702,7 @@ func TestBuildSchemaCursors_RootOneOfVariant(t *testing.T) {
 						Fields: map[string]*config.FieldConfig{
 							"apiSpec": {
 								Fields: map[string]*config.FieldConfig{
-									"tLSChannelPolicy": {
+									"tlsChannelPolicy": {
 										Fields: map[string]*config.FieldConfig{
 											"certificate": {
 												Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
@@ -5866,7 +5866,7 @@ func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t
 				ResponseVariantContainer: "GetConfig()",
 				Cases: []config.GetForUIDRootUnionCase{
 					{
-						TypeValue:            "oIDC",
+						TypeValue:            "oidc",
 						VariantField:         "OIDC",
 						ResponseTypeValue:    "oidc",
 						ResponseVariantField: "OIDCIdentityProviderConfigOutput",
@@ -5909,6 +5909,8 @@ func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t
 	assert.NotContains(t, content, "sdkkonnectops.GetPortalIdentityProvidersRequest")
 	// Slice list-items source iterates the response field directly.
 	assert.Contains(t, content, "for _, entry := range resp.PortalIdentityProviders {")
+	assert.Contains(t, content, `case "oidc":`)
+	assert.Contains(t, content, `case "portalSAML":`)
 	// Pointer-typed SDK discriminator is nil-checked and dereferenced.
 	assert.Contains(t, content, `if responseType := entry.GetType(); responseType == nil || string(*responseType) != "oidc" {`)
 	assert.Contains(t, content, `if responseType := entry.GetType(); responseType == nil || string(*responseType) != "saml" {`)
@@ -7470,6 +7472,13 @@ func TestJSONName(t *testing.T) {
 		{"forward_to_virtual_cluster", "forwardToVirtualCluster"},
 		// Already-camelCase input is idempotent (no underscores).
 		{"displayName", "displayName"},
+		// Leading initialisms are lowercased.
+		{"OIDC", "oidc"},
+		{"SAML", "saml"},
+		{"OIDCConfig", "oidcConfig"},
+		{"TLSChannelPolicy", "tlsChannelPolicy"},
+		{"Variant1", "variant1"},
+		{"Auth0", "auth0"},
 		// Empty string.
 		{"", ""},
 	}
