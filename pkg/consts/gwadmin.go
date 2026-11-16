@@ -106,14 +106,11 @@ const (
 	RelatedImageGWAdminEnvVar = "RELATED_IMAGE_GW_ADMIN"
 
 	// DefaultGWAdminBaseImage is the base image name for the gw-admin container.
-	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp-dev"
+	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp"
 	// DefaultGWAdminTag is the default image tag for the gw-admin container.
-	// gw-admin has no release yet: the tag pins an immutable main-<commit>
-	// build of the dev image by digest, and must be bumped by hand. The build
-	// requires a license (GW_ADMIN_ONPREM_LICENSE_FILE) granting the
+	// gw-admin requires a license (GW_ADMIN_ONPREM_LICENSE_FILE) granting the
 	// entitlements of GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS.
-	// TODO: move to a released image with a renovate annotation once gw-admin is released.
-	DefaultGWAdminTag = "main-42f5715@sha256:7829e796664079b6c1e6187aa58d003791e4090d9c196af5fab172ec43239a44"
+	DefaultGWAdminTag = "1.0.0" // renovate: datasource=docker depName=kong/kong-gw-admin-cp
 	// DefaultGWAdminImage is the full default image reference for the gw-admin container.
 	DefaultGWAdminImage = DefaultGWAdminBaseImage + ":" + DefaultGWAdminTag
 

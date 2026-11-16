@@ -26,10 +26,17 @@ import (
 
 type invalidPolicyChainsError struct {
 	problems []string
+	// serving is the revision of the last configuration that could be sent,
+	// pushed instead, or 0 when there is none (see invalidEntitiesError).
+	serving int64
 }
 
 func (e invalidPolicyChainsError) Error() string {
-	return "Policy chains prevent applying the complete gateway configuration: " + strings.Join(e.problems, "; ")
+	serving := ""
+	if e.serving != 0 {
+		serving = fmt.Sprintf(", gw-admin pods are pushed revision %d, the last that could be sent", e.serving)
+	}
+	return "Policy chains prevent applying the complete gateway configuration" + serving + ": " + strings.Join(e.problems, "; ")
 }
 
 // chainObject is a policy chain of a virtual cluster or listener.

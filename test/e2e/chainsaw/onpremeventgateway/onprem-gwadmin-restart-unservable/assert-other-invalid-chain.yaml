@@ -1,0 +1,10 @@
+# The OnPremEventGateway other_gateway_name can't be pushed: its policy chain
+# is invalid.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($other_gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: InvalidPolicyChain

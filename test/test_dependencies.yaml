@@ -41,8 +41,6 @@ chainsaw:
     # renovate: datasource=docker depName=kong/kong-event-gateway versioning=docker
     tag: '1.3.0'
   gw-admin:
-    # gw-admin has no semver release yet: this is a development image pinned by
-    # digest (an immutable main-<commit> tag), not tracked by renovate. Bump it
-    # by hand, together with consts.DefaultGWAdminTag in pkg/consts/gwadmin.go.
-    image: kong/kong-gw-admin-cp-dev
-    tag: 'main-42f5715@sha256:7829e796664079b6c1e6187aa58d003791e4090d9c196af5fab172ec43239a44'
+    image: kong/kong-gw-admin-cp
+    # renovate: datasource=docker depName=kong/kong-gw-admin-cp versioning=docker
+    tag: '1.0.0'

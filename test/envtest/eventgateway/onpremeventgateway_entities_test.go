@@ -977,7 +977,9 @@ spec:
 
 	t.Run("a gateway is pushed to every gw-admin pod over mutual TLS", func(t *testing.T) {
 		expectPushed(t, gatewayA, []*fakeGWAdmin{pod0, pod1}, func(ct *assert.CollectT, g fakeGateway, expected []uuid.UUID) {
-			assert.Equal(ct, []uuid.UUID{gatewayID(ct, gatewayA)}, expected)
+			// With no data plane certificate yet, the pods don't wait for
+			// the gateway to turn ready: they couldn't.
+			assert.Empty(ct, expected)
 			assert.Empty(ct, g.entities.BackendClusters)
 		})
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(gatewayA), gatewayA))

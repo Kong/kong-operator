@@ -434,6 +434,30 @@ func requestsForGWAdmin(ctx context.Context, cl client.Client, gwAdmin client.Ob
 	return requests
 }
 
+// expectedFor returns the gateways the gw-admin pods of the gateway are told
+// they serve, and wait for to turn ready (see expectedGateways): but those a
+// pod can't be given whole, the gateway itself when it has no data plane
+// certificate, as withCertificates tells, and any whose last push couldn't
+// give them (see Reconciler.unservable), the gateway itself included, so that
+// its push and those of the others tell the pods the same. Such a gateway
+// would keep a pod restarted from turning ready, and from serving every other
+// gateway.
+func (r *Reconciler) expectedFor(
+	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, withCertificates bool,
+) ([]uuid.UUID, error) {
+	ids, err := expectedGateways(ctx, r.Client, gateway)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(ids, func(id uuid.UUID) bool {
+		if id == gatewayID && !withCertificates {
+			return true
+		}
+		_, unservable := r.unservable.Load(id)
+		return unservable
+	}), nil
+}
+
 // expectedGateways returns the ids of the gateways the gw-admin of the gateway
 // must serve: every OnPremEventGateway allowed to use the GWAdmin, in any
 // namespace, not being deleted, and whose UID is a version 4 UUID. gw-admin

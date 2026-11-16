@@ -33,6 +33,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
@@ -769,6 +770,7 @@ spec:
 
 	gatewayA := newGateway("gateway-a")
 	require.NoError(t, cl.Create(ctx, gatewayA))
+	withDataPlaneCertificate(t, ctx, cl, gatewayA)
 
 	t.Run("a gateway without its GWAdmin reports it", func(t *testing.T) {
 		expectUnresolved(t, gatewayA, "NotFound", "The GWAdmin "+ns.Name+"/"+testGWAdminName+" does not exist")
@@ -855,6 +857,7 @@ spec:
 
 	t.Run("gw-admin serves every gateway of its GWAdmin", func(t *testing.T) {
 		require.NoError(t, cl.Create(ctx, gatewayB))
+		withDataPlaneCertificate(t, ctx, cl, gatewayB)
 		ids := []uuid.UUID{}
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(gatewayB), gatewayB)) || !assert.NotEmpty(ct, gatewayB.UID) {
@@ -885,6 +888,7 @@ spec:
 	t.Run("a gateway whose GWAdmin is gone is deleted without waiting for its pods", func(t *testing.T) {
 		gatewayC := newGateway("gateway-c")
 		require.NoError(t, cl.Create(ctx, gatewayC))
+		withDataPlaneCertificate(t, ctx, cl, gatewayC)
 		expectPushed(t, gatewayC, []*fakeGWAdmin{pod0, pod1}, func(*assert.CollectT, fakeGateway, []uuid.UUID) {})
 
 		require.NoError(t, cl.Delete(ctx, gwAdmin.gwAdmin))
@@ -911,4 +915,22 @@ spec:
 			assert.True(ct, apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(gatewayA), &eventgatewayv1alpha1.OnPremEventGateway{})))
 		}, waitTime, tickTime)
 	})
+}
+
+// withDataPlaneCertificate creates a data plane certificate of the gateway,
+// with the Secret it reads: a gw-admin pod is told it serves a gateway, and
+// waits for it to turn ready, only once it can hold one.
+func withDataPlaneCertificate(t *testing.T, ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) {
+	t.Helper()
+	name := "dp-" + gateway.Name
+	require.NoError(t, cl.Create(ctx, &corev1.Secret{
+		Name: name, Namespace: gateway.Namespace,
+		Data: map[string][]byte{"tls.crt": []byte(selfSignedCertificatePEM(t))},
+	}))
+	require.NoError(t, cl.Create(ctx, objectFromYAML[configurationv1alpha1.EventGatewayDataPlaneCertificate](t, gateway.Namespace, `
+metadata: {name: `+name+`}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    certificate: {type: secretRef, secretRef: {name: `+name+`, key: tls.crt}}
+`)))
 }

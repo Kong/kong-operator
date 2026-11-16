@@ -1251,6 +1251,58 @@ func (e invalidEntitiesError) Error() string {
 	return "The configuration isn't pushed, " + keeps + ": these entities can't be sent: " + strings.Join(problems, "; ")
 }
 
+// blockedPush returns why the configuration can't be pushed: entities that
+// can't be sent (see blocked), or policy chains that can't be applied, or nil.
+// Either way, the pods are pushed the gateway, its data plane certificates and
+// the last configuration that could be sent, if any, rather than nothing: a
+// gw-admin pod that lost them, e.g. restarted, gets them again.
+func (c *configuration) blockedPush() error {
+	// Both are told, the chains first: they give the reason of the
+	// conditions of the gateway (see failureReason).
+	var errs []error
+	if len(c.invalidChains) > 0 {
+		errs = append(errs, invalidPolicyChainsError{problems: c.invalidChains})
+	}
+	if err := c.blocked(); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// servingOf returns the revision of the last configuration that could be
+// sent, pushed in place of a configuration blocked, and whether the push is
+// blocked at all (see blockedPush).
+func servingOf(blocked error) (int64, bool) {
+	if e, ok := errors.AsType[invalidEntitiesError](blocked); ok {
+		return e.serving, true
+	}
+	if e, ok := errors.AsType[invalidPolicyChainsError](blocked); ok {
+		return e.serving, true
+	}
+	return 0, false
+}
+
+// withServing returns the error of a blocked push, telling the revision of the
+// last configuration that could be sent, pushed in its place.
+func withServing(blocked error, revision int64) error {
+	if joined, ok := blocked.(interface{ Unwrap() []error }); ok {
+		errs := slices.Clone(joined.Unwrap())
+		for i := range errs {
+			errs[i] = withServing(errs[i], revision)
+		}
+		return errors.Join(errs...)
+	}
+	if e, ok := errors.AsType[invalidEntitiesError](blocked); ok {
+		e.serving = revision
+		return e
+	}
+	if e, ok := errors.AsType[invalidPolicyChainsError](blocked); ok {
+		e.serving = revision
+		return e
+	}
+	return blocked
+}
+
 // byCreation orders objects from the oldest to the newest, then by name and
 // namespace: objects of several namespaces may share a name and a creation
 // second, and come from the cache in any order.

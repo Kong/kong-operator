@@ -18,6 +18,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 )
 
@@ -132,7 +133,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 			_, err = f.r.Reconcile(t.Context(), read(t, cl, f.gateway))
 			require.NoError(t, err)
 			if tt.blocked {
-				require.NotContains(t, f.pod().recorded(), callEntities)
+				require.NotContains(t, f.pod().recorded(), callEntities, "the entities are frozen: only the gateway and its certificates are pushed")
 			} else {
 				require.Contains(t, f.pod().recorded(), callEntities, "an unowned excluded scope must not block the gateway")
 			}
@@ -196,12 +197,22 @@ func TestReconcileClusterPolicyChainParentLifecycle(t *testing.T) {
 				require.Empty(t, held.VirtualClusters)
 				require.Equal(t, "Detached", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
 			} else {
-				require.NotContains(t, f.pod().recorded(), callEntities, "an excluded owning scope must retain the last running document")
+				// The pods are pushed the last configuration that could be sent,
+				// which they may hold already.
+				f.pod().mu.Lock()
+				held := f.pod().gateways[f.gatewayID]
+				f.pod().mu.Unlock()
+				i := slices.IndexFunc(held.VirtualClusters, func(vc gwadminapi.EventGatewayVirtualClusterOnPrem) bool {
+					return vc.Name == string(parent.Spec.APISpec.Name)
+				})
+				require.GreaterOrEqual(t, i, 0, "an excluded owning scope must retain the last running document")
+				require.NotEmpty(t, held.VirtualClusters[i].ClusterPolicies, "with the policies its chain orders")
 				require.Equal(t, first.Status.ConfigRevision, current.Status.ConfigRevision)
 				require.Equal(t, first.Status.ConfigHash, current.Status.ConfigHash)
 				require.Equal(t, "InvalidPolicyChain", condition.Reason)
 				require.Equal(t, "Invalid", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
 				require.NoError(t, f.cl.Delete(t.Context(), duplicate))
+				f.pod().reset()
 				reconcile()
 				require.Contains(t, f.pod().recorded(), callEntities, "repairing the owning scope must resume pending updates")
 				require.Greater(t, read(t, f.cl, f.gateway).Status.ConfigRevision, first.Status.ConfigRevision)
@@ -287,7 +298,7 @@ func TestReconcileClusterPolicyChainLifecycle(t *testing.T) {
 	require.NoError(t, f.cl.Update(t.Context(), chain))
 	f.pod().reset()
 	reconcile()
-	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document, including its revision")
+	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document, including its revision: only the gateway and its certificates are pushed")
 	require.Equal(t, second.Status.ConfigRevision, read(t, f.cl, f.gateway).Status.ConfigRevision)
 	require.Equal(t, second.Status.ConfigHash, read(t, f.cl, f.gateway).Status.ConfigHash)
 	expectProgrammed(metav1.ConditionFalse, "Invalid")
@@ -957,4 +968,76 @@ func TestClusterPolicyOrderEmptyAndReadErrors(t *testing.T) {
 			require.Nil(t, ordered)
 		})
 	}
+}
+
+// TestInvalidChainProvisionsARestartedPod checks a gw-admin pod restarted while
+// a policy chain of the gateway can't be applied still gets the gateway, its
+// data plane certificates and the last configuration that could be sent, and
+// is told the gateways it serves: it can turn ready, for the other gateways of
+// its GWAdmin too.
+func TestInvalidChainProvisionsARestartedPod(t *testing.T) {
+	_, chain, _, objects := clusterPolicyChainObjects(t)
+	f := newPushFixture(t, interceptor.Funcs{}, nil)
+	for _, obj := range slices.Concat(objects[1:], []client.Object{chain}, dataPlaneCertificateObjects(t)) {
+		require.NoError(t, f.cl.Create(t.Context(), obj))
+	}
+	reconcile := func() {
+		t.Helper()
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+	}
+	reconcile()
+	first := read(t, f.cl, f.gateway)
+	require.True(t, apimeta.IsStatusConditionTrue(first.Status.Conditions, "Programmed"))
+
+	chain = read(t, f.cl, chain)
+	chain.Spec.APISpec.Policies = chain.Spec.APISpec.Policies[:1]
+	require.NoError(t, f.cl.Update(t.Context(), chain))
+	f.pod().restart()
+	reconcile()
+
+	current := read(t, f.cl, f.gateway)
+	require.Equal(t, "InvalidPolicyChain", apimeta.FindStatusCondition(current.Status.Conditions, "Programmed").Reason)
+	require.Equal(t, first.Status.ConfigRevision, current.Status.ConfigRevision, "the configuration with the invalid chain isn't recorded")
+	f.pod().mu.Lock()
+	held, registered := f.pod().gateways[f.gatewayID]
+	f.pod().mu.Unlock()
+	require.True(t, registered, "the restarted pod serves the gateway")
+	require.NotEmpty(t, held.VirtualClusters, "with the last configuration that could be sent")
+	require.Contains(t, f.pod().recorded(), callExpected+" "+f.gatewayID.String(), "and is told the gateways it serves")
+}
+
+// TestInvalidChainStopsTrustingDeletedCertificate checks a data plane
+// certificate deleted while a policy chain of the gateway can't be applied
+// stops being trusted: the push is stopped, but the gateway's certificates are
+// still pushed.
+func TestInvalidChainStopsTrustingDeletedCertificate(t *testing.T) {
+	_, chain, _, objects := clusterPolicyChainObjects(t)
+	f := newPushFixture(t, interceptor.Funcs{}, nil)
+	second := fromYAML[configurationv1alpha1.EventGatewayDataPlaneCertificate](t, time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC), `
+metadata: {name: dp-second}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    certificate: {type: secretRef, secretRef: {name: dp-tls, key: tls.crt}}
+`)
+	for _, obj := range slices.Concat(objects[1:], []client.Object{chain, second}, dataPlaneCertificateObjects(t)) {
+		require.NoError(t, f.cl.Create(t.Context(), obj))
+	}
+	reconcile := func() {
+		t.Helper()
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+	}
+	reconcile()
+	require.Len(t, f.pod().holds(f.gatewayID), 2)
+
+	chain = read(t, f.cl, chain)
+	chain.Spec.APISpec.Policies = chain.Spec.APISpec.Policies[:1]
+	require.NoError(t, f.cl.Update(t.Context(), chain))
+	require.NoError(t, f.cl.Delete(t.Context(), read(t, f.cl, second)))
+	reconcile()
+
+	require.Equal(t, "InvalidPolicyChain", apimeta.FindStatusCondition(read(t, f.cl, f.gateway).Status.Conditions, "Programmed").Reason)
+	require.Len(t, f.pod().holds(f.gatewayID), 1, "the certificate deleted is no longer trusted")
 }

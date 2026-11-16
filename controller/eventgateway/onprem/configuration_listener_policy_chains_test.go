@@ -508,7 +508,7 @@ func TestReconcileListenerPolicyChainLifecycle(t *testing.T) {
 	require.NoError(t, f.cl.Update(t.Context(), chain))
 	f.pod().reset()
 	reconcile()
-	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document, including its revision")
+	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document, including its revision: only the gateway and its certificates are pushed")
 	require.Equal(t, pushed.Status.ConfigRevision, read(t, f.cl, f.gateway).Status.ConfigRevision)
 	require.Equal(t, declared, heldIDs())
 	expectProgrammed(metav1.ConditionFalse, "Invalid")

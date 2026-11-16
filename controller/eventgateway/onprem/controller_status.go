@@ -317,7 +317,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		// A static key pushed to a gw-admin pod may be served to data planes,
 		// whether or not the push to the others failed: its fingerprint is
 		// recorded then.
-		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e, result.reachedAPod(cfg)), cond))
+		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e, result.reachedAPod()), cond))
 	}
 	for _, e := range cfg.excluded {
 		what := "Left out of the configuration of the OnPremEventGateway %s: %s"
@@ -326,7 +326,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
 			fmt.Sprintf(what, gatewayKey, e.message))
-		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e.entityStatus, result.reachedAPod(cfg)), cond))
+		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e.entityStatus, result.reachedAPod()), cond))
 	}
 	errs = append(errs, r.reportDetached(ctx, gateway, cfg))
 	return errors.Join(errs...)
