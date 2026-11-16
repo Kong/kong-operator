@@ -215,11 +215,18 @@
       "groupSlug": "aws-sdk-go-v2"
     },
     {
-      "description": "Group the Go toolchain version in go.mod with the golang image version and digest in the Dockerfiles: they must move together in one PR",
+      "description": "Group the Go toolchain version in go.mod with the golang image version and digest in the Dockerfiles, plus all golang.org/x/* modules: they must move together in one PR. govulncheck fails unless every vulnerable module is fixed at once, and the x/* modules co-bump each other (e.g. x/crypto forces x/sys, x/net).",
       "matchManagers": ["gomod", "dockerfile"],
-      "matchDepNames": ["go", "golang"],
+      "matchPackageNames": ["go", "golang", "golang.org/x/**"],
       "groupName": "golang",
       "groupSlug": "golang"
+    },
+    {
+      "description": "Group all OpenTelemetry module updates into one PR (sdk/trace/core must move together to keep govulncheck green)",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["go.opentelemetry.io/otel", "go.opentelemetry.io/otel/**"],
+      "groupName": "opentelemetry",
+      "groupSlug": "opentelemetry"
     },
     {
       "description": "Group the Kubernetes Testing Framework (KTF) bump in go.mod with the ktf CLI pin in .mise.toml: they must move together in one PR",
@@ -308,6 +315,13 @@
       "matchBaseBranches": ["release/*"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
+    },
+    {
+      "description": "On release branches, group every enabled update (Go module patches + golang toolchain/image) into a single PR so govulncheck sees all security fixes together. Must be the last rule so it overrides the family groups above on release branches.",
+      "matchBaseBranches": ["release/*"],
+      "matchManagers": ["gomod", "dockerfile"],
+      "groupName": "release-branch-updates",
+      "groupSlug": "release-branch-updates"
     }
   ]
 }
