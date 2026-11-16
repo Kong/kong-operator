@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   conformance-tests:
-    timeout-minutes: 30
+    # Match CI's budget, leaving room beyond the 90m Go test timeout
+    # for setup, the race build and report upload.
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 120) }}
     runs-on: ubuntu-latest
     name: ${{ format('{0} {1}', matrix.gateway-type, matrix.router-flavor) }}
     strategy:
