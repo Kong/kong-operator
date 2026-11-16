@@ -2177,7 +2177,7 @@ apiGroupVersions:
               responseTypePointer: true
               responseVariantContainer: GetConfig()
               cases:
-                - typeValue: oIDC
+                - typeValue: oidc
                   variantField: OIDC
                   responseTypeValue: oidc
                   responseVariantField: PortalOIDCIdentityProviderConfigOutput
@@ -2186,7 +2186,7 @@ apiGroupVersions:
                       responseField: GetIssuerURL()
                     - objectField: ClientID
                       responseField: GetClientID()
-                - typeValue: sAML
+                - typeValue: saml
                   variantField: SAML
                   responseTypeValue: saml
                   responseVariantField: PortalSAMLIdentityProviderConfig
