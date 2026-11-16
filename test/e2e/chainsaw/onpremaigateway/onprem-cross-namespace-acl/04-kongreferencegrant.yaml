@@ -1,0 +1,24 @@
+# Allows the entities of the Entities namespace to reference the gateway of the
+# gateway's namespace. The agent and the model also reference the consumer group
+# there, which this grant deliberately leaves out:
+# 05-kongreferencegrant.yaml adds it in a later step, so the test proves that the
+# gateway grant alone does not resolve the ACL references.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: ($kong_reference_grant_name)
+  namespace: ($namespace)
+spec:
+  from:
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayModelProvider
+      namespace: ($entities_namespace)
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayAgent
+      namespace: ($entities_namespace)
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayModel
+      namespace: ($entities_namespace)
+  to:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway

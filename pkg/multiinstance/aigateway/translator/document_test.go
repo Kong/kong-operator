@@ -1527,6 +1527,111 @@ func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant(t *testing.T)
 	}
 }
 
+// TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel is the
+// AIGatewayAgent and AIGatewayModel counterpart of the test above: both translations
+// resolve a consumer group ACL reference across namespaces once a KongReferenceGrant in
+// the consumer group's namespace allows it, and refuse it otherwise.
+func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumerGroup := aiGatewayConsumerGroupFixture("group-other")
+	consumerGroup.Namespace = "other"
+	consumerGroup.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+
+	aclRefs := []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: "other", Name: consumerGroup.Name}}
+
+	agent := aiGatewayAgentFixture("agent-a")
+	agent.Spec.APISpec.Policies = nil
+	agent.Spec.APISpec.Access.AuthStrategies = nil
+	agent.Spec.APISpec.Access.Acls = &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+		Type:  aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+		Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+	}
+
+	model := aiGatewayModelFixture("model-a")
+	model.Spec.APISpec.Model.Access.Acls = &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+		Type:  aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
+		Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+	}
+
+	// The consumer group references the gateway across namespaces, so it needs its own
+	// grant in the gateway's namespace.
+	gatewayGrant := crossNamespaceGrant("AIGatewayConsumerGroup", new("gw"))
+
+	tests := []struct {
+		name     string
+		entity   client.Object
+		kind     string
+		aclAllow func(doc *aigw.Document) []string
+	}{
+		{
+			name:     "agent",
+			entity:   agent,
+			kind:     "AIGatewayAgent",
+			aclAllow: func(doc *aigw.Document) []string { return doc.Agents[0].Access.ACLs.Allow },
+		},
+		{
+			name:     "model",
+			entity:   model,
+			kind:     "AIGatewayModel",
+			aclAllow: func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Allow },
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// The entity references the consumer group across namespaces, so it needs a
+			// grant in the consumer group's namespace.
+			aclGrant := &configurationv1alpha1.KongReferenceGrant{
+				Name: "allow-cross-ns-acl", Namespace: "other",
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: []configurationv1alpha1.ReferenceGrantFrom{{
+						Group:     "aiconfiguration.konghq.com",
+						Kind:      configurationv1alpha1.Kind(tt.kind),
+						Namespace: "default",
+					}},
+					To: []configurationv1alpha1.ReferenceGrantTo{{
+						Group: "aiconfiguration.konghq.com",
+						Kind:  "AIGatewayConsumerGroup",
+						Name:  new(configurationv1alpha1.ObjectName(consumerGroup.Name)),
+					}},
+				},
+			}
+
+			for _, grants := range []struct {
+				name   string
+				list   []client.Object
+				wantOK bool
+			}{
+				{name: "no ACL grant", list: []client.Object{gatewayGrant}},
+				{name: "ACL grant", list: []client.Object{gatewayGrant, aclGrant}, wantOK: true},
+			} {
+				t.Run(grants.name, func(t *testing.T) {
+					t.Parallel()
+
+					cl := newTranslatorTestClient(t, append([]client.Object{gw, consumerGroup, tt.entity}, grants.list...)...)
+
+					doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+					require.NoError(t, err)
+
+					status := findStatusByName(t, statuses, tt.entity.GetName())
+					if !grants.wantOK {
+						require.ErrorContains(t, status.Err, "KongReferenceGrant")
+						return
+					}
+					require.NoError(t, status.Err)
+					require.Equal(t, []string{"group-other"}, tt.aclAllow(doc))
+				})
+			}
+		})
+	}
+}
+
 // TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the
 // rendered consumer embeds its credentials' secret-resolved api keys, so a change to the
 // backing Secret changes the rendered document (and, in production, the payload hash that

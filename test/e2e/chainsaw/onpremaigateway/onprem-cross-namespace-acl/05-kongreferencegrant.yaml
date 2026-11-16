@@ -1,0 +1,23 @@
+# Grows the grant of 04-kongreferencegrant.yaml with the consumer group target,
+# so that the agent and the model resolve their cross-namespace ACL references.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: ($kong_reference_grant_name)
+  namespace: ($namespace)
+spec:
+  from:
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayModelProvider
+      namespace: ($entities_namespace)
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayAgent
+      namespace: ($entities_namespace)
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayModel
+      namespace: ($entities_namespace)
+  to:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayConsumerGroup

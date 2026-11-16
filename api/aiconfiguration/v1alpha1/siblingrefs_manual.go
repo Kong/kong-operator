@@ -59,14 +59,8 @@ func HasCrossNamespaceConsumerGroupRefsInto(obj client.Object, namespace string)
 }
 
 // hasConsumerGroupRefInto reports whether the entity declares a consumer group ACL
-// reference, into namespace when namespace is not empty. Only the AIGatewayMCPServer
-// translation resolves these references across namespaces on the on-prem path. The
-// AIGatewayModel and AIGatewayAgent translations reject them, so counting them would
-// report a resolved reference that the translation refuses.
+// reference, into namespace when namespace is not empty.
 func hasConsumerGroupRefInto(obj client.Object, namespace string) bool {
-	if _, ok := obj.(*AIGatewayMCPServer); !ok {
-		return false
-	}
 	withRefs, ok := obj.(crossNamespaceSiblingRefsOwner)
 	if !ok {
 		return false

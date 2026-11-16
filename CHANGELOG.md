@@ -459,6 +459,11 @@
   `KonnectAIGateway`. The consumer group also needs its own grant when it
   references the gateway from another namespace.
   [#5257](https://github.com/Kong/kong-operator/issues/5257)
+- AI Gateway: on an `OnPremAIGateway`, an `AIGatewayAgent` and an
+  `AIGatewayModel` can reference an `AIGatewayConsumerGroup` of another
+  namespace in their ACLs, as on a `KonnectAIGateway`. A `KongReferenceGrant`
+  in the consumer group's namespace must permit the reference.
+  [#5257](https://github.com/Kong/kong-operator/issues/5257)
 
 ### Changed
 

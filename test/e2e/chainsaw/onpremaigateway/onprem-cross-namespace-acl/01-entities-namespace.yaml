@@ -1,0 +1,13 @@
+# The AI Gateway configuration entities live in a namespace the OnPremAIGateway
+# does not own. The WatchNamespaceGrant lets the gateway instance cache that
+# namespace, so that spec.watchNamespaces can include it.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: WatchNamespaceGrant
+metadata:
+  name: allow-onprem-aigateway
+  namespace: ($entities_namespace)
+spec:
+  from:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway
+      namespace: ($namespace)
