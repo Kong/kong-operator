@@ -286,12 +286,19 @@
   [#6573](https://github.com/Kong/kong-operator/pull/6573)
   [#6575](https://github.com/Kong/kong-operator/pull/6575)
 - Added the `EventGatewayVirtualClusterProducePolicyChain` API and CRD, including
-  Helm installation artifacts, to declare Konnect produce-policy ordering with
+  Helm installation artifacts, to declare produce-policy ordering with
   Kubernetes references to the complete set of root and nested policies.
-  The operator now reconciles this ordering in Konnect; on-prem support is not included.
+  The operator reconciles this ordering in Konnect, and applies the declared
+  order to the gw-admin configuration of an `OnPremEventGateway` with the
+  Kubernetes UIDs of the policies. A produce chain owns only the produce list of
+  its virtual cluster: cluster-level, consume and listener ordering stay
+  independent. An invalid or incomplete owning declaration pauses the gateway's
+  configuration updates instead of applying a shortened chain, and deleting the
+  chain restores the default policy order without deleting policy entities.
   [#6534](https://github.com/Kong/kong-operator/pull/6534)
   [#6537](https://github.com/Kong/kong-operator/pull/6537)
   [#6538](https://github.com/Kong/kong-operator/pull/6538)
+  [#6667](https://github.com/Kong/kong-operator/pull/6667)
 - Added the `EventGatewayListenerPolicyChain` API and CRD, including Helm
   installation artifacts, to declare the execution order of all policies on one
   Konnect Event Gateway listener using Kubernetes references.
@@ -437,6 +444,26 @@
   credential renders inside that consumer's document, and a change to its
   Secret or to the grant re-renders the consumer.
   [#6648](https://github.com/Kong/kong-operator/pull/6648)
+- On-prem (self-managed) gateways: Kong entities translated from `HTTPRoute`,
+  `GRPCRoute`, `TLSRoute`, `TCPRoute` and `UDPRoute` now also inherit the
+  `konghq.com/tags` annotation from the route's parent `Gateway` and from that
+  Gateway's `GatewayClass`, as Konnect hybrid gateways already do. This applies
+  to services, routes, upstreams, targets, plugins generated from route filters
+  or for routes without valid backends, and `KongPlugin`/`KongClusterPlugin`
+  instances bound to such routes or services through `konghq.com/plugins`.
+  Certificates and SNIs translated from a Gateway listener's TLS configuration
+  inherit the tags of that Gateway and its GatewayClass. A Kong certificate
+  translated from a Secret referenced through a backend Service's
+  `konghq.com/client-cert` annotation inherits the tags of the Gateways (and
+  their GatewayClasses) of the routes that use the Service; when several
+  Services share one Secret, the tags are the union over those Services.
+  Inherited tags are appended after the entity's own tags: when several
+  `Gateway`s contribute, all `Gateway`s' tags come first (ordered by namespace
+  and name), then all their `GatewayClass`es' tags, regardless of how many
+  sources (listeners, routes, Services) contribute, and the result is
+  deduplicated. Only `Gateway`s reconciled by this controller, and only
+  `GatewayClass`es it controls, contribute tags.
+  [#6539](https://github.com/Kong/kong-operator/pull/6539)
 
 ### Changed
 

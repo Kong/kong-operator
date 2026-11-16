@@ -15,22 +15,28 @@ func TestCertificate_SanitizedCopy(t *testing.T) {
 	}{
 		{
 			name: "fills all fields but Consumer and sanitizes key",
-			in: Certificate{kong.Certificate{
-				ID:        new("1"),
-				Cert:      new("2"),
-				Key:       new("3"),
-				CreatedAt: new(int64(4)),
-				SNIs:      []*string{new("5.1"), new("5.2")},
-				Tags:      []*string{new("6.1"), new("6.2")},
-			}},
-			want: Certificate{kong.Certificate{
-				ID:        new("1"),
-				Cert:      new("2"),
-				Key:       redactedString,
-				CreatedAt: new(int64(4)),
-				SNIs:      []*string{new("5.1"), new("5.2")},
-				Tags:      []*string{new("6.1"), new("6.2")},
-			}},
+			in: Certificate{
+				Certificate: kong.Certificate{
+					ID:        new("1"),
+					Cert:      new("2"),
+					Key:       new("3"),
+					CreatedAt: new(int64(4)),
+					SNIs:      []*string{new("5.1"), new("5.2")},
+					Tags:      []*string{new("6.1"), new("6.2")},
+				},
+				SNITags: map[string][]*string{"5.1": {new("7.1")}},
+			},
+			want: Certificate{
+				Certificate: kong.Certificate{
+					ID:        new("1"),
+					Cert:      new("2"),
+					Key:       redactedString,
+					CreatedAt: new(int64(4)),
+					SNIs:      []*string{new("5.1"), new("5.2")},
+					Tags:      []*string{new("6.1"), new("6.2")},
+				},
+				SNITags: map[string][]*string{"5.1": {new("7.1")}},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -241,13 +241,17 @@ func startProduceChainBehaviorTest(t *testing.T, period time.Duration, wrap func
 	vc.SetGatewayID("gateway-id")
 	vc.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(vc.Generation)}
 	require.NoError(t, cl.Status().Update(ctx, vc))
+	// The mock callbacks run on controller goroutines while the test keeps
+	// updating vc through the client, so resolve its key up front instead of
+	// reading Namespace and Name from the shared object.
+	vcKey := client.ObjectKeyFromObject(vc)
 	remote := &policyChainRemote{policies: []string{}}
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK.EventGatewayVirtualClusterProducePoliciesSDK
 	sdk.EXPECT().GetEventGatewayVirtualClusterProducePolicyChain(mock.Anything, "gateway-id", mock.Anything).
 		RunAndReturn(func(ctx context.Context, _ string, vcID string, _ ...sdkkonnectops.Option) (*sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyChainResponse, error) {
 			var parent configurationv1alpha1.EventGatewayVirtualCluster
-			if err := cl.Get(ctx, client.ObjectKeyFromObject(vc), &parent); err != nil {
+			if err := cl.Get(ctx, vcKey, &parent); err != nil {
 				return nil, err
 			}
 			assert.Equal(t, parent.GetKonnectID(), vcID)
@@ -260,7 +264,7 @@ func startProduceChainBehaviorTest(t *testing.T, period time.Duration, wrap func
 	sdk.EXPECT().UpdateEventGatewayVirtualClusterProducePolicyChain(mock.Anything, mock.Anything).
 		RunAndReturn(func(ctx context.Context, req sdkkonnectops.UpdateEventGatewayVirtualClusterProducePolicyChainRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.UpdateEventGatewayVirtualClusterProducePolicyChainResponse, error) {
 			var parent configurationv1alpha1.EventGatewayVirtualCluster
-			if err := cl.Get(ctx, client.ObjectKeyFromObject(vc), &parent); err != nil {
+			if err := cl.Get(ctx, vcKey, &parent); err != nil {
 				return nil, err
 			}
 			assert.Equal(t, parent.GetKonnectID(), req.VirtualClusterID)
