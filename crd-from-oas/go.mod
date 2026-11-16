@@ -3,7 +3,7 @@ module github.com/kong/kong-operator/v2/crd-from-oas
 go 1.27.4
 
 require (
-	github.com/caarlos0/env/v11 v11.4.1
+	github.com/caarlos0/env/v11 v11.4.2
 	github.com/getkin/kin-openapi v0.152.0
 	github.com/gobuffalo/flect v1.0.3
 	github.com/stretchr/testify v1.12.1
