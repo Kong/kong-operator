@@ -618,9 +618,11 @@ entity ID or `Programmed` status involved:
   declares: a `KongReferenceGrant` does not make a produce-chain reference
   cross-namespace.
 - Deleting only the chain releases the produce claim and rebuilds the document
-  with gw-admin's default produce order (creation time, then name). It never
-  deletes policies or their entities. A policy recreated with a new UID is
-  ordered by its new identity once the declaration lists it.
+  with gw-admin's default produce order: the root groups by creation time, then
+  name, each root immediately followed by its children so that every parent
+  group stays contiguous. It never deletes policies or their entities. A policy
+  recreated with a new UID is ordered by its new identity once the declaration
+  lists it.
 
 The [on-prem produce chain scenario](../test/e2e/chainsaw/onpremeventgateway/onprem-produce-policy-chain/chainsaw-test.yaml)
 covers ordering, sibling reorder and group moves, conflicting ownership, invalid

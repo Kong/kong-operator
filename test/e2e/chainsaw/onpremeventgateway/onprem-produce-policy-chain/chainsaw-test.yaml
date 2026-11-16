@@ -248,8 +248,9 @@ spec:
               name: chain
         - assert:
             file: ../onprem-shared/assert-gateway-programmed.yaml
-        # Default order: roots first (parse, root), then parse's children
-        # (first, second), oldest first.
+        # Default order: the root groups by creation, then name, each root
+        # followed by its children: parse, first and second, then root. A root
+        # inserted between parse and its children would be invalid.
         - script:
             env:
               - name: NAMESPACE
@@ -257,7 +258,7 @@ spec:
               - name: GATEWAY
                 value: ($gateway_name)
             timeout: 3m
-            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["parse", "root", "first", "second"]'
+            content: ../onprem-shared/onprem.sh wait-gwadmin-entities "$GATEWAY" 150 '[.entities.virtual_clusters[0].produce_policies[].name] == ["parse", "first", "second", "root"]'
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
