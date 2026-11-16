@@ -769,8 +769,9 @@ without displacing the owner. Missing, malformed, recreated, and terminating
 owners release their Consume claim; a terminating owner need not finish its
 finalizers before handover. Deleting only the chain releases only that claim,
 keeps policy CRs and entities, and resumes ordinary deterministic assembly:
-creation timestamp then resource name, with parents assembled before children.
-It does not retain historical remote ordering as Konnect does.
+each root and its children stay contiguous, in creation timestamp then
+resource name order. It does not retain historical remote ordering as Konnect
+does.
 
 Missing, duplicate, terminating, wrong-kind, wrong-virtual-cluster, invalid
 parent/group, and incomplete declarations cannot produce a shortened successful
