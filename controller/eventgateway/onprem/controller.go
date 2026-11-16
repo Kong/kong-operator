@@ -166,6 +166,7 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	for _, policy := range []client.Object{
 		&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
 		&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+		&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
 		&configurationv1alpha1.EventGatewayListenerPolicy{},
 	} {
 		b = b.Watches(policy,
@@ -333,8 +334,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		// Otherwise, when no pod holds it either (see recoverLastConfig),
 		// they are only pushed the gateway and its data plane certificates,
 		// so that one deleted stops being trusted, and keep the entities they
-		// hold. Invalid policy chains stop that push too (see
-		// pushConfiguration).
+		// hold. An invalid policy chain skips the entity write in the same way.
 		if notPushable != nil {
 			log.Debug(logger, "no last configuration of the OnPremEventGateway is pushed", "reason", notPushable.Error())
 			break
@@ -530,7 +530,9 @@ func (r pushResult) reachedAPod(cfg configuration) bool {
 // errors of the push: any other error, e.g. listing the gateways of the
 // GWAdmin, is returned apart, and only retried. A configuration blocked, with
 // entities that can't be sent, isn't pushed: blocked is the error of the push,
-// once the GWAdmin is resolved, so that the status still tells of it.
+// once the GWAdmin is resolved, so that the status still tells of it. An
+// invalid policy chain skips only the entity write: the gateway, its data plane
+// certificates and the expected gateways are still pushed.
 func (r *Reconciler) pushConfiguration(
 	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, config gatewayConfig, cfg configuration,
 	blocked error,
@@ -542,9 +544,6 @@ func (r *Reconciler) pushConfiguration(
 	if err != nil {
 		return result, nil, err
 	}
-	if len(cfg.invalidChains) > 0 {
-		return pushResult{done: true, target: target}, invalidPolicyChainsError{problems: cfg.invalidChains}, nil
-	}
 	expected, err := expectedGateways(ctx, r.Client, gateway)
 	if err != nil {
 		return result, nil, err
@@ -555,7 +554,10 @@ func (r *Reconciler) pushConfiguration(
 	// A stopped push with no configuration to push leaves the entities the
 	// pods hold as they are.
 	invalid, isBlocked := errors.AsType[invalidEntitiesError](blocked)
-	withEntities := !isBlocked || invalid.serving != 0
+	// An invalid policy chain skips only the entity write: the gateway, its
+	// data plane certificates and the expected gateways are still pushed, so a
+	// certificate deleted stops being trusted and a restarted pod is registered.
+	withEntities := (!isBlocked || invalid.serving != 0) && len(cfg.invalidChains) == 0
 
 	certificatesKey, err := certificatesHash(cfg.certificates)
 	if err != nil {
@@ -593,7 +595,13 @@ func (r *Reconciler) pushConfiguration(
 	result = pushResult{done: true, target: target, pending: pending, certificates: certificates, terminatingFailed: terminatingFailed.Load()}
 	if pushErr != nil {
 		result.retryAfter, result.failed = r.backoff.Failed(gateway.UID, inputs, pushErr, time.Now()), true
+		if len(cfg.invalidChains) > 0 {
+			pushErr = errors.Join(invalidPolicyChainsError{problems: cfg.invalidChains}, pushErr)
+		}
 		return result, pushErr, nil
+	}
+	if len(cfg.invalidChains) > 0 {
+		return result, invalidPolicyChainsError{problems: cfg.invalidChains}, nil
 	}
 	r.backoff.Forget(gateway.UID)
 	if len(pending) == 0 && !result.terminatingFailed {

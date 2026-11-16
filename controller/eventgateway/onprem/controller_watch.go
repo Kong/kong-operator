@@ -58,12 +58,14 @@ func entityChanged() predicate.Predicate {
 			switch e.ObjectNew.(type) {
 			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
 				*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+				*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy, *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain,
 				*configurationv1alpha1.EventGatewayListenerPolicy, *configurationv1alpha1.EventGatewayListenerPolicyChain:
 				return !e.ObjectOld.GetDeletionTimestamp().Equal(e.ObjectNew.GetDeletionTimestamp())
 			case *configurationv1alpha1.EventGatewayVirtualCluster:
 				oldAnnotations, newAnnotations := e.ObjectOld.GetAnnotations(), e.ObjectNew.GetAnnotations()
 				return oldAnnotations[policychain.OwnerAnnotation] != newAnnotations[policychain.OwnerAnnotation] ||
-					oldAnnotations[policychain.ProduceOwnerAnnotation] != newAnnotations[policychain.ProduceOwnerAnnotation]
+					oldAnnotations[policychain.ProduceOwnerAnnotation] != newAnnotations[policychain.ProduceOwnerAnnotation] ||
+					oldAnnotations[policychain.ConsumeOwnerAnnotation] != newAnnotations[policychain.ConsumeOwnerAnnotation]
 			}
 			return false
 		},
@@ -102,7 +104,7 @@ func mapEntityToOnPremEventGateway(cl client.Client) handler.MapFunc {
 }
 
 // mapPolicyToChainGateways also rebuilds gateways of the chains referencing a
-// cluster, produce or listener policy, which may have a different parent,
+// cluster, produce, consume or listener policy, which may have a different parent,
 // including a policy deleted and recreated there.
 func mapPolicyToChainGateways(cl client.Client) handler.MapFunc {
 	toGateway := mapEntityToOnPremEventGateway(cl)
@@ -121,6 +123,10 @@ func mapPolicyToChainGateways(cl client.Client) handler.MapFunc {
 			var list configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainList
 			chains, err = listObjects(ctx, cl, &list, &list.Items,
 				index.IndexFieldEventGatewayVirtualClusterProducePolicyChainOnEventGatewayVirtualClusterProducePolicyRef, key)
+		case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+			var list configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterConsumePolicyRef, key)
 		case *configurationv1alpha1.EventGatewayListenerPolicy:
 			var list configurationv1alpha1.EventGatewayListenerPolicyChainList
 			chains, err = listObjects(ctx, cl, &list, &list.Items,

@@ -37,12 +37,13 @@ func sameEntities(held gwadminapi.GatewayEntitySet, pushedKey []byte, orderedPol
 
 // orderedPolicyLists names the parents whose policy lists a policy chain
 // orders: clusterAndListener, those whose cluster-level or listener policies
-// a chain orders, and produce, those whose produce policies a produce chain
-// orders. The lists are independent: a chain of one kind doesn't make the
+// a chain orders, and produce and consume, those whose corresponding policies
+// a chain orders. The lists are independent: a chain of one kind doesn't make the
 // order of another list significant.
 type orderedPolicyLists struct {
 	clusterAndListener []uuid.UUID
 	produce            []uuid.UUID
+	consume            []uuid.UUID
 }
 
 // sameEntitiesFor is sameEntities with the policy lists each chain orders.
@@ -126,7 +127,9 @@ func sortedByID(e gwadminapi.GatewayEntitySet, ordered orderedPolicyLists) gwadm
 		if !slices.Contains(ordered.clusterAndListener, vc.Id) {
 			vc.ClusterPolicies = byID(vc.ClusterPolicies, func(p gwadminapi.EventGatewayClusterPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
 		}
-		vc.ConsumePolicies = byID(vc.ConsumePolicies, func(p gwadminapi.EventGatewayConsumePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
+		if !slices.Contains(ordered.consume, vc.Id) {
+			vc.ConsumePolicies = byID(vc.ConsumePolicies, func(p gwadminapi.EventGatewayConsumePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
+		}
 		if !slices.Contains(ordered.produce, vc.Id) {
 			vc.ProducePolicies = byID(vc.ProducePolicies, func(p gwadminapi.EventGatewayProducePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
 		}
