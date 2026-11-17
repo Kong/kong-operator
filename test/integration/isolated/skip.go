@@ -22,11 +22,3 @@ func SkipIfEnterpriseNotEnabled(ctx context.Context, t *testing.T, _ *envconf.Co
 	}
 	return ctx
 }
-
-// SkipBrokenKongPluginsRejectedByWebhook skips tests relying on KongPlugins with a broken configuration
-// being accepted by the cluster, to exercise the FallbackConfiguration feature. The operator's validating
-// webhook (kong.validations.kong.konghq.com), active in this suite, rejects them at admission.
-func SkipBrokenKongPluginsRejectedByWebhook(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-	t.Skip("skipping, the operator's validating webhook rejects KongPlugins with a broken configuration that this test relies on")
-	return ctx
-}

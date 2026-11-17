@@ -84,7 +84,7 @@ spec:
             port:
               number: 80
 ---
-# This is the ingress to expose graqhql services. 
+# This is the ingress to expose GraphQL services. 
 # Because we attached the `degraphql` plugin to the ingress, regular route matching is not available.
 # So we cannot access the console, then we used two ingresses for console and graphQL service.
 # You could use `curl -H"Host:graphql.service.example" http://${PROXY_IP}/...` to test function of degraphql plugin.

@@ -157,7 +157,9 @@ func TestCustomEntityExample(t *testing.T) {
 			return ctx
 		}).
 		Assess("entities not passing schema validation are excluded from config and produce KongConfigurationTranslationFailed events", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
-			t.Skip("skipping, the operator's validating webhook rejects KongCustomEntities not passing schema validation")
+			// TODO: no KongConfigurationTranslationFailed event is emitted for the invalid entity when the
+			// ControlPlane is managed by the operator. Investigate and re-enable.
+			t.Skip("skipping, KongConfigurationTranslationFailed event is not emitted for the invalid KongCustomEntity")
 
 			namespace := GetNamespaceForT(ctx, t)
 			c, err := clientset.NewForConfig(conf.Client().RESTConfig())

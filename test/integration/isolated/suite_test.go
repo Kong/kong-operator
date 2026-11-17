@@ -42,6 +42,7 @@ import (
 	kotest "github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/helpers/webhook"
 	"github.com/kong/kong-operator/v2/test/integration"
 	kicconsts "github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -110,6 +111,10 @@ func TestMain(m *testing.M) {
 	tenv.cfg = cfg
 
 	opts := []integration.SuiteOption{
+		// Let KongPlugins and KongCustomEntities with an invalid configuration through admission,
+		// as the FallbackConfiguration and schema validation tests rely on them being accepted
+		// by the API server. Webhook validation is covered by the validating webhook suite.
+		integration.WithWebhookOptions(webhook.WithoutValidatedResources("kongplugins", "kongclusterplugins", "kongcustomentities")),
 		integration.WithControllerConfigOptions(func(c *manager.Config) {
 			c.ControlPlaneConfigurationDumpEnabled = true
 			c.ControlPlaneConfigurationDumpAddr = controlPlaneDiagnosticsAddr
@@ -332,8 +337,9 @@ func deployGateway(
 				return operatorv2beta1.ControlPlaneFeatureGate{Name: name, State: state}
 			}),
 			ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
-				State:         operatorv2beta1.ConfigDumpStateEnabled,
-				DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
+				State: operatorv2beta1.ConfigDumpStateEnabled,
+				// Required by the CRD: an empty value is rejected, and the tests don't need sensitive data.
+				DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
 			},
 		}
 		gc.Spec.ControlPlaneOptions = &operatorv2beta1.GatewayConfigControlPlaneOptions{ControlPlaneOptions: cpOpts}

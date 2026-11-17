@@ -9,6 +9,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -24,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestKongUpstreamPolicyStatus(t *testing.T) {
@@ -166,8 +168,12 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			}
-			_, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
-			require.NoError(t, err)
+			// The Ingress admission webhook looks the KongServiceFacade up in the ControlPlane's cache, which
+			// may not have observed the just created object yet, so retry.
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				_, err := cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
+				assert.NoError(c, err)
+			}, consts.IngressWait, consts.WaitTick)
 			cleaner.Add(ingress)
 
 			t.Log("creating HTTPRoute")

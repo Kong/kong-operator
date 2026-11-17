@@ -71,6 +71,7 @@ type SuiteOption func(*suiteOptions)
 type suiteOptions struct {
 	createKongLicense       bool
 	controllerConfigOptions []testutils.ControllerConfigOption
+	webhookOptions          []webhook.Option
 }
 
 // WithKongLicense loads license data from the KONG_LICENSE_DATA
@@ -87,6 +88,13 @@ func WithKongLicense() SuiteOption {
 func WithControllerConfigOptions(opts ...testutils.ControllerConfigOption) SuiteOption {
 	return func(o *suiteOptions) {
 		o.controllerConfigOptions = append(o.controllerConfigOptions, opts...)
+	}
+}
+
+// WithWebhookOptions adjusts the validating webhook configuration registered by the test suite.
+func WithWebhookOptions(opts ...webhook.Option) SuiteOption {
+	return func(o *suiteOptions) {
+		o.webhookOptions = append(o.webhookOptions, opts...)
 	}
 }
 
@@ -190,7 +198,7 @@ func Suite(m *testing.M, opts ...SuiteOption) {
 
 	fmt.Println("INFO: configuring validating webhook")
 	checkConnectivityToWebhook, cleanupWebhook, err := webhook.EnsureValidatingWebhookRegistration(
-		GetCtx(), clients.K8sClient, controllerNamespace,
+		GetCtx(), clients.K8sClient, controllerNamespace, so.webhookOptions...,
 	)
 	exitOnErr(err)
 	defer cleanupWebhook()

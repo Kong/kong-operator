@@ -28,7 +28,6 @@ func TestIngressWithBrokenPluginFallback(t *testing.T) {
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("skip as the broken KongPlugin is rejected by the webhook", SkipBrokenKongPluginsRejectedByWebhook).
 		WithSetup("create test namespace", featureSetup(withoutGateway())).
 		Assess("deploying to cluster works and HTTP traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
