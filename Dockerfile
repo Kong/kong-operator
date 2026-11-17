@@ -34,6 +34,7 @@ ARG TARGETARCH
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
+ARG CGO_ENABLED=0
 
 RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
@@ -53,8 +54,6 @@ RUN --mount=type=bind,source=.,target=/prebuilt \
     if [ "${PREBUILT}" = "true" ]; then \
         cp "/prebuilt/bin/manager-linux-${TARGETARCH}" bin/manager; \
     else \
-        CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
-        TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
         make build.operator; \
     fi
 
