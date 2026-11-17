@@ -254,11 +254,12 @@ func TestBindingsForPlugin_InheritedTags(t *testing.T) {
 			Spec:        gwtypes.GatewaySpec{GatewayClassName: gwtypes.ObjectName(class)},
 		}
 	}
+	// gw-b and class-a also carry tags with reserved prefixes, which must never reach the bindings.
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
 		newGateway("gw-a", "class-a", "team-a"),
-		newGateway("gw-b", "class-b", "team-b"),
+		newGateway("gw-b", "class-b", "team-b,k8s-uid:1234"),
 		newGateway("theirs", "their-class", "their-tag"),
-		&gwtypes.GatewayClass{Name: "class-a", Annotations: map[string]string{"konghq.com/tags": "class-a-tag"}},
+		&gwtypes.GatewayClass{Name: "class-a", Annotations: map[string]string{"konghq.com/tags": "managed-by:someone-else,class-a-tag"}},
 		&gwtypes.GatewayClass{Name: "class-b", Annotations: map[string]string{"konghq.com/tags": "class-b-tag"}},
 		&gwtypes.GatewayClass{Name: "their-class", Annotations: map[string]string{"konghq.com/tags": "their-class-tag"}},
 	).Build()
