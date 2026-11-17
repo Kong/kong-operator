@@ -1,6 +1,7 @@
 package gatewayapi
 
 import (
+	"context"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -23,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	envtestconsts "github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
@@ -195,7 +197,7 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 	}, envtestconsts.WaitTime, envtestconsts.TickTime, "the Gateway should report the existing KonnectGatewayControlPlane as not programmed")
 
 	t.Log("asserting the pre-existing Konnect name is never rewritten")
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		var l konnectv1alpha2.KonnectGatewayControlPlaneList
 		if err := c.List(ctx, &l, client.InNamespace(gwNs.Name)); err != nil {
 			return false

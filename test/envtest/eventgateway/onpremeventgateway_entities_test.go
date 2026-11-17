@@ -42,6 +42,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -573,7 +574,7 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 			}
 		}, waitTime, tickTime)
 		// gw-admin keeps the value pushed, while the key reports the change.
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			values := pushedValues(&assert.CollectT{})
 			return len(values) == len(pushed) && !slices.Equal(values, pushed)
 		}, 3*time.Second, tickTime, "gw-admin keeps the value pushed")

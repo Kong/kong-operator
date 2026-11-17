@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
@@ -442,7 +443,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	})
 
 	t.Run("routes attached to Gateways that are not reconciled by KIC should not have other Gateway refs cleared from status", func(t *testing.T) {
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&routeNonKong), &routeNonKong); err != nil {
 				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&routeNonKong), err)
 				return true

@@ -22,6 +22,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -114,7 +115,7 @@ func TestKonnectEventGatewayUpdate5xxDoesNotHotLoop(t *testing.T) {
 	// a hot loop produces hundreds.
 	const maxCallsInWindow = 15
 	callsBefore := updateCalls.Load()
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		return updateCalls.Load()-callsBefore > maxCallsInWindow
 	}, 5*time.Second, 100*time.Millisecond,
 		"UpdateEventGateway called too many times: reconciler is hot-looping on 5xx errors")

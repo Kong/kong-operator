@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
@@ -770,7 +771,7 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingressInvalid, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	t.Log("verifying new configuration is not applied to kong proxy")
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/bar/", proxyURL))
 		require.NoError(t, err)
 		defer resp.Body.Close()
