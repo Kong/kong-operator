@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.5.0
 
 ### Added
 
@@ -17,6 +17,10 @@
   which keg 1.3.0 removed. Disable it with the chart value
   `global.validatingPolicies.kegDataPlaneDeprecatedSettings.enabled`.
   [#6637](https://github.com/Kong/kong-operator/pull/6637)
+
+### Changed
+
+- Bump default image to `2.4.0`.
 
 ## 1.5.0-rapid.3.1
 
