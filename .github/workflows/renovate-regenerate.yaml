@@ -22,11 +22,14 @@ concurrency:
 jobs:
   regenerate:
     # Renovate names the branch after the package, for example
-    # renovate/main-github.com-kong-sdk-konnect-go-0.x. The actor check keeps the run that
-    # the pushed commit starts from regenerating the files a second time.
+    # renovate/main-github.com-kong-sdk-konnect-go-0.x. On release branches Renovate groups
+    # every update under the release-branch-updates slug, so the package name is only in the
+    # pull request body. The actor check keeps the run that the pushed commit starts from
+    # regenerating the files a second time.
     if: >-
       github.actor == 'renovate[bot]' &&
-      contains(github.head_ref, 'sdk-konnect-go')
+      (contains(github.head_ref, 'sdk-konnect-go') ||
+       contains(github.event.pull_request.body, 'sdk-konnect-go'))
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     steps:
