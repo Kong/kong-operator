@@ -532,3 +532,45 @@ func TestGRPCPluginsForRule_ExtensionRef_Ordering(t *testing.T) {
 		})
 	}
 }
+
+func TestGRPCPluginsForRule_ExtensionRef_Condition(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.GRPCRouteRule{
+		Filters: []gatewayv1.GRPCRouteFilter{
+			{
+				Type: gatewayv1.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+	referencedPlugin := &configurationv1.KongPlugin{
+		Name:       "referenced-plugin",
+		Namespace:  "test-namespace",
+		PluginName: "request-termination",
+		Condition:  `http.path ^= "/api"`,
+	}
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(referencedPlugin).
+		Build()
+
+	plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	assert.Equal(t, `http.path ^= "/api"`, plugins[0].Condition)
+}

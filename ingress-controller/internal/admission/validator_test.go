@@ -43,9 +43,12 @@ type fakePluginSvc struct {
 	valid bool
 	// If non-nil, GetFullSchema returns this error (e.g. 404 = plugin not on gateway).
 	getFullSchemaErr error
+	// validated is the last plugin passed to Validate.
+	validated *kong.Plugin
 }
 
-func (f *fakePluginSvc) Validate(context.Context, *kong.Plugin) (bool, string, error) {
+func (f *fakePluginSvc) Validate(_ context.Context, plugin *kong.Plugin) (bool, string, error) {
+	f.validated = plugin
 	return f.valid, f.msg, f.err
 }
 
@@ -321,6 +324,39 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestKongHTTPValidator_ValidatePluginSendsCondition(t *testing.T) {
+	const condition = `http.path ^= "/api"`
+	store, _ := store.NewFakeStore(store.FakeObjects{})
+	pluginSvc := &fakePluginSvc{valid: true}
+	validator := KongHTTPValidator{
+		SecretGetter: store,
+		AdminAPIServicesProvider: fakeServicesProvider{
+			pluginSvc: pluginSvc,
+		},
+		ingressClassMatcher: fakeClassMatcher,
+	}
+
+	t.Run("KongPlugin", func(t *testing.T) {
+		ok, _, err := validator.ValidatePlugin(t.Context(), configurationv1.KongPlugin{
+			PluginName: "key-auth",
+			Condition:  condition,
+		}, nil)
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, new(condition), pluginSvc.validated.Condition)
+	})
+
+	t.Run("KongClusterPlugin", func(t *testing.T) {
+		ok, _, err := validator.ValidateClusterPlugin(t.Context(), configurationv1.KongClusterPlugin{
+			PluginName: "key-auth",
+			Condition:  condition,
+		}, nil)
+		require.NoError(t, err)
+		require.True(t, ok)
+		assert.Equal(t, new(condition), pluginSvc.validated.Condition)
+	})
 }
 
 func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {

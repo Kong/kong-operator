@@ -53,6 +53,13 @@ spec:
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
+          condition:
+            description: |-
+              Condition is an expression evaluated for every request right before the plugin's
+              `access` phase. When it evaluates to false, the plugin is skipped for that request.
+              When it evaluates to true or is unset, the plugin runs as usual.
+              Requires Kong Gateway 3.14 or later.
+            type: string
           config:
             description: |-
               Config contains the plugin configuration. It's a list of keys and values
