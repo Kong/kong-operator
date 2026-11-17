@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/go-database-reconciler/pkg/crud"
 	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 	prom "github.com/prometheus/client_model/go"
@@ -178,6 +179,136 @@ func TestPushFailureReason(t *testing.T) {
 
 			reason := pushFailureReason(tc.err)
 			require.Equal(t, tc.expectedReason, reason)
+		})
+	}
+}
+
+func TestRecordKonnectConfigSync(t *testing.T) {
+	instanceID := uuid.New()
+	m := NewGlobalCtrlRuntimeMetricsRecorder(instanceID)
+	serverURL := fmt.Sprintf("https://%s.konghq.tech/kic/api/control-planes/%s", uuid.NewString(), uuid.NewString())
+
+	m.RecordKonnectConfigSyncSuccess(KonnectConfigSync{
+		ServerURL:   serverURL,
+		Concurrency: 4,
+		Duration:    time.Second,
+		EntityCount: 10,
+		CreateOps:   3,
+		UpdateOps:   2,
+		DeleteOps:   1,
+	})
+	m.RecordKonnectConfigSyncFailure(KonnectConfigSync{
+		ServerURL:   serverURL,
+		Concurrency: 4,
+		Duration:    time.Second,
+		EntityCount: 20,
+		CreateOps:   5,
+	}, fmt.Errorf("wrapped: %w", kong.NewAPIError(http.StatusBadRequest, "bad request")))
+
+	metricFamilies, err := metrics.Registry.Gather()
+	require.NoError(t, err)
+
+	// findMetric returns the metric of the given family matching all given labels.
+	findMetric := func(t *testing.T, familyName string, labels map[string]string) *prom.Metric {
+		t.Helper()
+		family, ok := lo.Find(metricFamilies, func(family *prom.MetricFamily) bool {
+			return family.GetName() == familyName
+		})
+		require.True(t, ok, "expected to find %q metric", familyName)
+		labels[ServerURLKey] = serverURL
+		labels[ConcurrencyKey] = "4"
+		labels[InstanceIDKey] = instanceID.String()
+		metric, ok := lo.Find(family.GetMetric(), func(metric *prom.Metric) bool {
+			return lo.EveryBy(lo.Entries(labels), func(e lo.Entry[string, string]) bool {
+				return lo.ContainsBy(metric.GetLabel(), func(label *prom.LabelPair) bool {
+					return label.GetName() == e.Key && label.GetValue() == e.Value
+				})
+			})
+		})
+		require.True(t, ok, "expected to find %q metric with labels %v", familyName, labels)
+		return metric
+	}
+
+	successLabels := func() map[string]string {
+		return map[string]string{SuccessKey: SuccessTrue, StatusCodeKey: ""}
+	}
+	failureLabels := func() map[string]string {
+		return map[string]string{SuccessKey: SuccessFalse, StatusCodeKey: "400"}
+	}
+
+	t.Run("duration", func(t *testing.T) {
+		require.Equal(t, uint64(1), findMetric(t, MetricNameKonnectConfigSyncDuration, successLabels()).GetHistogram().GetSampleCount())
+		require.Equal(t, uint64(1), findMetric(t, MetricNameKonnectConfigSyncDuration, failureLabels()).GetHistogram().GetSampleCount())
+	})
+	t.Run("entity count", func(t *testing.T) {
+		require.InDelta(t, 10, findMetric(t, MetricNameKonnectConfigSyncEntityCount, successLabels()).GetGauge().GetValue(), 0)
+		require.InDelta(t, 20, findMetric(t, MetricNameKonnectConfigSyncEntityCount, failureLabels()).GetGauge().GetValue(), 0)
+	})
+	t.Run("operations", func(t *testing.T) {
+		for operation, expected := range map[string]float64{
+			OperationCreate: 3,
+			OperationUpdate: 2,
+			OperationDelete: 1,
+		} {
+			labels := successLabels()
+			labels[OperationKey] = operation
+			require.InDelta(t, expected, findMetric(t, MetricNameKonnectConfigSyncOperations, labels).GetCounter().GetValue(), 0)
+		}
+		labels := failureLabels()
+		labels[OperationKey] = OperationCreate
+		require.InDelta(t, 5, findMetric(t, MetricNameKonnectConfigSyncOperations, labels).GetCounter().GetValue(), 0)
+	})
+}
+
+func TestKonnectSyncFailureStatusCode(t *testing.T) {
+	badRequestErr := kong.NewAPIError(http.StatusBadRequest, "bad request")
+	notFoundErr := kong.NewAPIError(http.StatusNotFound, "not found")
+
+	testCases := []struct {
+		name               string
+		err                error
+		expectedStatusCode string
+	}{
+		{
+			name:               "api_error",
+			err:                badRequestErr,
+			expectedStatusCode: "400",
+		},
+		{
+			name:               "api_error_wrapped",
+			err:                fmt.Errorf("wrapped: %w", badRequestErr),
+			expectedStatusCode: "400",
+		},
+		{
+			name:               "deck_err_array_with_api_errors",
+			err:                deckutils.ErrArray{Errors: []error{errors.New("generic error"), notFoundErr, badRequestErr}},
+			expectedStatusCode: "404",
+		},
+		{
+			name: "wrapped_deck_err_array_with_crud_action_errors",
+			err: fmt.Errorf("wrapped: %w", deckutils.ErrArray{Errors: []error{
+				&crud.ActionError{OperationType: crud.Create, Kind: "service", Name: "svc", Err: errors.New("generic error")},
+				&crud.ActionError{OperationType: crud.Update, Kind: "route", Name: "route", Err: badRequestErr},
+			}}),
+			expectedStatusCode: "400",
+		},
+		{
+			name:               "network_error",
+			err:                net.UnknownNetworkError("network error"),
+			expectedStatusCode: "",
+		},
+		{
+			name:               "generic_error",
+			err:                errors.New("generic error"),
+			expectedStatusCode: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tc.expectedStatusCode, konnectSyncFailureStatusCode(tc.err))
 		})
 	}
 }
