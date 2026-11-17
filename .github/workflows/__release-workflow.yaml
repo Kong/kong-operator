@@ -204,7 +204,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-push-token: ${{ secrets.dockerhub-push-token }}
       dockerhub-pull-token: ${{ secrets.dockerhub-pull-token }}
     # NOTE: needs semver so that a tag rejected there (e.g. a malformed rapid
     # version) does not get images pushed.
@@ -212,7 +212,7 @@ jobs:
     - semver
     with:
       registry: ${{ inputs.registry }}
-      username: ${{ inputs.dockerhub-push-username }}
+      push-username: ${{ inputs.dockerhub-push-username }}
       pull-username: ${{ inputs.dockerhub-pull-username }}
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}

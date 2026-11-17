@@ -3,7 +3,7 @@ name: Reusable build
 on:
   workflow_call:
     secrets:
-      dockerhub-token:
+      dockerhub-push-token:
         description: Token to use for logging in to the registry when "push" input is set.
         required: false
       dockerhub-pull-token:
@@ -17,7 +17,7 @@ on:
         required: false
 
     inputs:
-      username:
+      push-username:
         description: Username to use for logging in to the registry when "push" input is set.
         required: false
         type: string
@@ -195,8 +195,8 @@ jobs:
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ inputs.registry }}
-          username: ${{ inputs.username }}
-          password: ${{ secrets.dockerhub-token }}
+          username: ${{ inputs.push-username }}
+          password: ${{ secrets.dockerhub-push-token }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -421,8 +421,8 @@ jobs:
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ inputs.registry }}
-          username: ${{ inputs.username }}
-          password: ${{ secrets.dockerhub-token }}
+          username: ${{ inputs.push-username }}
+          password: ${{ secrets.dockerhub-push-token }}
 
       # Prepare today's date in the same format as the pattern used in the metadata-action above for schedule trigger.
       - name: Prepare today's date string
