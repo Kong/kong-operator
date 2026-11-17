@@ -81,8 +81,11 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
 
-	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType)
-	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
+	shard, err := test.ConformanceShardFromEnv()
+	require.NoError(t, err)
+
+	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType, supportedFeatures, shard)
+	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests, shard)
 }
 
 const conformanceLooserTimeout = 180 * time.Second
@@ -94,6 +97,7 @@ func runConformance(
 	supportedFeatures []features.FeatureName,
 	cleanupResources bool,
 	skipped []string,
+	shard test.ConformanceShard,
 ) {
 	t.Helper()
 	ensureConformanceNamespace(ctx, t)
@@ -122,6 +126,13 @@ func runConformance(
 	// (standard vs hybrid) so that reports for different topologies don't
 	// collide on the same mode value in the gateway-api conformance table.
 	mode := fmt.Sprintf("%s-%s", kongRouterFlavor, gwType)
+	if shard.Enabled() {
+		// Sharded runs only execute a subset of the suite, so give their
+		// reports a distinct mode (and file name) instead of letting them
+		// collide with the full-suite report for the same topology.
+		mode = fmt.Sprintf("%s-shard-%d-of-%d", mode, shard.Index, shard.Total)
+		t.Logf("running conformance test shard %s", shard)
+	}
 	md := metadata.Metadata()
 	reportFileName := fmt.Sprintf("experimental-%s-%s-report.yaml", md.Release, mode)
 

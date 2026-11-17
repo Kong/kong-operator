@@ -16,7 +16,7 @@ jobs:
     # tool installation, cluster setup, the race build and artifact uploads.
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 120) }}
     runs-on: ubuntu-latest
-    name: ${{ matrix.gateway-type }} ${{ matrix.router-flavor }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }}
+    name: ${{ matrix.gateway-type }} ${{ matrix.router-flavor }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format(' shard {0}/{1}', matrix.shard_index, matrix.shard_total) || '' }}
     env:
       # Only used by the hybrid+ipv6 leg's pre-created cluster (see below);
       # harmless and unused by every other leg, which manages its own
@@ -25,24 +25,48 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        router-flavor:
-          - traditional_compatible
-          - expressions
-        gateway-type:
-          - standard
-          - hybrid
-        ip_family:
-          - ipv4
-        exclude:
-         - router-flavor: expressions
-           gateway-type: hybrid
         include:
+          # Standard legs run the whole suite in a single job: their runtime is
+          # dominated by the tests themselves rather than by hybrid's per-test
+          # isolation sleep, so sharding them would multiply the per-job setup
+          # cost without shortening the workflow's critical path.
+          - router-flavor: traditional_compatible
+            gateway-type: standard
+            ip_family: ipv4
+          - router-flavor: expressions
+            gateway-type: standard
+            ip_family: ipv4
           - router-flavor: traditional_compatible
             gateway-type: standard
             ip_family: ipv6
           - router-flavor: expressions
             gateway-type: standard
             ip_family: ipv6
+          # Hybrid legs sleep 30s between tests so stale Konnect configuration
+          # can drain from the data plane (see test/conformance/conformance_test.go),
+          # which makes the whole suite take over an hour and dominate the
+          # workflow. Shard them: every shard gets its own runner, cluster and
+          # Konnect control plane and executes a balanced subset of the tests.
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv4
+            shard_index: 1
+            shard_total: 4
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv4
+            shard_index: 2
+            shard_total: 4
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv4
+            shard_index: 3
+            shard_total: 4
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv4
+            shard_index: 4
+            shard_total: 4
           # Hybrid makes real Konnect API calls, which on an ipv6-only
           # cluster needs NAT64/DNS64 (see e2e chainsaw's hybridgateway
           # ipv6 leg). That needs the cluster to exist before the Go test
@@ -53,6 +77,23 @@ jobs:
           - router-flavor: traditional_compatible
             gateway-type: hybrid
             ip_family: ipv6
+            shard_index: 1
+            shard_total: 4
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv6
+            shard_index: 2
+            shard_total: 4
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv6
+            shard_index: 3
+            shard_total: 4
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv6
+            shard_index: 4
+            shard_total: 4
 
     steps:
     - name: Harden Runner
@@ -139,6 +180,7 @@ jobs:
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
         KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
         KONG_TEST_CLUSTER_IP_FAMILY: ${{ matrix.ip_family }}
+        KONG_TEST_CONFORMANCE_SHARD: ${{ matrix.shard_index && format('{0}/{1}', matrix.shard_index, matrix.shard_total) || '' }}
         # hybrid+ipv6 hands off its pre-created (and NAT64/DNS64-patched)
         # cluster here instead of letting the test binary create its own;
         # every other leg leaves this empty and self-manages as before.
@@ -152,7 +194,7 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
+        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -160,19 +202,19 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
+        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}
         path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}.xml
 
     - name: collect conformance report
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
+        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}
         path: experimental-*-report.yaml
 
     - name: upload controller logs
       if: ${{ always() }}
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
+        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}
         path: /tmp/kong-operator-controller-logs*
         if-no-files-found: error
