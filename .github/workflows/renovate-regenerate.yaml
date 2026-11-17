@@ -6,7 +6,12 @@ name: regenerate after dependency bump
 # so this workflow runs the generators on the bump pull request and pushes the result to the
 # pull request branch.
 on:
-  pull_request:
+  # pull_request_target, not pull_request: a pull_request run reads the workflow file from the
+  # pull request's own tree, so this file would not run on release-branch pull requests until
+  # it is backported to every branch in renovate.json baseBranchPatterns. pull_request_target
+  # reads it from the default branch, so one file covers every branch. The actor check below
+  # keeps fork pull requests out, so the write token never runs untrusted code.
+  pull_request_target:
     paths:
       - go.mod
       - go.sum
@@ -51,10 +56,13 @@ jobs:
             kong-operator
           permission-contents: write
 
+      # No token here: the generation step runs repository scripts and freshly bumped
+      # dependencies, so the write token stays out of the workspace and appears only in the
+      # push step.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
-          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -71,6 +79,8 @@ jobs:
       - name: Push the regenerated files
         env:
           HEAD_REF: ${{ github.head_ref }}
+          # Only reaches this step, never the workspace or a remote URL.
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
 
@@ -83,4 +93,5 @@ jobs:
           git config user.email "team-k8s+github-bot@konghq.com"
           git add --all
           git commit --message "chore: regenerate files after github.com/Kong/sdk-konnect-go bump"
-          git push origin "HEAD:${HEAD_REF}"
+          git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$APP_TOKEN" | base64)" \
+            push origin "HEAD:${HEAD_REF}"
