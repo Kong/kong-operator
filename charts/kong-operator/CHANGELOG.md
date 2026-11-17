@@ -17,12 +17,6 @@
   which keg 1.3.0 removed. Disable it with the chart value
   `global.validatingPolicies.kegDataPlaneDeprecatedSettings.enabled`.
   [#6637](https://github.com/Kong/kong-operator/pull/6637)
-- Add the `EventGatewayListenerPolicyChain`,
-  `EventGatewayVirtualClusterConsumePolicyChain` and
-  `EventGatewayVirtualClusterProducePolicyChain` CRDs.
-  [#6501](https://github.com/Kong/kong-operator/pull/6501),
-  [#6534](https://github.com/Kong/kong-operator/pull/6534),
-  [#6572](https://github.com/Kong/kong-operator/pull/6572)
 
 ### Changed
 
