@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 )
 
 var (
@@ -300,6 +301,11 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 	if len(supportedParentRefs) == 0 {
 		log.Info(logger, "No supported parent references found, skipping translation")
 		return nil
+	}
+
+	if err := gatewayapipkg.ValidateHTTPRouteRetries(c.route.Spec.Rules); err != nil {
+		log.Error(logger, err, "HTTPRoute contains unsupported retry configuration")
+		return err
 	}
 
 	log.Debug(logger, "Found supported parent references",

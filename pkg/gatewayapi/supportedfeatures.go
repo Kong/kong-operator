@@ -39,6 +39,10 @@ var commonSupportedFeatures = []features.FeatureName{
 	features.SupportHTTPRoutePathRewrite,
 	features.SupportHTTPRouteHostRewrite,
 	features.SupportHTTPRouteBackendTimeout,
+	// Kong Gateway retries transport-level failures (connection errors) through
+	// the Service retries setting. It does not retry on HTTP response status
+	// codes, so HTTPRouteRetryCodes is intentionally not advertised.
+	features.SupportHTTPRouteRetryConnectionError,
 
 	// TLSRoute extended.
 	features.SupportTLSRouteModeTerminate,

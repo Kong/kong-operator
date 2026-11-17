@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
@@ -149,10 +150,11 @@ func groupRulesFromHTTPRoutesByKongServiceName(
 				cache.addRule(ruleMeta)
 			}
 		}
-		// Rules are grouped by backendRefs only. Split a group into per-timeout services
-		// only when its rules carry more than one distinct backendRequest timeout, so that
-		// enabling backendRequest timeouts does not rename existing Kong services.
-		return splitServiceGroupsByBackendRequestTimeout(cache.ruleGroups)
+		// Rules are grouped by backendRefs only. Split a group into per-config services
+		// only when its rules carry more than one distinct backendRequest timeout or retry
+		// configuration, so that enabling either feature does not rename existing Kong
+		// services.
+		return splitServiceGroupsByKongServiceConfig(cache.ruleGroups)
 	}
 
 	// Otherwise, we still group rules in the same HTTPRoute sharing the same backends,
@@ -300,6 +302,9 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	// If the service is translated from multiple rules, the timeout from the last rule which has specific timeout will be applied to the service in the loop.
 	for _, ruleMeta := range rulesMeta {
 		applyTimeoutToServiceFromHTTPRouteRule(&service, ruleMeta.Rule)
+		if err := applyRetriesToServiceFromHTTPRouteRule(&service, ruleMeta.Rule); err != nil {
+			return kongstate.Service{}, err
+		}
 	}
 
 	if options.ExpressionRoutes {
@@ -354,6 +359,22 @@ func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 	svc.ReadTimeout = new(timeoutMS)
 	svc.ConnectTimeout = new(timeoutMS)
 	svc.WriteTimeout = new(timeoutMS)
+}
+
+// applyRetriesToServiceFromHTTPRouteRule applies the rule's HTTPRoute retry
+// attempts to the translated Kong service. A nil retry stanza leaves the Kong
+// default in place. Unsupported retry fields return an error so translation
+// fails instead of silently dropping them.
+func applyRetriesToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gatewayapi.HTTPRouteRule) error {
+	retries, err := gatewayapipkg.KongRetriesForHTTPRouteRule(rule)
+	if err != nil {
+		return err
+	}
+	if retries == nil {
+		return nil
+	}
+	svc.Retries = new(int(*retries))
+	return nil
 }
 
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
@@ -680,24 +701,24 @@ func groupRulesByBackendRefs(ruleEntries []httpRouteRuleMeta) map[string][]httpR
 	return groupSliceByKeyFn(ruleEntries, httpRouteRuleMeta.getHTTPBackendRefsKey)
 }
 
-// splitServiceGroupsByBackendRequestTimeout splits each Kong service group whose rules carry
-// more than one distinct backendRequest timeout into separate groups, one per timeout, since a
-// Kong service can only hold a single timeout. Groups with a single (or no) distinct timeout keep
-// their original service name, so enabling backendRequest timeouts does not rename existing Kong
-// services. When a split happens, every resulting group is suffixed with its timeout
-// (".timeout.<ms>"); the default-timeout group keeps the original name as it carries no suffix.
-func splitServiceGroupsByBackendRequestTimeout(groups map[string][]httpRouteRuleMeta) map[string][]httpRouteRuleMeta {
+// splitServiceGroupsByKongServiceConfig splits each Kong service group whose rules carry more
+// than one distinct backendRequest timeout or retries value into separate groups, since a Kong
+// service can hold only one value for each setting. Groups with a single (or default) value keep
+// their original service name, so enabling either feature does not rename existing Kong services.
+// When a split happens, every resulting group is suffixed with its non-default settings
+// (".timeout.<ms>", ".retries.<n>", or both); the all-default group keeps the original name.
+func splitServiceGroupsByKongServiceConfig(groups map[string][]httpRouteRuleMeta) map[string][]httpRouteRuleMeta {
 	result := make(map[string][]httpRouteRuleMeta, len(groups))
 	for serviceName, rulesMeta := range groups {
-		rulesByTimeout := groupSliceByKeyFn(rulesMeta, httpRouteRuleMeta.getBackendRequestTimeoutKey)
-		if len(rulesByTimeout) <= 1 {
+		rulesByConfig := groupSliceByKeyFn(rulesMeta, httpRouteRuleMeta.getKongServiceConfigKey)
+		if len(rulesByConfig) <= 1 {
 			result[serviceName] = rulesMeta
 			continue
 		}
-		for timeoutKey, rules := range rulesByTimeout {
+		for configKey, rules := range rulesByConfig {
 			// All rules in the group share the same backendRefs, so any of them produces the same
 			// base name; use the first to build the length-safe suffixed name.
-			splitName := rules[0].kongServiceNameByBackendRefsWithSuffix(backendRequestTimeoutServiceNameSuffix(timeoutKey))
+			splitName := rules[0].kongServiceNameByBackendRefsWithSuffix(kongServiceConfigNameSuffix(configKey))
 			result[splitName] = rules
 		}
 	}
@@ -733,10 +754,13 @@ type httpRouteRuleMeta struct {
 	parentRoute *gatewayapi.HTTPRoute
 }
 
-// getHTTPBackendRefsKey computes a key from a list of backendRefs.
-// The order of backedRefs is not important.
+// getHTTPBackendRefsKey computes a key from a list of backendRefs and the
+// rule-level Kong Service settings that require separate Services. The order of
+// backendRefs is not important.
 func (m httpRouteRuleMeta) getHTTPBackendRefsKey() string {
-	return getSortedItemsString(m.Rule.BackendRefs) + ";backendRequestTimeout=" + m.getBackendRequestTimeoutKey()
+	return getSortedItemsString(m.Rule.BackendRefs) +
+		";backendRequestTimeout=" + m.getBackendRequestTimeoutKey() +
+		";retries=" + m.getRetriesKey()
 }
 
 func (m httpRouteRuleMeta) getRuleKey() string {
@@ -769,6 +793,40 @@ func backendRequestTimeoutServiceNameSuffix(timeoutKey string) string {
 		return ""
 	}
 	return ".timeout." + timeoutKey
+}
+
+// getRetriesKey returns a canonical key identifying the rule's effective Kong
+// Service retries value. Rules that resolve to Kong's default return an empty
+// key, so they keep the existing service name and grouping. Unsupported retry
+// configuration also returns an empty key; translation rejects it separately.
+func (m httpRouteRuleMeta) getRetriesKey() string {
+	retries, err := gatewayapipkg.KongRetriesForHTTPRouteRule(m.Rule)
+	if err != nil || retries == nil {
+		return ""
+	}
+	if *retries == gatewayapipkg.DefaultKongServiceRetries {
+		return ""
+	}
+	return strconv.FormatInt(*retries, 10)
+}
+
+// getKongServiceConfigKey combines every rule property that maps to a single
+// Kong Service setting. Rules sharing backends but differing in any of these
+// properties must use separate Kong Services.
+func (m httpRouteRuleMeta) getKongServiceConfigKey() string {
+	return m.getBackendRequestTimeoutKey() + "|" + m.getRetriesKey()
+}
+
+// kongServiceConfigNameSuffix returns the service name suffix for a split
+// group. The empty (default) key yields no suffix so services keep their
+// original names when no split is needed.
+func kongServiceConfigNameSuffix(configKey string) string {
+	timeoutKey, retriesKey, _ := strings.Cut(configKey, "|")
+	suffix := backendRequestTimeoutServiceNameSuffix(timeoutKey)
+	if retriesKey != "" {
+		suffix += ".retries." + retriesKey
+	}
+	return suffix
 }
 
 // getKongServiceNameByBackendRefs generates service name based on rule's backendRefs and the namespace of the parent HTTPRoute

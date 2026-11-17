@@ -949,3 +949,28 @@ func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
 		assert.Equal(t, foreignParentStatus, foreign)
 	})
 }
+
+func TestGatewayParentStatusForRoutePropagatesConditionMessage(t *testing.T) {
+	route := &gatewayapi.HTTPRoute{
+		Name:       "route",
+		Namespace:  "namespace",
+		Generation: 7,
+	}
+	message := "rules[0].retry.codes is unsupported: Kong Gateway cannot retry on HTTP response status codes"
+	parentStatus := gatewayParentStatusForRoute(route, supportedGatewayWithCondition{
+		gateway: &gatewayapi.Gateway{
+			Name:      "gateway",
+			Namespace: "namespace",
+		},
+		condition: metav1.Condition{
+			Type:    string(gatewayapi.RouteConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(gatewayapi.RouteReasonUnsupportedValue),
+			Message: message,
+		},
+	})
+
+	if assert.Len(t, parentStatus.Conditions, 1) {
+		assert.Equal(t, message, parentStatus.Conditions[0].Message)
+	}
+}
