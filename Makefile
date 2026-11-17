@@ -38,6 +38,17 @@ LDFLAGS_METADATA ?= \
 	-X $(GO_METADATA_PACKAGE).repo=$(REPO_INFO) \
 	-X $(GO_METADATA_PACKAGE).repoURL=$(REPO_URL)
 
+CGO_ENABLED ?= $(shell go env CGO_ENABLED)
+TARGETOS ?= $(shell go env GOOS)
+TARGETARCH ?= $(shell go env GOARCH)
+OPERATOR_BUILD_ENV = \
+	CGO_ENABLED=$(CGO_ENABLED) \
+	GOOS=$(TARGETOS) \
+	GOARCH=$(TARGETARCH) \
+	TAG=$(TAG) \
+	COMMIT=$(COMMIT) \
+	REPO_INFO=$(REPO_INFO)
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -259,7 +270,8 @@ build.operator.debug:
 
 .PHONY: _build.operator
 _build.operator:
-	go build -o bin/manager $(GCFLAGS) \
+	env $(OPERATOR_BUILD_ENV) \
+		go build -o bin/manager $(GCFLAGS) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		cmd/main.go
 
@@ -568,10 +580,45 @@ manifests.charts.kong-operator.chart.yaml:
 # Build - Container Images
 # ------------------------------------------------------------------------------
 
+PREBUILT ?= false
+GO_MOD_CACHE ?= $(shell go env GOMODCACHE)
+GO_BUILD_CACHE ?= $(shell go env GOCACHE)
+GO_BUILD_CONTAINER_USER ?= $(shell id -u):$(shell id -g)
+GO_BUILDER_IMAGE = $(shell awk '/^FROM --platform=\$$BUILDPLATFORM golang:/ { print $$3; exit }' $(PROJECT_DIR)/Dockerfile)
+
+.PHONY: _build.operator.container
+_build.operator.container: TARGETOS = linux
+_build.operator.container: CGO_ENABLED = 0
+_build.operator.container:
+	@if [ -z "$(GO_BUILDER_IMAGE)" ]; then \
+		echo "Go builder image not found in $(PROJECT_DIR)/Dockerfile" >&2; \
+		exit 1; \
+	fi
+	mkdir -p "$(PROJECT_DIR)/bin" "$(GO_MOD_CACHE)" "$(GO_BUILD_CACHE)"
+	docker run --rm \
+		--user "$(GO_BUILD_CONTAINER_USER)" \
+		--volume "$(PROJECT_DIR):/workspace" \
+		--volume "$(GO_MOD_CACHE):/go/pkg/mod" \
+		--volume "$(GO_BUILD_CACHE):/go-build" \
+		--workdir /workspace \
+		--env HOME=/tmp \
+		--env GOPATH=/go \
+		--env GOCACHE=/go-build \
+		$(GO_BUILDER_IMAGE) \
+		env $(OPERATOR_BUILD_ENV) \
+		make build.operator
+	mv -f "$(PROJECT_DIR)/bin/manager" "$(PROJECT_DIR)/bin/manager-linux-$(TARGETARCH)"
+
+ifeq ($(PREBUILT),true)
+_docker.build: _build.operator.container
+endif
+
 .PHONY: _docker.build
 _docker.build:
 	docker build -t $(IMG):$(TAG) \
+		--platform linux/$(TARGETARCH) \
 		--target $(TARGET) \
+		--build-arg PREBUILT=$(PREBUILT) \
 		--build-arg GOPATH=$(shell go env GOPATH) \
 		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=$(TAG) \
