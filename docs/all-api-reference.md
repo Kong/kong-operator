@@ -10856,6 +10856,7 @@ security context to a DataPlane's proxy container.
 
 _Appears in:_
 
+- [DBBackedHybridControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedeploymentoptions)
 - [DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)
 - [DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v2beta1-types-dataplanedeploymentoptions)
 
