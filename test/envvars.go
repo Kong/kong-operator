@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -190,4 +191,62 @@ func ConformanceSkipTests() []string {
 		}
 	}
 	return skip
+}
+
+// ConformanceShard describes how the Gateway API conformance suite is split
+// across test runs. The zero value means "no sharding, run the whole suite".
+type ConformanceShard struct {
+	Index int
+	Total int
+}
+
+// Enabled reports whether the conformance suite should be restricted to a
+// single shard.
+func (s ConformanceShard) Enabled() bool {
+	return s.Total > 1
+}
+
+// String returns a human readable representation of the shard.
+func (s ConformanceShard) String() string {
+	if !s.Enabled() {
+		return "all"
+	}
+	return fmt.Sprintf("%d/%d", s.Index, s.Total)
+}
+
+// ConformanceShardFromEnv returns the shard of the Gateway API conformance
+// suite to run. It reads the KONG_TEST_CONFORMANCE_SHARD environment variable
+// in the "<index>/<total>" format, with a 1-based index, e.g. "2/4". An empty
+// value means the whole suite is run.
+//
+// Invalid values are returned as errors so that CI fails fast instead of
+// silently running the wrong subset of tests.
+func ConformanceShardFromEnv() (ConformanceShard, error) {
+	raw := strings.TrimSpace(os.Getenv("KONG_TEST_CONFORMANCE_SHARD"))
+	if raw == "" {
+		return ConformanceShard{}, nil
+	}
+
+	indexRaw, totalRaw, ok := strings.Cut(raw, "/")
+	if !ok {
+		return ConformanceShard{}, fmt.Errorf(
+			"invalid KONG_TEST_CONFORMANCE_SHARD %q: expected <index>/<total>, e.g. 2/4", raw,
+		)
+	}
+
+	index, err := strconv.Atoi(strings.TrimSpace(indexRaw))
+	if err != nil {
+		return ConformanceShard{}, fmt.Errorf("invalid KONG_TEST_CONFORMANCE_SHARD %q: index is not a number: %w", raw, err)
+	}
+	total, err := strconv.Atoi(strings.TrimSpace(totalRaw))
+	if err != nil {
+		return ConformanceShard{}, fmt.Errorf("invalid KONG_TEST_CONFORMANCE_SHARD %q: total is not a number: %w", raw, err)
+	}
+	if total < 1 || index < 1 || index > total {
+		return ConformanceShard{}, fmt.Errorf(
+			"invalid KONG_TEST_CONFORMANCE_SHARD %q: index must be between 1 and total", raw,
+		)
+	}
+
+	return ConformanceShard{Index: index, Total: total}, nil
 }
