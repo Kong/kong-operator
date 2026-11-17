@@ -227,7 +227,7 @@
   `attempts` above Kong's limit are rejected with `Accepted=False` and reason
   `UnsupportedValue`. The `konghq.com/retries` Service annotation takes
   precedence over the native Route setting.
-  [#6459](https://github.com/Kong/kong-operator/issues/6459)
+  [#6718](https://github.com/Kong/kong-operator/pull/6718)
 - Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect and on-prem
   Consume policy-chain ordering using Kubernetes references to the complete set
   of root and nested policies on one virtual cluster. Parent groups remain
