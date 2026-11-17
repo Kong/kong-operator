@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/update"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
@@ -951,7 +952,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 
 		// The ResourceVersion must never change: the controller should skip the
 		// SSA patch when the desired state already matches the live state.
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			var deployList appsv1.DeploymentList
 			if err := cl.List(ctx, &deployList,
 				client.InNamespace(ns.Name),
@@ -1139,7 +1140,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 
 		// The ResourceVersion must never change: the controller should skip the
 		// SSA patch when the desired state already matches the live state.
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			var svcAfter corev1.Service
 			if err := cl.Get(ctx, client.ObjectKey{
 				Name: fmt.Sprintf("%s-kafka", egdp.Name), Namespace: ns.Name,
@@ -1761,7 +1762,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 		}, waitTime, tickTime)
 
 		// The rollout isn't reported complete yet: A must survive.
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			return apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(certA), &configurationv1alpha1.EventGatewayDataPlaneCertificate{}))
 		}, waitTime, tickTime, "old certificate must not be removed before the rollout to the new one is confirmed complete")
 

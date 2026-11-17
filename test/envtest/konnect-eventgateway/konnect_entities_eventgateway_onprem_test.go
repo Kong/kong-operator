@@ -27,6 +27,7 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -173,7 +174,7 @@ func konnectStatusOf(ctx context.Context, cl client.Client, obj client.Object) s
 // finalizer during d.
 func requireNoKonnectStatus(t *testing.T, ctx context.Context, cl client.Client, d time.Duration, objects ...client.Object) {
 	t.Helper()
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		for _, obj := range objects {
 			if s := konnectStatusOf(ctx, cl, obj); s != "" {
 				t.Logf("%T %s/%s: %s", obj, obj.GetNamespace(), obj.GetName(), s)
@@ -360,7 +361,7 @@ func TestEventGatewayChildrenCreatedBeforeTheirOnPremAncestor(t *testing.T) {
 // reconciler sets during d (see konnectStateOf).
 func requireNoKonnectState(t *testing.T, ctx context.Context, cl client.Client, d time.Duration, objects ...client.Object) {
 	t.Helper()
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		for _, obj := range objects {
 			if s := konnectStateOf(ctx, cl, obj); s != "" {
 				t.Logf("%T %s/%s: %s", obj, obj.GetNamespace(), obj.GetName(), s)

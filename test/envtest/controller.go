@@ -173,7 +173,7 @@ func StartReconcilersWithConfig(
 	// Wait for the manager's cache to finish its initial sync before returning.
 	// mgr.Start(ctx) only launched in a goroutine above, so without this, on a
 	// loaded CI machine the controller's workers can start tens of seconds
-	// later, and the callers' EventuallyWithT/require.Never windows would run -
+	// later, and the callers' EventuallyWithT/Never windows would run -
 	// and expire - before the reconciler has run even once.
 	require.True(t, mgr.GetCache().WaitForCacheSync(ctx), "manager caches failed to sync")
 }

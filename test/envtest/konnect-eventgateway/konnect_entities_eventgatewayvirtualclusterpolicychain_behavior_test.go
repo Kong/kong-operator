@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -397,7 +398,7 @@ func waitForChainCondition(t *testing.T, cl client.Client, chain *configurationv
 
 func assertNoChainWrites(t *testing.T, remote *policyChainRemote, count int) {
 	t.Helper()
-	require.Never(t, func() bool { return len(remote.writes()) != count }, time.Second, 50*time.Millisecond, "invalid chains must not PUT")
+	asserts.Never(t, func(context.Context) bool { return len(remote.writes()) != count }, time.Second, 50*time.Millisecond, "invalid chains must not PUT")
 }
 
 func assertChainWrites(t *testing.T, remote *policyChainRemote, start int, expected []string) {

@@ -1,6 +1,7 @@
 package eventgateway
 
 import (
+	"context"
 	"slices"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // TestOnPremEventGatewayGWAdmin checks that an OnPremEventGateway reports
@@ -197,7 +199,7 @@ spec:`+onPremEventGatewayParentRef(crossNamespace.Name)+`
 			_, ok, _ := pod.state(gatewayID(ct, crossNamespace))
 			assert.True(ct, ok)
 		}, waitTime, tickTime)
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			ct := &assert.CollectT{}
 			return trusted(ct)
 		}, 2*time.Second, tickTime, "the deleted certificate is trusted again")

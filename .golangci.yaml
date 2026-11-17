@@ -96,6 +96,8 @@ linters:
           msg: Please use slices.Contains() instead
         - pattern: ^lo\.FindIndexOf$
           msg: Please use slices.IndexFunc() instead
+        - pattern: ^(require|assert)\.Never$
+          msg: Please use test/helpers/asserts.Never instead. Testify's Never runs the condition in a goroutine, which leaks when the condition outlives the wait.
         - pattern: GatewayOperatorV1beta1\(\)\.GatewayConfigurations$
           msg: Please use controller-runtime client and v2beta1 GatewayConfigurations instead
         - pattern: v1beta1\.GatewayConfiguration$

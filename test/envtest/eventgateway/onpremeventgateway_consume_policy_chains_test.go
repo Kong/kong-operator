@@ -26,6 +26,7 @@ import (
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 type consumeChainFixture struct {
@@ -528,7 +529,7 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 		assert.Contains(ct, expected, id)
 	}, waitTime, tickTime)
 	writes := fresh.writeCount()
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		return fresh.writeCount() != writes
 	}, time.Second, tickTime, "nothing new is pushed to the new pod while the chain is invalid")
 	held, ok, _ = f.pod.state(id)
