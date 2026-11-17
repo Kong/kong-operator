@@ -176,7 +176,10 @@ jobs:
     - name: run conformance tests
       run: make test.conformance
       env:
-        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}.xml
+        # The shard suffix is required here too: buildpulse-report merges all
+        # tests-report* artifacts into a single directory, so identically named
+        # JUnit files from different shards would overwrite each other.
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}.xml
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
         KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
         KONG_TEST_CLUSTER_IP_FAMILY: ${{ matrix.ip_family }}
@@ -203,7 +206,7 @@ jobs:
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}
-        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}.xml
+        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}${{ matrix.shard_index && format('-shard-{0}-of-{1}', matrix.shard_index, matrix.shard_total) || '' }}.xml
 
     - name: collect conformance report
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
