@@ -292,8 +292,8 @@ func TestKongPluginWithTargetsToKongPluginInputCondition(t *testing.T) {
 		},
 		{
 			name:              "condition",
-			condition:         `http.path ^= "/api"`,
-			expectedCondition: new(`http.path ^= "/api"`),
+			condition:         `http.path.startsWith("/api")`,
+			expectedCondition: new(`http.path.startsWith("/api")`),
 		},
 	}
 
@@ -318,7 +318,7 @@ func TestPluginBindingMatchesCondition(t *testing.T) {
 		Name:       "plugin",
 		Namespace:  "default",
 		PluginName: "request-termination",
-		Condition:  `http.path ^= "/api"`,
+		Condition:  `http.path.startsWith("/api")`,
 	}
 	binding := &configurationv1alpha1.KongPluginBinding{
 		Name:      "binding",
@@ -337,12 +337,12 @@ func TestPluginBindingMatchesCondition(t *testing.T) {
 	}{
 		{
 			name:      "same condition",
-			condition: new(`http.path ^= "/api"`),
+			condition: new(`http.path.startsWith("/api")`),
 			matches:   true,
 		},
 		{
 			name:      "different condition",
-			condition: new(`http.path ^= "/admin"`),
+			condition: new(`http.path.startsWith("/admin")`),
 			matches:   false,
 		},
 		{

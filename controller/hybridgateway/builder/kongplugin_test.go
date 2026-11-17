@@ -232,10 +232,10 @@ func TestKongPluginBuilder_WithOrdering(t *testing.T) {
 func TestKongPluginBuilder_WithCondition(t *testing.T) {
 	plugin, err := NewKongPlugin().
 		WithName("test-plugin").
-		WithCondition(`http.path ^= "/api"`).
+		WithCondition(`http.path.startsWith("/api")`).
 		Build()
 	require.NoError(t, err)
-	assert.Equal(t, `http.path ^= "/api"`, plugin.Condition)
+	assert.Equal(t, `http.path.startsWith("/api")`, plugin.Condition)
 }
 
 func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
