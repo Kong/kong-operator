@@ -1,0 +1,189 @@
+# HTTPRoute ExtensionRef KongPlugin condition test scenario.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-kongplugin-condition
+spec:
+  description: |
+    Validates that the KongPlugin spec.condition reaches Konnect and the DataPlane
+    of a hybrid Gateway when the plugin is attached through an HTTPRoute ExtensionRef filter:
+    1. A request-termination KongPlugin with a condition on the request path is
+       attached to an HTTPRoute; the Konnect plugin carries the condition.
+    2. Requests matching the condition are terminated, other requests reach the backend.
+    3. Removing the condition clears it on the Konnect plugin and makes the plugin
+       terminate every request.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: listener_http_port
+      value: 80
+    - name: host_header
+      value: ""
+    - name: http_method
+      value: GET
+    - name: httpbin_deployment_name
+      value: httpbin
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
+    - name: plugin_name
+      value: conditional-termination
+    - name: http_route_name
+      value: kongplugin-condition
+    # Substring of the name of the KongPlugin the controller mirrors from the referenced one.
+    - name: plugin_reference_name
+      value: (join('.', [($namespace), 'request-termination']))
+
+  steps:
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create Gateway with an HTTP listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway-http-only.yaml
+
+    - name: Create-httpbin-backend
+      description: Create the httpbin backend Deployment and Service.
+      use:
+        template: ../../common/_step_templates/apply-assert-httpbinService.yaml
+
+    - name: Create-kongplugin-and-httproute
+      description: Create a conditional request-termination KongPlugin and an HTTPRoute referencing it.
+      try:
+        - apply:
+            file: 01-kongplugin-httproute.yaml
+        - assert:
+            file: 01-assert-httproute.yaml
+
+    - name: Verify-konnect-condition
+      description: Verify the Konnect plugin carries the condition.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: ($plugin_reference_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: FIELD
+                value: .condition
+              - name: EXPECTED
+                value: '"http.path.startsWith(\"/anything/blocked\")"'
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_field.sh
+            check:
+              (json_parse($stdout).success): true
+
+    - name: Verify-condition-matches
+      description: Verify a request matching the condition is terminated by the plugin.
+      bindings:
+        - name: route_path
+          value: /anything/blocked
+        - name: expected_status
+          value: "418"
+      use:
+        template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+    - name: Verify-condition-does-not-match
+      description: Verify a request not matching the condition reaches the backend.
+      bindings:
+        - name: route_path
+          value: /anything/allowed
+        - name: expected_status
+          value: "200"
+      use:
+        template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+    - name: Remove-condition
+      description: Remove the condition from the KongPlugin and verify it is cleared in Konnect.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              condition: null
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: ($plugin_reference_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: FIELD
+                value: .condition
+              - name: EXPECTED
+                value: 'null'
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_field.sh
+            check:
+              (json_parse($stdout).success): true
+
+    - name: Verify-plugin-applies-without-condition
+      description: Verify the plugin terminates requests it skipped while the condition was set.
+      bindings:
+        - name: route_path
+          value: /anything/allowed
+        - name: expected_status
+          value: "418"
+      use:
+        template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-httproute-kongplugin-condition
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
