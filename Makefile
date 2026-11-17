@@ -568,10 +568,45 @@ manifests.charts.kong-operator.chart.yaml:
 # Build - Container Images
 # ------------------------------------------------------------------------------
 
+PREBUILT ?= false
+TARGETARCH ?= $(shell go env GOARCH)
+GO_MOD_CACHE ?= $(shell go env GOMODCACHE)
+GO_BUILD_CACHE ?= $(shell go env GOCACHE)
+GO_BUILD_CONTAINER_USER ?= $(shell id -u):$(shell id -g)
+GO_BUILDER_IMAGE = $(shell awk '/^FROM --platform=\$$BUILDPLATFORM golang:/ { print $$3; exit }' Dockerfile)
+
+.PHONY: _build.operator.container
+_build.operator.container:
+	mkdir -p bin "$(GO_MOD_CACHE)" "$(GO_BUILD_CACHE)"
+	docker run --rm \
+		--user "$(GO_BUILD_CONTAINER_USER)" \
+		--volume "$(CURDIR):/workspace" \
+		--volume "$(GO_MOD_CACHE):/go/pkg/mod" \
+		--volume "$(GO_BUILD_CACHE):/go-build" \
+		--workdir /workspace \
+		--env HOME=/tmp \
+		--env GOPATH=/go \
+		--env GOCACHE=/go-build \
+		--env CGO_ENABLED=0 \
+		--env GOOS=linux \
+		--env GOARCH="$(TARGETARCH)" \
+		--env TAG="$(TAG)" \
+		--env COMMIT="$(COMMIT)" \
+		--env REPO_INFO="$(REPO_INFO)" \
+		$(GO_BUILDER_IMAGE) \
+		make build.operator
+	mv -f bin/manager "bin/manager-linux-$(TARGETARCH)"
+
+ifeq ($(PREBUILT),true)
+_docker.build: _build.operator.container
+endif
+
 .PHONY: _docker.build
 _docker.build:
 	docker build -t $(IMG):$(TAG) \
+		--platform linux/$(TARGETARCH) \
 		--target $(TARGET) \
+		--build-arg PREBUILT=$(PREBUILT) \
 		--build-arg GOPATH=$(shell go env GOPATH) \
 		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=$(TAG) \

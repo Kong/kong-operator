@@ -7,6 +7,7 @@ FROM --platform=$BUILDPLATFORM golang:1.27.4@sha256:5e8afd493a7124a8586e134d9b53
 WORKDIR /workspace
 ARG GOPATH
 ARG GOCACHE
+ARG PREBUILT=false
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
@@ -14,7 +15,9 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
+    if [ "${PREBUILT}" != "true" ]; then \
+        go mod download -x; \
+    fi
 
 COPY ingress-controller/ ingress-controller/
 COPY cmd/main.go cmd/main.go
@@ -41,13 +44,19 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+RUN --mount=type=bind,source=.,target=/prebuilt \
+    --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
-    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
-    TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
-    make build.operator
+    mkdir -p bin; \
+    if [ "${PREBUILT}" = "true" ]; then \
+        cp "/prebuilt/bin/manager-linux-${TARGETARCH}" bin/manager; \
+    else \
+        CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
+        TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
+        make build.operator; \
+    fi
 
 # ------------------------------------------------------------------------------
 # UBI (Red Hat certification)
