@@ -82,7 +82,7 @@ version = "v0.2.15"
 
 [tools."github:anchore/syft"]
 # renovate: datasource=github-releases depName=anchore/syft
-version = "1.51.1"
+version = "1.57.2"
 
 ################################################################################
 # Tasks
