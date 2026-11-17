@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
@@ -528,9 +529,11 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 		}
 		assert.Contains(ct, expected, id)
 	}, waitTime, tickTime)
-	writes := fresh.writeCount()
+	before, ok, _ := fresh.state(id)
+	require.True(t, ok)
 	asserts.Never(t, func(context.Context) bool {
-		return fresh.writeCount() != writes
+		after, ok, _ := fresh.state(id)
+		return !ok || !reflect.DeepEqual(before.entities, after.entities)
 	}, time.Second, tickTime, "nothing new is pushed to the new pod while the chain is invalid")
 	held, ok, _ = f.pod.state(id)
 	require.True(t, ok)
