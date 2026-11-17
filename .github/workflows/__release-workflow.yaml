@@ -7,6 +7,9 @@ on:
       dockerhub-push-token:
         required: true
         description: "The token to push images to Docker Hub"
+      dockerhub-pull-token:
+        required: false
+        description: "Pull-scoped token for the read-only image scan"
       gpg-private-key:
         required: true
         description: "The GPG private key to sign the commits"
@@ -30,6 +33,10 @@ on:
         description: "The username to push images to Docker Hub"
         type: string
         required: true
+      dockerhub-pull-username:
+        description: "The username paired with the pull-scoped image scan token"
+        type: string
+        required: false
       tag:
         description: The version to release (e.g. v1.2.3)
         type: string
@@ -198,6 +205,7 @@ jobs:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
       dockerhub-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-pull-token: ${{ secrets.dockerhub-pull-token }}
     # NOTE: needs semver so that a tag rejected there (e.g. a malformed rapid
     # version) does not get images pushed.
     needs:
@@ -205,6 +213,7 @@ jobs:
     with:
       registry: ${{ inputs.registry }}
       username: ${{ inputs.dockerhub-push-username }}
+      pull-username: ${{ inputs.dockerhub-pull-username }}
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}
       ref: ${{ inputs.base }}

@@ -6,6 +6,9 @@ on:
       dockerhub-token:
         description: Token to use for logging in to the registry when "push" input is set.
         required: false
+      dockerhub-pull-token:
+        description: Pull-scoped token for the read-only image scan (never used to push).
+        required: false
       slack-webhook-url:
         description: Slack webhook URL to send notifications to in case of failures.
         required: false
@@ -16,6 +19,10 @@ on:
     inputs:
       username:
         description: Username to use for logging in to the registry when "push" input is set.
+        required: false
+        type: string
+      pull-username:
+        description: Username paired with "dockerhub-pull-token" for the read-only image scan.
         required: false
         type: string
       registry:
@@ -530,13 +537,13 @@ jobs:
           name: digest-image-linux-${{ matrix.arch }}.sha256
 
       # `imagetools inspect` and the scanners below read ~/.docker/config.json; anonymous Docker Hub
-      # pulls are rate limited.
+      # pulls are rate limited. Pull-scoped on purpose: this job never pushes.
       - name: Log in to the Container registry
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ inputs.registry }}
-          username: ${{ inputs.username }}
-          password: ${{ secrets.dockerhub-token }}
+          username: ${{ inputs.pull-username }}
+          password: ${{ secrets.dockerhub-pull-token }}
 
       # The build pushes a single platform with buildx attestations, so the digest it reports is an
       # index whose one image child is that platform. Syft resolves an index against the runner's
@@ -567,8 +574,8 @@ jobs:
         with:
           asset_prefix: image-linux-${{ matrix.arch }}
           image: ${{ env.IMAGE }}
-          registry_username: ${{ inputs.username }}
-          registry_password: ${{ secrets.dockerhub-token }}
+          registry_username: ${{ inputs.pull-username }}
+          registry_password: ${{ secrets.dockerhub-pull-token }}
           # Gating on findings is a separate decision; a scanner failure still fails the job.
           fail_build: 'false'
 
