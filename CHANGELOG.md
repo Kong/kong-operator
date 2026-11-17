@@ -261,6 +261,15 @@
 
 ### Added
 
+- Added the `condition` field to `KongPlugin` and `KongClusterPlugin`. It sets the
+  plugin's `condition`, an expression Kong Gateway evaluates for each request
+  right before the plugin's `access` phase, skipping the plugin when it is false.
+  The field is sent to Kong Gateway by the ingress controller, to Konnect through
+  `KongPluginBinding`s and `HTTPRoute`/`GRPCRoute` `ExtensionRef` filters in
+  hybrid gateways, and is checked by the admission webhook. Requires Kong
+  Gateway 3.14 or later.
+  [#5276](https://github.com/Kong/kong-operator/issues/5276)
+  [#6715](https://github.com/Kong/kong-operator/pull/6715)
 - Gateway API: honor `HTTPRoute.spec.rules[].retry.attempts` for
   connection-error retries in standard and hybrid Gateway modes, and advertise
   the `HTTPRouteRetryConnectionError` conformance feature. Kong Gateway retries

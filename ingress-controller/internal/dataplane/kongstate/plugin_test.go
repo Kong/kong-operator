@@ -86,6 +86,20 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "condition",
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{
+					PluginName: "correlation-id",
+					Condition:  `http.path ^= "/api"`,
+				},
+			},
+			want: kong.Plugin{
+				Name:      new("correlation-id"),
+				Config:    kong.Configuration{},
+				Condition: new(`http.path ^= "/api"`),
+			},
+		},
+		{
 			name: "secret configuration",
 			args: args{
 				plugin: configurationv1.KongClusterPlugin{
@@ -473,6 +487,20 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				Tags:         kong.StringSlice("example"),
 			},
 			wantErr: false,
+		},
+		{
+			name: "condition",
+			args: args{
+				plugin: configurationv1.KongPlugin{
+					PluginName: "correlation-id",
+					Condition:  `http.path ^= "/api"`,
+				},
+			},
+			want: kong.Plugin{
+				Name:      new("correlation-id"),
+				Config:    kong.Configuration{},
+				Condition: new(`http.path ^= "/api"`),
+			},
 		},
 		{
 			name: "secret configuration",

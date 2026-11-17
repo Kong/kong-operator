@@ -370,6 +370,9 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 	if plugin.InstanceName != "" {
 		pluginInput.InstanceName = new(plugin.InstanceName)
 	}
+	if plugin.Condition != "" {
+		pluginInput.Condition = new(plugin.Condition)
+	}
 	if len(plugin.Protocols) > 0 {
 		pluginInput.Protocols = lo.Map(
 			plugin.Protocols,
@@ -438,6 +441,9 @@ func pluginBindingMatches(
 		return false, nil
 	}
 	if stringValueOrEmpty(desired.InstanceName) != stringValueOrEmpty(konnectPlugin.InstanceName) {
+		return false, nil
+	}
+	if stringValueOrEmpty(desired.Condition) != stringValueOrEmpty(konnectPlugin.Condition) {
 		return false, nil
 	}
 	if !protocolsEqual(desired.Protocols, konnectPlugin.Protocols) {

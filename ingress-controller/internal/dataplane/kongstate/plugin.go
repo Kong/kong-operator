@@ -93,6 +93,7 @@ func kongPluginFromK8SClusterPlugin(
 
 			RunOn:        k8sPlugin.RunOn,
 			Ordering:     k8sPlugin.Ordering,
+			Condition:    k8sPlugin.Condition,
 			InstanceName: k8sPlugin.InstanceName,
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
@@ -154,6 +155,7 @@ func kongPluginFromK8SPlugin(
 
 			RunOn:        k8sPlugin.RunOn,
 			Ordering:     k8sPlugin.Ordering,
+			Condition:    k8sPlugin.Condition,
 			InstanceName: k8sPlugin.InstanceName,
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
@@ -330,6 +332,7 @@ type plugin struct {
 
 	RunOn        string
 	Ordering     *kong.PluginOrdering
+	Condition    string
 	InstanceName string
 	Disabled     bool
 	Protocols    []string
@@ -354,6 +357,9 @@ func (p plugin) toKongPlugin() kong.Plugin {
 	}
 	if p.InstanceName != "" {
 		result.InstanceName = new(p.InstanceName)
+	}
+	if p.Condition != "" {
+		result.Condition = new(p.Condition)
 	}
 	return result
 }

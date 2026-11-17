@@ -913,3 +913,45 @@ func TestPluginsForRule_ExtensionRef_Ordering(t *testing.T) {
 		})
 	}
 }
+
+func TestPluginsForRule_ExtensionRef_Condition(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.HTTPRouteRule{
+		Filters: []gwtypes.HTTPRouteFilter{
+			{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+	referencedPlugin := &configurationv1.KongPlugin{
+		Name:       "referenced-plugin",
+		Namespace:  "test-namespace",
+		PluginName: "request-termination",
+		Condition:  `http.path ^= "/api"`,
+	}
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(referencedPlugin).
+		Build()
+
+	plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	assert.Equal(t, `http.path ^= "/api"`, plugins[0].Condition)
+}

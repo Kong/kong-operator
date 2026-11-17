@@ -273,3 +273,94 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 		})
 	}
 }
+
+func TestKongPluginWithTargetsToKongPluginInputCondition(t *testing.T) {
+	binding := &configurationv1alpha1.KongPluginBinding{
+		Spec: configurationv1alpha1.KongPluginBindingSpec{
+			Scope: configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane,
+		},
+	}
+
+	tests := []struct {
+		name              string
+		condition         string
+		expectedCondition *string
+	}{
+		{
+			name:              "no condition",
+			expectedCondition: nil,
+		},
+		{
+			name:              "condition",
+			condition:         `http.path ^= "/api"`,
+			expectedCondition: new(`http.path ^= "/api"`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &configurationv1.KongPlugin{
+				Name:       "plugin",
+				Namespace:  "default",
+				PluginName: "request-termination",
+				Condition:  tt.condition,
+			}
+
+			got, err := kongPluginWithTargetsToKongPluginInput(binding, plugin, nil, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedCondition, got.Condition)
+		})
+	}
+}
+
+func TestPluginBindingMatchesCondition(t *testing.T) {
+	plugin := &configurationv1.KongPlugin{
+		Name:       "plugin",
+		Namespace:  "default",
+		PluginName: "request-termination",
+		Condition:  `http.path ^= "/api"`,
+	}
+	binding := &configurationv1alpha1.KongPluginBinding{
+		Name:      "binding",
+		Namespace: "default",
+		Spec: configurationv1alpha1.KongPluginBindingSpec{
+			PluginReference: configurationv1alpha1.PluginRef{Name: plugin.Name},
+			Scope:           configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane,
+		},
+	}
+	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
+
+	tests := []struct {
+		name      string
+		condition *string
+		matches   bool
+	}{
+		{
+			name:      "same condition",
+			condition: new(`http.path ^= "/api"`),
+			matches:   true,
+		},
+		{
+			name:      "different condition",
+			condition: new(`http.path ^= "/admin"`),
+			matches:   false,
+		},
+		{
+			name:      "missing condition",
+			condition: nil,
+			matches:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			remote := &sdkkonnectcomp.Plugin{
+				Name:      "request-termination",
+				Condition: tt.condition,
+			}
+			matches, err := pluginBindingMatches(t.Context(), cl, binding, remote)
+			require.NoError(t, err)
+			assert.Equal(t, tt.matches, matches)
+		})
+	}
+}
