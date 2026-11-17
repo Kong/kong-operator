@@ -562,7 +562,7 @@ func TestGRPCPluginsForRule_ExtensionRef_Condition(t *testing.T) {
 		Name:       "referenced-plugin",
 		Namespace:  "test-namespace",
 		PluginName: "request-termination",
-		Condition:  `http.path ^= "/api"`,
+		Condition:  `http.path.startsWith("/api")`,
 	}
 	fakeClient := fakectrlruntimeclient.NewClientBuilder().
 		WithScheme(scheme.Get()).
@@ -572,5 +572,5 @@ func TestGRPCPluginsForRule_ExtensionRef_Condition(t *testing.T) {
 	plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
 	require.NoError(t, err)
 	require.Len(t, plugins, 1)
-	assert.Equal(t, `http.path ^= "/api"`, plugins[0].Condition)
+	assert.Equal(t, `http.path.startsWith("/api")`, plugins[0].Condition)
 }

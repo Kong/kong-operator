@@ -327,7 +327,7 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 }
 
 func TestKongHTTPValidator_ValidatePluginSendsCondition(t *testing.T) {
-	const condition = `http.path ^= "/api"`
+	const condition = `http.path.startsWith("/api")`
 	store, _ := store.NewFakeStore(store.FakeObjects{})
 	pluginSvc := &fakePluginSvc{valid: true}
 	validator := KongHTTPValidator{

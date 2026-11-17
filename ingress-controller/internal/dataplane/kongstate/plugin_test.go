@@ -90,13 +90,13 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			args: args{
 				plugin: configurationv1.KongClusterPlugin{
 					PluginName: "correlation-id",
-					Condition:  `http.path ^= "/api"`,
+					Condition:  `http.path.startsWith("/api")`,
 				},
 			},
 			want: kong.Plugin{
 				Name:      new("correlation-id"),
 				Config:    kong.Configuration{},
-				Condition: new(`http.path ^= "/api"`),
+				Condition: new(`http.path.startsWith("/api")`),
 			},
 		},
 		{
@@ -493,13 +493,13 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			args: args{
 				plugin: configurationv1.KongPlugin{
 					PluginName: "correlation-id",
-					Condition:  `http.path ^= "/api"`,
+					Condition:  `http.path.startsWith("/api")`,
 				},
 			},
 			want: kong.Plugin{
 				Name:      new("correlation-id"),
 				Config:    kong.Configuration{},
-				Condition: new(`http.path ^= "/api"`),
+				Condition: new(`http.path.startsWith("/api")`),
 			},
 		},
 		{
