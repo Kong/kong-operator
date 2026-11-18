@@ -27,12 +27,11 @@ import (
 //
 // Writes performed by the operator itself (reported through MarkWrite) also change the config version.
 // A version change observed in a window in which the operator wrote to the control plane is attributed to the
-// operator and does not trigger a drift check: an external change interleaved with operator writes is only
-// detected by the periodic drift check.
+// operator and does not trigger fetching entities: an external change interleaved with operator writes is only
+// detected after a later external change to the control plane, a change of the entity in Kubernetes or a restart.
 type ConfigVersionTracker struct {
-	versionTTL       time.Duration
-	driftCheckPeriod time.Duration
-	now              func() time.Time
+	versionTTL time.Duration
+	now        func() time.Time
 
 	mu            sync.Mutex
 	controlPlanes map[string]*controlPlaneConfigVersion
@@ -40,14 +39,13 @@ type ConfigVersionTracker struct {
 }
 
 // NewConfigVersionTracker returns a ConfigVersionTracker that checks the config version of a control plane
-// at most once every versionTTL and checks every entity against Konnect at least once every driftCheckPeriod.
-func NewConfigVersionTracker(versionTTL, driftCheckPeriod time.Duration) *ConfigVersionTracker {
+// at most once every versionTTL.
+func NewConfigVersionTracker(versionTTL time.Duration) *ConfigVersionTracker {
 	return &ConfigVersionTracker{
-		versionTTL:       versionTTL,
-		driftCheckPeriod: driftCheckPeriod,
-		now:              time.Now,
-		controlPlanes:    map[string]*controlPlaneConfigVersion{},
-		entities:         map[types.UID]entitySyncRecord{},
+		versionTTL:    versionTTL,
+		now:           time.Now,
+		controlPlanes: map[string]*controlPlaneConfigVersion{},
+		entities:      map[types.UID]entitySyncRecord{},
 	}
 }
 
@@ -269,12 +267,13 @@ func upsertUnlessInSync[E any](
 
 	if rec, ok := t.record(g.uid); g.periodic && versionOK && ok && rec.payloadHash == payloadHash {
 		logger := ctrllog.FromContext(ctx)
-		checkedAt := t.now()
-		if changedAt.Before(rec.checkedAt) && checkedAt.Sub(rec.checkedAt) < t.driftCheckPeriod {
+		if changedAt.Before(rec.checkedAt) {
 			log.Debug(logger, "entity unchanged and no external change in Konnect, skipping update")
 			g.outcome = syncOutcomeSkipped
 			return nil
 		}
+
+		checkedAt := t.now()
 
 		ent, err := get(ctx)
 		if err == nil && ent != nil {
