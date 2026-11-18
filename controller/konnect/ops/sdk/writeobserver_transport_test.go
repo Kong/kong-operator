@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"sync"
@@ -15,10 +16,18 @@ type recordingObserver struct {
 	marks []string
 }
 
-func (o *recordingObserver) MarkWrite(controlPlaneID string) {
+func (o *recordingObserver) BeforeWrite(_ context.Context, controlPlaneID string) {
+	o.record("before:" + controlPlaneID)
+}
+
+func (o *recordingObserver) AfterWrite(_ context.Context, controlPlaneID string) {
+	o.record("after:" + controlPlaneID)
+}
+
+func (o *recordingObserver) record(mark string) {
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	o.marks = append(o.marks, controlPlaneID)
+	o.marks = append(o.marks, mark)
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
@@ -38,31 +47,31 @@ func TestWriteObservingTransport(t *testing.T) {
 			name:          "entity upsert",
 			method:        http.MethodPut,
 			url:           "https://us.api.konghq.com/v2/control-planes/cp-1/core-entities/services/svc-1",
-			expectedMarks: []string{"cp-1", "cp-1"},
+			expectedMarks: []string{"before:cp-1", "after:cp-1"},
 		},
 		{
 			name:          "entity create",
 			method:        http.MethodPost,
 			url:           "https://us.api.konghq.com/v2/control-planes/cp-1/core-entities/services",
-			expectedMarks: []string{"cp-1", "cp-1"},
+			expectedMarks: []string{"before:cp-1", "after:cp-1"},
 		},
 		{
 			name:          "entity delete",
 			method:        http.MethodDelete,
 			url:           "https://us.api.konghq.com/v2/control-planes/cp-1/core-entities/routes/r-1",
-			expectedMarks: []string{"cp-1", "cp-1"},
+			expectedMarks: []string{"before:cp-1", "after:cp-1"},
 		},
 		{
 			name:          "control plane update",
 			method:        http.MethodPatch,
 			url:           "https://us.api.konghq.com/v2/control-planes/cp-1",
-			expectedMarks: []string{"cp-1", "cp-1"},
+			expectedMarks: []string{"before:cp-1", "after:cp-1"},
 		},
 		{
 			name:          "server URL with path prefix",
 			method:        http.MethodPut,
 			url:           "https://us.svc.konghq.tech/api/v2/control-planes/cp-2/core-entities/plugins/p-1",
-			expectedMarks: []string{"cp-2", "cp-2"},
+			expectedMarks: []string{"before:cp-2", "after:cp-2"},
 		},
 		{
 			name:   "entity get",
