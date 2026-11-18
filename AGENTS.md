@@ -74,6 +74,8 @@ on the **host running Docker** (see https://kind.sigs.k8s.io/docs/user/known-iss
 
 CI raises these limits automatically via the `.github/actions/bump-inotify` composite action.
 
+This should be done automatically when creating clusters with https://github.com/Kong/team-k8s/blob/13508f297d0b1ad9ea4dec301ecbcc1663d540b1/hack/colima_create_environment.sh#L26
+
 ### CRD Validation Tests
 
 ```bash
