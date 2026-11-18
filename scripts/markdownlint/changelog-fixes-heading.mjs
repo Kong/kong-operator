@@ -1,6 +1,9 @@
 // Custom markdownlint rule: bugfix sections in changelogs must be titled
 // "### Fixes", not "### Fixed".
 //
+// The rule only applies to files named CHANGELOG.md (in any directory); all
+// other markdown files are skipped.
+//
 // Releases that were published with "### Fixed" before this rule existed can
 // be grandfathered via the `allowed_releases` option, e.g.:
 //
@@ -12,6 +15,8 @@
 // A release is identified by the text of the closest preceding level 2
 // heading, with surrounding brackets stripped (`## [v2.3.3]` -> `v2.3.3`).
 
+import path from "node:path";
+
 /** @type {import("markdownlint").Rule} */
 export default {
   names: ["KO001", "changelog-fixes-heading"],
@@ -19,6 +24,10 @@ export default {
   tags: ["headings", "changelog"],
   parser: "micromark",
   function: (params, onError) => {
+    if (path.basename(params.name) !== "CHANGELOG.md") {
+      return;
+    }
+
     const allowedReleases = new Set(params.config?.allowed_releases ?? []);
     let currentRelease = "";
 
