@@ -139,11 +139,12 @@ Kubernetes API definitions. The generators use them to produce CRDs, deepcopy me
 - `api/gateway-operator/v1alpha1/` - **AIGateway** (experimental), **DataPlaneMetricsExtension**
 - `api/aigateway/v1alpha1/` - **OnPremAIGateway**
 - `api/aiconfiguration/v1alpha1/` - AI Gateway entities for Konnect and on-prem layouts
-- `api/eventgateway/v1alpha1/` - Event Gateway entities, including **KegDataPlane**
+- `api/eventgateway/v1alpha1/` - **KegDataPlane** and **OnPremEventGateway** data planes
 - `api/mcp/v1alpha1/` - **MCPServerDataPlane**
 - `api/incubator/v1alpha1/` - **KongServiceFacade**
-- `api/konnect/v1alpha1/`, `api/konnect/v1alpha2/` - Konnect integration, including **MCPServer**
-- `api/configuration/` - Kong configuration types
+- `api/konnect/v1alpha1/` - Konnect integration, including **MCPServer**
+- `api/konnect/v1alpha2/` - **KonnectExtension**, the only type in this version
+- `api/configuration/` - Kong configuration types, including the Event Gateway entities (**EventGatewayBackendCluster**, **EventGatewayListener**, **EventGatewayVirtualCluster**) in `v1alpha1/`
 - `api/common/v1alpha1/` - Shared types (ControlPlaneRef, ObjectRef, KongTags)
 
 ### Controllers (`controller/`)
@@ -274,7 +275,8 @@ make verify.manifests           # Report manifest drift
 
 ## Changelog
 
-Add an entry to `CHANGELOG.md` for every change that a user of the operator can see. Put it under the section for the next release, in one of these subsections: Breaking changes, Added, Changed, or Fixes.
+Add an entry to `CHANGELOG.md` for every change that a user of the operator can see. Put it under the `## [Unreleased]` section at the top of the release list, in one of these subsections: Breaking changes, Added, Changed, or Fixes.
+If the section is missing, create it above the newest release and add `- [Unreleased](#unreleased)` to the Table of Contents.
 
 - Do not add entries for tests, linters, generator output, refactors, or CI work.
 - Keep the entry brief: one or two sentences that say what changed. Most entries in `CHANGELOG.md` show the style.
