@@ -25,10 +25,10 @@ import (
 // control plane was observed since the entity was last checked. When an external change was observed, the
 // entity is fetched from Konnect and only updated when its representation differs.
 //
-// Writes performed by the operator itself (reported through MarkWrite) also change the config version.
-// A version change observed in a window in which the operator wrote to the control plane is attributed to the
-// operator and does not trigger fetching entities: an external change interleaved with operator writes is only
-// detected after a later external change to the control plane, a change of the entity in Kubernetes or a restart.
+// Writes performed by the operator itself also change the config version. They are reported through BeforeWrite and
+// AfterWrite, which read the config version right before the first and right after the last of overlapping writes:
+// a change before the writes is attributed to an external actor, a change during the writes to the operator.
+// Only an external change made while an operator write is in flight goes undetected.
 type ConfigVersionTracker struct {
 	versionTTL time.Duration
 	now        func() time.Time
@@ -53,11 +53,13 @@ type controlPlaneConfigVersion struct {
 	fetchMu sync.Mutex
 
 	// Fields below are guarded by ConfigVersionTracker.mu.
-	fetchedAt time.Time
-	fetchErr  bool
-	version   string
-	changedAt time.Time
-	ownWrite  bool
+	sdk            sdkkonnectgo.DPNodesSDK
+	fetchedAt      time.Time
+	fetchErr       bool
+	version        string
+	changedAt      time.Time
+	ownWrite       bool
+	writesInFlight int
 }
 
 type hash [sha256.Size]byte
@@ -68,13 +70,68 @@ type entitySyncRecord struct {
 	checkedAt   time.Time
 }
 
-// MarkWrite records that the operator is writing to the given control plane.
-// It must be called both before sending a write request and after receiving its response, so that every
-// config version check overlapping the write attributes the version change to the operator.
-func (t *ConfigVersionTracker) MarkWrite(controlPlaneID string) {
+// BeforeWrite must be called before the operator sends a write request to the given control plane.
+// When no other write is in flight and none happened since the config version was last read, it reads the
+// config version first, so that a change made before the write is not attributed to the operator.
+func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID string) {
+	t.mu.Lock()
+	cp := t.controlPlane(controlPlaneID)
+	if !cp.hasCleanBaseline() {
+		cp.ownWrite = true
+		cp.writesInFlight++
+		t.mu.Unlock()
+		return
+	}
+	t.mu.Unlock()
+
+	cp.fetchMu.Lock()
+	defer cp.fetchMu.Unlock()
+
+	t.mu.Lock()
+	clean, sdk := cp.hasCleanBaseline(), cp.sdk
+	t.mu.Unlock()
+	if clean {
+		t.refresh(ctx, cp, controlPlaneID, sdk)
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.controlPlane(controlPlaneID).ownWrite = true
+	cp.ownWrite = true
+	cp.writesInFlight++
+}
+
+// AfterWrite must be called after the operator received the response to a write request to the given control plane.
+// When no other write is in flight, it reads the config version, so that a later change is attributed to an
+// external actor.
+func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID string) {
+	t.mu.Lock()
+	cp := t.controlPlane(controlPlaneID)
+	if cp.writesInFlight > 0 {
+		cp.writesInFlight--
+	}
+	if !cp.needsRebaseline() {
+		t.mu.Unlock()
+		return
+	}
+	t.mu.Unlock()
+
+	cp.fetchMu.Lock()
+	defer cp.fetchMu.Unlock()
+
+	t.mu.Lock()
+	rebaseline, sdk := cp.needsRebaseline(), cp.sdk
+	t.mu.Unlock()
+	if rebaseline {
+		t.refresh(ctx, cp, controlPlaneID, sdk)
+	}
+}
+
+func (cp *controlPlaneConfigVersion) hasCleanBaseline() bool {
+	return !cp.ownWrite && cp.writesInFlight == 0 && cp.version != "" && cp.sdk != nil
+}
+
+func (cp *controlPlaneConfigVersion) needsRebaseline() bool {
+	return cp.ownWrite && cp.writesInFlight == 0 && cp.version != "" && cp.sdk != nil
 }
 
 // Forget drops what is known about the entity with the given UID.
@@ -106,6 +163,7 @@ func (t *ConfigVersionTracker) lastExternalChange(
 ) (time.Time, bool) {
 	t.mu.Lock()
 	cp := t.controlPlane(controlPlaneID)
+	cp.sdk = sdk
 	t.mu.Unlock()
 
 	cp.fetchMu.Lock()
@@ -119,6 +177,18 @@ func (t *ConfigVersionTracker) lastExternalChange(
 	}
 	t.mu.Unlock()
 
+	return t.refresh(ctx, cp, controlPlaneID, sdk)
+}
+
+// refresh reads the config version of the control plane and records an external change when it differs from
+// the previous one and the operator did not write to the control plane in between.
+// The caller must hold cp.fetchMu.
+func (t *ConfigVersionTracker) refresh(
+	ctx context.Context,
+	cp *controlPlaneConfigVersion,
+	controlPlaneID string,
+	sdk sdkkonnectgo.DPNodesSDK,
+) (time.Time, bool) {
 	version, err := fetchExpectedConfigVersion(ctx, sdk, controlPlaneID)
 
 	t.mu.Lock()
@@ -128,7 +198,8 @@ func (t *ConfigVersionTracker) lastExternalChange(
 	// timestamped after it: entities checked before are considered stale.
 	now := t.now()
 	ownWrite := cp.ownWrite
-	cp.ownWrite = false
+	// A write still in flight may change the version after the response.
+	cp.ownWrite = cp.writesInFlight > 0
 	cp.fetchedAt = now
 	if err != nil {
 		log.Debug(ctrllog.FromContext(ctx), "failed to get Konnect control plane expected config version",

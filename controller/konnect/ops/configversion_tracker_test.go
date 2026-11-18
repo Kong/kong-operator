@@ -56,6 +56,8 @@ type fakeConfigVersion struct {
 	version string
 	err     error
 	calls   int
+	// afterRead, when set, runs after the version to return was read, simulating concurrent activity.
+	afterRead func()
 }
 
 func newFakeConfigVersion(t *testing.T) *fakeConfigVersion {
@@ -66,9 +68,14 @@ func newFakeConfigVersion(t *testing.T) *fakeConfigVersion {
 			if f.err != nil {
 				return nil, f.err
 			}
+			version := f.version
+			if afterRead := f.afterRead; afterRead != nil {
+				f.afterRead = nil
+				afterRead()
+			}
 			return &sdkkonnectops.GetExpectedConfigVersionResponse{
 				GetExpectedConfigVersionResponse: &sdkkonnectcomp.GetExpectedConfigVersionResponse{
-					ExpectedConfigVersion: f.version,
+					ExpectedConfigVersion: version,
 				},
 			}, nil
 		},
@@ -265,11 +272,18 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		assert.Equal(t, 1, upserts)
 	})
 
+	operatorWrite := func(t *testing.T, e env, version string) {
+		t.Helper()
+		e.tracker.BeforeWrite(t.Context(), testCPID)
+		e.version.version = version
+		e.tracker.AfterWrite(t.Context(), testCPID)
+	}
+
 	t.Run("config version change caused by operator writes does not trigger a get", func(t *testing.T) {
 		e := synced(t)
 
-		e.tracker.MarkWrite(testCPID)
-		e.version.version = "2"
+		operatorWrite(t, e, "2")
+		assert.Equal(t, 2, e.version.calls, "config version must be read before and after the write")
 		e.clock.Advance(testVersionTTL)
 		assert.Equal(t, syncOutcomeSkipped, update(t, e, true))
 		gets, upserts := e.services.calls()
@@ -278,7 +292,70 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 
 		e.version.version = "3"
 		e.clock.Advance(testVersionTTL)
-		assert.Equal(t, syncOutcomeVerified, update(t, e, true), "operator write must only cover one version check")
+		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
+	})
+
+	t.Run("external change before an operator write triggers a get", func(t *testing.T) {
+		e := synced(t)
+
+		e.version.version = "2"
+		operatorWrite(t, e, "3")
+		e.clock.Advance(testVersionTTL)
+		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
+		gets, _ := e.services.calls()
+		assert.Equal(t, 1, gets)
+	})
+
+	t.Run("external change after an operator write triggers a get", func(t *testing.T) {
+		e := synced(t)
+
+		operatorWrite(t, e, "2")
+		e.version.version = "3"
+		e.clock.Advance(testVersionTTL)
+		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
+		gets, _ := e.services.calls()
+		assert.Equal(t, 1, gets)
+	})
+
+	t.Run("overlapping operator writes read the config version once before and once after", func(t *testing.T) {
+		e := synced(t)
+
+		e.tracker.BeforeWrite(t.Context(), testCPID)
+		e.tracker.BeforeWrite(t.Context(), testCPID)
+		e.version.version = "2"
+		e.tracker.AfterWrite(t.Context(), testCPID)
+		e.version.version = "3"
+		e.tracker.AfterWrite(t.Context(), testCPID)
+		assert.Equal(t, 2, e.version.calls)
+
+		e.clock.Advance(testVersionTTL)
+		assert.Equal(t, syncOutcomeSkipped, update(t, e, true))
+	})
+
+	t.Run("operator write starting while the config version is read after a write is attributed to the operator",
+		func(t *testing.T) {
+			e := synced(t)
+
+			e.tracker.BeforeWrite(t.Context(), testCPID)
+			e.version.version = "2"
+			e.version.afterRead = func() {
+				e.tracker.BeforeWrite(t.Context(), testCPID)
+				e.version.version = "3"
+			}
+			e.tracker.AfterWrite(t.Context(), testCPID)
+			e.tracker.AfterWrite(t.Context(), testCPID)
+			assert.Equal(t, 3, e.version.calls)
+
+			e.clock.Advance(testVersionTTL)
+			assert.Equal(t, syncOutcomeSkipped, update(t, e, true))
+		},
+	)
+
+	t.Run("operator write before any config version baseline does not read it", func(t *testing.T) {
+		e := setup(t)
+
+		operatorWrite(t, e, "2")
+		assert.Equal(t, 0, e.version.calls)
 	})
 
 	t.Run("unchanged periodic update is skipped indefinitely without config version changes", func(t *testing.T) {

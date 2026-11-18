@@ -1,14 +1,17 @@
 package sdk
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 )
 
 // WriteObserver is notified of the operator's writes to Konnect control planes.
 type WriteObserver interface {
-	// MarkWrite is called before sending a write request to the control plane and after receiving its response.
-	MarkWrite(controlPlaneID string)
+	// BeforeWrite is called before sending a write request to the control plane.
+	BeforeWrite(ctx context.Context, controlPlaneID string)
+	// AfterWrite is called after receiving the response to a write request to the control plane.
+	AfterWrite(ctx context.Context, controlPlaneID string)
 }
 
 var controlPlanePathRegex = regexp.MustCompile(`/v2/control-planes/([^/]+)(?:/|$)`)
@@ -38,8 +41,8 @@ func (t *writeObservingTransport) RoundTrip(req *http.Request) (*http.Response, 
 		return t.base.RoundTrip(req)
 	}
 
-	controlPlaneID := m[1]
-	t.observer.MarkWrite(controlPlaneID)
-	defer t.observer.MarkWrite(controlPlaneID)
+	ctx, controlPlaneID := req.Context(), m[1]
+	t.observer.BeforeWrite(ctx, controlPlaneID)
+	defer t.observer.AfterWrite(ctx, controlPlaneID)
 	return t.base.RoundTrip(req)
 }

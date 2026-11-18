@@ -9,6 +9,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -167,6 +168,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		logger = logger.WithValues("konnect_id", id)
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
+
+	// Sync records are only stored after the cleanup finalizer was added, so they
+	// must be dropped on every path that removes it, not only on deletion.
+	if controllerutil.ContainsFinalizer(ent, KonnectCleanupFinalizer) {
+		defer forgetIfCleanupFinalizerRemoved(r.ConfigVersionTracker, ent)
+	}
 
 	chainClient := r.Client
 	if r.apiReader != nil {
@@ -663,7 +670,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			// update failed after the entity was created in Konnect), try to recover
 			// it from the in-memory store so the entity can still be cleaned up.
 			r.restorePendingKonnectIDForDeletion(ent)
-			r.ConfigVersionTracker.Forget(ent.GetUID())
 
 			if err := ops.Delete(ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
 				// If the error was a network error, handle it here, there's no need to proceed,
@@ -1037,6 +1043,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 		return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect status for %s: %w", pendingKey, err)
 	}
 	return ctrl.Result{}, true, nil
+}
+
+// forgetIfCleanupFinalizerRemoved drops the sync record of the entity when its Konnect cleanup finalizer is gone.
+func forgetIfCleanupFinalizerRemoved(f interface{ Forget(types.UID) }, ent client.Object) {
+	if !controllerutil.ContainsFinalizer(ent, KonnectCleanupFinalizer) {
+		f.Forget(ent.GetUID())
+	}
 }
 
 // restorePendingKonnectIDForDeletion restores the Konnect ID from the in-memory
