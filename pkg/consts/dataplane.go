@@ -210,3 +210,65 @@ const (
 	// to ensure that the resources are not deleted when in use by a dataplane.
 	ExtensionInUseFinalizer = "gateway-operator.konghq.com/extension-in-use"
 )
+
+// -----------------------------------------------------------------------------
+// Consts - DataPlane Kong configuration file watching
+// -----------------------------------------------------------------------------
+
+const (
+	// KongConfWatchPathEnvVarName is the environment variable read by the Kong
+	// Gateway container entrypoint to enable the in-container kong.conf watcher.
+	// Its value is the absolute path of the watched kong.conf file. When it is
+	// unset the images behave as they always have.
+	//
+	// See KAG-9223 and the "Reload Gateway listeners from a watched kong.conf" ERD.
+	KongConfWatchPathEnvVarName = "KONG_CONF_WATCH_PATH"
+
+	// KongConfWatchVolume is the name of the volume holding the watched kong.conf.
+	KongConfWatchVolume = "kong-conf-watch"
+
+	// KongConfWatchVolumeMountPath is the directory the watched kong.conf
+	// ConfigMap is mounted at.
+	//
+	// NOTE: the ConfigMap has to be mounted as a directory. Kubernetes does not
+	// update a file mounted with subPath, so the watcher would never observe a
+	// change and no reload would ever happen.
+	KongConfWatchVolumeMountPath = "/var/kong-conf-watch"
+
+	// KongConfWatchFileName is the name of the watched Kong configuration file,
+	// and the key holding its contents in the generated ConfigMap.
+	KongConfWatchFileName = "kong.conf"
+
+	// KongConfWatchPath is the absolute path of the watched kong.conf inside the
+	// proxy container. It is the value set on KongConfWatchPathEnvVarName.
+	KongConfWatchPath = KongConfWatchVolumeMountPath + "/" + KongConfWatchFileName
+
+	// KongConfWatchConfigMapNameSuffix is appended to the DataPlane name to build
+	// the name of the ConfigMap holding the watched kong.conf.
+	//
+	// NOTE: the name has to be stable across reconciliations. The Pod template
+	// references the ConfigMap by name, so a name that changed with the contents
+	// (e.g. a content hash) would change the Pod template and trigger exactly the
+	// rollout this feature exists to avoid.
+	KongConfWatchConfigMapNameSuffix = "-kong-conf"
+
+	// DataPlaneConfigMapTypeLabel indicates the purpose of a DataPlane-owned ConfigMap.
+	DataPlaneConfigMapTypeLabel = "gateway-operator.konghq.com/dataplane-configmap-type"
+
+	// DataPlaneConfigMapTypeKongConfWatch is the DataPlaneConfigMapTypeLabel value
+	// of the ConfigMap holding the watched kong.conf.
+	DataPlaneConfigMapTypeKongConfWatch = "kong-conf-watch"
+)
+
+const (
+	// DataPlaneDefaultWorkerShutdownTimeout is the default value the operator sets
+	// for the Nginx worker_shutdown_timeout directive when the watched kong.conf is
+	// in use.
+	//
+	// `kong reload` keeps the old workers alive until their connections close, so
+	// without an upper bound a long-lived stream connection would pin a worker
+	// indefinitely and repeated listener changes would accumulate workers, and
+	// their memory, until the Pod is OOM killed. Kong sets no default for this
+	// directive.
+	DataPlaneDefaultWorkerShutdownTimeout = "60s"
+)
