@@ -27,9 +27,8 @@ import (
 )
 
 const (
-	testCPID             = "cp-1"
-	testVersionTTL       = time.Minute
-	testDriftCheckPeriod = time.Hour
+	testCPID       = "cp-1"
+	testVersionTTL = time.Minute
 )
 
 type testClock struct {
@@ -47,7 +46,7 @@ func (c *testClock) Advance(d time.Duration) {
 
 func newTestConfigVersionTracker() (*ConfigVersionTracker, *testClock) {
 	clock := &testClock{now: time.Unix(1_000_000, 0)}
-	tracker := NewConfigVersionTracker(testVersionTTL, testDriftCheckPeriod)
+	tracker := NewConfigVersionTracker(testVersionTTL)
 	tracker.now = clock.Now
 	return tracker, clock
 }
@@ -282,15 +281,15 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		assert.Equal(t, syncOutcomeVerified, update(t, e, true), "operator write must only cover one version check")
 	})
 
-	t.Run("drift check period forces a get", func(t *testing.T) {
+	t.Run("unchanged periodic update is skipped indefinitely without config version changes", func(t *testing.T) {
 		e := synced(t)
 
-		e.clock.Advance(testDriftCheckPeriod)
-		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
-		gets, _ := e.services.calls()
-		assert.Equal(t, 1, gets)
-
+		e.clock.Advance(24 * time.Hour)
 		assert.Equal(t, syncOutcomeSkipped, update(t, e, true))
+		gets, upserts := e.services.calls()
+		assert.Equal(t, 0, gets)
+		assert.Equal(t, 0, upserts)
+		assert.Equal(t, 1, e.version.calls)
 	})
 
 	t.Run("failure to get the config version sends and is not retried within TTL", func(t *testing.T) {
