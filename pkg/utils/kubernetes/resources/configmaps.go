@@ -29,12 +29,20 @@ func KongConfWatchConfigMapName(dataplaneName string) string {
 
 // GenerateKongConfWatchConfigMapForDataPlane generates the ConfigMap holding the
 // kong.conf watched by the DataPlane's Kong Gateway container.
+// configMapLabelSelector is the operator's --configmap-label-selector. It must
+// be set on the generated ConfigMap, because the manager's cache only ingests
+// ConfigMaps carrying that label: without it the operator cannot read back the
+// ConfigMap it just wrote.
 func GenerateKongConfWatchConfigMapForDataPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	contents string,
+	configMapLabelSelector string,
 ) *corev1.ConfigMap {
 	labels := GetManagedLabelForOwner(dataplane)
 	labels[consts.DataPlaneConfigMapTypeLabel] = consts.DataPlaneConfigMapTypeKongConfWatch
+	if configMapLabelSelector != "" {
+		labels[configMapLabelSelector] = "true"
+	}
 
 	cm := &corev1.ConfigMap{
 		Name:      KongConfWatchConfigMapName(dataplane.Name),

@@ -261,7 +261,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		WithAdditionalLabels(deploymentLabels).
 		WithSecretLabelSelector(r.SecretLabelSelector).
 		WithIPFamily(r.DataPlaneIPFamily).
-		WithConfWatch(r.ConfWatchEnabled)
+		WithConfWatch(r.ConfWatchEnabled).
+		WithConfigMapLabelSelector(r.ConfigMapLabelSelector)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {

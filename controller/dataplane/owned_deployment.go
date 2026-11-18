@@ -62,6 +62,7 @@ type DeploymentBuilder struct {
 	ipFamily               ipfamily.IPFamily
 	adminAPIDisabled       bool
 	confWatchEnabled       bool
+	configMapLabelSelector string
 
 	secretLabelSelector string
 }
@@ -77,6 +78,14 @@ func NewDeploymentBuilder(logger logr.Logger, client client.Client) *DeploymentB
 // WithClusterCertificate configures a cluster certificate name for a DeploymentBuilder.
 func (d *DeploymentBuilder) WithClusterCertificate(name string) *DeploymentBuilder {
 	d.clusterCertificateName = name
+	return d
+}
+
+// WithConfigMapLabelSelector sets the operator's configmap-label-selector, which
+// has to be applied to generated ConfigMaps so that the manager's cache ingests
+// them. Without it the operator cannot read back a ConfigMap it just wrote.
+func (d *DeploymentBuilder) WithConfigMapLabelSelector(selector string) *DeploymentBuilder {
+	d.configMapLabelSelector = selector
 	return d
 }
 
@@ -209,7 +218,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// the listen-related settings out of it, and before the spec hash is taken,
 	// so that the hash covers the Deployment that is actually applied.
 	if d.confWatchEnabled {
-		if err := applyKongConfWatchForDataPlane(ctx, d.client, d.logger, dataplane, desiredDeployment); err != nil {
+		if err := applyKongConfWatchForDataPlane(ctx, d.client, d.logger, dataplane, desiredDeployment, d.configMapLabelSelector); err != nil {
 			return nil, op.Noop, fmt.Errorf("failed configuring the watched kong.conf: %w", err)
 		}
 	} else if err := deleteKongConfWatchConfigMapsForDataPlane(ctx, d.client, dataplane); err != nil {

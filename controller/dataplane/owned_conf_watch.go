@@ -54,6 +54,7 @@ func ensureKongConfWatchConfigMapForDataPlane(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	contents string,
+	configMapLabelSelector string,
 ) (op.Result, *corev1.ConfigMap, error) {
 	dpNn := client.ObjectKeyFromObject(dataplane)
 
@@ -62,7 +63,7 @@ func ensureKongConfWatchConfigMapForDataPlane(
 		return op.Noop, nil, fmt.Errorf("failed listing kong.conf ConfigMaps for DataPlane %s: %w", dpNn, err)
 	}
 
-	generated := k8sresources.GenerateKongConfWatchConfigMapForDataPlane(dataplane, contents)
+	generated := k8sresources.GenerateKongConfWatchConfigMapForDataPlane(dataplane, contents, configMapLabelSelector)
 
 	// More than one is only possible if something outside the operator created
 	// one. Delete everything that does not carry the name we generate, so the
@@ -81,10 +82,29 @@ func ensureKongConfWatchConfigMapForDataPlane(
 	}
 
 	if existing == nil {
-		if err := cl.Create(ctx, generated); err != nil {
+		err := cl.Create(ctx, generated)
+		if err == nil {
+			return op.Created, generated, nil
+		}
+		if !apierrors.IsAlreadyExists(err) {
 			return op.Noop, nil, fmt.Errorf("failed creating kong.conf ConfigMap for DataPlane %s: %w", dpNn, err)
 		}
-		return op.Created, generated, nil
+
+		// The ConfigMap exists but the list did not return it, because the
+		// manager's cache only ingests ConfigMaps carrying the operator's
+		// configmap-label-selector label and this one does not have it yet (for
+		// example it was written by an earlier version of the operator). Reading
+		// it back would go through the same cache and fail the same way, so
+		// overwrite it unconditionally: that applies the label, after which the
+		// cache sees it and later reconciliations take the normal path. Without
+		// this the reconciliation fails on every pass and never converges.
+		if err := cl.Update(ctx, generated); err != nil {
+			return op.Noop, nil, fmt.Errorf(
+				"failed adopting the existing kong.conf ConfigMap %s for DataPlane %s: %w",
+				client.ObjectKeyFromObject(generated), dpNn, err,
+			)
+		}
+		return op.Updated, generated, nil
 	}
 
 	old := existing.DeepCopy()
@@ -150,6 +170,7 @@ func applyKongConfWatchForDataPlane(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	deployment *k8sresources.Deployment,
+	configMapLabelSelector string,
 ) error {
 	container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 	if container == nil {
@@ -167,7 +188,7 @@ func applyKongConfWatchForDataPlane(
 	managedEnv, remainingEnv := config.ExtractConfWatchEnvVars(container.Env)
 	contents := config.RenderKongConf(managedEnv)
 
-	_, cm, err := ensureKongConfWatchConfigMapForDataPlane(ctx, cl, logger, dataplane, contents)
+	_, cm, err := ensureKongConfWatchConfigMapForDataPlane(ctx, cl, logger, dataplane, contents, configMapLabelSelector)
 	if err != nil {
 		return err
 	}

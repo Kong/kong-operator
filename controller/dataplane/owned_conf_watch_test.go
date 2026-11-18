@@ -19,7 +19,12 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
-const confWatchTestImage = "kong/kong-gateway:3.17.0.0"
+const (
+	confWatchTestImage = "kong/kong-gateway:3.17.0.0"
+	// confWatchTestLabelSelector mirrors the operator's default
+	// --configmap-label-selector.
+	confWatchTestLabelSelector = "konghq.com/configmap"
+)
 
 func confWatchTestDataPlane() *operatorv1beta1.DataPlane {
 	return &operatorv1beta1.DataPlane{
@@ -74,6 +79,7 @@ func buildWithConfWatch(
 		WithClusterCertificate("test-cert").
 		WithIPFamily(ipfamily.IPv4).
 		WithConfWatch(enabled).
+		WithConfigMapLabelSelector(confWatchTestLabelSelector).
 		BuildAndDeploy(t.Context(), dataplane, false, false)
 	require.NoError(t, err)
 	require.NotNil(t, deployment)
@@ -189,6 +195,7 @@ func TestConfWatchListenerChangeDoesNotChangePodTemplate(t *testing.T) {
 			WithClusterCertificate("test-cert").
 			WithIPFamily(ipfamily.IPv4).
 			WithConfWatch(true).
+			WithConfigMapLabelSelector(confWatchTestLabelSelector).
 			BuildAndDeploy(t.Context(), dp, true, false)
 		require.NoError(t, err)
 		require.NotNil(t, deployment)
@@ -250,6 +257,7 @@ func TestKongConfWatchConfigMapCleanup(t *testing.T) {
 			WithClusterCertificate("test-cert").
 			WithIPFamily(ipfamily.IPv4).
 			WithConfWatch(enabled).
+			WithConfigMapLabelSelector(confWatchTestLabelSelector).
 			BuildAndDeploy(t.Context(), dataplane, true, false)
 		require.NoError(t, err)
 	}
@@ -267,4 +275,35 @@ func TestKongConfWatchConfigMapCleanup(t *testing.T) {
 	build(false)
 	err := cl.Get(t.Context(), confMapNN, &cm)
 	assert.Error(t, err, "the kong.conf ConfigMap should have been removed")
+}
+
+// TestConfWatchConfigMapCarriesCacheLabel guards a failure found on a real
+// cluster: the manager's cache only ingests ConfigMaps carrying the operator's
+// --configmap-label-selector label. Without it the operator cannot read back the
+// ConfigMap it just created, so every reconciliation tries to create it again,
+// fails with AlreadyExists and the DataPlane never converges.
+func TestConfWatchConfigMapCarriesCacheLabel(t *testing.T) {
+	dataplane := confWatchTestDataPlane()
+	cl := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(confWatchTestScheme(t)).
+		WithObjects(dataplane).
+		Build()
+
+	_, _, err := NewDeploymentBuilder(logr.Discard(), cl).
+		WithDefaultImage(confWatchTestImage).
+		WithClusterCertificate("test-cert").
+		WithIPFamily(ipfamily.IPv4).
+		WithConfWatch(true).
+		WithConfigMapLabelSelector(confWatchTestLabelSelector).
+		BuildAndDeploy(t.Context(), dataplane, true, false)
+	require.NoError(t, err)
+
+	var cm corev1.ConfigMap
+	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+		Namespace: dataplane.Namespace,
+		Name:      k8sresources.KongConfWatchConfigMapName(dataplane.Name),
+	}, &cm))
+
+	assert.Equal(t, "true", cm.Labels[confWatchTestLabelSelector],
+		"the ConfigMap must carry the operator's configmap-label-selector label, or the manager's cache will not see it")
 }

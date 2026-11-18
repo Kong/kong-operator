@@ -912,6 +912,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ConfWatchEnabled:         c.FeatureGates.Enabled(FeatureGateDataPlaneKongConfWatch),
 				},
 				ConfWatchEnabled:       c.FeatureGates.Enabled(FeatureGateDataPlaneKongConfWatch),
+				ConfigMapLabelSelector: c.ConfigMapLabelSelector,
 				DefaultImage:           consts.DefaultDataPlaneImage,
 				KonnectEnabled:         c.KonnectControllersEnabled,
 				EnforceConfig:          c.EnforceConfig,
