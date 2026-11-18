@@ -6433,7 +6433,7 @@ KongTargetAPISpec are the attributes of the Kong Target itself.
 
 | Field | Description |
 | --- | --- |
-| `target` _string_ | Target is the target address of the upstream. |
+| `target` _string_ | Target is the target address of the upstream. An IP address is valid unless the KongService sets spec.tls_verify; then the host must match the server certificate's CN or SAN, so use the service FQDN. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 
@@ -6450,7 +6450,7 @@ KongTargetSpec defines the spec of KongTarget.
 
 | Field | Description |
 | --- | --- |
-| `target` _string_ | Target is the target address of the upstream. |
+| `target` _string_ | Target is the target address of the upstream. An IP address is valid unless the KongService sets spec.tls_verify; then the host must match the server certificate's CN or SAN, so use the service FQDN. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `upstreamRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
