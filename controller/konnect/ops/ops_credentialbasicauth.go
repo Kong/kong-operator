@@ -54,6 +54,7 @@ func createKongCredentialBasicAuth(
 func updateKongCredentialBasicAuth(
 	ctx context.Context,
 	sdk sdkkonnectgo.BasicAuthCredentialsSDK,
+	g *syncGuard,
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -61,12 +62,28 @@ func updateKongCredentialBasicAuth(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertBasicAuthWithConsumer(ctx, sdkkonnectops.UpsertBasicAuthWithConsumerRequest{
+	id := cred.GetKonnectStatus().GetKonnectID()
+	consumerID := cred.Status.Konnect.GetConsumerID()
+	req := sdkkonnectops.UpsertBasicAuthWithConsumerRequest{
 		ControlPlaneID:              cpID,
-		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-		BasicAuthID:                 cred.GetKonnectStatus().GetKonnectID(),
+		ConsumerIDForNestedEntities: consumerID,
+		BasicAuthID:                 id,
 		BasicAuthWithoutParents:     kongCredentialBasicAuthToBasicAuthWithoutParents(cred),
-	})
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.BasicAuth, error) {
+			resp, err := sdk.GetBasicAuthWithConsumer(ctx, sdkkonnectops.GetBasicAuthWithConsumerRequest{
+				ControlPlaneID:              cpID,
+				ConsumerIDForNestedEntities: consumerID,
+				BasicAuthID:                 id,
+			})
+			return resp.GetBasicAuth(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.BasicAuth, error) {
+			resp, err := sdk.UpsertBasicAuthWithConsumer(ctx, req)
+			return resp.GetBasicAuth(), err
+		},
+	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
 		return errWrap
@@ -149,7 +166,7 @@ func adoptKongCredentialBasicAuth(
 	case commonv1alpha1.AdoptModeOverride:
 		credCopy := cred.DeepCopy()
 		credCopy.SetKonnectID(konnectID)
-		if err = updateKongCredentialBasicAuth(ctx, sdk, credCopy); err != nil {
+		if err = updateKongCredentialBasicAuth(ctx, sdk, nil, credCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

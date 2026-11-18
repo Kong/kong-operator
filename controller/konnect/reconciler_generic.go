@@ -56,6 +56,9 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 
 	MetricRecorder metrics.Recorder
 
+	// ConfigVersionTracker, when set, is used to skip periodic updates of entities in sync with Konnect.
+	ConfigVersionTracker *ops.ConfigVersionTracker
+
 	// apiReader makes policy-chain ownership decisions independent of cache lag.
 	apiReader client.Reader
 
@@ -96,6 +99,15 @@ func WithMetricRecorder[T constraints.SupportedKonnectEntityType, TEnt constrain
 ) KonnectEntityReconcilerOption[T, TEnt] {
 	return func(r *KonnectEntityReconciler[T, TEnt]) {
 		r.MetricRecorder = metricRecorder
+	}
+}
+
+// WithConfigVersionTracker sets the tracker used to skip periodic updates of entities in sync with Konnect.
+func WithConfigVersionTracker[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	tracker *ops.ConfigVersionTracker,
+) KonnectEntityReconcilerOption[T, TEnt] {
+	return func(r *KonnectEntityReconciler[T, TEnt]) {
+		r.ConfigVersionTracker = tracker
 	}
 }
 
@@ -651,6 +663,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			// update failed after the entity was created in Konnect), try to recover
 			// it from the in-memory store so the entity can still be cleaned up.
 			r.restorePendingKonnectIDForDeletion(ent)
+			r.ConfigVersionTracker.Forget(ent.GetUID())
 
 			if err := ops.Delete(ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
 				// If the error was a network error, handle it here, there's no need to proceed,
@@ -872,7 +885,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if inputs, ok := any(ent).(createInputsAware); ok {
 		previousHash = inputs.GetCreateInputsHash()
 	}
-	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
+	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, r.ConfigVersionTracker)
 	if inputs, ok := any(ent).(createInputsAware); ok &&
 		(previousID != ent.GetKonnectStatus().GetKonnectID() || previousHash != inputs.GetCreateInputsHash()) {
 		r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), pendingKonnectEntityStatus{
