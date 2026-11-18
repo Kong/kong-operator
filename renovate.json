@@ -328,6 +328,15 @@
       "enabled": false
     },
     {
+      "description": "Keep the UBI base image current on release branches. A base frozen for the life of a release branch collects unapplied errata, and the errata rule is evaluated on the base the image was built from. No other dependency is re-enabled here.",
+      "matchManagers": ["dockerfile"],
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["/ubi9\\/ubi-minimal/"],
+      "matchBaseBranches": ["release/*"],
+      "enabled": true,
+      "minimumReleaseAge": "7 days"
+    },
+    {
       "description": "On release branches, group every enabled update (Go module patches + golang toolchain/image) into a single PR so govulncheck sees all security fixes together. Must be the last rule so it overrides the family groups above on release branches.",
       "matchBaseBranches": ["release/*"],
       "matchManagers": ["gomod", "dockerfile"],

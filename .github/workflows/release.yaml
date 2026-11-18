@@ -44,6 +44,8 @@ jobs:
       konnect-pat: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
       op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
       kong-license-data: ${{ secrets.KONG_LICENSE_DATA }}
+      pyxis-api-token: ${{ secrets.PYXIS_API_TOKEN }}
+      pyxis-certification-component-id: ${{ secrets.PYXIS_CERTIFICATION_COMPONENT_ID }}
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       dockerhub-pull-username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
