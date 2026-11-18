@@ -16,18 +16,50 @@ PROXY_IP="${PROXY_IP}"
 PROXY_PORT="${PROXY_PORT}"
 EXPECTED_RESPONSE="${EXPECTED_RESPONSE:-Running on Pod}"
 
+# run_with_timeout SECONDS COMMAND [ARG...]: a portable replacement for GNU
+# coreutils' timeout(1), which macOS does not ship by default. COMMAND runs in
+# the background and is killed after SECONDS; 124 is returned on timeout, like
+# timeout(1).
+run_with_timeout() {
+  local timeout=$1
+  local pid
+  local waited=0
+  shift
+
+  "$@" &
+  pid=$!
+
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$waited" -ge "$timeout" ]; then
+      kill -TERM "$pid" 2>/dev/null
+      # Don't wait forever if the command ignores SIGTERM.
+      sleep 1
+      kill -KILL "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      return 124
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+
+  wait "$pid"
+}
+
 case "$PROTOCOL" in
   tcp)
     MAX_RETRIES="${MAX_RETRIES:-180}"
     RETRY_DELAY="${RETRY_DELAY:-1}"
-    # The echo server greets as soon as the connection is established.
-    PROBE='exec 3<>/dev/tcp/$1/$2; timeout 2 cat <&3'
+    # The echo server greets as soon as the connection is established. Read
+    # its lines until the read timeout so the probe does not wait for the
+    # server to close.
+    PROBE='exec 3<>/dev/tcp/$1/$2 || exit 1; while IFS= read -r -t 2 -u 3 line; do printf "%s\n" "$line"; done'
     ;;
   udp)
     MAX_RETRIES="${MAX_RETRIES:-30}"
     RETRY_DELAY="${RETRY_DELAY:-2}"
-    # UDP is connectionless: send a datagram to get a reply.
-    PROBE='exec 3<>/dev/udp/$1/$2; echo -n probe >&3; timeout 2 cat <&3'
+    # UDP is connectionless: send a datagram to get a reply. dd returns after
+    # reading the reply datagram, while the outer timeout bounds a missing one.
+    PROBE='exec 3<>/dev/udp/$1/$2 || exit 1; printf "probe" >&3; exec dd bs=4096 count=1 <&3 2>/dev/null'
     ;;
   *)
     echo "{\"success\": false, \"error\": \"unsupported PROTOCOL '$PROTOCOL', expected 'tcp' or 'udp'\"}"
@@ -39,7 +71,7 @@ LAST_OUTPUT=""
 LAST_STATUS=0
 
 for ATTEMPT in $(seq 1 "$MAX_RETRIES"); do
-  OUTPUT=$(timeout 5 bash -c "$PROBE" _ "$PROXY_IP" "$PROXY_PORT" 2>&1)
+  OUTPUT=$(run_with_timeout 5 bash -c "$PROBE" _ "$PROXY_IP" "$PROXY_PORT" 2>&1)
   STATUS=$?
 
   LAST_OUTPUT="$OUTPUT"
