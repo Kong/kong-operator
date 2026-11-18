@@ -525,7 +525,7 @@ func Run(
 			Namespace: cfg.ClusterCASecretNamespace,
 			Name:      cfg.ClusterCASecretName,
 		},
-		consts.DefaultCertTTL,
+		cfg.SecretLabelSelector,
 	); err != nil {
 		return fmt.Errorf("failed ensuring cluster CA certificate: %w", err)
 	}
@@ -608,20 +608,18 @@ const clusterCACommonName = "Kong Operator CA"
 // Helm and cert-manager create the Secret before the operator starts. OLM does
 // not, so the operator creates it on first start. An existing Secret is never
 // overwritten: rotating the CA would invalidate every certificate already
-// issued from it.
+// issued from it. The created Secret carries secretLabelSelector so the
+// operator's Secret cache, which filters on that label, can see it; an empty
+// selector leaves the Secret unlabelled, as the cache then has no filter.
 func EnsureClusterCASecret(
 	ctx context.Context,
 	log logr.Logger,
 	c client.Client,
 	key client.ObjectKey,
-	ttl time.Duration,
+	secretLabelSelector string,
 ) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
-
-	if ttl <= 0 {
-		ttl = consts.DefaultCertTTL
-	}
 
 	var ca corev1.Secret
 	if err := c.Get(ctx, key, &ca); err != nil {
@@ -629,17 +627,21 @@ func EnsureClusterCASecret(
 			return fmt.Errorf("failed getting cluster CA certificate Secret %s: %w", key, err)
 		}
 
-		certPEM, keyPEM, err := pki.GenerateCA(clusterCACommonName, time.Now(), ttl)
+		certPEM, keyPEM, err := pki.GenerateCA(clusterCACommonName, time.Now(), consts.DefaultCertTTL)
 		if err != nil {
 			return fmt.Errorf("failed generating cluster CA certificate: %w", err)
+		}
+		var labels map[string]string
+		if secretLabelSelector != "" {
+			labels = map[string]string{
+				secretLabelSelector: mgrconfig.LabelValueForSelectorInternal,
+			}
 		}
 		ca = corev1.Secret{
 			Name:      key.Name,
 			Namespace: key.Namespace,
-			Labels: map[string]string{
-				mgrconfig.DefaultSecretLabelSelector: "internal",
-			},
-			Type: corev1.SecretTypeTLS,
+			Labels:    labels,
+			Type:      corev1.SecretTypeTLS,
 			Data: map[string][]byte{
 				corev1.TLSCertKey:       certPEM,
 				corev1.TLSPrivateKeyKey: keyPEM,

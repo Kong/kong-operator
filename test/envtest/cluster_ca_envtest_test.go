@@ -14,7 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func TestEnsureClusterCASecret(t *testing.T) {
@@ -33,12 +36,14 @@ func TestEnsureClusterCASecret(t *testing.T) {
 	t.Run("creates a missing secret", func(t *testing.T) {
 		key := keyFor("missing-ca")
 
-		require.NoError(t, kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), cl, key, time.Hour))
+		require.NoError(t, kgomanager.EnsureClusterCASecret(
+			ctx, logr.Discard(), cl, key, mgrconfig.DefaultSecretLabelSelector,
+		))
 
 		var ca corev1.Secret
 		require.NoError(t, cl.Get(ctx, key, &ca))
 		require.Equal(t, corev1.SecretTypeTLS, ca.Type)
-		require.Equal(t, "internal", ca.Labels["konghq.com/secret"])
+		require.Equal(t, mgrconfig.LabelValueForSelectorInternal, ca.Labels[mgrconfig.DefaultSecretLabelSelector])
 		require.True(t, secrets.IsTLSSecretValid(&ca))
 
 		block, _ := pem.Decode(ca.Data[corev1.TLSCertKey])
@@ -47,21 +52,47 @@ func TestEnsureClusterCASecret(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, cert.IsCA)
 		require.Equal(t, "Kong Operator CA", cert.Subject.CommonName)
-		require.WithinDuration(t, time.Now().Add(time.Hour), cert.NotAfter, 2*time.Minute)
+		require.WithinDuration(t, time.Now().Add(consts.DefaultCertTTL), cert.NotAfter, 2*time.Minute)
 	})
 
 	t.Run("keeps an existing secret unchanged", func(t *testing.T) {
 		key := keyFor("existing-ca")
-		require.NoError(t, kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), cl, key, time.Hour))
+		require.NoError(t, kgomanager.EnsureClusterCASecret(
+			ctx, logr.Discard(), cl, key, mgrconfig.DefaultSecretLabelSelector,
+		))
 
 		var before corev1.Secret
 		require.NoError(t, cl.Get(ctx, key, &before))
 
-		require.NoError(t, kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), cl, key, time.Hour))
+		require.NoError(t, kgomanager.EnsureClusterCASecret(
+			ctx, logr.Discard(), cl, key, mgrconfig.DefaultSecretLabelSelector,
+		))
 
 		var after corev1.Secret
 		require.NoError(t, cl.Get(ctx, key, &after))
 		require.Equal(t, before.Data, after.Data)
+	})
+
+	t.Run("uses the configured secret label selector", func(t *testing.T) {
+		key := keyFor("custom-selector-ca")
+		const selector = "example.com/secret"
+
+		require.NoError(t, kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), cl, key, selector))
+
+		var ca corev1.Secret
+		require.NoError(t, cl.Get(ctx, key, &ca))
+		require.Equal(t, mgrconfig.LabelValueForSelectorInternal, ca.Labels[selector])
+		require.NotContains(t, ca.Labels, mgrconfig.DefaultSecretLabelSelector)
+	})
+
+	t.Run("omits labels when the selector is empty", func(t *testing.T) {
+		key := keyFor("empty-selector-ca")
+
+		require.NoError(t, kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), cl, key, ""))
+
+		var ca corev1.Secret
+		require.NoError(t, cl.Get(ctx, key, &ca))
+		require.Empty(t, ca.Labels)
 	})
 
 	t.Run("rejects an invalid existing secret without overwriting it", func(t *testing.T) {
@@ -72,7 +103,9 @@ func TestEnsureClusterCASecret(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, &invalid))
 
-		err := kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), cl, key, time.Hour)
+		err := kgomanager.EnsureClusterCASecret(
+			ctx, logr.Discard(), cl, key, mgrconfig.DefaultSecretLabelSelector,
+		)
 		require.ErrorContains(t, err, "is invalid")
 
 		var after corev1.Secret
@@ -82,26 +115,42 @@ func TestEnsureClusterCASecret(t *testing.T) {
 
 	t.Run("uses a secret created concurrently", func(t *testing.T) {
 		key := keyFor("concurrent-ca")
-		concurrentClient := alreadyExistsClient{Client: cl}
+		certPEM, keyPEM, err := pki.GenerateCA("concurrent-winner", time.Now(), time.Hour)
+		require.NoError(t, err)
+		winnerData := map[string][]byte{
+			corev1.TLSCertKey:       certPEM,
+			corev1.TLSPrivateKeyKey: keyPEM,
+		}
+		concurrentClient := alreadyExistsClient{Client: cl, winnerData: winnerData}
 
-		require.NoError(t, kgomanager.EnsureClusterCASecret(ctx, logr.Discard(), concurrentClient, key, time.Hour))
+		require.NoError(t, kgomanager.EnsureClusterCASecret(
+			ctx, logr.Discard(), concurrentClient, key, mgrconfig.DefaultSecretLabelSelector,
+		))
 
 		var ca corev1.Secret
 		require.NoError(t, cl.Get(ctx, key, &ca))
-		require.True(t, secrets.IsTLSSecretValid(&ca))
+		require.Equal(t, winnerData, ca.Data)
 	})
 }
 
-// alreadyExistsClient creates the object but reports AlreadyExists, as when
-// another operator replica wins the race between Get and Create.
+// alreadyExistsClient creates a distinct winner but reports AlreadyExists, as
+// when another operator replica wins the race between Get and Create.
 type alreadyExistsClient struct {
 	client.Client
+
+	winnerData map[string][]byte
 }
 
 func (c alreadyExistsClient) Create(
 	ctx context.Context, obj client.Object, opts ...client.CreateOption,
 ) error {
-	if err := c.Client.Create(ctx, obj, opts...); err != nil {
+	winner := &corev1.Secret{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+		Type:      corev1.SecretTypeTLS,
+		Data:      c.winnerData,
+	}
+	if err := c.Client.Create(ctx, winner, opts...); err != nil {
 		return err
 	}
 	return apierrors.NewAlreadyExists(corev1.Resource("secrets"), obj.GetName())
