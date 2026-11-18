@@ -21,6 +21,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/test/helpers"
@@ -39,15 +40,18 @@ func TestTCPRouteEssentials(t *testing.T) {
 	const service2Port = 8080
 	test2UUID := uuid.NewString()
 
-	gatewayClassName := uuid.NewString()
-	gatewayName := uuid.NewString()
-
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindTCPRoute).
-		WithSetup("skip if router not expressions", SkipIfRouterNotExpressions).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup(
+			withKongRouterFlavor(dpconf.RouterFlavorExpressions),
+			withGatewayListeners(gatewayapi.Listener{
+				Name:     gatewayTCPPortName,
+				Protocol: gatewayapi.TCPProtocolType,
+				Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
+			}),
+		)).
 		WithSetup("configure TCP Deployments with Services and TCPRoutes", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 			gatewayClient, err := gatewayclient.NewForConfig(cfg.Client().RESTConfig())
 			assert.NoError(t, err)
@@ -56,23 +60,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			cluster := GetClusterFromCtx(ctx)
-
-			t.Log("deploying a supported gatewayclass to the test cluster")
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			assert.NoError(t, err)
-			cleaner.Add(gwc)
-
-			t.Logf("deploying a gateway to the test cluster using unmanaged gateway mode and port %d", ktfkong.DefaultTCPServicePort)
-			gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Name = gatewayName
-				gw.Spec.Listeners = []gatewayapi.Listener{{
-					Name:     gatewayTCPPortName,
-					Protocol: gatewayapi.TCPProtocolType,
-					Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
-				}}
-			})
-			assert.NoError(t, err)
-			cleaner.Add(gateway)
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 
 			t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
 			container1 := generators.NewContainer(service1Name, test.EchoImage, test.EchoTCPPort)
@@ -138,7 +126,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 				Spec: gatewayapi.TCPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
-							Name:        gatewayapi.ObjectName(gatewayName),
+							Name:        gatewayapi.ObjectName(gateway.Name),
 							SectionName: new(gatewayapi.SectionName(gatewayTCPPortName)),
 						}},
 					},
@@ -228,10 +216,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
+			gatewayClass := GetFromCtxForT[*gatewayapi.GatewayClass](ctx, t)
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("deleting the GatewayClass")
-			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gatewayClassName, metav1.DeleteOptions{}))
+			deleteGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("verifying that the Gateway gets unlinked from the route via status")
 			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
@@ -241,8 +231,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
 
 			t.Log("putting the GatewayClass back")
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			assert.NoError(t, err)
+			recreateGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
@@ -251,26 +240,14 @@ func TestTCPRouteEssentials(t *testing.T) {
 			t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
 			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
+			// The operator removes the Gateway's DataPlane and ControlPlane along with it, so there's neither
+			// the proxy to send requests to nor the controller to update the TCPRoute's status until it's recreated.
 			t.Log("deleting the Gateway")
-			assert.NoError(t, gatewayClient.GatewayV1().Gateways(namespace).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
-
-			t.Log("verifying that the Gateway gets unlinked from the route via status")
-			callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
-			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
-
-			t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the Gateway now removed")
-			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
+			deleteGateway(ctx, t, gateway)
 
 			t.Log("putting the Gateway back")
-			_, err = helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Name = gatewayName
-				gw.Spec.Listeners = []gatewayapi.Listener{{
-					Name:     gatewayTCPPortName,
-					Protocol: gatewayapi.TCPProtocolType,
-					Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
-				}}
-			})
-			assert.NoError(t, err)
+			ctx = recreateGateway(ctx, t, gateway)
+			tcpGatewayURL = GetTCPURLFromCtx(ctx)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
@@ -280,30 +257,15 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("deleting both GatewayClass and Gateway rapidly")
-			assert.NoError(t, gatewayClient.GatewayV1().GatewayClasses().Delete(ctx, gwc.Name, metav1.DeleteOptions{}))
-			assert.NoError(t, gatewayClient.GatewayV1().Gateways(namespace).Delete(ctx, gatewayName, metav1.DeleteOptions{}))
-
-			t.Log("verifying that the Gateway gets unlinked from the route via status")
-			callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
-			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
-
-			t.Log("verifying that the data-plane configuration from the TCPRoute does not get orphaned with the GatewayClass and Gateway gone")
-			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
+			deleteGatewayClass(ctx, t, gatewayClass)
+			deleteGateway(ctx, t, gateway)
 
 			t.Log("putting the GatewayClass back")
-			_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			assert.NoError(t, err)
+			recreateGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("putting the Gateway back")
-			_, err = helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Name = gatewayName
-				gw.Spec.Listeners = []gatewayapi.Listener{{
-					Name:     gatewayTCPPortName,
-					Protocol: gatewayapi.TCPProtocolType,
-					Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
-				}}
-			})
-			assert.NoError(t, err)
+			ctx = recreateGateway(ctx, t, gateway)
+			tcpGatewayURL = GetTCPURLFromCtx(ctx)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
@@ -344,25 +306,11 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assertEventuallyResponseTCP(t, tcpGatewayURL, test2UUID)
 
 			t.Log("testing port matching")
-			t.Log("putting the Gateway back")
-			_, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Name = gatewayName
-				gw.Spec.Listeners = []gatewayapi.Listener{{
-					Name:     gatewayTCPPortName,
-					Protocol: gatewayapi.TCPProtocolType,
-					Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
-				}}
-			})
-			assert.NoError(t, err)
-			t.Log("putting the GatewayClass back")
-			_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			assert.NoError(t, err)
-
 			t.Log("verifying that the TCPRoute responds before specifying a port not existent in Gateway")
 			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
-			_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TCPRoutes(namespace), tcpRoute.Name, func(r *gatewayapi.TCPRoute) {
+			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TCPRoutes(namespace), tcpRoute.Name, func(r *gatewayapi.TCPRoute) {
 				notExistingPort := gatewayapi.PortNumber(81)
 				r.Spec.ParentRefs[0].Port = &notExistingPort
 				r.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)

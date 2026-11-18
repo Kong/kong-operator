@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/configuration"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -50,7 +51,7 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 		New("verify upstream TLS").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 			kongClients, err := clientset.NewForConfig(cluster.Config())
@@ -91,7 +92,8 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			caSecret := &corev1.Secret{
 				Name: caSecretName,
 				Labels: map[string]string{
-					configuration.CACertLabelKey: "true",
+					configuration.CACertLabelKey:         "true",
+					mgrconfig.DefaultSecretLabelSelector: mgrconfig.LabelValueForSelectorTrue,
 				},
 				Annotations: map[string]string{
 					annotations.IngressClassKey: ingressClass,
@@ -124,7 +126,8 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			anotherCaSecret := &corev1.Secret{
 				Name: anotherCASecretName,
 				Labels: map[string]string{
-					configuration.CACertLabelKey: "true",
+					configuration.CACertLabelKey:         "true",
+					mgrconfig.DefaultSecretLabelSelector: mgrconfig.LabelValueForSelectorTrue,
 				},
 				Annotations: map[string]string{
 					annotations.IngressClassKey: ingressClass,

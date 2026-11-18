@@ -159,22 +159,6 @@ func GetHTTPSURLFromCtx(ctx context.Context) *url.URL {
 	return u.(*url.URL)
 }
 
-type _adminURL struct{}
-
-// SetAdminURLInCtx sets the admin URL in the context.
-func SetAdminURLInCtx(ctx context.Context, url *url.URL) context.Context {
-	return setInCtx(ctx, _adminURL{}, url)
-}
-
-// GetAdminURLFromCtx gets the admin URL from the context.
-func GetAdminURLFromCtx(ctx context.Context) *url.URL {
-	u := ctx.Value(_adminURL{})
-	if u == nil {
-		return nil
-	}
-	return u.(*url.URL)
-}
-
 type _diagURL struct{}
 
 // SetDiagURLInCtx sets the diag URL in the context.
