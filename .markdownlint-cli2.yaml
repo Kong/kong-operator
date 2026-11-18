@@ -1,6 +1,9 @@
 # Config schema:
 # https://github.com/DavidAnson/markdownlint-cli2/blob/main/test/markdownlint-cli2-yaml-example/.markdownlint-cli2.yaml
 
+customRules:
+- ./scripts/markdownlint/changelog-fixes-heading.mjs
+
 config:
 
   # All available checks options:
@@ -49,3 +52,13 @@ config:
   MD036:
     # Punctuation characters
     punctuation: ".,;:!?。，；：！？*"
+
+  # changelog-fixes-heading (custom, see scripts/markdownlint/) : Bugfix sections
+  # must use "### Fixes" instead of "### Fixed".
+  changelog-fixes-heading:
+    # Releases published before this rule existed that already use "### Fixed".
+    allowed_releases:
+    - v2.3.3
+    - v2.0.9
+    - v2.0.8
+    - v2.0.7
