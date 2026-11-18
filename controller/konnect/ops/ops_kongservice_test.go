@@ -463,7 +463,7 @@ func TestUpdateKongService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, svc := tc.mockServicePair(t)
 
-			err := updateService(ctx, sdk, svc)
+			err := updateService(ctx, sdk, nil, svc)
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)
