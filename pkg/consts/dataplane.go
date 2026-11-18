@@ -260,15 +260,20 @@ const (
 	DataPlaneConfigMapTypeKongConfWatch = "kong-conf-watch"
 )
 
-const (
-	// DataPlaneDefaultWorkerShutdownTimeout is the default value the operator sets
-	// for the Nginx worker_shutdown_timeout directive when the watched kong.conf is
-	// in use.
-	//
-	// `kong reload` keeps the old workers alive until their connections close, so
-	// without an upper bound a long-lived stream connection would pin a worker
-	// indefinitely and repeated listener changes would accumulate workers, and
-	// their memory, until the Pod is OOM killed. Kong sets no default for this
-	// directive.
-	DataPlaneDefaultWorkerShutdownTimeout = "60s"
-)
+// NOTE: the operator deliberately does NOT default
+// nginx_main_worker_shutdown_timeout (KONG_NGINX_MAIN_WORKER_SHUTDOWN_TIMEOUT)
+// when the watched kong.conf is in use.
+//
+// `kong reload` keeps the old Nginx workers alive until their connections
+// close. Setting the directive bounds how long they linger, which bounds worker
+// (and memory) accumulation under frequent listener changes. It also bounds how
+// long an established connection survives a reload: when the timeout expires,
+// the draining worker is killed and its connections are dropped. Testing on a
+// cluster confirmed both halves of that trade-off, a long-lived TCP stream being
+// cut exactly N seconds after an unrelated reload.
+//
+// Dropping long-lived stream connections is the very thing this feature exists
+// to avoid, so the operator does not pick a value on the user's behalf. Kong
+// itself sets no default. Operators who reload often, and who can tolerate
+// losing drained connections, should set the value explicitly; an environment
+// variable set on the DataPlane always wins over the generated file.

@@ -106,8 +106,11 @@ func TestApplyKongConfWatchForDataPlane(t *testing.T) {
 
 		assert.Equal(t, consts.KongConfWatchPath,
 			k8sutils.EnvValueByName(container.Env, consts.KongConfWatchPathEnvVarName))
-		assert.Equal(t, consts.DataPlaneDefaultWorkerShutdownTimeout,
-			k8sutils.EnvValueByName(container.Env, "KONG_NGINX_MAIN_WORKER_SHUTDOWN_TIMEOUT"))
+		// The operator must not pick a worker_shutdown_timeout on the user's
+		// behalf: it bounds how long an established connection survives a reload,
+		// and dropping long-lived streams is what this feature exists to avoid.
+		assert.Empty(t, k8sutils.EnvValueByName(container.Env, "KONG_NGINX_MAIN_WORKER_SHUTDOWN_TIMEOUT"),
+			"the operator must not default worker_shutdown_timeout")
 	})
 
 	t.Run("mounts the ConfigMap as a directory, never with SubPath", func(t *testing.T) {

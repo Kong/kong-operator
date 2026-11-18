@@ -205,13 +205,6 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		// KongDefaults returns a fresh map, so mutating it is safe.
 		config.DisableAdminAPI(kongDefaults)
 	}
-	if d.confWatchEnabled {
-		// Reloads keep the old workers alive until their connections drain, so a
-		// steady stream of listener changes would otherwise accumulate workers and
-		// their memory. FillContainerEnvs leaves an existing value alone, so a user
-		// who sets their own timeout keeps it.
-		kongDefaults["KONG_NGINX_MAIN_WORKER_SHUTDOWN_TIMEOUT"] = consts.DataPlaneDefaultWorkerShutdownTimeout
-	}
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, kongDefaults)
 
 	// NOTE: this has to run after the environment is complete, because it moves
