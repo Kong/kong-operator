@@ -63,7 +63,9 @@ type KongTargetSpec struct {
 
 // KongTargetAPISpec are the attributes of the Kong Target itself.
 type KongTargetAPISpec struct {
-	// Target is the target address of the upstream.
+	// Target is the target address of the upstream, in "host:port" format.
+	// When the upstream uses TLS verification, the host must match the server
+	// certificate's CN or SAN. Use the service FQDN, not a pod IP.
 	Target string `json:"target"`
 	// Weight is the weight this target gets within the upstream loadbalancer.
 	// +kubebuilder:validation:Minimum=0

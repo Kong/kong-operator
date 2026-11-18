@@ -139,7 +139,10 @@ spec:
                     && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:')
                     && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               target:
-                description: Target is the target address of the upstream.
+                description: |-
+                  Target is the target address of the upstream, in "host:port" format.
+                  When the upstream uses TLS verification, the host must match the server
+                  certificate's CN or SAN. Use the service FQDN, not a pod IP.
                 type: string
               upstreamRef:
                 description: UpstreamRef is a reference to a KongUpstream this KongTarget
