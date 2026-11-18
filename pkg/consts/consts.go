@@ -169,6 +169,10 @@ const (
 	// DefaultKonnectSyncPeriod is the default sync period for Konnect entities.
 	DefaultKonnectSyncPeriod = time.Minute
 
+	// DefaultKonnectDriftCheckPeriod is the maximum time after which a Konnect Kong Gateway entity is checked
+	// against Konnect, even when no change in its control plane configuration was observed.
+	DefaultKonnectDriftCheckPeriod = time.Hour
+
 	// DefaultKonnectRequestTimeout is the default timeout for requests to Konnect API.
 	DefaultKonnectRequestTimeout = 10 * time.Second
 

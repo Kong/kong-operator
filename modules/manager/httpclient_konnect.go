@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
-func httpClientForKonnect(c *Config) *http.Client {
+func httpClientForKonnect(c *Config, writeObserver sdkops.WriteObserver) *http.Client {
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.IdleConnTimeout = 2 * c.KonnectSyncPeriod
 	// Configure HTTP/2 health checks to detect stalled connections.
@@ -22,7 +24,7 @@ func httpClientForKonnect(c *Config) *http.Client {
 	}
 
 	return &http.Client{
-		Transport: transport,
+		Transport: sdkops.NewWriteObservingTransport(transport, writeObserver),
 		Timeout:   c.KonnectRequestTimeout,
 	}
 }

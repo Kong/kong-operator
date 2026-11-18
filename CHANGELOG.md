@@ -71,6 +71,17 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Changed
+
+- Konnect: Kong Gateway entities are no longer PUT to Konnect on every sync
+  period. The operator sends a PUT only when the entity's desired state changes
+  in Kubernetes, including referenced objects such as KongPlugins and Secrets.
+  Otherwise it polls the control plane's expected config version once per sync
+  period. When the version changes because of a write the operator didn't make,
+  it GETs each entity and sends a PUT only if the entity drifted.
+
 ## [v2.4.0]
 
 > Release date: 2026-11-17
