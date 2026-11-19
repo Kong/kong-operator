@@ -83,7 +83,7 @@
   Workspace. The field is rejected on `KongCACertificate` and
   `KongDataPlaneClientCertificate`, which belong to the Control Plane, and on
   Control Planes that don't support Workspaces.
-  [#TBD](https://github.com/Kong/kong-operator/pull/TBD)
+  [#6756](https://github.com/Kong/kong-operator/pull/6756)
 
 ### Fixes
 
