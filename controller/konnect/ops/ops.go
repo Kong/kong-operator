@@ -360,6 +360,14 @@ func Delete[
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
 	if ent.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(ent) {
+		// An entity that needs a ControlPlane but never had its ControlPlane ID set
+		// (for example because its ControlPlaneRef was rejected) can't have been
+		// created in Konnect: creation requires the ControlPlane ID. There is
+		// nothing to clean up, and probing Konnect without an ID would fail.
+		if cpEnt, ok := any(ent).(interface{ GetControlPlaneID() string }); ok && cpEnt.GetControlPlaneID() == "" {
+			return nil
+		}
+
 		// The Konnect ID was never persisted to the status. This can happen if the
 		// operator created the entity in Konnect but was interrupted before writing
 		// the ID to the status (and the in-memory record was lost, e.g. on restart).

@@ -543,6 +543,46 @@ func TestDelete(t *testing.T) {
 	}
 
 	testDelete(t, testCasesForKonnectGatewayControlPlane)
+
+	testCasesForKongService := []deleteTestCase[
+		configurationv1alpha1.KongService,
+		*configurationv1alpha1.KongService,
+	]{
+		{
+			// For example a KongService whose controlPlaneRef points at a Control
+			// Plane Group: the ref is rejected, so the ControlPlane ID is never set
+			// and the entity can't exist in Konnect.
+			name: "no Konnect ID and no ControlPlane ID - Konnect is not called",
+			entity: &configurationv1alpha1.KongService{
+				Name:      "test-svc",
+				Namespace: "test-ns",
+			},
+		},
+		{
+			name: "no Konnect ID but ControlPlane ID set - Konnect is probed by UID",
+			entity: &configurationv1alpha1.KongService{
+				Name:      "test-svc",
+				Namespace: "test-ns",
+				Status: configurationv1alpha1.KongServiceStatus{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+						ControlPlaneID: "cp-id",
+					},
+				},
+			},
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				sdk.ServicesSDK.EXPECT().
+					ListService(mock.Anything, mock.Anything).
+					Return(&sdkkonnectops.ListServiceResponse{
+						Object: &sdkkonnectops.ListServiceResponseBody{
+							Data: []sdkkonnectcomp.Service{},
+						},
+					}, nil)
+				return sdk
+			},
+		},
+	}
+
+	testDelete(t, testCasesForKongService)
 }
 
 func testDelete[
