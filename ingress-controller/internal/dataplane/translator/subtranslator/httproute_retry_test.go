@@ -205,6 +205,51 @@ func TestTranslateHTTPRoutesToKongstateServicesRejectsUnsupportedRetry(t *testin
 	require.Empty(t, result.ServiceNameToKongstateService)
 }
 
+func TestTranslateHTTPRoutesToKongstateServicesIsolatesUnsupportedRetryFromHealthyRoute(t *testing.T) {
+	healthyRoute := httpRouteWithRetry("healthy-route", nil)
+	healthyRoute.TypeMeta = metav1.TypeMeta{APIVersion: "gateway.networking.k8s.io/v1", Kind: "HTTPRoute"}
+	healthyRoute.Spec.CommonRouteSpec = commonRouteSpecMock("fake-gateway-1")
+
+	invalidRoute := httpRouteWithRetry("invalid-retry-route", nil)
+	invalidRoute.TypeMeta = metav1.TypeMeta{APIVersion: "gateway.networking.k8s.io/v1", Kind: "HTTPRoute"}
+	invalidRoute.Spec.CommonRouteSpec = commonRouteSpecMock("fake-gateway-1")
+	invalidRoute.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{
+		Codes: []gatewayapi.HTTPRouteRetryStatusCode{503},
+	}
+
+	fakeStore, err := store.NewFakeStore(store.FakeObjects{
+		Services: []*corev1.Service{{
+			Name:      testHTTPRouteBackend,
+			Namespace: testHTTPRouteNamespace,
+			Spec: corev1.ServiceSpec{Ports: []corev1.ServicePort{{
+				Port: 80,
+			}}},
+		}},
+	})
+	require.NoError(t, err)
+
+	result := TranslateHTTPRoutesToKongstateServices(
+		logr.Discard(),
+		fakeStore,
+		[]*gatewayapi.HTTPRoute{healthyRoute, invalidRoute},
+		TranslateHTTPRouteToKongstateServiceOptions{CombinedServicesFromDifferentHTTPRoutes: true},
+	)
+
+	healthyNN := k8stypes.NamespacedName{Namespace: testHTTPRouteNamespace, Name: "healthy-route"}
+	invalidNN := k8stypes.NamespacedName{Namespace: testHTTPRouteNamespace, Name: "invalid-retry-route"}
+	require.NotContains(t, result.HTTPRouteNameToTranslationErrors, healthyNN)
+	require.Contains(t, result.HTTPRouteNameToTranslationErrors, invalidNN)
+	require.ErrorContains(t, result.HTTPRouteNameToTranslationErrors[invalidNN][0], "retry.codes is unsupported")
+
+	require.Len(t, result.ServiceNameToKongstateService, 1)
+	for svcName, svc := range result.ServiceNameToKongstateService {
+		require.NotContains(t, svcName, ".retries.")
+		require.NotNil(t, svc.Retries)
+		require.Equal(t, DefaultRetries, *svc.Retries)
+		require.Len(t, svc.Routes, 1)
+	}
+}
+
 func TestKongServiceConfigNameSuffixCombinesTimeoutAndRetries(t *testing.T) {
 	suffix := kongServiceConfigNameSuffix("500|2")
 	require.True(t, strings.HasPrefix(suffix, ".timeout.500"))

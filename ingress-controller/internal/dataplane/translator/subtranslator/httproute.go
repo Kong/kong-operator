@@ -797,14 +797,18 @@ func backendRequestTimeoutServiceNameSuffix(timeoutKey string) string {
 
 // getRetriesKey returns a canonical key identifying the rule's effective Kong
 // Service retries value. Rules that resolve to Kong's default return an empty
-// key, so they keep the existing service name and grouping. Unsupported retry
-// configuration also returns an empty key; translation rejects it separately.
+// key, so they keep the existing service name and grouping. Rules with
+// unsupported retry configuration return a rule-specific key so they never
+// group with valid rules and fail healthy HTTPRoutes sharing backends.
 func (m httpRouteRuleMeta) getRetriesKey() string {
 	retries, err := gatewayapipkg.KongRetriesForHTTPRouteRule(m.Rule)
-	if err != nil || retries == nil {
-		return ""
+	if err != nil {
+		if m.parentRoute != nil {
+			return fmt.Sprintf("unsupported.%s.%s.%d", m.parentRoute.Namespace, m.parentRoute.Name, m.RuleNumber)
+		}
+		return fmt.Sprintf("unsupported.%d", m.RuleNumber)
 	}
-	if *retries == gatewayapipkg.DefaultKongServiceRetries {
+	if retries == nil || *retries == gatewayapipkg.DefaultKongServiceRetries {
 		return ""
 	}
 	return strconv.FormatInt(*retries, 10)
