@@ -238,12 +238,14 @@ jobs:
       contents: read
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-push-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-pull-token: ${{ secrets.dockerhub-pull-token }}
     needs:
     - semver
     with:
       registry: ${{ inputs.registry }}
-      username: ${{ inputs.dockerhub-push-username }}
+      push-username: ${{ inputs.dockerhub-push-username }}
+      pull-username: ${{ inputs.dockerhub-pull-username }}
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}
       ref: ${{ inputs.base }}
@@ -276,14 +278,16 @@ jobs:
         with:
           egress-policy: audit
 
-      # preflight pulls the published image, and it cannot use --insecure together with
-      # --submit, so the registry login must be a real TLS registry.
+      # preflight only reads the published image, and it cannot use --insecure together
+      # with --submit, so the registry login must be a real TLS registry. Pull-scoped
+      # credentials are enough, and this job hands the credential file to a third-party
+      # container.
       - name: Log in to the Container registry
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ inputs.registry }}
-          username: ${{ inputs.dockerhub-push-username }}
-          password: ${{ secrets.dockerhub-push-token }}
+          username: ${{ inputs.dockerhub-pull-username }}
+          password: ${{ secrets.dockerhub-pull-token }}
 
       # A missing credential must not fail the release: it is reported and the step stops.
       - name: Submit the image for Red Hat certification
