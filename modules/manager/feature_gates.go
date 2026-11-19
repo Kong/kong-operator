@@ -13,11 +13,23 @@ type FeatureGate string
 const (
 	// FeatureGateMCPServer enables the MCPServer controller.
 	FeatureGateMCPServer FeatureGate = "mcp-server"
+
+	// FeatureGateDataPlaneKongConfWatch makes the operator render the DataPlane's
+	// listen settings into a kong.conf that the Kong Gateway container watches,
+	// instead of setting them as KONG_* environment variables.
+	//
+	// With it enabled, adding, changing or removing a Gateway listener no longer
+	// alters the Pod template, so Kong reloads in place instead of the Pods being
+	// rolled. It requires a Kong Gateway image that reads KONG_CONF_WATCH_PATH.
+	//
+	// See KAG-9223.
+	FeatureGateDataPlaneKongConfWatch FeatureGate = "dataplane-kong-conf-watch"
 )
 
 // allFeatureGates is the exhaustive list of valid feature gates.
 var allFeatureGates = []FeatureGate{
 	FeatureGateMCPServer,
+	FeatureGateDataPlaneKongConfWatch,
 }
 
 // FeatureGates holds the set of enabled feature gates parsed from the --feature-gates flag.
@@ -56,6 +68,12 @@ func (f FeatureGates) String() string {
 	}
 	sort.Strings(names)
 	return strings.Join(names, ",")
+}
+
+// ValidFeatureGateNames returns the comma-separated list of known feature gate
+// names, for use in flag help text.
+func ValidFeatureGateNames() string {
+	return validFeatureGateNames()
 }
 
 func isKnownFeatureGate(gate FeatureGate) bool {

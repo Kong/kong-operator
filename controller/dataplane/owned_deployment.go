@@ -61,6 +61,8 @@ type DeploymentBuilder struct {
 	opts                   []k8sresources.DeploymentOpt
 	ipFamily               ipfamily.IPFamily
 	adminAPIDisabled       bool
+	confWatchEnabled       bool
+	configMapLabelSelector string
 
 	secretLabelSelector string
 }
@@ -76,6 +78,25 @@ func NewDeploymentBuilder(logger logr.Logger, client client.Client) *DeploymentB
 // WithClusterCertificate configures a cluster certificate name for a DeploymentBuilder.
 func (d *DeploymentBuilder) WithClusterCertificate(name string) *DeploymentBuilder {
 	d.clusterCertificateName = name
+	return d
+}
+
+// WithConfigMapLabelSelector sets the operator's configmap-label-selector, which
+// has to be applied to generated ConfigMaps so that the manager's cache ingests
+// them. Without it the operator cannot read back a ConfigMap it just wrote.
+func (d *DeploymentBuilder) WithConfigMapLabelSelector(selector string) *DeploymentBuilder {
+	d.configMapLabelSelector = selector
+	return d
+}
+
+// WithConfWatch configures whether the DataPlane's listen settings are rendered
+// into a kong.conf the Kong Gateway container watches, instead of being set as
+// KONG_* environment variables.
+//
+// With it enabled, a listener change no longer alters the Pod template, so Kong
+// reloads in place rather than the Pods being replaced. See KAG-9223.
+func (d *DeploymentBuilder) WithConfWatch(enabled bool) *DeploymentBuilder {
+	d.confWatchEnabled = enabled
 	return d
 }
 
@@ -185,6 +206,17 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		config.DisableAdminAPI(kongDefaults)
 	}
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, kongDefaults)
+
+	// NOTE: this has to run after the environment is complete, because it moves
+	// the listen-related settings out of it, and before the spec hash is taken,
+	// so that the hash covers the Deployment that is actually applied.
+	if d.confWatchEnabled {
+		if err := applyKongConfWatchForDataPlane(ctx, d.client, d.logger, dataplane, desiredDeployment, d.configMapLabelSelector); err != nil {
+			return nil, op.Noop, fmt.Errorf("failed configuring the watched kong.conf: %w", err)
+		}
+	} else if err := deleteKongConfWatchConfigMapsForDataPlane(ctx, d.client, dataplane); err != nil {
+		return nil, op.Noop, err
+	}
 
 	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
 		return nil, op.Noop, err

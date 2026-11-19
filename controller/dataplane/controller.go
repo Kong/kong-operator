@@ -59,6 +59,11 @@ type Reconciler struct {
 	// DataPlaneIPFamily controls which IP family (or families) DataPlanes'
 	// Kong listens bind to.
 	DataPlaneIPFamily ipfamily.IPFamily
+	// ConfWatchEnabled makes the reconciler render the DataPlane's listen
+	// settings into a kong.conf watched by the Kong Gateway container, instead of
+	// setting them as KONG_* environment variables, so that a listener change
+	// reloads Kong in place rather than rolling the Pods. See KAG-9223.
+	ConfWatchEnabled bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -255,7 +260,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels).
 		WithSecretLabelSelector(r.SecretLabelSelector).
-		WithIPFamily(r.DataPlaneIPFamily)
+		WithIPFamily(r.DataPlaneIPFamily).
+		WithConfWatch(r.ConfWatchEnabled).
+		WithConfigMapLabelSelector(r.ConfigMapLabelSelector)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {

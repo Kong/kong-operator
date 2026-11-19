@@ -104,7 +104,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.OnPremAIGatewayControllerEnabled, "enable-controller-onpremaigateway", false, "Enable the on-prem AI Gateway (control plane) controller.")
 
 	// feature gates
-	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
+	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", fmt.Sprintf("Comma-separated list of feature gates to enable. Valid values: %s.", manager.ValidFeatureGateNames()))
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
 	flagSet.Int64Var(&cfg.KonnectListPageSize, "konnect-list-page-size", consts.DefaultKonnectListPageSize, fmt.Sprintf("Page size requested when listing Konnect entities to find the Konnect entity of an object, e.g. one whose Konnect ID was lost or that is deleted without one. Must be between 1 and %d. Only lower it if Konnect rejects the default: a lower value means more requests.", consts.MaxKonnectListPageSize))

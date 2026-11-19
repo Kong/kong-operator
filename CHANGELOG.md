@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [v2.4.0](#v240)
 - [v2.4.0-rapid.3.1](#v240-rapid31)
 - [v2.4.0-rapid.3.0](#v240-rapid30)
@@ -70,6 +71,53 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [Unreleased]
+
+### Added
+
+- Added the `dataplane-kong-conf-watch` feature gate. With it enabled, the
+  operator renders a DataPlane's listen settings (`proxy_listen`,
+  `stream_listen` and `port_maps`) into a `kong.conf` held in a ConfigMap that
+  the Kong Gateway container watches, and points the container at it with
+  `KONG_CONF_WATCH_PATH`, instead of setting those settings as `KONG_*`
+  environment variables.
+
+  Those settings no longer live in the Pod template, so adding, changing or
+  removing a Gateway listener leaves the Pod template untouched: Kubernetes
+  creates no new ReplicaSet and replaces no Pod. The Gateway reloads in place
+  instead, keeping the Nginx master and draining existing connections on the old
+  workers, which is what lets a listener change happen without dropping
+  long-lived stream connections.
+
+  The feature is off by default and requires a Kong Gateway image whose
+  entrypoint reads `KONG_CONF_WATCH_PATH` (3.17 and later). On an older image
+  the operator keeps the settings in the environment, so enabling the gate is
+  safe on a mixed fleet.
+
+  The operator deliberately does not set
+  `KONG_NGINX_MAIN_WORKER_SHUTDOWN_TIMEOUT`. The directive bounds how long the
+  Nginx workers a reload leaves draining stay alive, which bounds worker and
+  memory accumulation under frequent listener changes, but it equally bounds how
+  long an established connection survives a reload: when it expires the draining
+  worker is killed and its connections are dropped. Dropping long-lived stream
+  connections is what this feature exists to avoid, so the choice is left to the
+  operator, as it is in Kong itself.
+
+  Known limitations in this first iteration:
+  - A ConfigMap update takes effect on the mounted volume only after kubelet
+    syncs it. Reload latencies of roughly 20s, 40s and 70s were observed on a
+    k3d cluster. The DataPlane's Service picks up a new listener's port
+    immediately, so there is a window in which the Service targets a port Kong
+    is not listening on yet. The Pod stays Ready throughout.
+  - The in-container watcher reports the result of a reload only in the
+    container log, so the operator cannot confirm that a listener was
+    programmed and does not reflect it in any status condition.
+  - A blue/green preview Deployment shares the live Deployment's `kong.conf`
+    ConfigMap, so a listener change reaches the live Pods immediately rather
+    than being staged with the preview.
+
+  [KAG-9223](https://konghq.atlassian.net/browse/KAG-9223)
 
 ## [v2.4.0]
 

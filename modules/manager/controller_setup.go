@@ -882,6 +882,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ValidateDataPlaneImage:   c.ValidateImages,
 				CertTTL:                  c.CertTTL,
 				DataPlaneIPFamily:        c.IPFamily,
+				ConfWatchEnabled:         c.FeatureGates.Enabled(FeatureGateDataPlaneKongConfWatch),
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -908,7 +909,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					LoggingMode:              c.LoggingMode,
 					CertTTL:                  c.CertTTL,
 					DataPlaneIPFamily:        c.IPFamily,
+					ConfWatchEnabled:         c.FeatureGates.Enabled(FeatureGateDataPlaneKongConfWatch),
 				},
+				ConfWatchEnabled:       c.FeatureGates.Enabled(FeatureGateDataPlaneKongConfWatch),
+				ConfigMapLabelSelector: c.ConfigMapLabelSelector,
 				DefaultImage:           consts.DefaultDataPlaneImage,
 				KonnectEnabled:         c.KonnectControllersEnabled,
 				EnforceConfig:          c.EnforceConfig,

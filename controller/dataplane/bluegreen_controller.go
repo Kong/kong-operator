@@ -80,6 +80,13 @@ type BlueGreenReconciler struct {
 	// DataPlaneIPFamily controls which IP family (or families) DataPlanes'
 	// Kong listens bind to.
 	DataPlaneIPFamily ipfamily.IPFamily
+	// ConfigMapLabelSelector mirrors the delegate Reconciler's setting. It is
+	// applied to generated ConfigMaps so the manager's cache ingests them.
+	ConfigMapLabelSelector string
+	// ConfWatchEnabled mirrors the delegate Reconciler's setting. It has to be
+	// kept in sync with it: the preview and live Deployments share one kong.conf
+	// ConfigMap, and a builder that has the feature off removes that ConfigMap.
+	ConfWatchEnabled bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -572,7 +579,9 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels).
 		WithSecretLabelSelector(r.SecretLabelSelector).
-		WithIPFamily(r.DataPlaneIPFamily)
+		WithIPFamily(r.DataPlaneIPFamily).
+		WithConfWatch(r.ConfWatchEnabled).
+		WithConfigMapLabelSelector(r.ConfigMapLabelSelector)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
