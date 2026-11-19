@@ -71,6 +71,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- The operator now creates the configured cluster CA `Secret` before the
+  manager starts when the `Secret` is missing. This enables certificate issuance
+  and metrics scraping for installations such as OLM that cannot create the
+  `Secret` in advance. Existing `Secret`s are never overwritten.
+  [#6728](https://github.com/Kong/kong-operator/pull/6728)
+
 ## [v2.4.0]
 
 > Release date: 2026-11-17
