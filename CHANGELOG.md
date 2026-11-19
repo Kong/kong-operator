@@ -82,7 +82,7 @@
   `OnPremEventGateway`s, as the other policy chains can. `KongReferenceGrant`
   accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
   a parent of another namespace is matched by namespace and name.
-  [#XXXX](https://github.com/Kong/kong-operator/pull/XXXX)
+  [#6746](https://github.com/Kong/kong-operator/pull/6746)
 
 ### Fixes
 
