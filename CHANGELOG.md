@@ -71,6 +71,30 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## unreleased
+
+### Fixes
+
+- Gateway API: `Gateway` listeners on different ports that share a hostname
+  are no longer reported as conflicted (`HostnameConflict`) and not accepted.
+  Listeners now conflict on a hostname only when they also share a port.
+  [#5918](https://github.com/Kong/kong-operator/pull/5918)
+- Gateway API: an `HTTPRoute` without hostnames attached to a `Gateway` by
+  `parentRefs[].port` now gets only the hostnames of the listeners on that
+  port. Before, it got the hostnames of all listeners, and listeners sharing a
+  hostname made Kong reject the whole configuration with a route name
+  uniqueness violation.
+  [#5918](https://github.com/Kong/kong-operator/pull/5918)
+
+### Changed
+
+- Gateway API: Kong in a `Gateway`'s DataPlane now listens on ports derived
+  from the HTTP and HTTPS listeners instead of always on `8000`/`8443`
+  (ports below 1024 are remapped from `16384` up). Upgrading, or changing the
+  listeners, can cause brief connection errors while the DataPlane pods roll
+  out.
+  [#5918](https://github.com/Kong/kong-operator/pull/5918)
+
 ## [v2.4.0]
 
 > Release date: 2026-11-17
@@ -3966,7 +3990,7 @@ by the operator's semver:
 
 > Release date: 2025-05-22
 
-## Changed
+### Changed
 
 - Allowed the `kubectl rollout restart` operation for Deployment resources created via DataPlane CRD.
   [#1660](https://github.com/kong/kong-operator/pull/1660)

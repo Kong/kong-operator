@@ -129,7 +129,8 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.path == "/tls-backend") || (http.path ^= "/tls-backend/")
+  - expression: ((http.path == "/tls-backend") || (http.path ^= "/tls-backend/"))
+      && ((net.dst.port == 80) || (net.dst.port == 443))
     https_redirect_status_code: 426
     id: a33a9f1c-998b-5773-bce2-697a3c85fdbb
     name: httproute.default.httproute-tls-backend._.0.0
@@ -174,7 +175,8 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.path == "/missing") || (http.path ^= "/missing/")
+  - expression: ((http.path == "/missing") || (http.path ^= "/missing/")) && ((net.dst.port
+      == 80) || (net.dst.port == 443))
     https_redirect_status_code: 426
     id: cffc54ef-c777-56af-9050-bf1089608e33
     name: httproute.default.httproute-tags._.1.0
@@ -214,7 +216,8 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.path == "/httpbin") || (http.path ^= "/httpbin/")
+  - expression: ((http.path == "/httpbin") || (http.path ^= "/httpbin/")) && ((net.dst.port
+      == 80) || (net.dst.port == 443))
     https_redirect_status_code: 426
     id: 357ae046-a29a-57d8-a602-3e5cc772d6c1
     name: httproute.default.httproute-tags._.0.0

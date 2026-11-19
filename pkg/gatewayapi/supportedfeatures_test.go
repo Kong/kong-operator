@@ -57,3 +57,13 @@ func TestGetSupportedFeaturesUnsupportedRouter(t *testing.T) {
 	require.ErrorContains(t, err, "unsupported router type")
 	require.Nil(t, supportedFeatures)
 }
+
+func TestGetSupportedFeaturesHTTPRouteParentRefPort(t *testing.T) {
+	expressions, err := GetSupportedFeatures(consts.RouterFlavorExpressions, false)
+	require.NoError(t, err)
+	require.Contains(t, expressions, features.SupportHTTPRouteParentRefPort)
+
+	traditionalCompatible, err := GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible, false)
+	require.NoError(t, err)
+	require.NotContains(t, traditionalCompatible, features.SupportHTTPRouteParentRefPort)
+}
