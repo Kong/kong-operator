@@ -292,6 +292,11 @@ func mapAncestorToDescendants(cl client.Client, target reflect.Type) handler.Map
 // (see releaseOrphan).
 func (r *Reconciler) reportUnreachable(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 	if err := r.Get(ctx, key, obj); err != nil {
+		if _, isKey := obj.(*configurationv1alpha1.EventGatewayStaticKey); isKey && apierrors.IsNotFound(err) {
+			// A static key deleted no longer needs the fingerprint recorded
+			// for it.
+			r.inputsHashes.Delete(key)
+		}
 		return client.IgnoreNotFound(err)
 	}
 	if !obj.GetDeletionTimestamp().IsZero() {
@@ -320,9 +325,17 @@ func (r *Reconciler) reportUnreachable(ctx context.Context, key client.ObjectKey
 	var gateway eventgatewayv1alpha1.OnPremEventGateway
 	switch err := r.Get(ctx, gatewayKey, &gateway); {
 	case apierrors.IsNotFound(err):
-		return r.setEntityConditions(ctx, entity, nil, entityCondition(entity, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+		notFound := entityCondition(entity, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
 			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityGatewayNotFoundReason,
-			fmt.Sprintf("The OnPremEventGateway %s does not exist", gatewayKey)))
+			fmt.Sprintf("The OnPremEventGateway %s does not exist", gatewayKey))
+		if _, isKey := entity.(*configurationv1alpha1.EventGatewayStaticKey); isKey {
+			// No gateway holds the value of the static key anymore: it loses
+			// its fingerprint, so that it can be attached to another gateway,
+			// and starts again from the value it is pushed with there.
+			r.inputsHashes.Delete(client.ObjectKeyFromObject(entity))
+			return r.setEntityStatusFields(ctx, entity, "", []string{konnectv1alpha1.CreateInputsAppliedConditionType}, notFound)
+		}
+		return r.setEntityConditions(ctx, entity, notFound)
 	case err != nil:
 		return err
 	}

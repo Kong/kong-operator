@@ -30,6 +30,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -74,6 +75,13 @@ type configuration struct {
 	// a chain orders: their order must also be compared when checking
 	// gw-admin for drift.
 	orderedPolicies []uuid.UUID
+	// orderedProducePolicies are the virtual clusters whose produce policies
+	// a produce chain orders, independently of the cluster-level policies a
+	// cluster chain orders on the same virtual cluster.
+	orderedProducePolicies []uuid.UUID
+	// orderedConsumePolicies orders only the consume list, independently of
+	// other chains of the same virtual cluster.
+	orderedConsumePolicies []uuid.UUID
 	// invalidChains prevent pushing a partial document or falling back to
 	// implicit ordering while an owning declaration cannot be fulfilled.
 	invalidChains []string
@@ -81,6 +89,18 @@ type configuration struct {
 	// gateway, by the UID of their object, and built those of this one: an
 	// entity reading a Secret that is gone is sent as it was last.
 	previous, built map[types.UID]any
+	// keyInputs holds, by the UID of their object, the fingerprints of the
+	// static keys of the configuration (see staticKeyRequest).
+	keyInputs map[types.UID]keyInputs
+	// pushedKeyHashes holds, by id, the fingerprints of the values of the
+	// static keys of the entities pushed (see withKeyInputs): those of this
+	// configuration, an entity kept included, or, when it is blocked, those of
+	// the last one that could be sent.
+	pushedKeyHashes map[uuid.UUID]string
+	// inputsHashes holds the fingerprints recorded that the cache may not
+	// show yet, by the UID of their static key, or is nil (see
+	// Reconciler.inputsHashes).
+	inputsHashes *sync.Map
 	// namespace is the namespace of the gateway. An entity of another
 	// namespace belongs to the gateway only when KongReferenceGrants allow
 	// its references up to the gateway (see parentNotGranted).
@@ -372,6 +392,11 @@ type entityStatus struct {
 	// unusable.
 	kept       bool
 	conditions []metav1.Condition
+	// inputsHash and inputsApplied are, for a static key, the fingerprint to
+	// record in its status and its CreateInputsApplied condition, or nil (see
+	// keyInputsStatus).
+	inputsHash    string
+	inputsApplied *metav1.Condition
 }
 
 // dataPlaneCertificate is a data plane certificate of the gateway.
@@ -423,6 +448,16 @@ func buildConfigurationAfter(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
 	sent *gwadminapi.GatewayEntitySet,
 ) (configuration, error) {
+	return buildConfigurationWith(ctx, cl, gateway, secretHint, previous, sent, nil)
+}
+
+// buildConfigurationWith builds the configuration of the gateway, as
+// buildConfigurationAfter does, with the fingerprints of static keys recorded
+// that the cache may not show yet (see Reconciler.inputsHashes).
+func buildConfigurationWith(
+	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
+	sent *gwadminapi.GatewayEntitySet, inputsHashes *sync.Map,
+) (configuration, error) {
 	cfg := configuration{
 		namespace:   gateway.Namespace,
 		secretHint:  secretHint,
@@ -432,6 +467,9 @@ func buildConfigurationAfter(
 		sent:        sentEntities(sent),
 		sentUnknown: sent == nil && gateway.Status.ConfigRevision != 0,
 		built:       map[types.UID]any{},
+		keyInputs:   map[types.UID]keyInputs{},
+
+		inputsHashes: inputsHashes,
 	}
 	backendClusters, err := cfg.addGatewayEntities(ctx, cl, gateway)
 	if err != nil {
@@ -461,6 +499,12 @@ func buildConfigurationAfter(
 	if err := cfg.addClusterPolicyChains(ctx, cl, virtualClusters); err != nil {
 		return configuration{}, err
 	}
+	if err := cfg.addProducePolicyChains(ctx, cl, virtualClusters); err != nil {
+		return configuration{}, err
+	}
+	if err := cfg.addConsumePolicyChains(ctx, cl, virtualClusters); err != nil {
+		return configuration{}, err
+	}
 	if err := listenerPolicies.add(); err != nil {
 		return configuration{}, err
 	}
@@ -471,12 +515,23 @@ func buildConfigurationAfter(
 	if err := cfg.addCertificates(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
-	key, err := comparisonKey(withGWAdminDefaults(cfg.entities), cfg.orderedPolicies...)
+	key, err := comparisonKeyFor(withGWAdminDefaults(cfg.entities), cfg.orderedPolicyLists())
 	if err != nil {
 		return configuration{}, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
 	}
 	cfg.pushedKey = key
 	return cfg, nil
+}
+
+// orderedPolicyLists returns the parents whose policy lists a chain orders, by
+// kind of policy: cluster-level and listener policies together, as their ids
+// are those of the parents, and produce and consume policies apart.
+func (c *configuration) orderedPolicyLists() orderedPolicyLists {
+	return orderedPolicyLists{
+		clusterAndListener: c.orderedPolicies,
+		produce:            c.orderedProducePolicies,
+		consume:            c.orderedConsumePolicies,
+	}
 }
 
 // entityKind is a kind of entity of the configuration.
@@ -770,38 +825,72 @@ func convertChildren[T any, PT interface {
 }
 
 // addParentsFirst adds the objects converted, a parent, of their own kind,
-// before its children: those without a parent first, then their children, and
-// so on. One whose parent isn't added, or is attached to another entity than
-// it, sameParent telling, is left out. parentOf, when set, returns the parent
-// of an object.
+// before its children: each object without a parent, then its children, and so
+// on, before the next object without a parent. A parent and its children thus
+// stay contiguous, as gw-admin requires of a produce policy chain: a root
+// inserted between a parent and its children is invalid. One whose parent
+// isn't added, or is attached to another entity than it, sameParent telling,
+// is left out. parentOf, when set, returns the parent of an object.
 func addParentsFirst[PT entityObject, E any](
 	ctx context.Context, c *configuration, cl client.Client, pending []pendingEntity[PT, E], parentOf func(PT) (client.ObjectKey, bool),
 	sameParent func(child, parent client.ObjectKey) bool, k entityKind[PT, E],
 ) error {
 	added := map[client.ObjectKey]int{}
-	for len(pending) > 0 {
-		var ready, waiting []pendingEntity[PT, E]
-		for _, p := range pending {
-			if parentOf != nil {
-				if parent, ok := parentOf(p.obj); ok {
-					_, isAdded := added[parent]
-					if !isAdded || !sameParent(client.ObjectKeyFromObject(p.obj), parent) {
-						waiting = append(waiting, p)
-						continue
-					}
+	// add converts and adds one object.
+	add := func(p pendingEntity[PT, E]) {
+		maps.Copy(added, addPending(c, []pendingEntity[PT, E]{p}, k))
+	}
+	// addChildren adds the children of the object of key that are pending, each
+	// followed by its own children, in the order of pending.
+	var addChildren func(key client.ObjectKey)
+	addChildren = func(key client.ObjectKey) {
+		for {
+			i := slices.IndexFunc(pending, func(p pendingEntity[PT, E]) bool {
+				if parentOf == nil {
+					return false
 				}
+				parent, ok := parentOf(p.obj)
+				return ok && parent == key && sameParent(client.ObjectKeyFromObject(p.obj), parent)
+			})
+			if i < 0 {
+				return
 			}
-			ready = append(ready, p)
+			p := pending[i]
+			pending = slices.Delete(pending, i, i+1)
+			add(p)
+			if _, ok := added[client.ObjectKeyFromObject(p.obj)]; ok {
+				addChildren(client.ObjectKeyFromObject(p.obj))
+			}
 		}
-		if len(ready) == 0 {
-			orphans := make([]PT, 0, len(waiting))
-			for _, p := range waiting {
+	}
+	for len(pending) > 0 {
+		// ready is the first pending object that has no parent or whose parent
+		// was added: a root, or a child whose parent precedes it.
+		i := slices.IndexFunc(pending, func(p pendingEntity[PT, E]) bool {
+			if parentOf == nil {
+				return true
+			}
+			parent, ok := parentOf(p.obj)
+			if !ok {
+				return true
+			}
+			_, isAdded := added[parent]
+			return isAdded && sameParent(client.ObjectKeyFromObject(p.obj), parent)
+		})
+		if i < 0 {
+			orphans := make([]PT, 0, len(pending))
+			for _, p := range pending {
 				orphans = append(orphans, p.obj)
 			}
 			return excludeOrphans(ctx, c, cl, orphans, parentOf, added)
 		}
-		maps.Copy(added, addPending(c, ready, k))
-		pending = waiting
+		p := pending[i]
+		pending = slices.Delete(pending, i, i+1)
+		add(p)
+		key := client.ObjectKeyFromObject(p.obj)
+		if _, ok := added[key]; ok {
+			addChildren(key)
+		}
 	}
 	return nil
 }
@@ -1160,6 +1249,58 @@ func (e invalidEntitiesError) Error() string {
 		keeps = fmt.Sprintf("gw-admin pods are pushed revision %d, the last that could be sent", e.serving)
 	}
 	return "The configuration isn't pushed, " + keeps + ": these entities can't be sent: " + strings.Join(problems, "; ")
+}
+
+// blockedPush returns why the configuration can't be pushed: entities that
+// can't be sent (see blocked), or policy chains that can't be applied, or nil.
+// Either way, the pods are pushed the gateway, its data plane certificates and
+// the last configuration that could be sent, if any, rather than nothing: a
+// gw-admin pod that lost them, e.g. restarted, gets them again.
+func (c *configuration) blockedPush() error {
+	// Both are told, the chains first: they give the reason of the
+	// conditions of the gateway (see failureReason).
+	var errs []error
+	if len(c.invalidChains) > 0 {
+		errs = append(errs, invalidPolicyChainsError{problems: c.invalidChains})
+	}
+	if err := c.blocked(); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// servingOf returns the revision of the last configuration that could be
+// sent, pushed in place of a configuration blocked, and whether the push is
+// blocked at all (see blockedPush).
+func servingOf(blocked error) (int64, bool) {
+	if e, ok := errors.AsType[invalidEntitiesError](blocked); ok {
+		return e.serving, true
+	}
+	if e, ok := errors.AsType[invalidPolicyChainsError](blocked); ok {
+		return e.serving, true
+	}
+	return 0, false
+}
+
+// withServing returns the error of a blocked push, telling the revision of the
+// last configuration that could be sent, pushed in its place.
+func withServing(blocked error, revision int64) error {
+	if joined, ok := blocked.(interface{ Unwrap() []error }); ok {
+		errs := slices.Clone(joined.Unwrap())
+		for i := range errs {
+			errs[i] = withServing(errs[i], revision)
+		}
+		return errors.Join(errs...)
+	}
+	if e, ok := errors.AsType[invalidEntitiesError](blocked); ok {
+		e.serving = revision
+		return e
+	}
+	if e, ok := errors.AsType[invalidPolicyChainsError](blocked); ok {
+		e.serving = revision
+		return e
+	}
+	return blocked
 }
 
 // byCreation orders objects from the oldest to the newest, then by name and

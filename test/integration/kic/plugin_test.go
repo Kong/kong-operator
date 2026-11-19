@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,6 +33,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/labels"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
@@ -670,7 +672,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	)
 
 	t.Logf("validating that plugin %s is not configured without a grant", kongplugin.Name)
-	assert.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPSURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
 		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPSURL.Host), helpers.WithInsecureSkipVerify()).Do(req)
 		if err != nil {
@@ -705,7 +707,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	cleaner.Add(grant)
 
 	t.Logf("validating that plugin %s is not configured with an incorrectly configured referencegrant", kongplugin.Name)
-	assert.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPSURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
 		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPSURL.Host), helpers.WithInsecureSkipVerify()).Do(req)
 		if err != nil {

@@ -394,11 +394,27 @@ reset to false.
 
 | Field | Description |
 | --- | --- |
+| `aiSearch` _[AISettingsFeaturesAISearch](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesaisearch)_ | AI Search config |
 | `mcpServer` _[AISettingsFeaturesMcpServer](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesmcpserver)_ | AI Features config |
 
 _Appears in:_
 
 - [AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)
+
+#### AISettingsFeaturesAISearch
+
+
+AISettingsFeaturesAISearch AI Search config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether AI Search is enabled or not |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
 
 #### AISettingsFeaturesMcpServer
 
@@ -521,6 +537,24 @@ _Appears in:_
 - [Theme](#konnect-konghq-com-v1alpha1-types-theme)
 
 
+
+#### ConfigStoreControlPlaneRef
+
+
+ConfigStoreControlPlaneRef references the Konnect Control Plane that owns a
+KonnectConfigStore, using the same konnectNamespacedRef format as KongVault
+and KongCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type must be konnectNamespacedRef. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectGatewayControlPlane by name. An omitted namespace defaults to the KonnectConfigStore's namespace. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)
 
 #### ConfigurationDataPlaneGroupAutoscale
 
@@ -1044,7 +1078,7 @@ KonnectConfigStoreSpec defines the desired state of KonnectConfigStore.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | ControlPlaneRef is the reference to the parent ControlPlane object. |
+| `controlPlaneRef` _[ConfigStoreControlPlaneRef](#konnect-konghq-com-v1alpha1-types-configstorecontrolplaneref)_ | ControlPlaneRef is the reference to the parent KonnectGatewayControlPlane object. |
 | `apiSpec` _[KonnectConfigStoreAPISpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoreapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1936,6 +1970,7 @@ PortalAPISpec defines the API spec fields for Portal.
 | `notificationsDeveloperPiiVisibilityEnabled` _string_ | When enabled, portal registration notifications include the registering developer's identifying information (such as name and email). |
 | `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
 | `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
+| `themeName` _string_ | Name of the theme to use for the default content created upon creation of this portal. Must match an available theme name; if omitted or unrecognized, the default theme is used. Only applies when `create_default_content` is true. |
 
 _Appears in:_
 
@@ -2200,8 +2235,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
-| `oIDC` _[PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)_ | OIDC configuration. |
-| `sAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
+| `oidc` _[PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)_ | OIDC configuration. |
+| `saml` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
 
 _Appears in:_
 
@@ -2224,8 +2259,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `oIDC` |  |
-| `sAML` |  |
+| `oidc` |  |
+| `saml` |  |
 
 
 

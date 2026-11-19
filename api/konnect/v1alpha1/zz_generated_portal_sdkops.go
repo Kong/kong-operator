@@ -25,6 +25,15 @@ var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "ai.features.ai_search.enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"ai_search",
+			"enabled",
+		},
+	},
+	{
 		Label: "ai.features.mcp_server.enabled",
 		Path: []string{
 			"ai",

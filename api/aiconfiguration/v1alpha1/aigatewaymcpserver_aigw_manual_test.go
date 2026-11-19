@@ -58,6 +58,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 		return &AIGatewayConsumerGroup{
 			Name: "ai-gw-consumer-group", Namespace: "default",
 			Spec: AIGatewayConsumerGroupSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
 				APISpec: AIGatewayConsumerGroupAPISpec{
 					Name: "dev-users",
 				},
@@ -68,6 +69,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 		return &AIGatewayConsumerGroup{
 			Name: "ai-gw-denied-consumer-group", Namespace: "default",
 			Spec: AIGatewayConsumerGroupSpec{
+				AIGatewayRef: onPremGatewayRef("gw"),
 				APISpec: AIGatewayConsumerGroupAPISpec{
 					Name: "denied-users",
 				},

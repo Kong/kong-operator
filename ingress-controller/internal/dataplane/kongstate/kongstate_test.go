@@ -167,7 +167,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			certificates := make([]Certificate, 0, count)
 			for i := range count {
 				certificates = append(certificates,
-					Certificate{kong.Certificate{ID: new(strconv.Itoa(i)), Key: new("secret")}},
+					Certificate{ID: new(strconv.Itoa(i)), Key: new("secret")},
 				)
 			}
 			return certificates
@@ -1435,10 +1435,11 @@ func TestKongState_FillIDs(t *testing.T) {
 
 func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		in         []*configurationv1.KongPlugin
-		pluginRels map[string]rels.ForeignRelations
-		want       []string
+		name          string
+		in            []*configurationv1.KongPlugin
+		pluginRels    map[string]rels.ForeignRelations
+		inheritedTags pluginInheritedTags
+		want          []string
 	}{
 		{
 			name: "collision test",
@@ -1532,7 +1533,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 				KongPlugins: tt.in,
 			})
 			// this is not testing the kongPluginFromK8SPlugin failure cases, so there is no failures collector
-			got := buildPlugins(log, store, nil, tt.pluginRels)
+			got := buildPlugins(log, store, nil, tt.pluginRels, tt.inheritedTags)
 			require.Len(t, got, len(tt.want))
 			gotInstanceNames := lo.Map(got, func(p Plugin, _ int) string { return *p.InstanceName })
 			require.Equal(t, tt.want, gotInstanceNames)
@@ -2108,4 +2109,73 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKongState_BuildPluginsInheritedTags(t *testing.T) {
+	ks := KongState{
+		Services: []Service{
+			{
+				Name:          new("gateway-api-service"),
+				InheritedTags: util.InheritedTags{Gateway: []string{"svc-gw"}, GatewayClass: []string{"gwc"}},
+				Routes: []Route{
+					{Name: new("gateway-api-route"), InheritedTags: util.InheritedTags{Gateway: []string{"route-gw"}, GatewayClass: []string{"gwc"}}},
+					{Name: new("other-route")},
+				},
+			},
+			{
+				Name:   new("ingress-service"),
+				Routes: []Route{{Name: new("ingress-route")}},
+			},
+		},
+	}
+	inherited := ks.inheritedTagsForPlugins()
+	require.Equal(t, pluginInheritedTags{
+		routes:   map[string]util.InheritedTags{"gateway-api-route": {Gateway: []string{"route-gw"}, GatewayClass: []string{"gwc"}}},
+		services: map[string]util.InheritedTags{"gateway-api-service": {Gateway: []string{"svc-gw"}, GatewayClass: []string{"gwc"}}},
+	}, inherited)
+
+	s, err := store.NewFakeStore(store.FakeObjects{
+		KongPlugins: []*configurationv1.KongPlugin{
+			{
+				Name:       "foo-plugin",
+				Namespace:  "default",
+				PluginName: "correlation-id",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.UserTagKey: "plugin-tag,gwc",
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	plugins := buildPlugins(logr.Discard(), s, nil, map[string]rels.ForeignRelations{
+		"default:foo-plugin": {
+			Route: []rels.FR{
+				{Identifier: "gateway-api-route"},
+				{Identifier: "ingress-route"},
+			},
+			Service: []rels.FR{{Identifier: "gateway-api-service"}},
+		},
+	}, inherited)
+
+	tagsByEntity := map[string][]string{}
+	for _, p := range plugins {
+		var key string
+		switch {
+		case p.Route != nil:
+			key = "route/" + *p.Route.ID
+		case p.Service != nil:
+			key = "service/" + *p.Service.ID
+		}
+		// Only the user-specified tags are relevant here, drop the k8s-* ones.
+		tagsByEntity[key] = lo.Reject(lo.FromSlicePtr(p.Tags), func(tag string, _ int) bool {
+			return strings.HasPrefix(tag, "k8s-")
+		})
+	}
+	require.Equal(t, map[string][]string{
+		// The KongPlugin's own tags come first and are deduplicated against the inherited ones.
+		"route/gateway-api-route":     {"plugin-tag", "gwc", "route-gw"},
+		"route/ingress-route":         {"plugin-tag", "gwc"},
+		"service/gateway-api-service": {"plugin-tag", "gwc", "svc-gw"},
+	}, tagsByEntity)
 }

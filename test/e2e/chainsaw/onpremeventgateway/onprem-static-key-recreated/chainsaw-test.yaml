@@ -1,7 +1,8 @@
 # A static key of an OnPremEventGateway recreated with the same value still
 # decrypts the records it encrypted: keg names the key of a record by its id,
 # which is hashed from the group, kind, namespace and name of the key, not the UID of
-# its object.
+# its object. Its value can't change under that id: a change of its Secret
+# stops the push, and only a key created again takes a new value.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -17,9 +18,16 @@ spec:
     4. A new record, on another topic, names the same key id, and is handed
        back.
     5. The first record is still handed back.
-    6. The value of the key changes: keg refuses the first record, which no
-       longer decrypts, while a new record names the same key id, and is handed
-       back.
+    6. The value of the Secret of the key changes: the key reports it, and
+       stops the push, so that keg keeps the value pushed, and still hands back
+       the first record.
+    7. The value put back, the push goes on.
+    8. The value of the Secret changes again, stopping the push, and the key
+       is deleted with the policy using it: being deleted, it is sent as it is,
+       no longer stopping the push, so it goes. Created again, with the other
+       value, it is pushed:
+       keg refuses the first record, which no longer decrypts, while a new
+       record names the same key id, and is handed back.
   bindings:
     - name: gwadmin_name
       value: gw-admin
@@ -146,7 +154,7 @@ spec:
             env: *env
             content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" before-recreation before-recreation-value 120
 
-    - name: 6-Changed-value-keeps-the-key-id
+    - name: 6-Changed-value-stops-the-push
       try:
         - patch:
             resource:
@@ -156,6 +164,102 @@ spec:
                 name: encryption-key
               stringData:
                 key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy12MiE=
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: encryption-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: Invalid
+                    (contains(message, 'its value changed since it was pushed')): true
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: "False"
+                    reason: ValueChanged
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: InvalidEntities
+        # keg keeps the value pushed.
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" before-recreation before-recreation-value 120
+
+    - name: 7-Value-put-back
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: encryption-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: "True"
+                    reason: Unchanged
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - script:
+            env: *env
+            content: ../onprem-shared/onprem.sh record-consumed "$KEG_DP" before-recreation before-recreation-value 120
+
+    - name: 8-Key-recreated-with-another-value
+      try:
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy12MiE=
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: encryption-key
+              status:
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: "False"
+                    reason: ValueChanged
+        # The configuration sent uses the key: the in-use finalizer holds it
+        # until a configuration without the encrypt policy is pushed. Being
+        # deleted, the key is sent as it is, so that push goes through.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              name: encrypt
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              name: encryption-key
+        - apply:
+            file: key-and-encrypt.yaml
+        - assert:
+            resource: *key-programmed
+        - assert:
+            resource: *encrypt-programmed
         # Once keg has the new value, the decrypt policy, with failureMode
         # error, fails on the first record: keg refuses it rather than handing
         # it back decrypted with the wrong value. The error is the one keg

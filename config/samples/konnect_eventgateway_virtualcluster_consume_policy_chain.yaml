@@ -173,7 +173,7 @@ spec:
     skipRecord:
       name: consume-chain-skip
       enabled: Enabled
-      condition: record.value.skip == true
+      condition: record.value.content.skip == true
 ---
 apiVersion: configuration.konghq.com/v1alpha1
 kind: EventGatewayVirtualClusterConsumePolicy

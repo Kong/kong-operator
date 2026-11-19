@@ -158,3 +158,45 @@ func TestComparisonPreservesOnlyExplicitListenerPolicyOrder(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, same, "remote reordering of the policies a chain orders is drift")
 }
+
+func TestComparisonPreservesOnlyExplicitProducePolicyOrder(t *testing.T) {
+	var entities gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"virtual_clusters":[
+			{"id":"00000000-0000-4000-8000-000000000001","destination":{"id":"00000000-0000-4000-8000-000000000099"},
+			 "cluster_policies":[], "consume_policies":[],
+			 "produce_policies":[
+				{"id":"00000000-0000-4000-8000-000000000031","type":"modify_headers"},
+				{"id":"00000000-0000-4000-8000-000000000032","type":"modify_headers"}]},
+			{"id":"00000000-0000-4000-8000-000000000002","destination":{"id":"00000000-0000-4000-8000-000000000099"},
+			 "cluster_policies":[], "consume_policies":[],
+			 "produce_policies":[
+				{"id":"00000000-0000-4000-8000-000000000041","type":"modify_headers"},
+				{"id":"00000000-0000-4000-8000-000000000042","type":"modify_headers"}]}]
+	}`), &entities))
+	produce := []uuid.UUID{entities.VirtualClusters[0].Id}
+	encoded, err := json.Marshal(entities)
+	require.NoError(t, err)
+	var held gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal(encoded, &held))
+	key, err := comparisonKeyFor(entities, orderedPolicyLists{produce: produce})
+	require.NoError(t, err)
+
+	slices.Reverse(held.VirtualClusters[1].ProducePolicies)
+	same, err := sameEntitiesFor(held, key, orderedPolicyLists{produce: produce})
+	require.NoError(t, err)
+	require.True(t, same, "the produce order of a virtual cluster without a produce chain is insignificant")
+
+	slices.Reverse(held.VirtualClusters[0].ProducePolicies)
+	same, err = sameEntitiesFor(held, key, orderedPolicyLists{produce: produce})
+	require.NoError(t, err)
+	require.False(t, same, "remote reordering of the produce policies a chain orders is drift")
+
+	// A cluster chain claim on the same virtual cluster must not make the
+	// produce list order-sensitive, and the other way around.
+	clusterOnly, err := comparisonKeyFor(entities, orderedPolicyLists{clusterAndListener: produce})
+	require.NoError(t, err)
+	same, err = sameEntitiesFor(held, clusterOnly, orderedPolicyLists{clusterAndListener: produce})
+	require.NoError(t, err)
+	require.True(t, same, "the order of the produce list is independent of the cluster-level chain scope")
+}

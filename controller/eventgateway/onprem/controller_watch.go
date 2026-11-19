@@ -57,10 +57,15 @@ func entityChanged() predicate.Predicate {
 			// are removed. A claim is metadata, not a generation change.
 			switch e.ObjectNew.(type) {
 			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+				*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+				*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy, *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain,
 				*configurationv1alpha1.EventGatewayListenerPolicy, *configurationv1alpha1.EventGatewayListenerPolicyChain:
 				return !e.ObjectOld.GetDeletionTimestamp().Equal(e.ObjectNew.GetDeletionTimestamp())
 			case *configurationv1alpha1.EventGatewayVirtualCluster:
-				return e.ObjectOld.GetAnnotations()[policychain.OwnerAnnotation] != e.ObjectNew.GetAnnotations()[policychain.OwnerAnnotation]
+				oldAnnotations, newAnnotations := e.ObjectOld.GetAnnotations(), e.ObjectNew.GetAnnotations()
+				return oldAnnotations[policychain.OwnerAnnotation] != newAnnotations[policychain.OwnerAnnotation] ||
+					oldAnnotations[policychain.ProduceOwnerAnnotation] != newAnnotations[policychain.ProduceOwnerAnnotation] ||
+					oldAnnotations[policychain.ConsumeOwnerAnnotation] != newAnnotations[policychain.ConsumeOwnerAnnotation]
 			}
 			return false
 		},
@@ -99,8 +104,8 @@ func mapEntityToOnPremEventGateway(cl client.Client) handler.MapFunc {
 }
 
 // mapPolicyToChainGateways also rebuilds gateways of the chains referencing a
-// cluster or listener policy, which may have a different parent, including a
-// policy deleted and recreated there.
+// cluster, produce, consume or listener policy, which may have a different parent,
+// including a policy deleted and recreated there.
 func mapPolicyToChainGateways(cl client.Client) handler.MapFunc {
 	toGateway := mapEntityToOnPremEventGateway(cl)
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -114,6 +119,14 @@ func mapPolicyToChainGateways(cl client.Client) handler.MapFunc {
 			var list configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
 			chains, err = listObjects(ctx, cl, &list, &list.Items,
 				index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterPolicyRef, key)
+		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
+			var list configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayVirtualClusterProducePolicyChainOnEventGatewayVirtualClusterProducePolicyRef, key)
+		case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+			var list configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainList
+			chains, err = listObjects(ctx, cl, &list, &list.Items,
+				index.IndexFieldEventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterConsumePolicyRef, key)
 		case *configurationv1alpha1.EventGatewayListenerPolicy:
 			var list configurationv1alpha1.EventGatewayListenerPolicyChainList
 			chains, err = listObjects(ctx, cl, &list, &list.Items,
@@ -419,6 +432,30 @@ func requestsForGWAdmin(ctx context.Context, cl client.Client, gwAdmin client.Ob
 		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gateways[i])})
 	}
 	return requests
+}
+
+// expectedFor returns the gateways the gw-admin pods of the gateway are told
+// they serve, and wait for to turn ready (see expectedGateways): but those a
+// pod can't be given whole, the gateway itself when it has no data plane
+// certificate, as withCertificates tells, and any whose last push couldn't
+// give them (see Reconciler.unservable), the gateway itself included, so that
+// its push and those of the others tell the pods the same. Such a gateway
+// would keep a pod restarted from turning ready, and from serving every other
+// gateway.
+func (r *Reconciler) expectedFor(
+	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, withCertificates bool,
+) ([]uuid.UUID, error) {
+	ids, err := expectedGateways(ctx, r.Client, gateway)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(ids, func(id uuid.UUID) bool {
+		if id == gatewayID && !withCertificates {
+			return true
+		}
+		_, unservable := r.unservable.Load(id)
+		return unservable
+	}), nil
 }
 
 // expectedGateways returns the ids of the gateways the gw-admin of the gateway

@@ -15,7 +15,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayagents.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -562,7 +562,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayauthstrategies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -2616,7 +2616,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaycacertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -2840,7 +2840,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaycertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -3173,7 +3173,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayconsumercredentials.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -3414,7 +3414,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayconsumergroups.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -3623,7 +3623,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayconsumers.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -3854,7 +3854,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaycustompolicies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -4204,7 +4204,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaydataplanecertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -4433,7 +4433,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaydatastores.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -5457,7 +5457,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaymcpservers.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -10988,7 +10988,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaymodelproviders.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -21095,7 +21095,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaymodels.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -30025,7 +30025,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaypolicies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -30307,7 +30307,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaysnis.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -30520,7 +30520,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayvaults.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -32064,7 +32064,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewaydataplanes.aigateway.konghq.com
 spec:
   group: aigateway.konghq.com
@@ -36651,7 +36651,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: onpremaigateways.aigateway.konghq.com
 spec:
   group: aigateway.konghq.com
@@ -36808,7 +36808,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaybackendclusters.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -37221,7 +37221,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaydataplanecertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -37462,7 +37462,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaylistenerpolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -37897,7 +37897,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaylistenerpolicychains.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -38090,7 +38090,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaylisteners.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -38317,7 +38317,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayschemaregistries.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -38619,7 +38619,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaystatickeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -38873,6 +38873,12 @@ spec:
         - fieldPath: .spec.apiSpec
           message: 'apiSpec is immutable once the static key has been created in Konnect: Konnect static keys can''t be updated, create a new EventGatewayStaticKey instead'
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec == oldSelf.spec.apiSpec'
+        - fieldPath: .spec.apiSpec.value
+          message: 'the inline value is immutable once the static key has been pushed: records encrypted with it would no longer be decrypted, create a new EventGatewayStaticKey and point the policies at it, or delete this one and create it again'
+          rule: '!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != ''OnPremEventGateway'' || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(oldSelf.spec.apiSpec.value.value) || !has(self.spec.apiSpec.value.value) || self.spec.apiSpec.value.value == oldSelf.spec.apiSpec.value.value'
+        - fieldPath: .spec.parentRef
+          message: 'parentRef is immutable once the static key has been pushed: create a new EventGatewayStaticKey for the other gateway, or delete this one and create it again'
+          rule: '!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != ''OnPremEventGateway'' || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(self.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef'
     served: true
     storage: true
     subresources:
@@ -38886,7 +38892,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewaytlstrustbundles.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -39142,7 +39148,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -40224,7 +40230,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterconsumepolicychains.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -40417,7 +40423,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterpolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -41148,7 +41154,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterpolicychains.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -41341,7 +41347,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -42352,7 +42358,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterproducepolicychains.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -42545,7 +42551,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusters.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -43097,7 +43103,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -43145,7 +43151,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcacertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -43263,6 +43269,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               type:
                 default: inline
                 enum:
@@ -43373,7 +43381,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -43519,6 +43527,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               type:
                 default: inline
                 enum:
@@ -43631,7 +43641,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -43825,6 +43835,8 @@ spec:
             x-kubernetes-validations:
             - message: tags entries must not be longer than 128 characters
               rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+            - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+              rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
         required:
         - plugin
         type: object
@@ -43848,7 +43860,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongconsumergroups.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -43955,6 +43967,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             type: object
             x-kubernetes-validations:
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
@@ -44044,7 +44058,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongconsumers.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -44165,6 +44179,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             type: object
             x-kubernetes-validations:
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
@@ -44260,7 +44276,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcredentialacls.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -44341,6 +44357,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - consumerRef
             - group
@@ -44434,7 +44452,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcredentialapikeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -44515,6 +44533,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - consumerRef
             - key
@@ -44608,7 +44628,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcredentialbasicauths.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -44689,6 +44709,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               username:
                 type: string
             required:
@@ -44785,7 +44807,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcredentialhmacs.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -44868,6 +44890,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               username:
                 type: string
             required:
@@ -44963,7 +44987,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcredentialjwts.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -45067,6 +45091,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - consumerRef
             type: object
@@ -45161,7 +45187,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongcustomentities.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -45300,7 +45326,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongdataplaneclientcertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -45494,7 +45520,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongkeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -45641,6 +45667,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - kid
             type: object
@@ -45741,7 +45769,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongkeysets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -45846,6 +45874,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - controlPlaneRef
             - name
@@ -45941,7 +45971,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konglicenses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -46080,7 +46110,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongpluginbindings.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -46216,6 +46246,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               targets:
                 properties:
                   consumerGroupRef:
@@ -46397,7 +46429,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -46585,6 +46617,8 @@ spec:
             x-kubernetes-validations:
             - message: tags entries must not be longer than 128 characters
               rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+            - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+              rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
         required:
         - plugin
         type: object
@@ -46608,7 +46642,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongreferencegrants.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -46721,7 +46755,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongroutes.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -46911,6 +46945,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             type: object
             x-kubernetes-validations:
             - message: KIC is not supported as control plane
@@ -47011,7 +47047,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongservices.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47172,6 +47208,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               tls_verify:
                 type: boolean
               tls_verify_depth:
@@ -47288,7 +47326,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongsnis.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47375,6 +47413,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - certificateRef
             - name
@@ -47468,7 +47508,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongtargets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47548,6 +47588,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               target:
                 type: string
               upstreamRef:
@@ -47661,7 +47703,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   labels:
     gateway.networking.k8s.io/policy: direct
   name: kongupstreampolicies.configuration.konghq.com
@@ -48015,7 +48057,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongupstreams.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48288,6 +48330,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               use_srv_name:
                 type: boolean
             required:
@@ -48412,7 +48456,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongvaults.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48557,6 +48601,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - backend
             - prefix
@@ -48656,7 +48702,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kegdataplanes.eventgateway.konghq.com
 spec:
   group: eventgateway.konghq.com
@@ -53325,7 +53371,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: onpremeventgateways.eventgateway.konghq.com
 spec:
   group: eventgateway.konghq.com
@@ -53468,7 +53514,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigateways.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -53728,7 +53774,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: dataplanemetricsextensions.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -53822,7 +53868,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: dataplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -58607,7 +58653,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: dbbackedhybridcontrolplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -58691,7 +58737,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: gwadmins.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -63286,7 +63332,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongplugininstallations.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -63407,7 +63453,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: watchnamespacegrants.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -63468,7 +63514,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectaigateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -63710,7 +63756,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectapiauthconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -63865,7 +63911,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectcloudgatewaydataplanegroupconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -64198,7 +64244,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectcloudgatewaynetworks.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -64405,7 +64451,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectcloudgatewaytransitgateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -64709,7 +64755,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectconfigstores.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -64760,10 +64806,7 @@ spec:
                 type: object
               controlPlaneRef:
                 properties:
-                  konnectID:
-                    maxLength: 36
-                    type: string
-                  namespacedRef:
+                  konnectNamespacedRef:
                     properties:
                       name:
                         maxLength: 253
@@ -64777,21 +64820,12 @@ spec:
                     type: object
                   type:
                     enum:
-                    - konnectID
-                    - namespacedRef
+                    - konnectNamespacedRef
                     type: string
                 required:
+                - konnectNamespacedRef
                 - type
                 type: object
-                x-kubernetes-validations:
-                - message: when type is namespacedRef, namespacedRef must be set
-                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
-                - message: when type is namespacedRef, konnectID must not be set
-                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
-                - message: when type is konnectID, namespacedRef must not be set
-                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
             - controlPlaneRef
             type: object
@@ -64873,7 +64907,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectconfigstoresyncs.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -65186,7 +65220,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnecteventgateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -65374,7 +65408,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: mcpservers.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -65555,7 +65589,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalcustomdomains.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -65772,7 +65806,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalcustomizations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66107,7 +66141,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalemailconfigs.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66279,7 +66313,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalidentityproviderrequests.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66325,7 +66359,7 @@ spec:
                 properties:
                   config:
                     properties:
-                      oIDC:
+                      oidc:
                         properties:
                           claimMappings:
                             properties:
@@ -66358,7 +66392,7 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      sAML:
+                      saml:
                         properties:
                           idpMetadataURL:
                             maxLength: 253
@@ -66369,8 +66403,8 @@ spec:
                         type: object
                       type:
                         enum:
-                        - oIDC
-                        - sAML
+                        - oidc
+                        - saml
                         minLength: 1
                         type: string
                     required:
@@ -66503,7 +66537,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalipallowlists.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66670,7 +66704,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalpages.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66895,7 +66929,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portals.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66948,6 +66982,16 @@ spec:
                         type: string
                       features:
                         properties:
+                          aiSearch:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
                           mcpServer:
                             properties:
                               enabled:
@@ -66965,6 +67009,7 @@ spec:
                             - writeOperationsEnabled
                             type: object
                         required:
+                        - aiSearch
                         - mcpServer
                         type: object
                     required:
@@ -67069,6 +67114,9 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  themeName:
+                    maxLength: 253
+                    type: string
                 required:
                 - name
                 type: object
@@ -67162,7 +67210,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalteams.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -67343,7 +67391,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: mcpserverdataplanes.mcp.konghq.com
 spec:
   group: mcp.konghq.com
@@ -67923,7 +67971,7 @@ metadata:
     helm.sh/resource-policy: keep
     cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: controlplanes.gateway-operator.konghq.com
 spec:
   conversion:
@@ -72452,7 +72500,7 @@ metadata:
     helm.sh/resource-policy: keep
     cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: gatewayconfigurations.gateway-operator.konghq.com
 spec:
   conversion:
@@ -85962,7 +86010,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectextensions.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -86487,7 +86535,7 @@ metadata:
     helm.sh/resource-policy: keep
     cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
   conversion:
@@ -87919,9 +87967,9 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-controller-manager
   namespace: default
@@ -87947,12 +87995,12 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+        helm.sh/chart: kong-operator-1.5.0
         app.kubernetes.io/instance: "chartsnap"
-        app.kubernetes.io/version: "2.4.0-rapid.3.0"
+        app.kubernetes.io/version: "2.4.0"
         app.kubernetes.io/component: ko
         app: chartsnap-kong-operator
-        version: "2.4.0-rapid.3.0"
+        version: "2.4.0"
     spec:
       containers:
       - name: manager
@@ -87977,7 +88025,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: docker.io/kong/kong-operator:2.4.0-rapid.3.0
+        image: docker.io/kong/kong-operator:2.4.0
         livenessProbe:
           httpGet:
             path: /healthz
@@ -88057,9 +88105,9 @@ metadata:
     cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: controlplane-configuration-validations
 webhooks:
@@ -88173,9 +88221,9 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-serving-cert
   namespace: default
@@ -88194,9 +88242,9 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-validating-serving-cert
   namespace: default
@@ -88215,9 +88263,9 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: kong-operator-ca
   namespace: default
@@ -88239,9 +88287,9 @@ kind: Issuer
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-selfsigned-issuer
   namespace: default
@@ -88254,9 +88302,9 @@ kind: Issuer
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.5.0-rapid.2.0
+    helm.sh/chart: kong-operator-1.5.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.4.0-rapid.3.0"
+    app.kubernetes.io/version: "2.4.0"
     app.kubernetes.io/component: ko
   name: selfsigned-issuer
   namespace: default

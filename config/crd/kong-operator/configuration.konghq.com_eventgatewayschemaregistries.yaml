@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayschemaregistries.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -71,8 +71,11 @@ spec:
                         description: The configuration of the schema registry.
                         properties:
                           authentication:
-                            description: The authentication configuration for the
-                              schema registry.
+                            description: |-
+                              The authentication configuration for the schema registry.
+                              The Event Gateway only requires read-only access to the schema registry to
+                              fetch schemas for validation, so we recommend using credentials with
+                              read-only scope.
                             properties:
                               basic:
                                 description: SchemaRegistryAuthenticationBasic configuration.

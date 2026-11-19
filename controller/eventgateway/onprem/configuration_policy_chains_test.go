@@ -18,6 +18,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 )
 
@@ -132,7 +133,7 @@ func TestBuildClusterPolicyChainExcludedParentOwnership(t *testing.T) {
 			_, err = f.r.Reconcile(t.Context(), read(t, cl, f.gateway))
 			require.NoError(t, err)
 			if tt.blocked {
-				require.Empty(t, f.pod().recorded())
+				require.NotContains(t, f.pod().recorded(), callEntities, "the entities are frozen: only the gateway and its certificates are pushed")
 			} else {
 				require.Contains(t, f.pod().recorded(), callEntities, "an unowned excluded scope must not block the gateway")
 			}
@@ -196,12 +197,22 @@ func TestReconcileClusterPolicyChainParentLifecycle(t *testing.T) {
 				require.Empty(t, held.VirtualClusters)
 				require.Equal(t, "Detached", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
 			} else {
-				require.Empty(t, f.pod().recorded(), "an excluded owning scope must retain the last running document")
+				// The pods are pushed the last configuration that could be sent,
+				// which they may hold already.
+				f.pod().mu.Lock()
+				held := f.pod().gateways[f.gatewayID]
+				f.pod().mu.Unlock()
+				i := slices.IndexFunc(held.VirtualClusters, func(vc gwadminapi.EventGatewayVirtualClusterOnPrem) bool {
+					return vc.Name == string(parent.Spec.APISpec.Name)
+				})
+				require.GreaterOrEqual(t, i, 0, "an excluded owning scope must retain the last running document")
+				require.NotEmpty(t, held.VirtualClusters[i].ClusterPolicies, "with the policies its chain orders")
 				require.Equal(t, first.Status.ConfigRevision, current.Status.ConfigRevision)
 				require.Equal(t, first.Status.ConfigHash, current.Status.ConfigHash)
 				require.Equal(t, "InvalidPolicyChain", condition.Reason)
 				require.Equal(t, "Invalid", apimeta.FindStatusCondition(read(t, f.cl, chain).Status.Conditions, "Programmed").Reason)
 				require.NoError(t, f.cl.Delete(t.Context(), duplicate))
+				f.pod().reset()
 				reconcile()
 				require.Contains(t, f.pod().recorded(), callEntities, "repairing the owning scope must resume pending updates")
 				require.Greater(t, read(t, f.cl, f.gateway).Status.ConfigRevision, first.Status.ConfigRevision)
@@ -287,7 +298,7 @@ func TestReconcileClusterPolicyChainLifecycle(t *testing.T) {
 	require.NoError(t, f.cl.Update(t.Context(), chain))
 	f.pod().reset()
 	reconcile()
-	require.Empty(t, f.pod().recorded(), "an incomplete owner freezes the whole document, including its revision")
+	require.NotContains(t, f.pod().recorded(), callEntities, "an incomplete owner freezes the whole document, including its revision: only the gateway and its certificates are pushed")
 	require.Equal(t, second.Status.ConfigRevision, read(t, f.cl, f.gateway).Status.ConfigRevision)
 	require.Equal(t, second.Status.ConfigHash, read(t, f.cl, f.gateway).Status.ConfigHash)
 	expectProgrammed(metav1.ConditionFalse, "Invalid")
@@ -382,6 +393,191 @@ spec:
     - {name: a-first}
 `)
 	return gateway, chain, policies, objects
+}
+
+func producePolicyChainObjects(t *testing.T) (
+	*eventgatewayv1alpha1.OnPremEventGateway, *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+	[]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, []client.Object,
+) {
+	t.Helper()
+	created := time.Date(2026, 11, 2, 0, 0, 0, 0, time.UTC)
+	gateway := newTestGateway("gateway")
+	backend := fromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, created, `
+metadata: {name: backend}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: backend
+    authentication: {type: anonymous, anonymous: {}}
+    bootstrapServers: ["kafka:9092"]
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls: {enabled: Disabled}
+`)
+	parent := fromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, created, `
+metadata: {name: vc}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: backend}}
+  apiSpec:
+    name: vc
+    aclMode: passthrough
+    authentication: [{type: anonymous}]
+    dnsLabel: vc
+`)
+	policies := make([]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, 0, 2)
+	objects := []client.Object{gateway, backend, parent}
+	for i, name := range []string{"a-first", "z-second"} {
+		policy := fromYAML[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](t, created.Add(time.Duration(i)*time.Minute), `
+metadata: {name: `+name+`}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: `+name+`
+      config:
+        actions:
+        - op: set
+          set: {key: x-stage, value: `+name+`}
+`)
+		policies = append(policies, policy)
+		objects = append(objects, policy)
+	}
+	chain := fromYAML[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain](t, created, `
+metadata: {name: chain}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    policies:
+    - {name: z-second}
+    - {name: a-first}
+`)
+	return gateway, chain, policies, objects
+}
+
+func TestBuildProducePolicyChainOrder(t *testing.T) {
+	gateway, chain, policies, objects := producePolicyChainObjects(t)
+	cl := newFakeClient(t, append(objects, chain)...)
+	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+	require.NoError(t, err)
+	require.Empty(t, cfg.invalidChains)
+	require.Equal(t, string(policies[1].UID), cfg.entities.VirtualClusters[0].ProducePolicies[0].Id.String())
+	require.Equal(t, "EventGatewayVirtualClusterProducePolicy "+ns+"/a-first", cfg.objects["virtual_clusters.0.produce_policies.1"])
+	require.Equal(t, []uuid.UUID{uuid.MustParse(string(objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster).UID))},
+		cfg.orderedProducePolicies, "only the produce list of the virtual cluster is order-sensitive")
+	require.Empty(t, cfg.orderedPolicies, "a produce chain doesn't order the cluster-level list")
+}
+
+func TestBuildProducePolicyChainOwnershipIsIndependent(t *testing.T) {
+	gateway, chain, _, objects := producePolicyChainObjects(t)
+	parent := objects[2].(*configurationv1alpha1.EventGatewayVirtualCluster)
+	cl := newFakeClient(t, append(objects, chain)...)
+	build := func() configuration {
+		t.Helper()
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, cfg.invalidChains)
+		return cfg
+	}
+	build()
+	claimed := read(t, cl, parent)
+	require.Equal(t, policychain.ClaimValue(chain), claimed.Annotations[policychain.ProduceOwnerAnnotation])
+	require.Empty(t, claimed.Annotations[policychain.OwnerAnnotation], "produce ownership is independent of the cluster chain")
+
+	// A cluster chain of the same virtual cluster can claim it too.
+	clusterChain := fromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](t, time.Now().UTC(), `
+metadata: {name: cluster-chain}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: vc}}
+  apiSpec:
+    policies: []
+`)
+	require.NoError(t, cl.Create(t.Context(), clusterChain))
+	cfg := build()
+	require.Empty(t, cfg.invalidChains, "a cluster chain over an empty cluster-level set is valid")
+	claimed = read(t, cl, parent)
+	require.Equal(t, policychain.ClaimValue(clusterChain), claimed.Annotations[policychain.OwnerAnnotation])
+	require.Equal(t, policychain.ClaimValue(chain), claimed.Annotations[policychain.ProduceOwnerAnnotation])
+}
+
+func TestBuildProducePolicyChainOrderValidation(t *testing.T) {
+	for _, tt := range []struct {
+		name, problem string
+		change        func(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+			[]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy)
+	}{
+		{name: "declared order"},
+		{name: "omitted list", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies = nil
+		}, problem: "must be supplied explicitly"},
+		{name: "empty nonempty scope", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{}
+		}, problem: "must list every produce policy"},
+		{name: "partial declaration", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies = c.Spec.APISpec.Policies[:1]
+		}, problem: "a-first is missing"},
+		{name: "duplicate", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies[1] = c.Spec.APISpec.Policies[0]
+		}, problem: "duplicates policy"},
+		{name: "missing", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies[0].Name = "missing"
+		}, problem: "does not exist"},
+		{name: "wrong kind", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain, _ []*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterConsumePolicy"
+		}, problem: "must name an EventGatewayVirtualClusterProducePolicy"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gateway, chain, policies, objects := producePolicyChainObjects(t)
+			if tt.change != nil {
+				tt.change(chain, policies)
+			}
+			cl := newFakeClient(t, append(objects, chain)...)
+			cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+			require.NoError(t, err)
+			if tt.problem == "" {
+				require.Empty(t, cfg.invalidChains)
+				return
+			}
+			require.NotEmpty(t, cfg.invalidChains)
+			require.Contains(t, cfg.invalidChains[0], tt.problem)
+		})
+	}
+}
+
+// TestProducePolicyOrderKeepsReferencesLocal checks the produce chain contract
+// the API declares: unlike the cluster-level chain, its parent and policies
+// are never of another namespace, whatever a KongReferenceGrant allows.
+func TestProducePolicyOrderKeepsReferencesLocal(t *testing.T) {
+	policy := func(name string) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
+		return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
+			Name: name, Namespace: ns,
+			Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
+				APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
+					EventGatewayVirtualClusterProducePolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+						Type:                      configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate,
+						ModifyHeadersPolicyCreate: &configurationv1alpha1.EventGatewayModifyHeadersPolicyCreate{},
+					},
+				},
+			},
+		}
+	}
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainSpec{
+			EventGatewayVirtualClusterRef: namespacedRef("vc"),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{
+					{Name: "first", Namespace: "other"},
+				},
+			},
+		},
+	}
+	problem := producePolicyOrder(chain, []policyRef{{name: "first", namespace: "other"}}, []entityWithParent{policy("first")}, nil)
+	require.Contains(t, problem, "not cross-namespace")
+
+	chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
+	chain.Spec.APISpec.Policies[0].Namespace = ""
+	problem = producePolicyOrder(chain, []policyRef{{name: "first"}}, []entityWithParent{policy("first")}, nil)
+	require.Contains(t, problem, "in the same namespace")
 }
 
 func TestClusterPolicyOrderValidation(t *testing.T) {
@@ -772,4 +968,76 @@ func TestClusterPolicyOrderEmptyAndReadErrors(t *testing.T) {
 			require.Nil(t, ordered)
 		})
 	}
+}
+
+// TestInvalidChainProvisionsARestartedPod checks a gw-admin pod restarted while
+// a policy chain of the gateway can't be applied still gets the gateway, its
+// data plane certificates and the last configuration that could be sent, and
+// is told the gateways it serves: it can turn ready, for the other gateways of
+// its GWAdmin too.
+func TestInvalidChainProvisionsARestartedPod(t *testing.T) {
+	_, chain, _, objects := clusterPolicyChainObjects(t)
+	f := newPushFixture(t, interceptor.Funcs{}, nil)
+	for _, obj := range slices.Concat(objects[1:], []client.Object{chain}, dataPlaneCertificateObjects(t)) {
+		require.NoError(t, f.cl.Create(t.Context(), obj))
+	}
+	reconcile := func() {
+		t.Helper()
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+	}
+	reconcile()
+	first := read(t, f.cl, f.gateway)
+	require.True(t, apimeta.IsStatusConditionTrue(first.Status.Conditions, "Programmed"))
+
+	chain = read(t, f.cl, chain)
+	chain.Spec.APISpec.Policies = chain.Spec.APISpec.Policies[:1]
+	require.NoError(t, f.cl.Update(t.Context(), chain))
+	f.pod().restart()
+	reconcile()
+
+	current := read(t, f.cl, f.gateway)
+	require.Equal(t, "InvalidPolicyChain", apimeta.FindStatusCondition(current.Status.Conditions, "Programmed").Reason)
+	require.Equal(t, first.Status.ConfigRevision, current.Status.ConfigRevision, "the configuration with the invalid chain isn't recorded")
+	f.pod().mu.Lock()
+	held, registered := f.pod().gateways[f.gatewayID]
+	f.pod().mu.Unlock()
+	require.True(t, registered, "the restarted pod serves the gateway")
+	require.NotEmpty(t, held.VirtualClusters, "with the last configuration that could be sent")
+	require.Contains(t, f.pod().recorded(), callExpected+" "+f.gatewayID.String(), "and is told the gateways it serves")
+}
+
+// TestInvalidChainStopsTrustingDeletedCertificate checks a data plane
+// certificate deleted while a policy chain of the gateway can't be applied
+// stops being trusted: the push is stopped, but the gateway's certificates are
+// still pushed.
+func TestInvalidChainStopsTrustingDeletedCertificate(t *testing.T) {
+	_, chain, _, objects := clusterPolicyChainObjects(t)
+	f := newPushFixture(t, interceptor.Funcs{}, nil)
+	second := fromYAML[configurationv1alpha1.EventGatewayDataPlaneCertificate](t, time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC), `
+metadata: {name: dp-second}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    certificate: {type: secretRef, secretRef: {name: dp-tls, key: tls.crt}}
+`)
+	for _, obj := range slices.Concat(objects[1:], []client.Object{chain, second}, dataPlaneCertificateObjects(t)) {
+		require.NoError(t, f.cl.Create(t.Context(), obj))
+	}
+	reconcile := func() {
+		t.Helper()
+		_, err := f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
+		require.NoError(t, err)
+	}
+	reconcile()
+	require.Len(t, f.pod().holds(f.gatewayID), 2)
+
+	chain = read(t, f.cl, chain)
+	chain.Spec.APISpec.Policies = chain.Spec.APISpec.Policies[:1]
+	require.NoError(t, f.cl.Update(t.Context(), chain))
+	require.NoError(t, f.cl.Delete(t.Context(), read(t, f.cl, second)))
+	reconcile()
+
+	require.Equal(t, "InvalidPolicyChain", apimeta.FindStatusCondition(read(t, f.cl, f.gateway).Status.Conditions, "Programmed").Reason)
+	require.Len(t, f.pod().holds(f.gatewayID), 1, "the certificate deleted is no longer trusted")
 }

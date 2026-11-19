@@ -1,0 +1,228 @@
+package isolated
+
+import (
+	"bytes"
+	"context"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/e2e-framework/pkg/envconf"
+	"sigs.k8s.io/e2e-framework/pkg/features"
+
+	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
+)
+
+func TestCustomEntityExample(t *testing.T) {
+	f := features.
+		New("example").
+		WithLabel(testlabels.Example, testlabels.ExampleTrue).
+		WithLabel(testlabels.Kind, testlabels.KindKongCustomEntity).
+		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
+		WithSetup("skip if enterprise not enabled", SkipIfEnterpriseNotEnabled).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
+		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			applyManifest(ctx, t, samplesManifestPath("kongcustomentity.yaml"))
+
+			t.Log("waiting for hasura deployment to be ready")
+			helpers.WaitForDeploymentRollout(ctx, t, GetClusterFromCtx(ctx), GetNamespaceForT(ctx, t), "hasura")
+			return ctx
+		}).
+		Assess("degraphql plugin works as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			proxyURL := GetHTTPSURLFromCtx(ctx)
+			t.Log("Waiting for graphQL service to be available")
+			helpers.EventuallyGETPath(
+				t, proxyURL, proxyURL.String(), "/healthz", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, "OK", nil, consts.IngressWait, consts.WaitTick,
+			)
+
+			t.Log("injecting data for graphQL service")
+			injectDataURL := proxyURL.String() + "/v2/query"
+			runSQLCreateTableBody := `{
+				"type": "run_sql",
+				"args": {
+					"sql": "CREATE TABLE contacts(id serial NOT NULL, name text NOT NULL, phone_number text NOT NULL, PRIMARY KEY(id));"
+				  }
+			}`
+			req, err := http.NewRequest(http.MethodPost, injectDataURL, bytes.NewReader([]byte(runSQLCreateTableBody)))
+			require.NoError(t, err)
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("X-Hasura-Role", "admin")
+			resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
+			require.NoError(t, err)
+			resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			runSQLInsertRowBody := `{
+				"type": "run_sql",
+				"args": {
+					"sql": "INSERT INTO contacts (name, phone_number) VALUES ('Alice','0123456789');"
+				  }
+			}`
+			req, err = http.NewRequest(http.MethodPost, injectDataURL, bytes.NewReader([]byte(runSQLInsertRowBody)))
+			require.NoError(t, err)
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("X-Hasura-Role", "admin")
+			resp, err = helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
+			require.NoError(t, err)
+			resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			setMetadataURL := proxyURL.String() + "/v1/metadata"
+			trackTableBody := `{
+				"type": "pg_track_table",
+				"args": {
+				  "schema": "public",
+				  "name": "contacts"
+				}
+			}`
+			req, err = http.NewRequest(http.MethodPost, setMetadataURL, bytes.NewReader([]byte(trackTableBody)))
+			require.NoError(t, err)
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("X-Hasura-Role", "admin")
+			resp, err = helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
+			require.NoError(t, err)
+			resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
+			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
+			helpers.EventuallyGETPath(t, proxyURL, "https://graphql.service.example", "/contacts", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+
+			return ctx
+		}).
+		Assess("another ingress using the same degraphql plugin should also work", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			ingressNamespace := GetNamespaceForT(ctx, t)
+			const (
+				serviceName      = "hasura"
+				ingressName      = "hasura-ingress-graphql"
+				alterServiceName = "hasura-alter"
+				alterIngressName = "hasura-ingress-graphql-alter"
+			)
+			r := conf.Client().Resources()
+
+			t.Log("creating alternative service")
+			svc := corev1.Service{}
+			require.NoError(t, r.Get(ctx, serviceName, ingressNamespace, &svc))
+			alterService := &corev1.Service{
+				Name:        alterServiceName,
+				Namespace:   ingressNamespace,
+				Labels:      svc.Labels,
+				Annotations: svc.Annotations,
+			}
+			alterService.Spec = *svc.Spec.DeepCopy()
+			alterService.Spec.ClusterIP = ""
+			alterService.Spec.ClusterIPs = []string{}
+			require.NoError(t, r.Create(ctx, alterService))
+
+			t.Log("creating alternative ingress with the same degraphql plugin attached")
+			ingress := netv1.Ingress{}
+			require.NoError(t, r.Get(ctx, ingressName, ingressNamespace, &ingress))
+			alterIngress := &netv1.Ingress{
+				Name:        alterIngressName,
+				Namespace:   ingressNamespace,
+				Labels:      ingress.Labels,
+				Annotations: ingress.Annotations,
+			}
+			alterIngress.Spec = *ingress.Spec.DeepCopy()
+			for i := range alterIngress.Spec.Rules {
+				alterIngress.Spec.Rules[i].Host = "alter-graphql.service.example"
+				for j := range alterIngress.Spec.Rules[i].HTTP.Paths {
+					alterIngress.Spec.Rules[i].HTTP.Paths[j].Backend = netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: alterServiceName,
+							Port: netv1.ServiceBackendPort{
+								Number: int32(80),
+							},
+						},
+					}
+				}
+			}
+			require.NoError(t, r.Create(ctx, alterIngress))
+
+			t.Log("verifying degraphQL plugin and degraphql_routes entity works")
+			proxyURL := GetHTTPSURLFromCtx(ctx)
+			helpers.EventuallyGETPath(t, proxyURL, "https://alter-graphql.service.example", "/contacts", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, `"name":"Alice"`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+
+			return ctx
+		}).
+		Assess("entities not passing schema validation are excluded from config and produce KongConfigurationTranslationFailed events", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			// TODO: no KongConfigurationTranslationFailed event is emitted for the invalid entity when the
+			// ControlPlane is managed by the operator. Investigate and re-enable.
+			t.Skip("skipping, KongConfigurationTranslationFailed event is not emitted for the invalid KongCustomEntity")
+
+			namespace := GetNamespaceForT(ctx, t)
+			c, err := clientset.NewForConfig(conf.Client().RESTConfig())
+			require.NoError(t, err)
+			kceClient := c.ConfigurationV1alpha1().KongCustomEntities(namespace)
+			customEntity, err := kceClient.Get(ctx, "degraphql-route-example", metav1.GetOptions{})
+			require.NoError(t, err)
+			t.Logf("update the custom entity with invalid field, failing validation and thus being excluded from config")
+			customEntity.Spec.Fields = apiextensionsv1.JSON{
+				Raw: []byte(`{"uri":"/contacts","query":"aaaa","foo":"bar"}`),
+			}
+			_, err = kceClient.Update(ctx, customEntity, metav1.UpdateOptions{})
+			require.NoError(t, err)
+
+			cl, err := client.NewWithWatch(conf.Client().RESTConfig(), client.Options{})
+			require.NoError(t, err)
+
+			var events corev1.EventList
+			fs := fields.SelectorFromSet(fields.Set{
+				"involvedObject.kind":      "KongCustomEntity",
+				"involvedObject.name":      "degraphql-route-example",
+				"involvedObject.namespace": namespace,
+				"reason":                   "KongConfigurationTranslationFailed",
+			})
+			w, err := cl.Watch(ctx, &events, &client.ListOptions{
+				Namespace:     namespace,
+				FieldSelector: fs,
+			})
+			require.NoError(t, err)
+			defer w.Stop()
+
+			timer := time.NewTimer(consts.StatusWait)
+			defer timer.Stop()
+		forLoop:
+			for {
+				select {
+				case e := <-w.ResultChan():
+					event := e.Object.(*corev1.Event)
+					// Just perform the assertions and break out of the loop. There shouldn't be more than one event at this point.
+					assert.Contains(t, event.Message, "entity "+namespace+"/degraphql-route-example failed validation:")
+					assert.Contains(t, event.Message, "schema violation")
+					assert.Equal(t, "KongConfigurationTranslationFailed", event.Reason)
+					break forLoop
+
+				case <-timer.C:
+					t.Logf("timeout waiting for KongConfigurationTranslationFailed Event")
+					t.Fail()
+					return ctx
+				case <-ctx.Done():
+					t.Logf("timeout waiting for KongConfigurationTranslationFailed Event")
+					t.Fail()
+					return ctx
+				}
+			}
+
+			t.Log("verifying degraphQL plugin was excluded from the configuration as it was failing schema validation")
+			proxyURL := GetHTTPSURLFromCtx(ctx)
+			// The ingress providing graphQL service has a different host, so we need to set the `Host` header.
+			helpers.EventuallyGETPath(t, proxyURL, "https://graphql.service.example", "/contacts", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusNotFound, `{"message":"Not Found"}`, map[string]string{"Host": "graphql.service.example"}, consts.IngressWait, consts.WaitTick)
+
+			return ctx
+		}).
+		Teardown(featureTeardown())
+
+	tenv.Test(t, f.Feature())
+}

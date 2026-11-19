@@ -38,6 +38,17 @@ LDFLAGS_METADATA ?= \
 	-X $(GO_METADATA_PACKAGE).repo=$(REPO_INFO) \
 	-X $(GO_METADATA_PACKAGE).repoURL=$(REPO_URL)
 
+CGO_ENABLED ?= $(shell go env CGO_ENABLED)
+TARGETOS ?= $(shell go env GOOS)
+TARGETARCH ?= $(shell go env GOARCH)
+OPERATOR_BUILD_ENV = \
+	CGO_ENABLED=$(CGO_ENABLED) \
+	GOOS=$(TARGETOS) \
+	GOARCH=$(TARGETARCH) \
+	TAG=$(TAG) \
+	COMMIT=$(COMMIT) \
+	REPO_INFO=$(REPO_INFO)
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -259,7 +270,8 @@ build.operator.debug:
 
 .PHONY: _build.operator
 _build.operator:
-	go build -o bin/manager $(GCFLAGS) \
+	env $(OPERATOR_BUILD_ENV) \
+		go build -o bin/manager $(GCFLAGS) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		cmd/main.go
 
@@ -568,10 +580,45 @@ manifests.charts.kong-operator.chart.yaml:
 # Build - Container Images
 # ------------------------------------------------------------------------------
 
+PREBUILT ?= false
+GO_MOD_CACHE ?= $(shell go env GOMODCACHE)
+GO_BUILD_CACHE ?= $(shell go env GOCACHE)
+GO_BUILD_CONTAINER_USER ?= $(shell id -u):$(shell id -g)
+GO_BUILDER_IMAGE = $(shell awk '/^FROM --platform=\$$BUILDPLATFORM golang:/ { print $$3; exit }' $(PROJECT_DIR)/Dockerfile)
+
+.PHONY: _build.operator.container
+_build.operator.container: TARGETOS = linux
+_build.operator.container: CGO_ENABLED = 0
+_build.operator.container:
+	@if [ -z "$(GO_BUILDER_IMAGE)" ]; then \
+		echo "Go builder image not found in $(PROJECT_DIR)/Dockerfile" >&2; \
+		exit 1; \
+	fi
+	mkdir -p "$(PROJECT_DIR)/bin" "$(GO_MOD_CACHE)" "$(GO_BUILD_CACHE)"
+	docker run --rm \
+		--user "$(GO_BUILD_CONTAINER_USER)" \
+		--volume "$(PROJECT_DIR):/workspace" \
+		--volume "$(GO_MOD_CACHE):/go/pkg/mod" \
+		--volume "$(GO_BUILD_CACHE):/go-build" \
+		--workdir /workspace \
+		--env HOME=/tmp \
+		--env GOPATH=/go \
+		--env GOCACHE=/go-build \
+		$(GO_BUILDER_IMAGE) \
+		env $(OPERATOR_BUILD_ENV) \
+		make build.operator
+	mv -f "$(PROJECT_DIR)/bin/manager" "$(PROJECT_DIR)/bin/manager-linux-$(TARGETARCH)"
+
+ifeq ($(PREBUILT),true)
+_docker.build: _build.operator.container
+endif
+
 .PHONY: _docker.build
 _docker.build:
 	docker build -t $(IMG):$(TAG) \
+		--platform linux/$(TARGETARCH) \
 		--target $(TARGET) \
+		--build-arg PREBUILT=$(PREBUILT) \
 		--build-arg GOPATH=$(shell go env GOPATH) \
 		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=$(TAG) \
@@ -609,11 +656,10 @@ docker.run.openssf:
 
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
-# The hybrid flavor of the conformance suite needs ~20m for the tests alone.
-# The timeout must also cover the up-to-5m post-suite wait for the conformance
-# namespaces to terminate (suite_test.go), or the test binary gets SIGQUIT'd
-# mid-cleanup and the job fails even when every conformance test passed.
-CONFORMANCE_TEST_TIMEOUT ?= "30m"
+# Allow for the hybrid suite's 30s test isolation interval and the up-to-5m
+# post-suite wait for conformance namespaces to terminate (suite_test.go),
+# so the test binary is not interrupted before tests and cleanup complete.
+CONFORMANCE_TEST_TIMEOUT ?= "90m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
@@ -751,6 +797,12 @@ test.integration-ko:
 		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.ko.out" \
 		GOTESTPATH=./test/integration/ko/
+
+.PHONY: test.integration-ko-isolated
+test.integration-ko-isolated:
+	@$(MAKE) _test.integration \
+		COVERPROFILE="coverage.integration.ko-isolated.out" \
+		GOTESTPATH=./test/integration/isolated/
 
 .PHONY: test.integration-konnect
 test.integration-konnect:

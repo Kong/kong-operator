@@ -1095,12 +1095,21 @@ consumed records.
 * `error` - the batch is not delivered to the client.
 Use sparingly: erroring on a batch causes clients to get stuck on the
 problematic offset and requires manual intervention to skip it.
+A single record that always fails the policy, for example one written by a
+producer with access to the topic, pins every consumer group on that offset.
+The error the client receives contains the policy failure reason, which can
+include runtime-specific configuration details.
 * `skip` - the record is not delivered to the client.
 * `passthrough` - passes the record to the client even though policy
 execution failed.
 * `mark` - passes the record to the client but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
+failure (truncated to 512 characters).
+The failure reason can contain runtime-specific configuration details, such
+as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+text, JWT issuer and audience data, or expression snippets.
+If you don't want to share this information with clients, remove the header
+with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -1718,7 +1727,7 @@ of the consume schema validation policy when using an inline schema.<br /><br />
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `key` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkey)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
@@ -1816,7 +1825,7 @@ consume schema validation policy when using JSON parsing without schema.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
@@ -1837,7 +1846,7 @@ registry.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
@@ -2873,7 +2882,7 @@ parsed record fields policy.
 | Field | Description |
 | --- | --- |
 | `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects fields of a parsed record for decryption. |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keySources` _[][EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
 
 _Appears in:_
@@ -2886,7 +2895,11 @@ _Appears in:_
 EventGatewayParsedRecordDecryptFieldsPolicyCreate Decrypts fields of parsed
 Kafka records using AES_256_GCM.
 Keys are therefore 256 bits long.<br /><br />Note this policy can only be used as a child of a
-`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
+`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />This policy only runs on records that the parent schema validation policy
+successfully parses.
+If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+that fail schema validation are delivered to the client without parsing, so
+this policy doesn't run on them and their fields stay encrypted.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -2968,7 +2981,7 @@ parsed record policy.
 | Field | Description |
 | --- | --- |
 | `encryptFields` _[][EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -2980,7 +2993,11 @@ _Appears in:_
 EventGatewayParsedRecordEncryptFieldsPolicyCreate Encrypts fields of parsed
 Kafka records using AES_256_GCM.
 Keys are therefore 256 bits long.<br /><br />Note this policy can only be used as a child of a
-`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
+`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />This policy only runs on records that the parent schema validation policy
+successfully parses.
+If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+that fail schema validation are sent to the backend cluster without parsing,
+so this policy doesn't run on them and their fields aren't encrypted.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -3150,7 +3167,7 @@ parsed record fields consume policy.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `maskFields` _[][EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)_ | Selects which fields to mask and how to mask them. |
 
 _Appears in:_
@@ -3192,7 +3209,7 @@ record fields produce policy.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `maskFields` _[][EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)_ | Selects which fields to mask and how to mask them. |
 
 _Appears in:_
@@ -3334,7 +3351,7 @@ be set.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `schemaSource` _[EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
 
@@ -3391,7 +3408,7 @@ transcode parsed record policy when converting consumed records to JSON.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `schemaSource` _[EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
 
@@ -3533,7 +3550,7 @@ be set.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `schemaSource` _[EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
 
@@ -3935,13 +3952,13 @@ of the produce schema validation policy when using an inline schema.<br /><br />
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `key` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkey)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `value` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvalue)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
@@ -4033,11 +4050,11 @@ produce schema validation policy when using JSON parsing without schema.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
@@ -4054,12 +4071,12 @@ registry.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
@@ -4574,7 +4591,7 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 
 | Field | Description |
 | --- | --- |
-| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
+| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
 | `authentication` _[][VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
 | `description` _string_ | A human-readable description of the virtual cluster. |
 | `dnsLabel` _[VirtualClusterDNSLabel](#configuration-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
@@ -4611,7 +4628,7 @@ EventGatewayVirtualClusterConsumePolicyChainAPISpec defines the API spec fields 
 
 | Field | Description |
 | --- | --- |
-| `policies` _[][EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order. This API declares Konnect-only ordering. The parent virtual cluster and every policy must be in the same namespace as this chain. An omitted or empty namespace defaults to this chain's namespace; an explicit namespace must be the same, regardless of KongReferenceGrant permissions. Each policy must belong to the referenced EventGatewayVirtualCluster. List every consume policy exactly once, including roots and nested children. A root schemaValidation parent must precede its immediately contiguous children. Root groups may move and sibling children may reorder within their group. Deeper nesting is not supported. Ordering never changes parentPolicyRef. Existing parent requirements remain: decryptFields, maskFields and transcode require a schemaValidation parent; modifyHeaders and skipRecord may reference one. No other consume policy type accepts parentPolicyRef. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
+| `policies` _[][EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order. The same declared order applies on-prem: the operator rebuilds the ordered consume-policy list of the gw-admin configuration from it. The parent virtual cluster and every policy must be in the same namespace as this chain. An omitted or empty namespace defaults to this chain's namespace; an explicit namespace must be the same, regardless of KongReferenceGrant permissions. Each policy must belong to the referenced EventGatewayVirtualCluster. List every consume policy exactly once, including roots and nested children. A root schemaValidation parent must precede its immediately contiguous children. Root groups may move and sibling children may reorder within their group. Deeper nesting is not supported. Ordering never changes parentPolicyRef. Existing parent requirements remain: decryptFields, maskFields and transcode require a schemaValidation parent; modifyHeaders and skipRecord may reference one. No other consume policy type accepts parentPolicyRef. An explicit empty list is valid only when the parent has no consume policies; it does not clear an existing chain, on-prem included. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
 
 _Appears in:_
 
@@ -4931,7 +4948,7 @@ EventGatewayVirtualClusterProducePolicyChainAPISpec defines the API spec fields 
 
 | Field | Description |
 | --- | --- |
-| `policies` _[][EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order. This API declares Konnect-only ordering. The parent virtual cluster and every policy must be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. Each policy must belong to the referenced EventGatewayVirtualCluster. List every produce policy exactly once, including roots and nested children. A parent must precede its children, and each parent's group must remain contiguous. Root groups may move and sibling children may reorder within their group. Ordering does not change parentPolicyRef or move children between parents. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
+| `policies` _[][EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order. The same declared order applies on-prem: the operator rebuilds the ordered produce-policy list of the gw-admin configuration from it. The parent virtual cluster and every policy must be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. Each policy must belong to the referenced EventGatewayVirtualCluster. List every produce policy exactly once, including roots and nested children. A parent must precede its children, and each parent's group must remain contiguous. Root groups may move and sibling children may reorder within their group. Ordering does not change parentPolicyRef or move children between parents. An explicit empty list is valid only when the parent has no produce policies; it does not clear an existing chain, on-prem included. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
 
 _Appears in:_
 
@@ -6416,7 +6433,7 @@ KongTargetAPISpec are the attributes of the Kong Target itself.
 
 | Field | Description |
 | --- | --- |
-| `target` _string_ | Target is the target address of the upstream. |
+| `target` _string_ | Target is the target address of the upstream. An IP address is valid unless the KongService sets spec.tls_verify; then the host must match the server certificate's CN or SAN, so use the service FQDN. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 
@@ -6433,7 +6450,7 @@ KongTargetSpec defines the spec of KongTarget.
 
 | Field | Description |
 | --- | --- |
-| `target` _string_ | Target is the target address of the upstream. |
+| `target` _string_ | Target is the target address of the upstream. An IP address is valid unless the KongService sets spec.tls_verify; then the host must match the server certificate's CN or SAN, so use the service FQDN. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `upstreamRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
@@ -6781,7 +6798,16 @@ produced records.
 though policy execution failed.
 * `mark` - passes the record to the backend cluster but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
+failure (truncated to 512 characters).
+The header is stored with the record in the backend cluster, so every
+consumer of the topic sees it, including systems that never pass through the
+Event Gateway.
+The failure reason can contain runtime-specific configuration details, such
+as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+text, JWT issuer and audience data, or expression snippets, and a producer
+with access to the topic can trigger policy failures on purpose to expose it.
+If you don't want to share this information, remove the header with a Modify
+Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -6801,7 +6827,8 @@ _Underlying type:_ `string`
 
 ProduceKeyValidationAction Defines a behavior when record key is not valid.
 * reject - rejects a batch for topic partition. Only available for produce.
-* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
 
 
 
@@ -6819,7 +6846,8 @@ _Underlying type:_ `string`
 ProduceValueValidationAction Defines a behavior when record value is not
 valid.
 * reject - rejects a batch for topic partition. Only available for produce.
-* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
 
 
 
@@ -6932,7 +6960,7 @@ Registry](https://github.com/confluentinc/schema-registry)
 
 | Field | Description |
 | --- | --- |
-| `authentication` _[SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)_ | The authentication configuration for the schema registry. |
+| `authentication` _[SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)_ | The authentication configuration for the schema registry. The Event Gateway only requires read-only access to the schema registry to fetch schemas for validation, so we recommend using credentials with read-only scope. |
 | `endpoint` _string_ | The endpoint of the Confluent schema registry. |
 | `schemaType` _string_ | The format of the message.<br /><br />**`any` requires a minimum runtime version of `1.3`**. |
 | `timeoutSeconds` _int_ | Total time in seconds from establishing connection to receive a response from schema registry. |
@@ -7238,7 +7266,8 @@ _Underlying type:_ `string`
 VirtualClusterACLMode Configures whether or not ACL policies are enforced on
 the gateway.
 - `enforce_on_gateway` means the gateway enforces its own ACL policies for
-this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster.
+this virtual cluster
+and does not forward ACL-related commands to the backend cluster.
 Note that if there are no ACL policies configured, all access is denied.
 - `passthrough` tells the gateway to forward all ACL-related commands.
 
@@ -7340,7 +7369,7 @@ for the virtual cluster.
 | `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
 | `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)_ | Fetches principal metadata from Kong Identity after successful OAUTHBEARER authentication. The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
-| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
+| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of validation * validate_forward - pass authentication from the client through proxy to the backend cluster. Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
 | `validate` _[VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
 
 _Appears in:_
@@ -7501,7 +7530,7 @@ consumer group IDs, transaction IDs).
 | Field | Description |
 | --- | --- |
 | `additional` _[VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)_ |  |
-| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading.<br /><br />Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients.<br /><br />Created resources must include the prefix or the request will fail. |
+| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading. Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients. Created resources must include the prefix or the request will fail. |
 | `prefix` _string_ | The namespace is differentiated by this chosen prefix. The prefix is prepended to Kafka topic names, so it can only contain the characters Kafka allows in them: ASCII letters, digits, `.`, `_` and `-`. It must contain at least one character other than `.` and be at most 100 characters long to leave room for the rest of the topic name (Kafka limits topic names to 249 characters). For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
 
 _Appears in:_

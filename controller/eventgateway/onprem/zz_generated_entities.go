@@ -14,7 +14,7 @@ import (
 )
 
 // The entities that can belong to an OnPremEventGateway.
-// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaydataplanecertificates;eventgatewaylistenerpolicies;eventgatewaylistenerpolicychains;eventgatewaylisteners;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterconsumepolicies;eventgatewayvirtualclusterpolicies;eventgatewayvirtualclusterpolicychains;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaydataplanecertificates;eventgatewaylistenerpolicies;eventgatewaylistenerpolicychains;eventgatewaylisteners;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterconsumepolicies;eventgatewayvirtualclusterconsumepolicychains;eventgatewayvirtualclusterpolicies;eventgatewayvirtualclusterpolicychains;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusterproducepolicychains;eventgatewayvirtualclusters,verbs=get;list;watch
 
 // entityTypes returns an object of each entity kind that can belong to an
 // OnPremEventGateway: the entities whose gatewayRef accepts it and,
@@ -31,27 +31,31 @@ func entityTypes() []client.Object {
 		&configurationv1alpha1.EventGatewayTLSTrustBundle{},
 		&configurationv1alpha1.EventGatewayVirtualCluster{},
 		&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
+		&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{},
 		&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
 		&configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{},
 		&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+		&configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{},
 	}
 }
 
 // entityGroupKinds are the kinds of entityTypes.
 var entityGroupKinds = map[schema.GroupKind]struct{}{
-	{Group: "configuration.konghq.com", Kind: "EventGatewayBackendCluster"}:              {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayDataPlaneCertificate"}:        {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayListener"}:                    {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicy"}:              {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain"}:         {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewaySchemaRegistry"}:              {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayStaticKey"}:                   {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayTLSTrustBundle"}:              {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualCluster"}:              {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterConsumePolicy"}: {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicy"}:        {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicyChain"}:   {},
-	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicy"}: {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayBackendCluster"}:                   {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayDataPlaneCertificate"}:             {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayListener"}:                         {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicy"}:                   {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayListenerPolicyChain"}:              {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewaySchemaRegistry"}:                   {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayStaticKey"}:                        {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayTLSTrustBundle"}:                   {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualCluster"}:                   {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterConsumePolicy"}:      {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterConsumePolicyChain"}: {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicy"}:             {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicyChain"}:        {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicy"}:      {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicyChain"}: {},
 }
 
 // IndexOptions returns the cache indexes of the entity kinds that can belong
@@ -68,9 +72,11 @@ func IndexOptions() []index.Option {
 		index.OptionsForEventGatewayTLSTrustBundle(),
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
+		index.OptionsForEventGatewayVirtualClusterConsumePolicyChain(),
 		index.OptionsForEventGatewayVirtualClusterPolicy(),
 		index.OptionsForEventGatewayVirtualClusterPolicyChain(),
 		index.OptionsForEventGatewayVirtualClusterProducePolicy(),
+		index.OptionsForEventGatewayVirtualClusterProducePolicyChain(),
 	)
 }
 
@@ -88,9 +94,11 @@ func EntityGroupVersionResources() []schema.GroupVersionResource {
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewaytlstrustbundles"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusters"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterconsumepolicies"),
+		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterconsumepolicychains"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterpolicies"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterpolicychains"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),
+		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicychains"),
 	}
 }
 
@@ -115,6 +123,12 @@ var parentEntities = map[reflect.Type][]parentEntity{
 		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyList{} },
 			index.IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef},
 	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList {
+			return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainList{}
+		},
+			index.IndexFieldEventGatewayVirtualClusterConsumePolicyChainOnEventGatewayVirtualClusterRef},
+	},
 	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterPolicy](): {
 		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterPolicyList{} },
 			index.IndexFieldEventGatewayVirtualClusterPolicyOnEventGatewayVirtualClusterRef},
@@ -126,5 +140,11 @@ var parentEntities = map[reflect.Type][]parentEntity{
 	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](): {
 		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList{} },
 			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef},
+	},
+	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList {
+			return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainList{}
+		},
+			index.IndexFieldEventGatewayVirtualClusterProducePolicyChainOnEventGatewayVirtualClusterRef},
 	},
 }

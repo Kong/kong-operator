@@ -42,6 +42,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // gwAdminSecretLabel is the label the operator's Secret cache selects on, as
@@ -383,7 +384,7 @@ func TestGWAdminReconciler(t *testing.T) {
 				assert.Equal(ct, "true", d.Labels["touched"])
 			}
 		}, waitTime, tickTime)
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			d := &appsv1.Deployment{}
 			if err := cl.Get(ctx, client.ObjectKeyFromObject(gw), d); err != nil {
 				return false
@@ -443,7 +444,7 @@ func TestGWAdminReconciler(t *testing.T) {
 				assert.Equal(ct, "true", d.Labels["touched"])
 			}
 		}, waitTime, tickTime)
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			d := &appsv1.Deployment{}
 			if err := cl.Get(ctx, client.ObjectKeyFromObject(gw), d); err != nil {
 				return false
@@ -637,7 +638,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 		// Until the pods trust the Manual CA, the Automatic one stays
 		// published.
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			ca, err := published()
 			return err != nil || !ca.Equal(autoCA)
 		}, 3*time.Second, tickTime, "the Automatic CA must stay published until the pods trust the Manual one")
@@ -695,7 +696,7 @@ func TestGWAdminReconciler(t *testing.T) {
 			// Back in the cache.
 			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, &corev1.Secret{}))
 		}, waitTime, tickTime)
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			current := &operatorv1alpha1.GWAdmin{}
 			if err := cl.Get(ctx, client.ObjectKeyFromObject(gw), current); err != nil {
 				return false
@@ -888,7 +889,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		// stays checks that cond holds over a few reconciles.
 		stays := func(cond func() error, msg string) {
 			t.Helper()
-			require.Never(t, func() bool { return cond() != nil }, 3*time.Second, tickTime, msg)
+			asserts.Never(t, func(context.Context) bool { return cond() != nil }, 3*time.Second, tickTime, msg)
 		}
 
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -1028,7 +1029,7 @@ func TestGWAdminReconciler(t *testing.T) {
 				assert.Contains(ct, cond.Message, "data plane Deployment "+dpNamespace+"/dp")
 			}
 		}, waitTime, tickTime)
-		require.Never(t, func() bool { return !cpLeafOn(before) }, 3*time.Second, tickTime,
+		asserts.Never(t, func(context.Context) bool { return !cpLeafOn(before) }, 3*time.Second, tickTime,
 			"the cp server certificate must stay on the old CA until the data plane runs the new bundle")
 
 		// The data plane rolls out with the new bundle: the certificate moves.
@@ -1103,7 +1104,7 @@ func TestGWAdminReconciler(t *testing.T) {
 				assert.Contains(ct, cond.Message, "data plane Deployment "+dpNamespace+"/dp")
 			}
 		}, waitTime, tickTime)
-		require.Never(t, func() bool { return cpLeafOn(second) }, 3*time.Second, tickTime,
+		asserts.Never(t, func(context.Context) bool { return cpLeafOn(second) }, 3*time.Second, tickTime,
 			"the cp server certificate waits for the granted data plane")
 
 		// The skip annotation releases it.

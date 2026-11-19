@@ -97,7 +97,7 @@ spec:
     kind: Service
     namespace: fwuh
   to:
-  - group: "configuration.konghq.com"
+  - group: configuration.konghq.com
     kind: KongPlugin
     name: test # Optional, to limit external resources to a specific KongPlugin only.
 ---

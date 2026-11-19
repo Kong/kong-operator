@@ -1009,15 +1009,11 @@ func (r *KonnectConfigStoreSyncReconciler) configStoreSecretsSDK(
 	ctx context.Context,
 	store *konnectv1alpha1.KonnectConfigStore,
 ) (sdkkonnectgo.ConfigStoreSecretsSDK, error) {
-	ref := store.Spec.ControlPlaneRef
-	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
-		// A store whose controlPlaneRef points directly at a Konnect ID has no
-		// in-cluster Control Plane object to read credentials from. The store
-		// controller itself cannot reconcile such a store either, so its
-		// status would never become programmed; this is a defensive branch.
+	ref := store.GetControlPlaneRef()
+	if ref.NamespacedRef == nil {
 		return nil, fmt.Errorf(
-			"KonnectConfigStore %s/%s uses controlPlaneRef type %q: cannot resolve API credentials without an in-cluster KonnectGatewayControlPlane",
-			store.Namespace, store.Name, ref.Type)
+			"KonnectConfigStore %s/%s has no controlPlaneRef.konnectNamespacedRef: cannot resolve API credentials",
+			store.Namespace, store.Name)
 	}
 	cpNN := resolveNamespacedRef(store.Namespace, *ref.NamespacedRef)
 	var cp konnectv1alpha2.KonnectGatewayControlPlane

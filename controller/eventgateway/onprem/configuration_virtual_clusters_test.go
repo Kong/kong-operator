@@ -266,19 +266,19 @@ spec:
 	assert.Equal(t, "acls", gotVC.ClusterPolicies[0]["type"])
 	require.Len(t, gotVC.ConsumePolicies, 3)
 	assert.Equal(t, string(parent.UID), gotVC.ConsumePolicies[0]["id"], "a parent comes before its children")
-	assert.Equal(t, string(withRegistry.UID), gotVC.ConsumePolicies[1]["id"])
-	assert.Equal(t, string(child.UID), gotVC.ConsumePolicies[2]["id"])
-	assert.Equal(t, string(parent.UID), gotVC.ConsumePolicies[2]["parent_policy_id"], "a child references its parent by its UID")
+	assert.Equal(t, string(child.UID), gotVC.ConsumePolicies[1]["id"], "a child follows its parent before the next root group")
+	assert.Equal(t, string(parent.UID), gotVC.ConsumePolicies[1]["parent_policy_id"], "a child references its parent by its UID")
+	assert.Equal(t, string(withRegistry.UID), gotVC.ConsumePolicies[2]["id"])
 	assert.Equal(t, "2026-10-19T10:07:00Z", gotVC.ConsumePolicies[0]["created_at"])
-	registryRef := gotVC.ConsumePolicies[1]["config"].(map[string]any)["schema_registry"]
+	registryRef := gotVC.ConsumePolicies[2]["config"].(map[string]any)["schema_registry"]
 	assert.Equal(t, map[string]any{"id": string(registry.UID)}, registryRef, "a schema registry is referenced by its UID")
 	require.Len(t, gotVC.ProducePolicies, 1)
 	keyRef := gotVC.ProducePolicies[0]["config"].(map[string]any)["encryption_key"].(map[string]any)["key"]
 	assert.Equal(t, map[string]any{"id": staticKeyID(client.ObjectKeyFromObject(staticKey)).String(), "name": "key"}, keyRef,
 		"a static key is referenced by its id (see staticKeyID), with its name as gw-admin returns it")
 
-	assert.Equal(t, "EventGatewayVirtualClusterConsumePolicy "+client.ObjectKeyFromObject(child).String()+" (virtual_clusters.0.consume_policies.2.config)",
-		cfg.describeField("virtual_clusters.0.consume_policies.2.config"))
+	assert.Equal(t, "EventGatewayVirtualClusterConsumePolicy "+client.ObjectKeyFromObject(child).String()+" (virtual_clusters.0.consume_policies.1.config)",
+		cfg.describeField("virtual_clusters.0.consume_policies.1.config"))
 }
 
 // Konnect refuses two policies of a gateway with the same name, whatever their

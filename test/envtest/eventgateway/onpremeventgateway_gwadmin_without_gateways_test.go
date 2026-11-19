@@ -64,6 +64,7 @@ spec:
 
 	t.Run("a gateway using the GWAdmin takes over", func(t *testing.T) {
 		require.NoError(t, cl.Create(ctx, gateway))
+		withDataPlaneCertificate(t, ctx, cl, gateway)
 		expectServing(t, []*fakeGWAdmin{pod0}, func(ct *assert.CollectT) []uuid.UUID {
 			return []uuid.UUID{gatewayID(ct, gateway)}
 		})
@@ -93,6 +94,7 @@ spec:
 			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName, Namespace: new(ns.Name)}},
 		}
 		require.NoError(t, cl.Create(ctx, crossNamespace))
+		withDataPlaneCertificate(t, ctx, cl, crossNamespace)
 		pod3 := gwAdmin.startPod(ctx, "gw-admin-3", "10.0.0.4")
 		expectServing(t, []*fakeGWAdmin{pod0, pod3}, none)
 

@@ -49,8 +49,9 @@ func newLastConfigFixture(t *testing.T) lastConfigFixture {
 	s := newSchemaRegistryFixture(t)
 	policy := s.validateWith("validate", `{name: orders}`, 3)
 	f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
-		return append(append(f.gwAdmin.Objects(), f.gateway),
-			append(s.virtualCluster(), s.registry("orders", "gateway", 1), s.registry("other", "gateway", 2), policy)...)
+		return slices.Concat(f.gwAdmin.Objects(), []client.Object{f.gateway},
+			s.virtualCluster(), []client.Object{s.registry("orders", "gateway", 1), s.registry("other", "gateway", 2), policy},
+			dataPlaneCertificateObjects(t))
 	})
 	lf := lastConfigFixture{pushFixture: f, s: s, policy: policy}
 	lf.reconcile(t)
@@ -135,10 +136,9 @@ func TestLastGoodConfig(t *testing.T) {
 		f.pod().restart()
 		f.reconcile(t)
 		_, registered := f.pod().gateways[f.gatewayID]
-		assert.True(t, registered, "a restarted pod serves the gateway, with no entities")
-		assert.Empty(t, f.pod().gateways[f.gatewayID].VirtualClusters)
-		assert.True(t, slices.ContainsFunc(f.pod().recorded(), func(call string) bool { return call == callExpected+" "+f.gatewayID.String() }),
-			"and is told the gateways it serves")
+		assert.False(t, registered, "a restarted pod isn't given the gateway with no entities, which it would serve empty")
+		assert.True(t, slices.ContainsFunc(f.pod().recorded(), func(call string) bool { return call == callExpected+" " }),
+			"and is told the gateways it serves, but this one, so that it turns ready")
 	})
 
 	t.Run("what it uses stays held while it is pushed in place of the current one", func(t *testing.T) {
@@ -180,27 +180,33 @@ func TestLastGoodConfig(t *testing.T) {
 	})
 }
 
-func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
-	// The last configuration orders the cluster policies of its virtual
-	// cluster by a chain, not by id.
+func TestLastGoodConfigPushedAsComparesItsPolicyOrders(t *testing.T) {
+	// The last configuration orders the cluster and produce policies of its
+	// virtual cluster by chains, not by id.
 	var entities gwadminapi.GatewayEntitySet
 	require.NoError(t, json.Unmarshal([]byte(`{
 		"virtual_clusters": [
 			{"id":"00000000-0000-4000-8000-000000000001", "destination":{"id":"00000000-0000-4000-8000-000000000099"},
 			 "cluster_policies":[
 				{"id":"00000000-0000-4000-8000-000000000012","type":"acls"},
-				{"id":"00000000-0000-4000-8000-000000000011","type":"acls"}]}
+				{"id":"00000000-0000-4000-8000-000000000011","type":"acls"}],
+			 "produce_policies":[
+				{"id":"00000000-0000-4000-8000-000000000031","type":"modify_headers"},
+				{"id":"00000000-0000-4000-8000-000000000032","type":"modify_headers"}]}
 		]
 	}`), &entities))
 	ordered := []uuid.UUID{entities.VirtualClusters[0].Id}
 	last := &lastGoodConfig{
-		revision:        3,
-		config:          gatewayConfig{Entities: entities},
-		orderedPolicies: ordered,
+		revision:               3,
+		config:                 gatewayConfig{Entities: entities},
+		orderedPolicies:        ordered,
+		orderedProducePolicies: ordered,
 	}
 
 	for name, current := range map[string]configuration{
-		"the current configuration orders them too":       {namespace: ns, orderedPolicies: ordered},
+		"the current configuration orders them too": {
+			namespace: ns, orderedPolicies: ordered, orderedProducePolicies: ordered,
+		},
 		"the current configuration no longer orders them": {namespace: ns},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -208,16 +214,23 @@ func TestLastGoodConfigPushedAsComparesItsClusterPolicyOrder(t *testing.T) {
 			require.NoError(t, err)
 
 			held := withGWAdminDefaults(entities)
-			same, err := sameEntities(held, pushing.pushedKey, pushing.orderedPolicies...)
+			same, err := sameEntitiesFor(held, pushing.pushedKey, pushing.orderedPolicyLists())
 			require.NoError(t, err)
 			assert.True(t, same, "a pod holding the last entities isn't pushed them again")
 
-			held.VirtualClusters = slices.Clone(held.VirtualClusters)
-			held.VirtualClusters[0].ClusterPolicies = slices.Clone(held.VirtualClusters[0].ClusterPolicies)
-			slices.Reverse(held.VirtualClusters[0].ClusterPolicies)
-			same, err = sameEntities(held, pushing.pushedKey, pushing.orderedPolicies...)
+			reordered := withGWAdminDefaults(entities)
+			reordered.VirtualClusters[0].ClusterPolicies = slices.Clone(reordered.VirtualClusters[0].ClusterPolicies)
+			slices.Reverse(reordered.VirtualClusters[0].ClusterPolicies)
+			same, err = sameEntitiesFor(reordered, pushing.pushedKey, pushing.orderedPolicyLists())
 			require.NoError(t, err)
-			assert.False(t, same, "a pod holding them in another order is")
+			assert.False(t, same, "a pod holding cluster policies in another order is")
+
+			reordered = withGWAdminDefaults(entities)
+			reordered.VirtualClusters[0].ProducePolicies = slices.Clone(reordered.VirtualClusters[0].ProducePolicies)
+			slices.Reverse(reordered.VirtualClusters[0].ProducePolicies)
+			same, err = sameEntitiesFor(reordered, pushing.pushedKey, pushing.orderedPolicyLists())
+			require.NoError(t, err)
+			assert.False(t, same, "a pod holding produce policies in another order is")
 		})
 	}
 }

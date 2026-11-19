@@ -96,7 +96,7 @@ type {{.EntityName}}Spec struct {
 	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
-	// {{.ParentRefGoFieldName}} is the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
 	//
 	// +required
 	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
@@ -495,25 +495,28 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .RootRefDependency}}
 {{- if .ParentRef}}
 
-// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
+// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
 func (obj *{{.EntityName}}) Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}}() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
 {{- if .ParentRefCustomTypeName}}
 
 // GetParentRef returns the reference to the parent entity as a generic
-// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef.{{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}} The custom parent ref type's Group/Kind discriminator has no
 // ObjectRef representation, so only the namespaced reference is carried over.
+{{- end}}
 func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
 	return obj.Get{{.ParentRefCustomTypeName}}().ToObjectRef()
 }
 
 // SetParentRef sets the reference to the parent entity from a generic
-// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// ObjectRef.{{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}} The parent ref defaults to the custom type's default Group/Kind
 // (Konnect): only the namespaced reference is carried over.
+{{- end}}
 func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
 }
+{{- if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}
 
 // SkipKonnectReconciliation reports whether the entity's parent reference
 // resolves to a parent the Konnect reconciler does not manage (an
@@ -523,6 +526,7 @@ func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
 	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
 }
+{{- end}}
 {{- else}}
 
 // GetParentRef returns the reference to the parent entity.
@@ -617,7 +621,7 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
-{{- if .ParentRefCustomTypeName}}
+{{- if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}
 	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
 {{- else}}
 {{- with .GatewayRef}}

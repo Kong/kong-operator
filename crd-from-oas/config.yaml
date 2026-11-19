@@ -34,6 +34,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/auth-strategies
         name: AIGatewayAuthStrategy
@@ -91,6 +92,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
@@ -200,6 +202,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/model-providers
         name: AIGatewayModelProvider
@@ -358,6 +361,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
@@ -433,6 +437,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/consumers
         name: AIGatewayConsumer
@@ -464,6 +469,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/consumer-groups
         name: AIGatewayConsumerGroup
@@ -487,6 +493,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/mcp-servers
         name: AIGatewayMCPServer
@@ -871,6 +878,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
       # only obtain a Konnect ID once associated with a consumer, so they are
@@ -955,6 +963,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/custom-policies
         name: AIGatewayCustomPolicy
@@ -1004,6 +1013,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
             # Custom policies support both KonnectAIGateway and OnPremAIGateway
             # parents: the on-prem controllers and config translator now handle
             # this entity.
@@ -1032,6 +1042,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       - path: /v1/ai-gateways/{gatewayId}/certificates
         name: AIGatewayCertificate
@@ -1060,6 +1071,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # The nested /certificates/{certificateId}/snis path is not modelled as
       # a separate CRD: it's the same underlying SNI object as /snis (just
@@ -1089,6 +1101,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # The backends whose credentials the OAS carries inline are sourced from
       # Kubernetes Secrets, like AIGatewayCertificate's cert/key and
@@ -1137,6 +1150,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
       # Every writeOnly credential in the datastore configs is sourced from a
       # Secret, like AIGatewayModelProvider's cloud credentials. The token-vault
@@ -1240,6 +1254,7 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            supportsOnPremAIGateway: true
 
   configuration.konghq.com/v1alpha1:
     categories:
@@ -1384,6 +1399,21 @@ apiGroupVersions:
             # the same gateway. An empty namespace counts as unset.
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))\",message=\"gatewayRef can only be replaced by a parentRef referencing the same gateway, with the same name and namespace as gatewayRef, once the static key has been created in Konnect\",fieldPath=\".spec.parentRef\""
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec == oldSelf.spec.apiSpec\",message=\"apiSpec is immutable once the static key has been created in Konnect: Konnect static keys can't be updated, create a new EventGatewayStaticKey instead\",fieldPath=\".spec.apiSpec\""
+            # On-prem, status.id is never set: the inline value is immutable
+            # once the OnPremEventGateway controller recorded the fingerprint of
+            # the value it pushed. keg would hold a new value under the id the
+            # records encrypted with the old one name, and those records would
+            # no longer be decrypted. Its name, description and labels are
+            # updated in place, and a value from a Secret is checked by the
+            # controller, which stops the push when it changed. A recreated key
+            # starts with no fingerprint. Only for a key of an
+            # OnPremEventGateway: a Konnect key may keep its fingerprint while
+            # its id is cleared, e.g. to create it again.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != 'OnPremEventGateway' || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(oldSelf.spec.apiSpec.value.value) || !has(self.spec.apiSpec.value.value) || self.spec.apiSpec.value.value == oldSelf.spec.apiSpec.value.value\",message=\"the inline value is immutable once the static key has been pushed: records encrypted with it would no longer be decrypted, create a new EventGatewayStaticKey and point the policies at it, or delete this one and create it again\",fieldPath=\".spec.apiSpec.value\""
+            # Its gateway is immutable too, as in Konnect: the fingerprint is
+            # of the value the gateway holds. It is dropped once the gateway
+            # is gone, and the key can then be attached to another one.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != 'OnPremEventGateway' || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(self.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef\",message=\"parentRef is immutable once the static key has been pushed: create a new EventGatewayStaticKey for the other gateway, or delete this one and create it again\",fieldPath=\".spec.parentRef\""
           spec:
             apiSpec:
               name:
@@ -1775,7 +1805,9 @@ apiGroupVersions:
             # The generated EventGatewayVirtualClusterProducePolicyRef type is
             # shared with parentPolicyRef, which supports cross-namespace
             # references. This chain keeps its policies in its namespace, which
-            # ResolveValidatedPolicyIDs enforces.
+            # ResolveValidatedPolicyIDs enforces. CEL cannot enforce this:
+            # CRD validation rules expose metadata.name and
+            # metadata.generateName, but not metadata.namespace.
             supportCrossNamespaceReference: true
             resolverMethod: ResolveValidatedPolicyIDs
             watchSameParent: true
@@ -1793,7 +1825,8 @@ apiGroupVersions:
               policies:
                 _description: >-
                   Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order.
-                  This API declares Konnect-only ordering.
+                  The same declared order applies on-prem: the operator rebuilds the ordered
+                  produce-policy list of the gw-admin configuration from it.
                   The parent virtual cluster and every policy must be in the same namespace as this chain.
                   Namespace defaults to this chain's namespace and may be set explicitly
                   to that same namespace; cross-namespace references are not supported.
@@ -1802,8 +1835,9 @@ apiGroupVersions:
                   A parent must precede its children, and each parent's group must remain contiguous.
                   Root groups may move and sibling children may reorder within their group.
                   Ordering does not change parentPolicyRef or move children between parents.
-                  An explicit empty list is valid only when the remote chain has no policies;
-                  it does not clear an existing chain. Omitted and null lists are invalid.
+                  An explicit empty list is valid only when the parent has no produce policies;
+                  it does not clear an existing chain, on-prem included.
+                  Omitted and null lists are invalid.
                   When a policy is created or deleted, update this list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
@@ -1816,7 +1850,6 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterProducePolicyChainRequest
         reconciler:
-          skipOnPremEventGateway: true
           parentEntityGVK:
             kind: EventGatewayVirtualCluster
           parentRef:
@@ -1933,7 +1966,8 @@ apiGroupVersions:
               policies:
                 _description: >-
                   Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order.
-                  This API declares Konnect-only ordering.
+                  The same declared order applies on-prem: the operator rebuilds the ordered
+                  consume-policy list of the gw-admin configuration from it.
                   The parent virtual cluster and every policy must be in the same namespace as this chain.
                   An omitted or empty namespace defaults to this chain's namespace; an explicit
                   namespace must be the same, regardless of KongReferenceGrant permissions.
@@ -1945,8 +1979,8 @@ apiGroupVersions:
                   Existing parent requirements remain: decryptFields, maskFields and transcode
                   require a schemaValidation parent; modifyHeaders and skipRecord may reference one.
                   No other consume policy type accepts parentPolicyRef.
-                  An explicit empty list is valid only when the remote chain has no policies;
-                  it does not clear an existing chain. Omitted and null lists are invalid.
+                  An explicit empty list is valid only when the parent has no consume policies;
+                  it does not clear an existing chain, on-prem included. Omitted and null lists are invalid.
                   When a policy is created or deleted, update this list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
@@ -1959,7 +1993,6 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterConsumePolicyChainRequest
         reconciler:
-          skipOnPremEventGateway: true
           parentEntityGVK:
             kind: EventGatewayVirtualCluster
           parentRef:
@@ -2144,7 +2177,7 @@ apiGroupVersions:
               responseTypePointer: true
               responseVariantContainer: GetConfig()
               cases:
-                - typeValue: oIDC
+                - typeValue: oidc
                   variantField: OIDC
                   responseTypeValue: oidc
                   responseVariantField: PortalOIDCIdentityProviderConfigOutput
@@ -2153,7 +2186,7 @@ apiGroupVersions:
                       responseField: GetIssuerURL()
                     - objectField: ClientID
                       responseField: GetClientID()
-                - typeValue: sAML
+                - typeValue: saml
                   variantField: SAML
                   responseTypeValue: saml
                   responseVariantField: PortalSAMLIdentityProviderConfig
@@ -2337,3 +2370,6 @@ apiGroupVersions:
             kind: KonnectGatewayControlPlane
             group: konnect.konghq.com
             version: v1alpha2
+          parentRef:
+            fieldName: controlPlaneRef
+            typeName: ConfigStoreControlPlaneRef

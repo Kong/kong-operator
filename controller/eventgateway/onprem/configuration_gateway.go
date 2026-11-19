@@ -73,12 +73,10 @@ func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client
 	var keys configurationv1alpha1.EventGatewayStaticKeyList
 	if _, err := addAttached(ctx, c, cl, gateway, &keys, &keys.Items, index.IndexFieldEventGatewayStaticKeyOnOnPremEventGatewayRef,
 		entityKind[*configurationv1alpha1.EventGatewayStaticKey, gwadminapi.EventGatewayStaticKeyOnPrem]{
-			kind: "EventGatewayStaticKey",
-			request: func(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
-				return k.ToEventGatewayStaticKeyCreate(ctx, cl)
-			},
-			name: func(e gwadminapi.EventGatewayStaticKeyOnPrem) string { return e.Name },
-			list: in[*configurationv1alpha1.EventGatewayStaticKey]("static_keys", &c.entities.StaticKeys),
+			kind:    "EventGatewayStaticKey",
+			request: c.staticKeyRequest,
+			name:    func(e gwadminapi.EventGatewayStaticKeyOnPrem) string { return e.Name },
+			list:    in[*configurationv1alpha1.EventGatewayStaticKey]("static_keys", &c.entities.StaticKeys),
 		}); err != nil {
 		return parents{}, err
 	}

@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalidentityproviderrequests.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -70,7 +70,7 @@ spec:
                       PortalIdentityProviderRequestConfig represents a union type for config.
                       Only one of the fields should be set based on the Type.
                     properties:
-                      oIDC:
+                      oidc:
                         description: OIDC configuration.
                         properties:
                           claimMappings:
@@ -123,7 +123,7 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      sAML:
+                      saml:
                         description: SAML configuration.
                         properties:
                           idpMetadataURL:
@@ -143,8 +143,8 @@ spec:
                       type:
                         description: Type designates the type of configuration.
                         enum:
-                        - oIDC
-                        - sAML
+                        - oidc
+                        - saml
                         minLength: 1
                         type: string
                     required:

@@ -24,6 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -31,6 +32,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync/gwadminsynctest"
@@ -40,6 +42,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -491,6 +494,136 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 		}, waitTime, tickTime)
 	})
 
+	t.Run("a static key whose value changed since it was pushed stops the push until it is put back", func(t *testing.T) {
+		key := &configurationv1alpha1.EventGatewayStaticKey{}
+		getKey := func(ct *assert.CollectT) bool {
+			return assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "key"}, key))
+		}
+		inputsApplied := func() *metav1.Condition {
+			return apimeta.FindStatusCondition(key.GetConditions(), konnectv1alpha1.CreateInputsAppliedConditionType)
+		}
+		// pushedValues returns the value of the static key each pod holds.
+		pushedValues := func(ct *assert.CollectT) []string {
+			var values []string
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				if g, ok, _ := pod.state(gatewayID(ct, gateway)); assert.True(ct, ok) && assert.Len(ct, g.entities.StaticKeys, 1) {
+					data, err := json.Marshal(g.entities.StaticKeys[0].Value)
+					if assert.NoError(ct, err) {
+						values = append(values, string(data))
+					}
+				}
+			}
+			return values
+		}
+		setValue := func(value string) {
+			t.Helper()
+			var secret corev1.Secret
+			require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "key-secret"}, &secret))
+			secret.Data = map[string][]byte{"key": []byte(value)}
+			require.NoError(t, cl.Update(ctx, &secret))
+		}
+
+		var hash string
+		var pushed []string
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if getKey(ct) && assert.NotEmpty(ct, key.Status.CreateInputsHash, "the push records the fingerprint of the key") {
+				hash = key.Status.CreateInputsHash
+				if cond := inputsApplied(); assert.NotNil(ct, cond) {
+					assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+				}
+			}
+			pushed = pushedValues(ct)
+			assert.Len(ct, pushed, 2)
+		}, waitTime, tickTime)
+
+		// Its description isn't part of the fingerprint: changed, it is pushed.
+		require.NoError(t, cl.Patch(ctx, key, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"apiSpec":{"description":"rotated yearly"}}}`))))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				if g, ok, _ := pod.state(gatewayID(ct, gateway)); assert.True(ct, ok) && assert.Len(ct, g.entities.StaticKeys, 1) {
+					if assert.NotNil(ct, g.entities.StaticKeys[0].Description) {
+						assert.Equal(ct, "rotated yearly", *g.entities.StaticKeys[0].Description)
+					}
+				}
+			}
+			if getKey(ct) {
+				assert.True(ct, apimeta.IsStatusConditionTrue(key.GetConditions(), "Programmed"))
+				assert.Equal(ct, hash, key.Status.CreateInputsHash)
+			}
+		}, waitTime, tickTime)
+
+		setValue("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !getKey(ct) {
+				return
+			}
+			if cond := apimeta.FindStatusCondition(key.GetConditions(), "Programmed"); assert.NotNil(ct, cond) {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Contains(ct, cond.Message, "its value changed since it was pushed")
+			}
+			if cond := inputsApplied(); assert.NotNil(ct, cond) {
+				assert.Equal(ct, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
+			}
+			assert.Equal(ct, hash, key.Status.CreateInputsHash, "the fingerprint of the value pushed is kept")
+			var g eventgatewayv1alpha1.OnPremEventGateway
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(gateway), &g)) {
+				cond := apimeta.FindStatusCondition(g.Status.Conditions, "Programmed")
+				if assert.NotNil(ct, cond) {
+					assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason), cond.Reason)
+				}
+			}
+		}, waitTime, tickTime)
+		// gw-admin keeps the value pushed, while the key reports the change.
+		asserts.Never(t, func(context.Context) bool {
+			values := pushedValues(&assert.CollectT{})
+			return len(values) == len(pushed) && !slices.Equal(values, pushed)
+		}, 3*time.Second, tickTime, "gw-admin keeps the value pushed")
+
+		setValue("c2VjcmV0LWtleS0xMjM0NTY3ODkwMTIzNDU2")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !getKey(ct) {
+				return
+			}
+			assert.True(ct, apimeta.IsStatusConditionTrue(key.GetConditions(), "Programmed"))
+			if cond := inputsApplied(); assert.NotNil(ct, cond) {
+				assert.Equal(ct, konnectv1alpha1.CreateInputsReasonUnchanged, cond.Reason)
+			}
+			assert.Equal(ct, hash, key.Status.CreateInputsHash)
+		}, waitTime, tickTime)
+
+		// A key pushed to one gw-admin pod may be served from it: its
+		// fingerprint is recorded, though the push to the other failed.
+		pod1.setReject(func(e gwadminapi.GatewayEntitySet) string {
+			if len(e.StaticKeys) > 1 {
+				return "static_keys.1.value"
+			}
+			return ""
+		})
+		defer pod1.setReject(nil)
+		second := objectFromYAML[configurationv1alpha1.EventGatewayStaticKey](t, ns.Name, `
+metadata: {name: second-key}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    name: second-key
+    value: {type: secretRef, secretRef: {name: key-secret, key: key}}
+`)
+		require.NoError(t, cl.Create(ctx, second))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if g, ok, _ := pod0.state(gatewayID(ct, gateway)); assert.True(ct, ok) {
+				assert.Len(ct, g.entities.StaticKeys, 2)
+			}
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(second), second)) {
+				assert.False(ct, apimeta.IsStatusConditionTrue(second.GetConditions(), "Programmed"), "the push to gw-admin-1 failed")
+				assert.NotEmpty(ct, second.Status.CreateInputsHash)
+			}
+		}, waitTime, tickTime)
+		require.NoError(t, cl.Delete(ctx, second))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(second), &configurationv1alpha1.EventGatewayStaticKey{})
+			assert.True(ct, apierrors.IsNotFound(err), "the second key must be gone: %v", err)
+		}, waitTime, tickTime)
+	})
+
 	t.Run("its virtual clusters are pushed with their policies, a child policy after its parent", func(t *testing.T) {
 		virtualCluster := objectFromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, ns.Name, `
 metadata: {name: virtual-cluster}
@@ -644,6 +777,21 @@ spec:
 			metav1.ConditionFalse, "GatewayNotFound")
 		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayListenerPolicy{Name: "forward", Namespace: ns.Name},
 			metav1.ConditionFalse, "GatewayNotFound")
+		// No gateway holds the value of the static key anymore: it loses its
+		// fingerprint, and can be attached to another gateway.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var key configurationv1alpha1.EventGatewayStaticKey
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "key"}, &key)) {
+				assert.Empty(ct, key.Status.CreateInputsHash)
+				assert.Nil(ct, apimeta.FindStatusCondition(key.GetConditions(), konnectv1alpha1.CreateInputsAppliedConditionType))
+				if cond := apimeta.FindStatusCondition(key.GetConditions(), "Programmed"); assert.NotNil(ct, cond) {
+					assert.Equal(ct, "GatewayNotFound", cond.Reason)
+				}
+			}
+		}, waitTime, tickTime)
+		require.NoError(t, cl.Patch(ctx, &configurationv1alpha1.EventGatewayStaticKey{Name: "key", Namespace: ns.Name},
+			client.RawPatch(types.MergePatchType, []byte(`{"spec":{"parentRef":{"name":"another-gateway"}}}`))),
+			"without its fingerprint, the static key can be attached to another gateway")
 	})
 }
 
@@ -830,7 +978,9 @@ spec:
 
 	t.Run("a gateway is pushed to every gw-admin pod over mutual TLS", func(t *testing.T) {
 		expectPushed(t, gatewayA, []*fakeGWAdmin{pod0, pod1}, func(ct *assert.CollectT, g fakeGateway, expected []uuid.UUID) {
-			assert.Equal(ct, []uuid.UUID{gatewayID(ct, gatewayA)}, expected)
+			// With no data plane certificate yet, the pods don't wait for
+			// the gateway to turn ready: they couldn't.
+			assert.Empty(ct, expected)
 			assert.Empty(ct, g.entities.BackendClusters)
 		})
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(gatewayA), gatewayA))

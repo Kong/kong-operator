@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -289,7 +290,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 					kept.ObservedGeneration = e.obj.GetGeneration()
 					conds = append(conds, kept)
 				}
-				errs = append(errs, r.setEntityConditions(ctx, e.obj, nil, conds...))
+				errs = append(errs, r.setEntityConditions(ctx, e.obj, conds...))
 				continue
 			}
 			errs = append(errs, r.setEntityStatus(ctx, e, certificateCondition(e, gatewayKey, result, cert)))
@@ -313,7 +314,10 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		if held != "" {
 			cond.Reason = string(eventgatewayv1alpha1.OnPremEntityDeletionBlockedReason)
 		}
-		errs = append(errs, r.setEntityStatus(ctx, e, cond))
+		// A static key pushed to a gw-admin pod may be served to data planes,
+		// whether or not the push to the others failed: its fingerprint is
+		// recorded then.
+		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e, result.reachedAPod()), cond))
 	}
 	for _, e := range cfg.excluded {
 		what := "Left out of the configuration of the OnPremEventGateway %s: %s"
@@ -322,7 +326,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
 			fmt.Sprintf(what, gatewayKey, e.message))
-		errs = append(errs, r.setEntityStatus(ctx, e.entityStatus, cond))
+		errs = append(errs, r.setEntityStatus(ctx, withKeyInputs(cfg, e.entityStatus, result.reachedAPod()), cond))
 	}
 	errs = append(errs, r.reportDetached(ctx, gateway, cfg))
 	return errors.Join(errs...)
@@ -441,7 +445,7 @@ func (r *Reconciler) reportEntitiesNotProgrammed(ctx context.Context, gateway *e
 	}
 	var errs []error
 	notProgrammed := func(obj entityObject) {
-		errs = append(errs, r.setEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+		errs = append(errs, r.setEntityConditions(ctx, obj, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
 			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message)))
 	}
 	for _, e := range cfg.included {
@@ -467,10 +471,65 @@ func keptMessage(e entityStatus) string {
 // value moved from a Secret to an inline one.
 func (r *Reconciler) setEntityStatus(ctx context.Context, e entityStatus, programmed metav1.Condition) error {
 	conditions := slices.Clone(e.conditions)
+	var removed []string
 	if e.secretRefValid == nil {
-		return r.setEntityConditions(ctx, e.obj, []string{string(konnectv1alpha1.SecretRefValidConditionType)}, append(conditions, programmed)...)
+		removed = append(removed, string(konnectv1alpha1.SecretRefValidConditionType))
+	} else {
+		conditions = append(conditions, *e.secretRefValid)
 	}
-	return r.setEntityConditions(ctx, e.obj, nil, append(conditions, *e.secretRefValid, programmed)...)
+	inputsHash := r.recordedInputsHash(e.obj)
+	_, isKey := e.obj.(*configurationv1alpha1.EventGatewayStaticKey)
+	if isKey {
+		if e.inputsApplied == nil {
+			removed = append(removed, konnectv1alpha1.CreateInputsAppliedConditionType)
+		} else {
+			conditions = append(conditions, *e.inputsApplied)
+			inputsHash = e.inputsHash
+		}
+	}
+	// Remembered before it is written: a write that fails mustn't lose the
+	// fingerprint of a value a pod may already hold.
+	if isKey && inputsHash != "" && inputsHash != recordedInputsHash(e.obj) {
+		r.inputsHashes.Store(client.ObjectKeyFromObject(e.obj), recordedKeyHash{uid: e.obj.GetUID(), hash: inputsHash})
+	}
+	return r.setEntityStatusFields(ctx, e.obj, inputsHash, removed, append(conditions, programmed)...)
+}
+
+// recordedInputsHash returns the fingerprint recorded for the object, when it
+// is a static key: in its status, or, when the cache doesn't show it yet, the
+// one the controller recorded, forgotten once the cache shows one, or once
+// another key has its name. Another kind of entity has none: one with the
+// name of a key doesn't touch what is recorded for it.
+func (r *Reconciler) recordedInputsHash(obj client.Object) string {
+	if _, ok := obj.(*configurationv1alpha1.EventGatewayStaticKey); !ok {
+		return ""
+	}
+	key := client.ObjectKeyFromObject(obj)
+	if recordedInputsHash(obj) != "" {
+		r.inputsHashes.Delete(key)
+	} else if recorded, ok := r.inputsHashes.Load(key); ok && recorded.(recordedKeyHash).uid != obj.GetUID() {
+		// Recorded for a key deleted since, whose name another one has now.
+		r.inputsHashes.Delete(key)
+	}
+	return inputsHashOf(&r.inputsHashes, obj)
+}
+
+// withKeyInputs returns the status of the entity with, for a static key, the
+// fingerprint to record and its CreateInputsApplied condition (see
+// keyInputsStatus). reached tells the entities pushed may have reached a
+// gw-admin pod (see pushResult.reachedAPod): the fingerprint recorded then is
+// the one of the value of the key among them, whatever it reads now.
+func withKeyInputs(cfg configuration, e entityStatus, reached bool) entityStatus {
+	k, ok := e.obj.(*configurationv1alpha1.EventGatewayStaticKey)
+	if !ok {
+		return e
+	}
+	var pushed string
+	if reached {
+		pushed = cfg.pushedKeyHashes[staticKeyID(client.ObjectKeyFromObject(k))]
+	}
+	e.inputsHash, e.inputsApplied = keyInputsStatus(k, cfg.recordedHash(k), cfg.keyInputs[k.UID], pushed)
+	return e
 }
 
 // secretRefValidCondition returns the SecretRefValid condition of the
@@ -507,13 +566,20 @@ const entityStatusFieldManager = "kong-operator-onprem-eventgateway"
 // the conditions the controller applied.
 const entityStatusClearFieldManager = "kong-operator-onprem-eventgateway-clear"
 
-// setEntityConditions sets the conditions on an entity of a gateway, whose
+// setEntityConditions sets the conditions on an entity of a gateway, as
+// setEntityStatusFields does, with the fingerprint recorded for a static key.
+func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, conds ...metav1.Condition) error {
+	return r.setEntityStatusFields(ctx, obj, r.recordedInputsHash(obj), nil, conds...)
+}
+
+// setEntityStatusFields sets the conditions on an entity of a gateway, whose
 // status the controller owns, and removes those of the removed types it set.
 // What else is in its status was set by the Konnect reconciler, e.g. while its
 // on-prem ancestor did not exist yet, or under a Konnect gateway before it
 // moved: it is cleared, but for the conditions of the types set, which the
-// controller takes over.
-func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
+// controller takes over, and the fingerprint of a static key (see keyInputs),
+// applied with the conditions, so that the server never drops it.
+func (r *Reconciler) setEntityStatusFields(ctx context.Context, obj entityObject, inputsHash string, removed []string, conds ...metav1.Condition) error {
 	// Clearing what someone else set doesn't change what the controller
 	// applied: the ownership read once holds for both writes.
 	ownership := entityConditionOwnership(obj)
@@ -521,7 +587,7 @@ func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, 
 	if err := r.clearForeignStatus(ctx, obj, ownership, desired); err != nil {
 		return err
 	}
-	return r.applyEntityConditions(ctx, obj, ownership, true, desired)
+	return r.applyEntityConditions(ctx, obj, ownership, true, desired, inputsHash)
 }
 
 // setUnownedEntityConditions sets the conditions on an entity that may not be
@@ -531,7 +597,7 @@ func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, 
 // set.
 func (r *Reconciler) setUnownedEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
 	ownership := entityConditionOwnership(obj)
-	err := r.applyEntityConditions(ctx, obj, ownership, false, desiredEntityConditions(obj, ownership, removed, conds))
+	err := r.applyEntityConditions(ctx, obj, ownership, false, desiredEntityConditions(obj, ownership, removed, conds), r.recordedInputsHash(obj))
 	if apierrors.IsConflict(err) {
 		// Someone else set one of them since: it is theirs.
 		return nil
@@ -652,9 +718,13 @@ func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, o
 // on the entity, when they differ from those it set: the server removes those
 // it set and no longer applies, and leaves what someone else set. With force,
 // it takes over a condition someone else set; without, it returns a conflict.
-// An entity deleted meanwhile is left alone.
-func (r *Reconciler) applyEntityConditions(ctx context.Context, obj entityObject, ownership map[string]bool, force bool, desired []metav1.Condition) error {
-	if !entityConditionsChange(obj, ownership, desired) {
+// An entity deleted meanwhile is left alone. inputsHash is the fingerprint of
+// a static key, applied with them when set: once applied, it would be dropped
+// by an apply leaving it out.
+func (r *Reconciler) applyEntityConditions(
+	ctx context.Context, obj entityObject, ownership map[string]bool, force bool, desired []metav1.Condition, inputsHash string,
+) error {
+	if !entityConditionsChange(obj, ownership, desired) && inputsHash == recordedInputsHash(obj) {
 		return nil
 	}
 	gvk, err := apiutil.GVKForObject(obj, r.Scheme())
@@ -676,6 +746,9 @@ func (r *Reconciler) applyEntityConditions(ctx context.Context, obj entityObject
 		"metadata": map[string]any{"name": obj.GetName(), "namespace": obj.GetNamespace(), "uid": string(obj.GetUID())},
 		"status":   map[string]any{"conditions": conditions},
 	}}
+	if inputsHash != "" {
+		u.Object["status"].(map[string]any)["createInputsHash"] = inputsHash
+	}
 	u.SetGroupVersionKind(gvk)
 	opts := []client.SubResourceApplyOption{client.FieldOwner(entityStatusFieldManager)}
 	if force {
@@ -721,6 +794,10 @@ func otherStatusFields(obj entityObject) ([]string, error) {
 	status, _ := fields["status"].(map[string]any)
 	var other []string
 	for field := range status {
+		// The fingerprint of a static key is the controller's (see keyInputs).
+		if _, isKey := obj.(*configurationv1alpha1.EventGatewayStaticKey); isKey && field == "createInputsHash" {
+			continue
+		}
 		if field != "conditions" {
 			other = append(other, field)
 		}

@@ -17,6 +17,7 @@ limitations under the License.
 package onprem
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"slices"
@@ -49,7 +50,7 @@ func TestPush(t *testing.T) {
 
 	t.Run("a pod that doesn't know the gateway gets it all, in order", func(t *testing.T) {
 		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		assert.Equal(t, all, gwAdmin.recorded())
 	})
 
@@ -57,20 +58,20 @@ func TestPush(t *testing.T) {
 	pushed := func(t *testing.T) (*Reconciler, *fakeGWAdminClient) {
 		t.Helper()
 		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		gwAdmin.reset()
 		return r, gwAdmin
 	}
 
 	t.Run("nothing changed: only read", func(t *testing.T) {
 		r, gwAdmin := pushed(t)
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		assert.Equal(t, []string{callGetEntities, callListCertificates}, gwAdmin.recorded())
 	})
 
 	t.Run("the expected gateways changed: only they are set", func(t *testing.T) {
 		r, gwAdmin := pushed(t)
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, []uuid.UUID{gatewayID}, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, []uuid.UUID{gatewayID}, nil))
 		assert.Equal(t, []string{callGetEntities, callListCertificates, callExpected + " " + gatewayID.String()}, gwAdmin.recorded())
 	})
 
@@ -83,12 +84,49 @@ func TestPush(t *testing.T) {
 			}
 			return nil, nil
 		}
-		require.Error(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, []uuid.UUID{gatewayID}, nil, true))
+		require.Error(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, []uuid.UUID{gatewayID}, nil))
 		gwAdmin.respond = nil
 		gwAdmin.reset()
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		assert.Equal(t, []string{callGetEntities, callListCertificates, expectedCall}, gwAdmin.recorded(),
 			"those recorded before the failed call aren't trusted, even when they are the ones to set")
+	})
+
+	t.Run("a pod that may have got the entities is told so, though its push failed", func(t *testing.T) {
+		for _, tc := range []struct {
+			name    string
+			failing string
+			reply   *reply
+			err     error
+			want    bool
+		}{
+			{name: "setting the expected gateways failed", failing: callExpected, err: errors.New("timeout"), want: true},
+			{name: "the entities call timed out", failing: callEntities, err: errors.New("timeout"), want: true},
+			{name: "the entities call got a server error", failing: callEntities, reply: &reply{status: http.StatusBadGateway}, want: true},
+			{name: "gw-admin rejected the entities", failing: callEntities, reply: &reply{status: http.StatusBadRequest}, want: false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: func(call string) (*reply, error) {
+					if strings.HasPrefix(call, tc.failing) {
+						return tc.reply, tc.err
+					}
+					return nil, nil
+				}}
+				outcome := newCertificateOutcome()
+				require.Error(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, outcome, true))
+				assert.Equal(t, tc.want, outcome.mayHoldEntities(pod))
+			})
+		}
+
+		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: func(call string) (*reply, error) {
+			if strings.HasPrefix(call, callExpected) {
+				return nil, errors.New("timeout")
+			}
+			return nil, nil
+		}}
+		outcome := newCertificateOutcome()
+		require.Error(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, outcome, false))
+		assert.False(t, outcome.mayHoldEntities(pod), "not pushed the entities")
 	})
 
 	t.Run("a read answered with another 2xx than 200 fails", func(t *testing.T) {
@@ -98,29 +136,29 @@ func TestPush(t *testing.T) {
 			}
 			return nil, nil
 		}}
-		require.EqualError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true),
+		require.EqualError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil),
 			"failed to read the entities of the gateway: gw-admin returned 204 No Content, not 200")
 	})
 
 	t.Run("the pod holds other entities: only they are pushed", func(t *testing.T) {
 		r, gwAdmin := pushed(t)
 		gwAdmin.gateways[gatewayID] = gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{Name: "stale"}}}
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		assert.Equal(t, []string{callGetEntities, callListCertificates, callEntities}, gwAdmin.recorded())
 	})
 
 	t.Run("a restarted pod lost everything: it gets it all", func(t *testing.T) {
 		r, gwAdmin := pushed(t)
 		gwAdmin.restart()
-		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		assert.Equal(t, all, gwAdmin.recorded())
 	})
 
 	t.Run("another pod gets it all", func(t *testing.T) {
 		r, _ := pushed(t)
 		replaced := &fakeGWAdminClient{}
-		require.NoError(t, r.push(t.Context(), target, gwadminsync.Pod{Name: "gw-admin-0", UID: "new-pod-uid", Address: "10.0.0.1:8083"},
-			replaced, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, gwadminsync.Pod{Name: "gw-admin-0", UID: "new-pod-uid", Address: "10.0.0.1:8083"},
+			replaced, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil))
 		assert.Equal(t, all, replaced.recorded())
 	})
 
@@ -130,21 +168,32 @@ func TestPush(t *testing.T) {
 		name      string
 		respond   func(string) (*reply, error)
 		wantCalls int
+		// wantFirst are the calls of the push, when not the first wantCalls
+		// of a push to a pod that doesn't know the gateway.
+		wantFirst []string
 		wantErr   string
-		// wantRetry are the calls of the push tried again.
-		wantRetry []string
+		// wantRetry are the calls of the push tried again, and wantRetryErr
+		// its error, if any.
+		wantRetry    []string
+		wantRetryErr string
 	}{
 		{name: "reading the entities fails", respond: failing(callGetEntities, http.StatusInternalServerError), wantCalls: 1,
 			wantErr:   "failed to read the entities of the gateway: gw-admin returned 500 Internal Server Error: failed get-entities",
 			wantRetry: all},
-		{name: "registering the gateway fails", respond: failing(callRegister, http.StatusInternalServerError), wantCalls: 2,
+		// Registering may have been applied: the gateway is taken off the
+		// pod again. The failure may not last: the pod still waits for it.
+		{name: "registering the gateway fails", respond: failing(callRegister, http.StatusInternalServerError),
+			wantFirst: []string{callGetEntities, callRegister, callDeleteGateway},
 			wantErr:   "failed to register the gateway: gw-admin returned 500 Internal Server Error: failed register",
 			wantRetry: all},
-		// The pod holds no entities, which is what is pushed: the expected
-		// gateways, never set, are.
-		{name: "pushing the entities fails", respond: failing(callEntities, http.StatusBadRequest), wantCalls: 3,
+		// The pod refuses the entities, and has none to serve: the gateway
+		// is kept off it, and the pod is told the gateways it serves but
+		// this one, so that it can turn ready for the others. Tried again, the
+		// configuration is pushed again: accepted this time, it gets it all.
+		{name: "pushing the entities fails", respond: failing(callEntities, http.StatusBadRequest),
+			wantFirst: []string{callGetEntities, callRegister, callEntities, callDeleteGateway, callExpected + " " + other.String()},
 			wantErr:   "failed to push the entities of the gateway",
-			wantRetry: []string{callGetEntities, callListCertificates, expectedCall}},
+			wantRetry: all},
 		{name: "setting the expected gateways fails", respond: failing(callExpected, http.StatusBadRequest), wantCalls: 4,
 			wantErr:   "failed to set the gateways gw-admin serves",
 			wantRetry: []string{callGetEntities, callListCertificates, expectedCall}},
@@ -155,12 +204,21 @@ func TestPush(t *testing.T) {
 	for _, tc := range failures {
 		t.Run(tc.name, func(t *testing.T) {
 			r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: tc.respond}
-			require.ErrorContains(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true), tc.wantErr)
-			assert.Equal(t, all[:tc.wantCalls], gwAdmin.recorded())
+			require.ErrorContains(t, r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil), tc.wantErr)
+			want := tc.wantFirst
+			if want == nil {
+				want = all[:tc.wantCalls]
+			}
+			assert.Equal(t, want, gwAdmin.recorded())
 
 			gwAdmin.respond = nil
 			gwAdmin.reset()
-			require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil, true))
+			err := r.pushOnly(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected, nil)
+			if tc.wantRetryErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, tc.wantRetryErr)
+			}
 			assert.Equal(t, tc.wantRetry, gwAdmin.recorded())
 		})
 	}
@@ -180,7 +238,7 @@ func TestPushCertificates(t *testing.T) {
 	}
 	push := func(t *testing.T, r *Reconciler, client *fakeGWAdminClient, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration, expected ...uuid.UUID) error {
 		t.Helper()
-		return r.push(t.Context(), target, pod, client, deriveConfig(gateway, cfg), cfg, uuid.MustParse(string(gateway.UID)), expected, nil, true)
+		return r.pushOnly(t.Context(), target, pod, client, pushedConfig(gateway, cfg), cfg, uuid.MustParse(string(gateway.UID)), expected, nil)
 	}
 
 	t.Run("a pod that doesn't know the gateway gets its certificates before its entities, and isn't asked for them", func(t *testing.T) {
@@ -228,9 +286,14 @@ func TestPushCertificates(t *testing.T) {
 		assert.Contains(t, client.holds(firstID), certID)
 	})
 
-	t.Run("the certificates come before the entities: an entity gw-admin rejects doesn't keep them from being trusted", func(t *testing.T) {
-		r, client := newPushReconciler(), &fakeGWAdminClient{respond: failing(callEntities, http.StatusBadRequest)}
-		require.ErrorContains(t, push(t, r, client, first, withCertificate, firstID), "failed to push the entities")
+	t.Run("the certificates come before the entities: on a pod serving the gateway, an entity gw-admin rejects doesn't keep them from being trusted", func(t *testing.T) {
+		r, client := newPushReconciler(), &fakeGWAdminClient{}
+		require.NoError(t, push(t, r, client, first, withCertificate, firstID))
+		// A newer revision, which the pod refuses: it keeps the one it holds.
+		newer := first.DeepCopy()
+		newer.Status.ConfigRevision++
+		client.respond = failing(callEntities, http.StatusBadRequest)
+		require.ErrorContains(t, push(t, r, client, newer, withCertificate, firstID), "failed to push the entities")
 		assert.Contains(t, client.holds(firstID), certID)
 	})
 
@@ -249,7 +312,7 @@ func TestPushCertificates(t *testing.T) {
 		withRejected.certificates[0].body.Certificate = "changed"
 		client.respond = failing(rejectedCall, http.StatusBadRequest)
 		outcome := newCertificateOutcome()
-		err := r.push(t.Context(), target, pod, client, deriveConfig(first, withRejected), withRejected, firstID, []uuid.UUID{firstID}, outcome, true)
+		err := r.pushOnly(t.Context(), target, pod, client, pushedConfig(first, withRejected), withRejected, firstID, []uuid.UUID{firstID}, outcome)
 		require.NoError(t, err, "the rest of the configuration doesn't depend on it")
 		assert.Equal(t, []string{
 			callGetEntities, callListCertificates, rejectedCall, callDeleteCertificate + " " + firstID.String() + "/" + rejectedID.String(),
@@ -261,10 +324,10 @@ func TestPushCertificates(t *testing.T) {
 		assert.True(t, held)
 	})
 
-	t.Run("a pod failing on a certificate isn't told the expected gateways: it mustn't turn ready without it", func(t *testing.T) {
+	t.Run("a pod holding nothing of the gateway, failing on a certificate, doesn't keep it, and isn't told the expected gateways: it mustn't turn ready without it", func(t *testing.T) {
 		r, client := newPushReconciler(), &fakeGWAdminClient{respond: failing(rejectedCall, http.StatusInternalServerError)}
 		require.ErrorContains(t, push(t, r, client, first, withRejected, firstID), "failed to register the data plane certificate default/rejected")
-		assert.Equal(t, []string{callGetEntities, callRegister, rejectedCall}, client.recorded())
+		assert.Equal(t, []string{callGetEntities, callRegister, rejectedCall, callDeleteGateway}, client.recorded())
 	})
 
 	t.Run("a pod restarted holds nothing, and gets it all again", func(t *testing.T) {
@@ -278,11 +341,11 @@ func TestPushCertificates(t *testing.T) {
 
 	t.Run("the entities are pushed again with a new version of the configuration", func(t *testing.T) {
 		r, client := newPushReconciler(), &fakeGWAdminClient{}
-		config := deriveConfig(first, withCertificate)
-		require.NoError(t, r.push(t.Context(), target, pod, client, config, withCertificate, firstID, []uuid.UUID{firstID}, nil, true))
+		config := pushedConfig(first, withCertificate)
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, client, config, withCertificate, firstID, []uuid.UUID{firstID}, nil))
 		client.reset()
 		config.Version.DataVersion++
-		require.NoError(t, r.push(t.Context(), target, pod, client, config, withCertificate, firstID, []uuid.UUID{firstID}, nil, true))
+		require.NoError(t, r.pushOnly(t.Context(), target, pod, client, config, withCertificate, firstID, []uuid.UUID{firstID}, nil))
 		assert.Equal(t, []string{callGetEntities, callListCertificates, callEntities}, client.recorded())
 	})
 }
@@ -436,4 +499,130 @@ func TestExpectedGateways(t *testing.T) {
 
 	_, err = expectedGateways(t.Context(), newFakeClientWithInterceptor(t, interceptor.Funcs{List: failingList}), gateway)
 	require.Error(t, err)
+}
+
+// pushOnly pushes as push does, with the entities.
+func (r *Reconciler) pushOnly(
+	ctx context.Context, target *gwadminsync.Target, pod gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface,
+	config gatewayConfig, cfg configuration, gatewayID uuid.UUID, expected []uuid.UUID, outcome *certificateOutcome,
+) error {
+	return r.push(ctx, target, pod, gwAdmin, config, cfg, gatewayID, expected, outcome, true)
+}
+
+// pushedConfig returns the configuration of the gateway as a reconcile pushes
+// it: with the version of its configuration (see configVersion).
+func pushedConfig(gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) gatewayConfig {
+	config := deriveConfig(gateway, cfg)
+	config.Version = configVersion(gateway)
+	return config
+}
+
+// TestPushCertificatesAllRejected checks a gw-admin pod rejecting every data
+// plane certificate of the gateway isn't told it serves it: it would wait for
+// it to turn ready, and serve none of the gateways of its GWAdmin.
+func TestPushCertificatesAllRejected(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gatewayID := uuid.MustParse(string(gateway.UID))
+	other := uuid.New()
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod-uid", Address: "10.0.0.1:8083"}
+	certID := uuid.New()
+	cfg := emptyConfiguration()
+	cfg.certificates = []dataPlaneCertificate{testCertificate(certID, client.ObjectKey{Namespace: "default", Name: "cert"})}
+
+	r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: failing(callCertificate+" "+gatewayID.String()+"/"+certID.String(), http.StatusBadRequest)}
+	outcome := newCertificateOutcome()
+	require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, cfg), cfg, gatewayID, []uuid.UUID{gatewayID, other}, outcome, true),
+		"a certificate gw-admin rejects doesn't fail the push")
+	assert.Contains(t, gwAdmin.recorded(), callExpected+" "+other.String(), "the gateway isn't one the pod waits for")
+	assert.True(t, outcome.anyIncomplete(), "nor one the other gateways' pushes tell it serves")
+}
+
+// TestPushOlderRevision checks a gw-admin pod holding a newer revision than
+// the one recorded isn't pushed the older one, and the push tells.
+func TestPushOlderRevision(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gatewayID := uuid.MustParse(string(gateway.UID))
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod", Address: "10.0.0.1:8083"}
+	cfg := emptyConfiguration()
+	r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
+	newer := gateway.DeepCopy()
+	newer.Status.ConfigRevision = 5
+	require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, pushedConfig(newer, cfg), cfg, gatewayID, []uuid.UUID{gatewayID}, nil, true))
+	gwAdmin.reset()
+
+	older := gateway.DeepCopy()
+	older.Status.ConfigRevision = 1
+	require.ErrorContains(t, r.push(t.Context(), target, pod, gwAdmin, pushedConfig(older, cfg), cfg, gatewayID, []uuid.UUID{gatewayID}, nil, true),
+		"holds revision 5 of the gateway, newer than the one recorded, 1")
+	assert.NotContains(t, gwAdmin.recorded(), callEntities)
+}
+
+// TestPushTransientFailure checks a push to a pod holding nothing of the
+// gateway failing other than by a refusal, e.g. gw-admin answering 500, takes
+// the gateway off the pod again, but not out of those it waits for: the
+// failure may not last, and the pod mustn't turn ready without the gateway.
+func TestPushTransientFailure(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gatewayID := uuid.MustParse(string(gateway.UID))
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod", Address: "10.0.0.1:8083"}
+	cfg := emptyConfiguration()
+	r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: failing(callEntities, http.StatusInternalServerError)}
+	outcome := newCertificateOutcome()
+	require.Error(t, r.push(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, cfg), cfg, gatewayID, []uuid.UUID{gatewayID}, outcome, true))
+	assert.Equal(t, []string{callGetEntities, callRegister, callEntities, callDeleteGateway}, gwAdmin.recorded(),
+		"taken off the pod, which isn't told to serve without it")
+	assert.False(t, outcome.anyIncomplete(), "the gateway isn't taken as one a pod can't be given")
+}
+
+// TestPushKeptOffTellsExpectedOnlyWhileNotServing checks a gw-admin pod a
+// gateway is kept off is told the gateways it serves, without it, on every
+// push while it doesn't serve yet, as it may have lost them, e.g. restarted,
+// and only when they change once it serves.
+func TestPushKeptOffTellsExpectedOnlyWhileNotServing(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gatewayID := uuid.MustParse(string(gateway.UID))
+	other := uuid.New()
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	cfg := emptyConfiguration()
+	told := func(gwAdmin *fakeGWAdminClient) int {
+		return len(slices.DeleteFunc(gwAdmin.recorded(), func(call string) bool { return call != callExpected+" "+other.String() }))
+	}
+	for name, tc := range map[string]struct {
+		serving bool
+		want    int
+	}{
+		"not serving yet: told on every push": {serving: false, want: 2},
+		"serving: told once":                  {serving: true, want: 1},
+	} {
+		t.Run(name, func(t *testing.T) {
+			pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod", Address: "10.0.0.1:8083", Serving: tc.serving}
+			r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
+			for range 2 {
+				require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, cfg), cfg, gatewayID, []uuid.UUID{gatewayID, other}, nil, false))
+			}
+			assert.Equal(t, tc.want, told(gwAdmin))
+			assert.NotContains(t, gwAdmin.recorded(), callRegister, "nothing to give: the gateway is kept off")
+		})
+	}
+}
+
+// TestPushKeptOffCertificatesNotHeld checks the data plane certificates of a
+// gateway taken off a gw-admin pod, which refused its entities, are reported
+// as not held by that pod: it doesn't trust them, the gateway being gone.
+func TestPushKeptOffCertificatesNotHeld(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gatewayID := uuid.MustParse(string(gateway.UID))
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod", Address: "10.0.0.1:8083"}
+	cfg := emptyConfiguration()
+	cfg.certificates = []dataPlaneCertificate{testCertificate(uuid.New(), client.ObjectKey{Namespace: "default", Name: "cert"})}
+	r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: failing(callEntities, http.StatusBadRequest)}
+	outcome := newCertificateOutcome()
+	require.Error(t, r.push(t.Context(), target, pod, gwAdmin, pushedConfig(gateway, cfg), cfg, gatewayID, []uuid.UUID{gatewayID}, outcome, true))
+	held, missing, _, _ := outcome.held(&gwadminsync.Target{Pods: []gwadminsync.Pod{pod}}, nil, cfg.certificates[0])
+	assert.False(t, held)
+	assert.Equal(t, []string{pod.Name}, missing)
 }

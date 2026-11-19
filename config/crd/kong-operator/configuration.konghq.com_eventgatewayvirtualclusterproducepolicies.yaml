@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -325,6 +325,16 @@ spec:
                               * `mark` - passes the record to the backend cluster but marks it with a
                               `kong/policy-failure-<id>` header whose value is the reason for the policy
                               failure (truncated to 512 characters).
+                              The header is stored with the record in the backend cluster, so every
+                              consumer of the topic sees it, including systems that never pass through the
+                              Event Gateway.
+                              The failure reason can contain runtime-specific configuration details, such
+                              as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                              text, JWT issuer and audience data, or expression snippets, and a producer
+                              with access to the topic can trigger policy failures on purpose to expose
+                              it.
+                              If you don't want to share this information, remove the header with a Modify
+                              Headers produce policy, or use a different failure mode.
 
                               **Requires a minimum runtime version of `1.2`**.
                             enum:
@@ -395,6 +405,16 @@ spec:
                               * `mark` - passes the record to the backend cluster but marks it with a
                               `kong/policy-failure-<id>` header whose value is the reason for the policy
                               failure (truncated to 512 characters).
+                              The header is stored with the record in the backend cluster, so every
+                              consumer of the topic sees it, including systems that never pass through the
+                              Event Gateway.
+                              The failure reason can contain runtime-specific configuration details, such
+                              as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                              text, JWT issuer and audience data, or expression snippets, and a producer
+                              with access to the topic can trigger policy failures on purpose to expose
+                              it.
+                              If you don't want to share this information, remove the header with a Modify
+                              Headers produce policy, or use a different failure mode.
 
                               **Requires a minimum runtime version of `1.2`**.
                             enum:
@@ -795,6 +815,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -808,7 +838,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -861,7 +890,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -881,6 +909,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -935,7 +973,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1006,7 +1043,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1026,6 +1062,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -1039,7 +1085,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1069,7 +1114,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1149,6 +1193,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
