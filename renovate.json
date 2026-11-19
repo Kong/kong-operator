@@ -157,6 +157,17 @@
       "matchStrings": [
         "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
       ]
+    },
+    {
+      "description": "Match container images pinned by digest in .github/workflows/*.yaml. The dockerfile and github-actions managers do not read a run: script, so without this the digests never move.",
+      "customType": "regex",
+      "fileMatch": [
+        "\\.github/workflows/.*\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[\\w.-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [

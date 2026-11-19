@@ -60,6 +60,24 @@ on:
         required: false
         type: string
         default: distroless
+      tag-suffix:
+        description: |
+          Adds a suffix to all tags. Use it to publish a second image from the same
+          repository. Example: the Red Hat certified image. The suffix prevents a
+          collision with the default tags. If you set "redhat", the per-arch tags
+          become "<version>-redhat-amd64" and "<version>-redhat-arm64". The
+          multi-arch tag becomes "<version>-redhat".
+        required: false
+        type: string
+        default: ''
+      preflight:
+        description: |
+          Runs `preflight check container` on the built image. The checks apply the
+          Red Hat certification rules. The job does not submit the result. The job runs
+          only if "push" is false, because the image must be available locally.
+        required: false
+        type: boolean
+        default: false
       outputs:
         description: Set outputs for docker/build-push-action.
         required: false
@@ -159,6 +177,12 @@ jobs:
     needs:
       - semver
 
+    # The suffix keeps its leading dash. It joins with the per-arch suffix in the
+    # metadata flavor below. Use the same expression in build-multi-arch. That job
+    # writes the source names by hand.
+    env:
+      TAG_SUFFIX: ${{ inputs.tag-suffix != '' && format('-{0}', inputs.tag-suffix) || '' }}
+
     strategy:
       # Whatever gets changed here should be changed in the multi-arch job below.
       matrix:
@@ -242,7 +266,7 @@ jobs:
             type=semver,pattern={{major}}
             type=sha
             ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
-          flavor: latest=${{ inputs.latest }},suffix=-${{ matrix.arch }}
+          flavor: latest=${{ inputs.latest }},suffix=${{ env.TAG_SUFFIX }}-${{ matrix.arch }}
 
       # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
       - name: Setup golang
@@ -312,10 +336,47 @@ jobs:
               --platform "$PLATFORM_OS/$PLATFORM_ARCH" \
               "$IMAGE_NAME:$IMAGE_VERSION" -version | "$VERIFY_IMAGE_SCRIPT" "$REPOSITORY"
 
+      # Renovate updates the base image digest. This step runs on each PR to find a
+      # certification problem before a release.
+      # preflight reads the manifest from a registry. It does not read the local Docker
+      # daemon. Therefore, this step pushes the new image to a temporary registry.
+      # The step does not submit the result. You cannot use --submit with --insecure.
+      - name: Check the image against Red Hat certification rules
+        if: ${{ inputs.preflight && !inputs.push }}
+        env:
+          PLATFORM_ARCH: ${{ matrix.arch }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          registry_ref="localhost:5000/${IMAGE_NAME}:${IMAGE_VERSION}"
+          artifacts="${RUNNER_TEMP}/preflight-artifacts"
+          mkdir -p "${artifacts}"
+          docker run -d --name preflight-registry -p 5000:5000 \
+              registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+          for _ in $(seq 1 30); do
+            curl -fsS http://localhost:5000/v2/ >/dev/null 2>&1 && break
+            sleep 1
+          done
+          docker tag "${IMAGE_NAME}:${IMAGE_VERSION}" "${registry_ref}"
+          docker push "${registry_ref}"
+          docker run --rm \
+              --network host \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "${artifacts}:/artifacts" \
+              quay.io/opdev/preflight:1.22.0@sha256:cb198b3bb3b5fc8969f4af2e7bef22533f46eae185c586c7077cbc33612f0ba5 \
+              check container "${registry_ref}" \
+              --insecure \
+              --platform "${PLATFORM_ARCH}" \
+              --artifacts /artifacts
+          docker rm -f preflight-registry
+          # preflight exits with 0 when a check fails. Do not use the exit code as a gate.
+          jq -e '.passed' "${artifacts}/${PLATFORM_ARCH}/results.json"
+
       - name: Upload artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: image-${{ matrix.os }}-${{ matrix.arch }}
+          name: image-${{ matrix.os }}-${{ matrix.arch }}${{ env.TAG_SUFFIX }}
           path: /tmp/image.tar
 
       # The scan job needs the child manifest digest, not the index one, to select the platform
@@ -354,6 +415,11 @@ jobs:
 
     permissions:
       contents: read
+
+    # Keep this value the same as in the build job. Each per-arch source below needs
+    # the same suffix. Without the suffix, the index points to the default image.
+    env:
+      TAG_SUFFIX: ${{ inputs.tag-suffix != '' && format('-{0}', inputs.tag-suffix) || '' }}
 
     outputs:
       full_tag: ${{ steps.tag.outputs.tag }}
@@ -414,7 +480,7 @@ jobs:
             type=semver,pattern={{major}}
             type=sha
             ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
-          flavor: latest=${{ inputs.latest }}
+          flavor: latest=${{ inputs.latest }},suffix=${{ env.TAG_SUFFIX }}
 
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
@@ -438,8 +504,8 @@ jobs:
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-amd64
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}-arm64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}${{ env.TAG_SUFFIX }}-amd64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}${{ env.TAG_SUFFIX }}-arm64
 
       # When building on schedule (or on workflow_dispatch with nightly-tags enabled),
       # `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
@@ -451,8 +517,8 @@ jobs:
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}-amd64
-            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}-arm64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}${{ env.TAG_SUFFIX }}-amd64
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.date.outputs.today }}${{ env.TAG_SUFFIX }}-arm64
 
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
@@ -490,8 +556,9 @@ jobs:
           REGISTRY: ${{ inputs.registry }}
           IMAGE_NAME: ${{ inputs.image-name }}
           FULLVERSION: ${{ needs.semver.outputs.fullversion }}
+          TAG_SUFFIX: ${{ env.TAG_SUFFIX }}
         run: |
-          echo "tag=$REGISTRY/$IMAGE_NAME:$FULLVERSION" >> $GITHUB_OUTPUT
+          echo "tag=$REGISTRY/$IMAGE_NAME:$FULLVERSION$TAG_SUFFIX" >> $GITHUB_OUTPUT
 
       - name: Send slack notification if job fails.
         if: ${{ failure() && inputs.slack-send }}
