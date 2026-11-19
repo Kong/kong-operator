@@ -4,43 +4,35 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/base64"
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/stretchr/testify/assert"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
-	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestGRPCRouteExample(t *testing.T) {
-	testGRPC := func(ctx context.Context, t *testing.T, manifestName string, gatewayPort int, hostname string, certPool *x509.CertPool) {
+	// testGRPC applies the manifest, which brings its own Gateway, and verifies that the GRPCRoute
+	// is routable through the Gateway's first HTTP (h2c) or HTTPS listener, depending on certPool.
+	testGRPC := func(ctx context.Context, t *testing.T, manifestPath string, gatewayName string, hostname string, certPool *x509.CertPool) {
 		t.Helper()
-		cluster := GetClusterFromCtx(ctx)
-		proxyURL := GetHTTPURLFromCtx(ctx)
-		manifestPath := examplesManifestPath(manifestName)
-		t.Logf("applying yaml manifest %s", manifestPath)
-		b, err := os.ReadFile(manifestPath)
-		assert.NoError(t, err)
-		manifest := string(b)
-		assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
+		applyManifest(ctx, t, manifestPath)
+		ctx = waitForGateway(ctx, t, k8stypes.NamespacedName{Namespace: GetNamespaceForT(ctx, t), Name: gatewayName})
+
+		grpcAddr := GetHTTPURLFromCtx(ctx)
+		if certPool != nil {
+			grpcAddr = GetHTTPSURLFromCtx(ctx)
+		}
 
 		t.Log("verifying that GRPCRoute becomes routable")
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			err := grpcEchoResponds(
-				ctx, fmt.Sprintf("%s:%d", proxyURL.Hostname(), gatewayPort), hostname, "kong", certPool,
-			)
+			err := grpcEchoResponds(ctx, grpcAddr.Host, hostname, "kong", certPool)
 			assert.NoError(c, err)
 		}, consts.IngressWait, consts.WaitTick)
-
-		t.Logf("deleting yaml manifest %s", manifestPath)
-		assert.NoError(t, clusters.DeleteManifestByYAML(ctx, cluster, manifest))
 	}
 
 	f := features.
@@ -48,11 +40,9 @@ func TestGRPCRouteExample(t *testing.T) {
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
 		Assess("deploying to cluster works and deployed GRPC via HTTP responds", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			testGRPC(ctx, t, "gateway-grpcroute-via-http.yaml", ktfkong.DefaultProxyHTTPPort, "example-grpc-via-http.com", nil)
+			testGRPC(ctx, t, samplesManifestPath("gateway-grpcroute-via-http.yaml"), "example-grpcroute-via-http", "example-grpc-via-http.com", nil)
 			return ctx
 		}).
 		Assess("deploying to cluster works and deployed GRPC via HTTPS responds", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
@@ -63,7 +53,7 @@ func TestGRPCRouteExample(t *testing.T) {
 			assert.NoError(t, err)
 			assert.True(t, certPool.AppendCertsFromPEM(decodedCert))
 
-			testGRPC(ctx, t, "gateway-grpcroute-via-https.yaml", ktfkong.DefaultProxyTLSServicePort, "example.com", certPool)
+			testGRPC(ctx, t, samplesManifestPath("gateway-grpcroute-via-https.yaml"), "kong", "example.com", certPool)
 			return ctx
 		}).
 		Teardown(featureTeardown())

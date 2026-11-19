@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 type consumeChainFixture struct {
@@ -527,9 +529,11 @@ func TestOnPremEventGatewayConsumePolicyChainInvalidAndRestart(t *testing.T) {
 		}
 		assert.Contains(ct, expected, id)
 	}, waitTime, tickTime)
-	writes := fresh.writeCount()
-	require.Never(t, func() bool {
-		return fresh.writeCount() != writes
+	before, ok, _ := fresh.state(id)
+	require.True(t, ok)
+	asserts.Never(t, func(context.Context) bool {
+		after, ok, _ := fresh.state(id)
+		return !ok || !reflect.DeepEqual(before.entities, after.entities)
 	}, time.Second, tickTime, "nothing new is pushed to the new pod while the chain is invalid")
 	held, ok, _ = f.pod.state(id)
 	require.True(t, ok)

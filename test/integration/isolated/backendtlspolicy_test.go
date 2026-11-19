@@ -24,7 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	constsmgr "github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
-	"github.com/kong/kong-operator/v2/test/helpers"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -50,7 +50,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 		New("verify upstream TLS").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindBackendTLSPolicy).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("prepare gateway API client", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 			gwapiClient, err := gatewayclient.NewForConfig(cluster.Config())
@@ -121,7 +121,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 			caSecret := &corev1.Secret{
 				Name: caSecretName,
 				Labels: map[string]string{
-					configuration.CACertLabelKey: "true",
+					configuration.CACertLabelKey:         "true",
+					mgrconfig.DefaultSecretLabelSelector: mgrconfig.LabelValueForSelectorTrue,
 				},
 				Data: map[string][]byte{
 					"id":     []byte(uuid.NewString()),
@@ -141,19 +142,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 			ns := GetNamespaceForT(ctx, t)
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 
-			t.Log("Create GatewayClass")
-			gatewayClassName := uuid.NewString()
-			gatewayCLass, err := helpers.DeployGatewayClass(ctx, gwapiClient, gatewayClassName)
-			assert.NoError(t, err)
-			cleaner.Add(gatewayCLass)
-
-			t.Log("Create Gateway")
-			gatewayName := uuid.NewString()
-			gateway, err := helpers.DeployGateway(ctx, gwapiClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
-				gw.Name = gatewayName
-			})
-			assert.NoError(t, err)
-			cleaner.Add(gateway)
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 
 			container := generators.NewContainer("goecho", test.EchoImage, test.EchoHTTPSPort)
 			container.VolumeMounts = []corev1.VolumeMount{
@@ -185,7 +174,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			}
-			deployment, err = cluster.Client().AppsV1().Deployments(ns).Create(ctx, deployment, metav1.CreateOptions{})
+			deployment, err := cluster.Client().AppsV1().Deployments(ns).Create(ctx, deployment, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			cleaner.Add(deployment)
 

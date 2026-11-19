@@ -13,11 +13,13 @@ jobs:
   build-push-images:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
+      dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
+      dockerhub-pull-token: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}
       slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
     with:
-      username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+      push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+      pull-username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
       registry: docker.io
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO_NIGHTLY }}
       push: true
@@ -42,7 +44,7 @@ jobs:
           egress-policy: audit
 
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: docker.io
           username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
@@ -160,7 +162,7 @@ jobs:
           egress-policy: audit
 
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: docker.io
           username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}

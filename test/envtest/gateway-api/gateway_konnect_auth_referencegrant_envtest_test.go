@@ -1,6 +1,7 @@
 package gatewayapi
 
 import (
+	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -18,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
@@ -73,7 +75,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 	t.Cleanup(func() { _ = c.Delete(ctx, gw) })
 
 	t.Run("no derived grant is created without user KongReferenceGrant", func(t *testing.T) {
-		require.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			var grants configurationv1alpha1.KongReferenceGrantList
 			if err := c.List(ctx, &grants, client.InNamespace(authNs.Name)); err != nil {
 				return false

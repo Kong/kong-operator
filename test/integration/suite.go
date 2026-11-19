@@ -69,7 +69,9 @@ func GetClients() testutils.K8sClients {
 type SuiteOption func(*suiteOptions)
 
 type suiteOptions struct {
-	createKongLicense bool
+	createKongLicense       bool
+	controllerConfigOptions []testutils.ControllerConfigOption
+	webhookOptions          []webhook.Option
 }
 
 // WithKongLicense loads license data from the KONG_LICENSE_DATA
@@ -78,6 +80,21 @@ type suiteOptions struct {
 func WithKongLicense() SuiteOption {
 	return func(o *suiteOptions) {
 		o.createKongLicense = true
+	}
+}
+
+// WithControllerConfigOptions adjusts the configuration of the operator's
+// controller manager started by the test suite.
+func WithControllerConfigOptions(opts ...testutils.ControllerConfigOption) SuiteOption {
+	return func(o *suiteOptions) {
+		o.controllerConfigOptions = append(o.controllerConfigOptions, opts...)
+	}
+}
+
+// WithWebhookOptions adjusts the validating webhook configuration registered by the test suite.
+func WithWebhookOptions(opts ...webhook.Option) SuiteOption {
+	return func(o *suiteOptions) {
+		o.webhookOptions = append(o.webhookOptions, opts...)
 	}
 }
 
@@ -101,7 +118,9 @@ func Suite(m *testing.M, opts ...SuiteOption) {
 	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
-	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(BlueGreenControllerEnabled))
+	cfg := testutils.DefaultControllerConfigForTests(
+		append([]testutils.ControllerConfigOption{testutils.WithBlueGreenController(BlueGreenControllerEnabled)}, so.controllerConfigOptions...)...,
+	)
 	controllerNamespace := cfg.ControllerNamespace
 
 	var cancel context.CancelFunc
@@ -179,7 +198,7 @@ func Suite(m *testing.M, opts ...SuiteOption) {
 
 	fmt.Println("INFO: configuring validating webhook")
 	checkConnectivityToWebhook, cleanupWebhook, err := webhook.EnsureValidatingWebhookRegistration(
-		GetCtx(), clients.K8sClient, controllerNamespace,
+		GetCtx(), clients.K8sClient, controllerNamespace, so.webhookOptions...,
 	)
 	exitOnErr(err)
 	defer cleanupWebhook()

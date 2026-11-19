@@ -46,7 +46,7 @@ jobs:
         fetch-depth: ${{ matrix.fetch_depth }}
 
     - name: Setup go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
       with:
         go-version-file: go.mod
         cache: false
@@ -119,6 +119,11 @@ jobs:
       env:
         MAKE_TARGET: ${{ matrix.make-target }}
         CRD_BREAKING_CHANGES_REPORT: ${{ runner.temp }}/crd-breaking-changes.md
+        # The base comes from the event payload, not from github.base_ref: for a pull request in
+        # a stack, GITHUB_BASE_REF holds the default branch while the pull request targets the
+        # branch below it in the stack. With the default branch as the base, every change of the
+        # stack below the pull request looks like a change of the pull request.
+        CRD_BREAKING_CHANGES_BASE_REF: ${{ github.event.pull_request.base.ref }}
       run: make "$MAKE_TARGET"
 
     # Keeps at most one comment: the existing one is edited when it is already there, so a
@@ -133,7 +138,7 @@ jobs:
         PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         VERIFY_OUTCOME: ${{ steps.verify.outcome }}
         REPORT_FILE: ${{ runner.temp }}/crd-breaking-changes.md
-        CRD_BREAKING_CHANGES_BASE_REF: ${{ github.base_ref }}
+        CRD_BREAKING_CHANGES_BASE_REF: ${{ github.event.pull_request.base.ref }}
         CRD_BREAKING_CHANGES_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
       run: |
         set -euo pipefail

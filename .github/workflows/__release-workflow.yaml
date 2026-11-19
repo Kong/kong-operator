@@ -7,6 +7,9 @@ on:
       dockerhub-push-token:
         required: true
         description: "The token to push images to Docker Hub"
+      dockerhub-pull-token:
+        required: false
+        description: "Pull-scoped token for the read-only image scan"
       gpg-private-key:
         required: true
         description: "The GPG private key to sign the commits"
@@ -30,6 +33,10 @@ on:
         description: "The username to push images to Docker Hub"
         type: string
         required: true
+      dockerhub-pull-username:
+        description: "The username paired with the pull-scoped image scan token"
+        type: string
+        required: false
       tag:
         description: The version to release (e.g. v1.2.3)
         type: string
@@ -197,14 +204,16 @@ jobs:
       contents: read
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-push-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-pull-token: ${{ secrets.dockerhub-pull-token }}
     # NOTE: needs semver so that a tag rejected there (e.g. a malformed rapid
     # version) does not get images pushed.
     needs:
     - semver
     with:
       registry: ${{ inputs.registry }}
-      username: ${{ inputs.dockerhub-push-username }}
+      push-username: ${{ inputs.dockerhub-push-username }}
+      pull-username: ${{ inputs.dockerhub-pull-username }}
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}
       ref: ${{ inputs.base }}
@@ -230,7 +239,7 @@ jobs:
           egress-policy: audit
 
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.dockerhub-push-username }}
@@ -348,7 +357,7 @@ jobs:
           egress-policy: audit
 
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ${{ inputs.registry }}
           username: ${{ inputs.dockerhub-push-username }}
@@ -447,7 +456,7 @@ jobs:
           ref: ${{ inputs.base }}
 
       - name: Setup golang
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
 
@@ -551,7 +560,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.base }}
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: go.mod
 

@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 var tcpMutex = sync.Mutex{}
@@ -154,7 +156,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return helpers.EchoResponds(t, helpers.ProtocolTCP, proxyTCPURL, testUUID1) == nil
 	}, ingressWait*2, waitTick)
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		return helpers.EchoResponds(t, helpers.ProtocolTCP, proxyTCPURL, testUUID2) == nil
 	}, time.Second*10, time.Second)
 

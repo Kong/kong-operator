@@ -1,6 +1,8 @@
 # More info: https://docs.docker.com/engine/reference/builder/#dockerignore-file
-# Ignore build and test binaries.
-bin/
+# Ignore build and test binaries. PREBUILT image builds need the operator binary
+# in the Docker build context.
+bin/*
+!bin/manager-linux-*
 config/
 docs/
 scripts/

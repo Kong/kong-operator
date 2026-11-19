@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongtargets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -139,7 +139,10 @@ spec:
                     && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:')
                     && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               target:
-                description: Target is the target address of the upstream.
+                description: |-
+                  Target is the target address of the upstream.
+                  An IP address is valid unless the KongService sets spec.tls_verify; then the
+                  host must match the server certificate's CN or SAN, so use the service FQDN.
                 type: string
               upstreamRef:
                 description: UpstreamRef is a reference to a KongUpstream this KongTarget
