@@ -402,6 +402,31 @@ func createGatewayConfiguration(
 
 	if gatewayType == hybridGateway {
 		t.Log("configuring GatewayConfiguration with Konnect access token - Hybrid Gateway")
+
+		// Konnect applies hybrid data plane configuration asynchronously, and
+		// Kong Gateway nginx workers can briefly disagree about the router
+		// state while a new config version is rolled out: one worker already
+		// serves a newly added route while another still serves the previous
+		// config without it. HTTPRouteWeight sends 500 concurrent requests with
+		// a fixed retry budget (10 rounds) right after the route converges on
+		// some workers, so the split shows up as a mix of 200s and 404s and
+		// exhausts the budget. Run the conformance data plane with a single
+		// worker so that once the response gate succeeds every request uses
+		// the same router.
+		// See https://github.com/Kong/kong-operator/issues/5859 and
+		// https://github.com/kubernetes-sigs/gateway-api/issues/5451.
+		//
+		// TODO: remove this override and restore the default worker count once
+		// the gateway-api fix for the HTTP/gRPC weight checks
+		// (https://github.com/kubernetes-sigs/gateway-api/pull/5456) is merged
+		// and backported to the v1.7.x line, and the gateway-api dependency
+		// used by this repository is upgraded to a release that includes it.
+		proxyContainer := &gwconf.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0]
+		proxyContainer.Env = append(proxyContainer.Env, corev1.EnvVar{
+			Name:  "KONG_NGINX_WORKER_PROCESSES",
+			Value: "1",
+		})
+
 		kapi := konnectv1alpha1.KonnectAPIAuthConfiguration{
 			GenerateName: "api-auth-config-",
 			Namespace:    conformanceInfraNamespace,
