@@ -159,3 +159,13 @@ func validatePolicyChainPolicy(
 	}
 	return nil
 }
+
+// policyNameIn returns how a message about a chain of namespace names the
+// policy of key: its name, or namespace/name for a policy of another
+// namespace.
+func policyNameIn(key client.ObjectKey, namespace string) string {
+	if key.Namespace == namespace {
+		return key.Name
+	}
+	return key.String()
+}

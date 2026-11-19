@@ -66,11 +66,9 @@ spec:
                       in execution order.
                       The same declared order applies on-prem: the operator rebuilds the ordered
                       produce-policy list of the gw-admin configuration from it.
-                      The parent virtual cluster and every policy must be in the same namespace as
-                      this chain.
-                      Namespace defaults to this chain's namespace and may be set explicitly to
-                      that same namespace; cross-namespace references are not supported.
                       Each policy must belong to the referenced EventGatewayVirtualCluster.
+                      Namespace defaults to this chain's namespace; a policy in another namespace
+                      needs a KongReferenceGrant in its namespace.
                       List every produce policy exactly once, including roots and nested children.
                       A parent must precede its children, and each parent's group must remain
                       contiguous.

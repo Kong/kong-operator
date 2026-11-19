@@ -318,23 +318,17 @@ func TestConsumePolicyChainParentIdentity(t *testing.T) {
 	gateway, chain, policies, objects := consumePolicyChainObjects(t)
 	cfg, err := buildConfiguration(t.Context(), newFakeClient(t, append(objects, chain)...), gateway, "", nil)
 	require.NoError(t, err)
-	var refs []policyRef
 	var snapshots []entityWithParent
 	for _, ref := range chain.Spec.APISpec.Policies {
-		refs = append(refs, policyRef{name: ref.Name})
 		snapshots = append(snapshots, policies[ref.Name])
 	}
 	entities := slices.Clone(cfg.entities.VirtualClusters[0].ConsumePolicies)
-	entities[1] = editedJSON(entities[1], func(payload map[string]any) {
+	require.Empty(t, consumePolicyOrder(chain, snapshots, entities))
+	edited := slices.Clone(entities)
+	edited[1] = editedJSON(edited[1], func(payload map[string]any) {
 		payload["parent_policy_id"] = uuid.NewString()
 	})
-	require.Contains(t, consumePolicyOrder(chain, refs, snapshots, entities), "parent identity changed")
-
-	refs[0].namespace = "foreign"
-	require.Contains(t, consumePolicyOrder(chain, refs, snapshots, nil), "not cross-namespace")
-	refs[0].namespace = ""
-	chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("foreign")
-	require.Contains(t, consumePolicyOrder(chain, refs, snapshots, nil), "same namespace")
+	require.Contains(t, consumePolicyOrder(chain, snapshots, edited), "parent identity changed")
 }
 
 func TestConsumePolicyChainEmptyScope(t *testing.T) {

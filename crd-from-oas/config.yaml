@@ -1802,12 +1802,6 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayVirtualClusterProducePolicy]
             resolvesTo: id
-            # The generated EventGatewayVirtualClusterProducePolicyRef type is
-            # shared with parentPolicyRef, which supports cross-namespace
-            # references. This chain keeps its policies in its namespace, which
-            # ResolveValidatedPolicyIDs enforces. CEL cannot enforce this:
-            # CRD validation rules expose metadata.name and
-            # metadata.generateName, but not metadata.namespace.
             supportCrossNamespaceReference: true
             resolverMethod: ResolveValidatedPolicyIDs
             watchSameParent: true
@@ -1827,10 +1821,9 @@ apiGroupVersions:
                   Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order.
                   The same declared order applies on-prem: the operator rebuilds the ordered
                   produce-policy list of the gw-admin configuration from it.
-                  The parent virtual cluster and every policy must be in the same namespace as this chain.
-                  Namespace defaults to this chain's namespace and may be set explicitly
-                  to that same namespace; cross-namespace references are not supported.
                   Each policy must belong to the referenced EventGatewayVirtualCluster.
+                  Namespace defaults to this chain's namespace; a policy in another
+                  namespace needs a KongReferenceGrant in its namespace.
                   List every produce policy exactly once, including roots and nested children.
                   A parent must precede its children, and each parent's group must remain contiguous.
                   Root groups may move and sibling children may reorder within their group.
@@ -1945,10 +1938,6 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayVirtualClusterConsumePolicy]
             resolvesTo: id
-            # The generated EventGatewayVirtualClusterConsumePolicyRef type is
-            # shared with parentPolicyRef, which supports cross-namespace
-            # references. The chain keeps its policies in its namespace, which
-            # ResolveValidatedPolicyIDs enforces.
             supportCrossNamespaceReference: true
             resolverMethod: ResolveValidatedPolicyIDs
             watchSameParent: true
@@ -1968,10 +1957,9 @@ apiGroupVersions:
                   Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order.
                   The same declared order applies on-prem: the operator rebuilds the ordered
                   consume-policy list of the gw-admin configuration from it.
-                  The parent virtual cluster and every policy must be in the same namespace as this chain.
-                  An omitted or empty namespace defaults to this chain's namespace; an explicit
-                  namespace must be the same, regardless of KongReferenceGrant permissions.
                   Each policy must belong to the referenced EventGatewayVirtualCluster.
+                  Namespace defaults to this chain's namespace; a policy in another
+                  namespace needs a KongReferenceGrant in its namespace.
                   List every consume policy exactly once, including roots and nested children.
                   A root schemaValidation parent must precede its immediately contiguous children.
                   Root groups may move and sibling children may reorder within their group.

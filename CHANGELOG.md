@@ -73,6 +73,17 @@
 
 ## Unreleased
 
+### Added
+
+- `EventGatewayVirtualClusterProducePolicyChain`s and
+  `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
+  cluster, and order policies, in another namespace, with a
+  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
+  `OnPremEventGateway`s, as the other policy chains can. `KongReferenceGrant`
+  accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
+  a parent of another namespace is matched by namespace and name.
+  [#XXXX](https://github.com/Kong/kong-operator/pull/XXXX)
+
 ### Fixes
 
 - The operator now creates the configured cluster CA `Secret` before the

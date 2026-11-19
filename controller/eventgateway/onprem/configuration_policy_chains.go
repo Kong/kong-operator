@@ -78,7 +78,7 @@ type policyChainScope[C chainObject, E any] struct {
 	// validate, when set, checks the complete ordered set of the policies the
 	// chain declares, from the assembled object snapshots and entities in
 	// declared order, and returns why it can't be applied, or "".
-	validate func(chain C, refs []policyRef, policies []entityWithParent, entities []E) string
+	validate func(chain C, policies []entityWithParent, entities []E) string
 	// ordered returns the parents this scope records as ordered, so that the
 	// comparison of the configuration with gw-admin is order-sensitive for
 	// their policy list alone.
@@ -405,41 +405,20 @@ func compareKeys(a, b client.ObjectKey) int {
 // producePolicyOrder checks the declared order of a produce chain against the
 // gw-admin document contract: a root schemaValidation group is contiguous and
 // its children follow it. It returns why the order can't be applied, or "".
-// The declaration is checked with the objects read for it, without Konnect
-// status: on-prem applications rely on the Kubernetes references alone.
+// The declaration is checked with the objects read for it, in declared order,
+// without Konnect status: on-prem applications rely on the Kubernetes
+// references alone. The virtual cluster and the policies may be of other
+// namespaces: the KongReferenceGrants allowing it are checked before.
 func producePolicyOrder(
 	chain *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
-	refs []policyRef,
 	policies []entityWithParent,
 	_ []gwadminapi.EventGatewayProducePolicyOnPrem,
 ) string {
-	// The produce chain API supports no cross-namespace reference: the
-	// parent and every policy are in the namespace of the chain, whatever a
-	// KongReferenceGrant allows. CEL can't enforce this: CRD validation rules
-	// expose metadata.name and metadata.generateName, but not the object's
-	// namespace.
-	if ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef; ref != nil &&
-		ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace {
-		return "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"
+	order, byKey, problem := policiesByKey[*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](policies, "EventGatewayVirtualClusterProducePolicy")
+	if problem != "" {
+		return problem
 	}
-	for _, ref := range refs {
-		if ref.namespace != "" && ref.namespace != chain.Namespace {
-			return fmt.Sprintf("policy %s/%s must be in the namespace of the chain: produce chain references are not cross-namespace", ref.namespace, ref.name)
-		}
-	}
-	order := make([]string, 0, len(chain.Spec.APISpec.Policies))
-	for _, ref := range chain.Spec.APISpec.Policies {
-		order = append(order, ref.Name)
-	}
-	byName := make(map[string]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy, len(policies))
-	for i, policy := range policies {
-		produce, ok := policy.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy)
-		if !ok {
-			return fmt.Sprintf("spec.apiSpec.policies[%d] is not an EventGatewayVirtualClusterProducePolicy", i)
-		}
-		byName[produce.Name] = produce
-	}
-	if err := configurationv1alpha1.ValidateProducePolicyChainOrder(order, byName); err != nil {
+	if err := configurationv1alpha1.ValidateProducePolicyChainOrder(chain.Namespace, order, byKey); err != nil {
 		return err.Error()
 	}
 	return ""
@@ -447,54 +426,62 @@ func producePolicyOrder(
 
 func consumePolicyOrder(
 	chain *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain,
-	refs []policyRef,
 	policies []entityWithParent,
 	entities []gwadminapi.EventGatewayConsumePolicyOnPrem,
 ) string {
-	if ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef; ref != nil &&
-		ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace {
-		return "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"
+	order, byKey, problem := policiesByKey[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](policies, "EventGatewayVirtualClusterConsumePolicy")
+	if problem != "" {
+		return problem
 	}
-	order := make([]string, 0, len(refs))
-	for _, ref := range refs {
-		if ref.namespace != "" && ref.namespace != chain.Namespace {
-			return fmt.Sprintf("policy %s/%s must be in the namespace of the chain: consume chain references are not cross-namespace", ref.namespace, ref.name)
-		}
-		order = append(order, ref.name)
-	}
-	byName := make(map[string]*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy, len(policies))
-	for i, policy := range policies {
-		consume, ok := policy.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
-		if !ok {
-			return fmt.Sprintf("spec.apiSpec.policies[%d] is not an EventGatewayVirtualClusterConsumePolicy", i)
-		}
-		byName[consume.Name] = consume
-	}
-	if err := configurationv1alpha1.ValidateConsumePolicyChainOrder(order, byName); err != nil {
+	if err := configurationv1alpha1.ValidateConsumePolicyChainOrder(chain.Namespace, order, byKey); err != nil {
 		return err.Error()
 	}
 	// Conversions read parent references separately. A same-name parent
 	// recreated between those reads must not leave a dangling or stale ID.
 	for i, entity := range entities {
-		policy := byName[order[i]]
+		policy := byKey[order[i]]
 		fields, err := jsonValue(entity)
 		if err != nil {
-			return fmt.Sprintf("cannot validate consume policy %s: %v", policy.Name, err)
+			return fmt.Sprintf("cannot validate consume policy %s: %v", order[i], err)
 		}
 		payload, ok := fields.(map[string]any)
 		if !ok {
-			return fmt.Sprintf("consume policy %s has an invalid document representation", policy.Name)
+			return fmt.Sprintf("consume policy %s has an invalid document representation", order[i])
 		}
 		parentID, _ := payload["parent_policy_id"].(string)
 		expected := ""
-		if parent := policy.Spec.APISpec.ParentPolicyRef.Name; parent != "" {
-			expected = string(byName[parent].UID)
+		if ref := policy.Spec.APISpec.ParentPolicyRef; ref.Name != "" {
+			key := client.ObjectKey{Namespace: policy.Namespace, Name: ref.Name}
+			if ref.Namespace != "" {
+				key.Namespace = ref.Namespace
+			}
+			expected = string(byKey[key].UID)
 		}
 		if parentID != expected {
-			return fmt.Sprintf("consume policy %s parent identity changed during configuration assembly; waiting for a consistent configuration", policy.Name)
+			return fmt.Sprintf("consume policy %s parent identity changed during configuration assembly; waiting for a consistent configuration", order[i])
 		}
 	}
 	return ""
+}
+
+// policiesByKey returns the keys of the policies, in their order, and the
+// policies by key, or why one isn't a policy of kind.
+func policiesByKey[P interface {
+	*T
+	entityWithParent
+}, T any](policies []entityWithParent, kind string) ([]client.ObjectKey, map[client.ObjectKey]*T, string) {
+	order := make([]client.ObjectKey, 0, len(policies))
+	byKey := make(map[client.ObjectKey]*T, len(policies))
+	for i, policy := range policies {
+		p, ok := policy.(P)
+		if !ok {
+			return nil, nil, fmt.Sprintf("spec.apiSpec.policies[%d] is not an %s", i, kind)
+		}
+		key := client.ObjectKeyFromObject(p)
+		order = append(order, key)
+		byKey[key] = (*T)(p)
+	}
+	return order, byKey, ""
 }
 
 // On-prem deletion is not a remote operation and needs no finalizer. A stale
@@ -606,7 +593,7 @@ func policyOrder[C chainObject, E any](
 	// The declared order must also be valid for the backend: a nested chain
 	// can't order a child before its parent, nor interleave root groups.
 	if s.validate != nil {
-		if problem := s.validate(chain, refs, read, ordered); problem != "" {
+		if problem := s.validate(chain, read, ordered); problem != "" {
 			return nil, problem, nil
 		}
 	}
