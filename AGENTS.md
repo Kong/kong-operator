@@ -244,7 +244,8 @@ branch and catch incompatible schema changes before CI does.
    make verify.crd-breaking-changes
    ```
 
-6. **Update CHANGELOG.md** - For significant changes, add release notes
+6. **Update CHANGELOG.md** - For significant changes, add release notes.
+   Bugfix entries go under a `### Fixes` heading (not `### Fixed`); this is enforced by `make lint.markdownlint`.
 
 ### Verify Before Commit
 

@@ -32,12 +32,34 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
 
+// Option customizes the validating webhook configuration registered by EnsureValidatingWebhookRegistration.
+type Option func(*admregv1.ValidatingWebhookConfiguration)
+
+// WithoutValidatedResources removes the given resources (e.g. "kongplugins") from the rules of all
+// webhooks, so that the API server does not send them to the webhook for validation.
+// Webhooks left without any resources are dropped from the configuration.
+func WithoutValidatedResources(resources ...string) Option {
+	return func(cfg *admregv1.ValidatingWebhookConfiguration) {
+		for i := range cfg.Webhooks {
+			for j := range cfg.Webhooks[i].Rules {
+				cfg.Webhooks[i].Rules[j].Resources = lo.Without(cfg.Webhooks[i].Rules[j].Resources, resources...)
+			}
+			cfg.Webhooks[i].Rules = lo.Filter(cfg.Webhooks[i].Rules, func(r admregv1.RuleWithOperations, _ int) bool {
+				return len(r.Resources) > 0
+			})
+		}
+		cfg.Webhooks = lo.Filter(cfg.Webhooks, func(wh admregv1.ValidatingWebhook, _ int) bool {
+			return len(wh.Rules) > 0
+		})
+	}
+}
+
 // EnsureValidatingWebhookRegistration registers a validating webhook and configures connectivity for
 // the webhook defined in kubernetes manifests. When successful, it returns a function to check connectivity
 // to the webhook (should be called after bootstrapping the controller) and a cleanup function to remove
 // the webhook registration and associated resources. When an error is returned, no resources are created.
 func EnsureValidatingWebhookRegistration(
-	ctx context.Context, client *kubernetes.Clientset, controllerNamespace string,
+	ctx context.Context, client *kubernetes.Clientset, controllerNamespace string, opts ...Option,
 ) (checkConnectivityToWebhook func() error, cleanup func(), err error) {
 	webhookKustomize, err := kubectl.RunKustomize(kcfg.ValidatingWebhookPath())
 	if err != nil {
@@ -46,6 +68,9 @@ func EnsureValidatingWebhookRegistration(
 	webhookConfig := &admregv1.ValidatingWebhookConfiguration{}
 	if err := yaml.Unmarshal(webhookKustomize, webhookConfig); err != nil {
 		return nil, nil, fmt.Errorf("unmarshal webhook kustomize output: %w", err)
+	}
+	for _, opt := range opts {
+		opt(webhookConfig)
 	}
 	if len(webhookConfig.Webhooks) == 0 || webhookConfig.Webhooks[0].ClientConfig.Service == nil {
 		return nil, nil, fmt.Errorf("no webhook Service configuration found")

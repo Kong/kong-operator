@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -25,16 +25,14 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
-	"github.com/kong/kong-operator/v2/test/helpers"
+	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
 
 func TestKongUpstreamPolicyStatus(t *testing.T) {
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.Kind, testlabels.KindKongUpstreamPolicy).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("prepare clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 
@@ -170,25 +168,24 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 					},
 				},
 			}
-			_, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
-			require.NoError(t, err)
+			// The Ingress admission webhook looks the KongServiceFacade up in the ControlPlane's cache, which
+			// may not have observed the just created object yet, so retry.
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				_, err := cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
+				assert.NoError(c, err)
+			}, consts.IngressWait, consts.WaitTick)
 			cleaner.Add(ingress)
 
-			t.Log("creating IngressClass")
-			gatewayClassName := uuid.NewString()
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			require.NoError(t, err)
-			cleaner.Add(gwc)
-
-			t.Log("creating Gateway")
-			gw, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName)
-			require.NoError(t, err)
-			cleaner.Add(gw)
-
 			t.Log("creating HTTPRoute")
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 			httpRoute := &gatewayapi.HTTPRoute{
 				Name: "http-route",
 				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: gatewayapi.ObjectName(gateway.Name),
+						}},
+					},
 					Rules: []gatewayapi.HTTPRouteRule{
 						{
 							BackendRefs: []gatewayapi.HTTPBackendRef{
