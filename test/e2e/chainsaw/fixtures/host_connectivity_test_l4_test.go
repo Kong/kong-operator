@@ -44,7 +44,7 @@ func runL4ConnectivityTest(t *testing.T, protocol string, port int, path string)
 	return result, err
 }
 
-func startTCPEchoServer(t *testing.T) int {
+func startTCPEchoServer(t *testing.T, response string) int {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func startTCPEchoServer(t *testing.T) int {
 			return
 		}
 		defer conn.Close()
-		_, _ = conn.Write([]byte(l4EchoResponse))
+		_, _ = conn.Write([]byte(response))
 		// Keep the connection open: the probe must not wait for EOF.
 		<-done
 	}()
@@ -88,6 +88,23 @@ func startUDPEchoServer(t *testing.T) int {
 	return conn.LocalAddr().(*net.UDPAddr).Port
 }
 
+func startUDPBlackholeServer(t *testing.T) int {
+	t.Helper()
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
+
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			if _, _, err := conn.ReadFrom(buf); err != nil {
+				return
+			}
+		}
+	}()
+	return conn.LocalAddr().(*net.UDPAddr).Port
+}
+
 func TestHostConnectivityL4WithoutGNUTimeout(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("the script relies on bash /dev/tcp and /dev/udp")
@@ -106,7 +123,7 @@ func TestHostConnectivityL4WithoutGNUTimeout(t *testing.T) {
 		protocol string
 		port     int
 	}{
-		{protocol: "tcp", port: startTCPEchoServer(t)},
+		{protocol: "tcp", port: startTCPEchoServer(t, l4EchoResponse)},
 		{protocol: "udp", port: startUDPEchoServer(t)},
 	} {
 		t.Run(tc.protocol, func(t *testing.T) {
@@ -119,6 +136,34 @@ func TestHostConnectivityL4WithoutGNUTimeout(t *testing.T) {
 	}
 
 	require.NoFileExists(t, marker, "the script must not invoke the external timeout command")
+}
+
+func TestHostConnectivityL4MatchesUnterminatedFinalLine(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the script relies on bash /dev/tcp and /dev/udp")
+	}
+
+	// read -t assigns a partial line after the timeout and returns non-zero, so
+	// the probe must print that line outside the read loop as well.
+	port := startTCPEchoServer(t,
+		"Welcome, you are connected to node test-node.\nRunning on Pod test-echo")
+
+	result, err := runL4ConnectivityTest(t, "tcp", port, os.Getenv("PATH"))
+	require.NoError(t, err)
+	require.True(t, result.Success)
+}
+
+func TestHostConnectivityL4TimesOutWhenServerNeverAnswers(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the script relies on bash /dev/tcp and /dev/udp")
+	}
+
+	// The UDP probe reads its reply with dd, which has no timeout of its own.
+	// A server that never answers exercises run_with_timeout's kill/124 path.
+	result, err := runL4ConnectivityTest(t, "udp", startUDPBlackholeServer(t), os.Getenv("PATH"))
+	require.Error(t, err)
+	require.False(t, result.Success)
+	require.Equal(t, 124, result.LastStatus)
 }
 
 func TestHostConnectivityL4ReportsFailure(t *testing.T) {

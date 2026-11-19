@@ -51,8 +51,9 @@ case "$PROTOCOL" in
     RETRY_DELAY="${RETRY_DELAY:-1}"
     # The echo server greets as soon as the connection is established. Read
     # its lines until the read timeout so the probe does not wait for the
-    # server to close.
-    PROBE='exec 3<>/dev/tcp/$1/$2 || exit 1; while IFS= read -r -t 2 -u 3 line; do printf "%s\n" "$line"; done'
+    # server to close. read -t still assigns a final partial line when it
+    # times out, so print that line after the loop too.
+    PROBE='exec 3<>/dev/tcp/$1/$2 || exit 1; while IFS= read -r -t 2 -u 3 line; do printf "%s\n" "$line"; done; [ -z "$line" ] || printf "%s\n" "$line"'
     ;;
   udp)
     MAX_RETRIES="${MAX_RETRIES:-30}"
