@@ -19,6 +19,7 @@ func createTarget(
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
+	workspace := target.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: target, Op: CreateOp}
 	}
@@ -29,6 +30,7 @@ func createTarget(
 
 	resp, err := sdk.CreateTargetWithUpstream(ctx, sdkkonnectops.CreateTargetWithUpstreamRequest{
 		ControlPlaneID:       cpID,
+		Workspace:            workspace,
 		UpstreamIDForTarget:  target.Status.Konnect.UpstreamID,
 		TargetWithoutParents: kongTargetToTargetWithoutParents(target),
 	})
@@ -52,6 +54,7 @@ func updateTarget(
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
+	workspace := target.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: target, Op: UpdateOp}
 	}
@@ -61,6 +64,7 @@ func updateTarget(
 
 	_, err := sdk.UpsertTargetWithUpstream(ctx, sdkkonnectops.UpsertTargetWithUpstreamRequest{
 		ControlPlaneID:       cpID,
+		Workspace:            workspace,
 		UpstreamIDForTarget:  target.Status.Konnect.UpstreamID,
 		TargetID:             target.GetKonnectID(),
 		TargetWithoutParents: kongTargetToTargetWithoutParents(target),
@@ -79,6 +83,7 @@ func deleteTarget(
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
+	workspace := target.GetWorkspace()
 	if cpID == "" {
 		return fmt.Errorf("can't delete %T %s without a Konnect ControlPlane ID", target, client.ObjectKeyFromObject(target))
 	}
@@ -89,6 +94,7 @@ func deleteTarget(
 
 	_, err := sdk.DeleteTargetWithUpstream(ctx, sdkkonnectops.DeleteTargetWithUpstreamRequest{
 		ControlPlaneID:      cpID,
+		Workspace:           workspace,
 		UpstreamIDForTarget: target.Status.Konnect.UpstreamID,
 		TargetID:            id,
 	})
@@ -106,6 +112,7 @@ func adoptTarget(
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
+	workspace := target.GetWorkspace()
 
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
@@ -118,6 +125,7 @@ func adoptTarget(
 
 	resp, err := sdk.GetTargetWithUpstream(ctx, sdkkonnectops.GetTargetWithUpstreamRequest{
 		ControlPlaneID:      cpID,
+		Workspace:           workspace,
 		UpstreamIDForTarget: target.Status.Konnect.UpstreamID,
 		TargetID:            konnectID,
 	})
@@ -204,6 +212,7 @@ func getKongTargetForUID(
 			// Those will be enforced via subsequent updates.
 			Tags:                new(UIDLabelForObject(target)),
 			ControlPlaneID:      target.GetControlPlaneID(),
+			Workspace:           target.GetWorkspace(),
 			UpstreamIDForTarget: upstreamID,
 		}
 

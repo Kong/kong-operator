@@ -109,6 +109,7 @@ type KonnectExtensionControlPlane struct {
 	//
 	// +required
 	// +kubebuilder:validation:XValidation:rule="self.type != 'kic'", message="kic type not supported as controlPlaneRef."
+	// +kubebuilder:validation:XValidation:rule="!has(self.workspace)", message="workspace is not supported for KonnectExtension"
 	Ref commonv1alpha1.ControlPlaneRef `json:"ref"`
 }
 

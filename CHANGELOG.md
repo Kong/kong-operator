@@ -73,6 +73,18 @@
 
 ## Unreleased
 
+### Added
+
+- Konnect entities can now be placed in a Konnect Workspace with
+  `spec.controlPlaneRef.workspace` (name or ID). Child entities, such as a
+  `KongRoute` with a `serviceRef` or credentials of a `KongConsumer`, inherit the
+  Workspace of their parent, and so do `KongPluginBinding`s generated from
+  `konghq.com/plugins` annotations. Entities without the field stay in the default
+  Workspace. The field is rejected on `KongCACertificate` and
+  `KongDataPlaneClientCertificate`, which belong to the Control Plane, and on
+  Control Planes that don't support Workspaces.
+  [#TBD](https://github.com/Kong/kong-operator/pull/TBD)
+
 ### Fixes
 
 - Deleting a Konnect entity whose `controlPlaneRef` was never resolved, for

@@ -238,6 +238,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	// have a ControlPlaneRef, hence the type constraints in the reconciler can't be used.
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
 		resource.SetControlPlaneID(cp.Status.ID)
+		setWorkspace(ent, kongSvcCPRef)
 	}
 
 	return ctrl.Result{}, nil

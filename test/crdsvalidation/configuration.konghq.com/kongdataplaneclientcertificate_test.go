@@ -35,6 +35,12 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("cp ref workspace", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupCPRefWorkspace(t, obj, common.WorkspaceNotSupported,
+			"controlPlaneRef.workspace is not supported: data plane client certificates belong to the ControlPlane").
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("cp ref, type=kic", func(t *testing.T) {
 		common.NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, common.EmptyControlPlaneRefNotAllowed).
 			RunWithConfig(t, cfg, scheme)

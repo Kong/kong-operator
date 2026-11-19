@@ -31,6 +31,33 @@ type EntityWithControlPlaneRef interface {
 	GetControlPlaneID() string
 }
 
+// EntityWithWorkspace is an interface for entities that can live in a
+// Konnect Workspace of their ControlPlane.
+type EntityWithWorkspace interface {
+	SetWorkspace(string)
+	GetWorkspace() string
+}
+
+// setWorkspace stores the Konnect Workspace of the given ControlPlaneRef in the
+// entity status, so that Konnect operations target that Workspace.
+// Entities that do not support Workspaces are left unchanged.
+func setWorkspace(ent any, cpRef commonv1alpha1.ControlPlaneRef) {
+	if resource, ok := ent.(EntityWithWorkspace); ok {
+		resource.SetWorkspace(cpRef.GetWorkspace())
+	}
+}
+
+// controlPlaneSupportsWorkspaces reports whether a ControlPlane with the given
+// cluster type can hold Konnect Workspaces. Workspaces are not supported on
+// Kong Ingress Controller, serverless and control plane group control planes:
+// https://developer.konghq.com/how-to/manage-konnect-workspaces/#konnect-workspace-limitations
+func controlPlaneSupportsWorkspaces(clusterType *sdkkonnectcomp.CreateControlPlaneRequestClusterType) bool {
+	if clusterType == nil {
+		return true
+	}
+	return *clusterType == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane
+}
+
 // handleControlPlaneRef handles the ControlPlaneRef for the given entity.
 // It sets the owner reference to the referenced ControlPlane and updates the
 // status of the entity based on the referenced ControlPlane status.
@@ -97,6 +124,20 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, nil
 	}
 
+	if cpRef.GetWorkspace() != "" && !controlPlaneSupportsWorkspaces(cp.GetKonnectClusterType()) {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.ControlPlaneRefReasonInvalid,
+			fmt.Sprintf("Workspace %q is set, but ControlPlane %s with cluster type %s does not support Workspaces",
+				cpRef.GetWorkspace(), cpnn, *cp.GetKonnectClusterType()),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+		return ctrl.Result{}, nil
+	}
+
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		if res, errStatus := patch.StatusWithCondition(
@@ -116,6 +157,7 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
 		old := ent.DeepCopyObject().(TEnt)
 		resource.SetControlPlaneID(cp.Status.ID)
+		setWorkspace(ent, cpRef)
 		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
 			if apierrors.IsConflict(err) {

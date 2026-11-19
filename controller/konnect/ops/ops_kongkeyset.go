@@ -21,12 +21,14 @@ func createKeySet(
 	keySet *configurationv1alpha1.KongKeySet,
 ) error {
 	cpID := keySet.GetControlPlaneID()
+	workspace := keySet.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: keySet}
 	}
 
 	resp, err := sdk.CreateKeySet(ctx, sdkkonnectops.CreateKeySetRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		KeySet:         kongKeySetToKeySetInput(keySet),
 	})
 
@@ -56,6 +58,7 @@ func updateKeySet(
 	keySet *configurationv1alpha1.KongKeySet,
 ) error {
 	cpID := keySet.GetControlPlaneID()
+	workspace := keySet.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: keySet, Op: UpdateOp}
 	}
@@ -63,6 +66,7 @@ func updateKeySet(
 	_, err := sdk.UpsertKeySet(ctx,
 		sdkkonnectops.UpsertKeySetRequest{
 			ControlPlaneID: cpID,
+			Workspace:      workspace,
 			KeySetID:       keySet.GetKonnectStatus().GetKonnectID(),
 			KeySet:         kongKeySetToKeySetInput(keySet),
 		},
@@ -86,6 +90,7 @@ func deleteKeySet(
 	id := keySet.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteKeySet(ctx, sdkkonnectops.DeleteKeySetRequest{
 		ControlPlaneID: keySet.GetControlPlaneID(),
+		Workspace:      keySet.GetWorkspace(),
 		KeySetID:       id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, keySet); errWrap != nil {
@@ -101,6 +106,7 @@ func adoptKeySet(
 	keySet *configurationv1alpha1.KongKeySet,
 ) error {
 	cpID := keySet.GetControlPlaneID()
+	workspace := keySet.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -111,6 +117,7 @@ func adoptKeySet(
 	resp, err := sdk.GetKeySet(ctx, sdkkonnectops.GetKeySetRequest{
 		KeySetID:       konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -174,6 +181,7 @@ func getKongKeySetForUID(
 ) (string, error) {
 	resp, err := sdk.ListKeySet(ctx, sdkkonnectops.ListKeySetRequest{
 		ControlPlaneID: keySet.GetControlPlaneID(),
+		Workspace:      keySet.GetWorkspace(),
 		Tags:           new(UIDLabelForObject(keySet)),
 	})
 	if err != nil {

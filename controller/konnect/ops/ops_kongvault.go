@@ -33,6 +33,7 @@ func resolvedConfigStoreIDFromContext(ctx context.Context) (string, bool) {
 
 func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
+	workspace := vault.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: CreateOp}
 	}
@@ -43,6 +44,7 @@ func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 	}
 	resp, err := sdk.CreateVault(ctx, sdkkonnectops.CreateVaultRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Vault:          vaultInput,
 	})
 
@@ -60,6 +62,7 @@ func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 
 func updateVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
+	workspace := vault.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: UpdateOp}
 	}
@@ -73,6 +76,7 @@ func updateVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 	_, err = sdk.UpsertVault(ctx, sdkkonnectops.UpsertVaultRequest{
 		VaultID:        id,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Vault:          vaultInput,
 	})
 
@@ -85,6 +89,7 @@ func updateVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 
 func deleteVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
+	workspace := vault.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: DeleteOp}
 	}
@@ -92,6 +97,7 @@ func deleteVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configu
 	id := vault.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteVault(ctx, sdkkonnectops.DeleteVaultRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		VaultID:        id,
 	})
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, vault); errWrapped != nil {
@@ -103,6 +109,7 @@ func deleteVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configu
 
 func adoptVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
 	cpID := vault.GetControlPlaneID()
+	workspace := vault.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -117,6 +124,7 @@ func adoptVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSD
 	resp, err := sdk.GetVault(ctx, sdkkonnectops.GetVaultRequest{
 		VaultID:        konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -247,6 +255,7 @@ func getKongVaultForUID(
 ) (string, error) {
 	resp, err := sdk.ListVault(ctx, sdkkonnectops.ListVaultRequest{
 		ControlPlaneID: vault.GetControlPlaneID(),
+		Workspace:      vault.GetWorkspace(),
 		Tags:           new(UIDLabelForObject(vault)),
 	})
 	if err != nil {

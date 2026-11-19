@@ -70,6 +70,12 @@ type KonnectEntityStatusWithControlPlaneRef struct {
 	//
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
 }
 
 // SetControlPlaneID sets the ControlPlane ID of the KonnectEntityStatus struct.
@@ -91,6 +97,12 @@ type KonnectEntityStatusWithControlPlaneAndConsumerRefs struct {
 	//
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
 
 	// ConsumerID is the Konnect ID of the Consumer this entity is associated with.
 	//
@@ -128,6 +140,12 @@ type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
+
 	// ServiceID is the Konnect ID of the Service this entity is associated with.
 	//
 	// +optional
@@ -154,6 +172,12 @@ type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
+
 	// UpstreamID is the Konnect ID of the Upstream this entity is associated with.
 	//
 	// +optional
@@ -169,6 +193,12 @@ type KonnectEntityStatusWithControlPlaneAndKeySetRef struct {
 	//
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
 
 	// KeySetID is the Konnect ID of the KeySet this entity is associated with.
 	//
@@ -206,6 +236,12 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
+
 	// CertificateID is the Konnect ID of the Certificate this entity is associated with.
 	//
 	// +optional
@@ -221,6 +257,12 @@ type KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs stru
 	//
 	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
+
+	// Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+	// Empty means the ControlPlane's default Workspace.
+	//
+	// +optional
+	Workspace string `json:"workspace,omitempty"`
 
 	// CertificateID is the Konnect ID of the client Certificate referenced by this entity.
 	//

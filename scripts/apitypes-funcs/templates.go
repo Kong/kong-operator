@@ -97,6 +97,35 @@ func (obj *{{ .Type }}) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 {{- end }}
 }
+
+// GetWorkspace returns the Konnect Workspace in the {{ .Type }} status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *{{ .Type }}) GetWorkspace() string {
+{{- if .KonnectStatusType | hasPrefix "*" }}
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+{{- end }}
+{{- if .KonnectStatusEmbedded }}
+	return obj.Status.Workspace
+{{- else }}
+	return obj.Status.Konnect.Workspace
+{{- end }}
+}
+
+// SetWorkspace sets the Konnect Workspace in the {{ .Type }} status.
+func (obj *{{ .Type }}) SetWorkspace(ws string) {
+{{- if .KonnectStatusType | hasPrefix "*" }}
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+{{- end }}
+{{- if .KonnectStatusEmbedded }}
+	obj.Status.Workspace = ws
+{{- else }}
+	obj.Status.Konnect.Workspace = ws
+{{- end }}
+}
 {{- end }}
 
 // GetTypeName returns the {{ .Type }} Kind name.

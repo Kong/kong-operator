@@ -24,6 +24,7 @@ func createCertificate(
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
+	workspace := cert.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cert, Op: CreateOp}
 	}
@@ -41,6 +42,7 @@ func createCertificate(
 
 	respList, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(strings.Join(GenerateTagsForObject(cert, cert.Spec.Tags...), ",")),
 	})
 	if err != nil {
@@ -64,6 +66,7 @@ func createCertificate(
 
 	resp, err := sdk.CreateCertificate(ctx, sdkkonnectops.CreateCertificateRequest{
 		ControlPlaneID:     cpID,
+		Workspace:          workspace,
 		CertificateRequest: input,
 	})
 
@@ -94,6 +97,7 @@ func updateCertificate(
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
+	workspace := cert.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cert, Op: UpdateOp}
 	}
@@ -108,6 +112,7 @@ func updateCertificate(
 	_, err = sdk.UpsertCertificate(ctx,
 		sdkkonnectops.UpsertCertificateRequest{
 			ControlPlaneID:     cpID,
+			Workspace:          workspace,
 			CertificateID:      cert.GetKonnectStatus().GetKonnectID(),
 			CertificateRequest: input,
 		},
@@ -131,6 +136,7 @@ func deleteCertificate(
 	id := cert.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteCertificate(ctx, sdkkonnectops.DeleteCertificateRequest{
 		ControlPlaneID: cert.GetControlPlaneID(),
+		Workspace:      cert.GetWorkspace(),
 		CertificateID:  id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cert); errWrap != nil {
@@ -147,6 +153,7 @@ func adoptCertificate(
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
+	workspace := cert.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -156,6 +163,7 @@ func adoptCertificate(
 	resp, err := sdk.GetCertificate(ctx, sdkkonnectops.GetCertificateRequest{
 		CertificateID:  konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -287,6 +295,7 @@ func getKongCertificateForUID(
 ) (string, error) {
 	resp, err := sdk.ListCertificate(ctx, sdkkonnectops.ListCertificateRequest{
 		ControlPlaneID: cert.GetControlPlaneID(),
+		Workspace:      cert.GetWorkspace(),
 		Tags:           new(UIDLabelForObject(cert)),
 	})
 	if err != nil {

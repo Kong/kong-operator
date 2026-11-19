@@ -65,6 +65,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// configuration will connect to.
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.workspace)", message="workspace is not supported for KonnectCloudGatewayDataPlaneGroupConfiguration"
 	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	// Adopt is the options for adopting a cloud gateway dataplane group configuration from an existing transit dataplane group configuration in Konnect.

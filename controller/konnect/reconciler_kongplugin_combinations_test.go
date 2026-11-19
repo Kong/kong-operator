@@ -459,7 +459,7 @@ func TestGroupByControlPlane(t *testing.T) {
 				},
 			},
 			want: ForeignRelationsGroupedByControlPlane{
-				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}}: {
 					Service: []configurationv1alpha1.KongService{
 						{
 							Name:      "s1",
@@ -469,6 +469,90 @@ func TestGroupByControlPlane(t *testing.T) {
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 										Name: "cp1",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "services in different workspaces of the same control plane are grouped apart, routes follow their service",
+			objects: []client.Object{
+				&configurationv1alpha1.KongService{
+					Name:      "s-team-a",
+					Namespace: "default",
+					Spec: configurationv1alpha1.KongServiceSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+								Name: "cp1",
+							},
+							Workspace: "team-a",
+						},
+					},
+				},
+			},
+			args: args{
+				relations: ForeignRelations{
+					Service: []configurationv1alpha1.KongService{
+						{
+							Name:      "s-default",
+							Namespace: "default",
+							Spec: configurationv1alpha1.KongServiceSpec{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+										Name: "cp1",
+									},
+								},
+							},
+						},
+					},
+					Route: []configurationv1alpha1.KongRoute{
+						{
+							Name:      "r-team-a",
+							Namespace: "default",
+							Spec: configurationv1alpha1.KongRouteSpec{
+								ServiceRef: &configurationv1alpha1.ServiceRef{
+									Type: configurationv1alpha1.ServiceRefNamespacedRef,
+									NamespacedRef: &commonv1alpha1.NamespacedRef{
+										Name: "s-team-a",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: ForeignRelationsGroupedByControlPlane{
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}}: {
+					Service: []configurationv1alpha1.KongService{
+						{
+							Name:      "s-default",
+							Namespace: "default",
+							Spec: configurationv1alpha1.KongServiceSpec{
+								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+										Name: "cp1",
+									},
+								},
+							},
+						},
+					},
+				},
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}, Workspace: "team-a"}: {
+					Route: []configurationv1alpha1.KongRoute{
+						{
+							Name:      "r-team-a",
+							Namespace: "default",
+							Spec: configurationv1alpha1.KongRouteSpec{
+								ServiceRef: &configurationv1alpha1.ServiceRef{
+									Type: configurationv1alpha1.ServiceRefNamespacedRef,
+									NamespacedRef: &commonv1alpha1.NamespacedRef{
+										Name: "s-team-a",
 									},
 								},
 							},
@@ -510,7 +594,7 @@ func TestGroupByControlPlane(t *testing.T) {
 				},
 			},
 			want: ForeignRelationsGroupedByControlPlane{
-				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}}: {
 					Service: []configurationv1alpha1.KongService{
 						{
 							Name:      "s1",
@@ -526,7 +610,7 @@ func TestGroupByControlPlane(t *testing.T) {
 						},
 					},
 				},
-				types.NamespacedName{Namespace: "default", Name: "cp2"}: {
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp2"}}: {
 					Service: []configurationv1alpha1.KongService{
 						{
 							Name:      "s2",
@@ -599,7 +683,7 @@ func TestGroupByControlPlane(t *testing.T) {
 				},
 			},
 			want: ForeignRelationsGroupedByControlPlane{
-				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}}: {
 					Service: []configurationv1alpha1.KongService{
 						{
 							Name:      "s1",
@@ -658,7 +742,7 @@ func TestGroupByControlPlane(t *testing.T) {
 				},
 			},
 			want: ForeignRelationsGroupedByControlPlane{
-				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}}: {
 					Consumer: []configurationv1.KongConsumer{
 						{
 							Name:      "c1",
@@ -697,7 +781,7 @@ func TestGroupByControlPlane(t *testing.T) {
 				},
 			},
 			want: ForeignRelationsGroupedByControlPlane{
-				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
+				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "cp1"}}: {
 					ConsumerGroup: []configurationv1beta1.KongConsumerGroup{
 						{
 							Name:      "cg1",

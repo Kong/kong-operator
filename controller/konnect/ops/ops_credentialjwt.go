@@ -19,6 +19,7 @@ func createKongCredentialJWT(
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: CreateOp}
 	}
@@ -26,6 +27,7 @@ func createKongCredentialJWT(
 	resp, err := sdk.CreateJwtWithConsumer(ctx,
 		sdkkonnectops.CreateJwtWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			JWTWithoutParents:           kongCredentialJWTToJWTWithoutParents(cred),
 		},
@@ -57,6 +59,7 @@ func updateKongCredentialJWT(
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
@@ -64,6 +67,7 @@ func updateKongCredentialJWT(
 	_, err := sdk.UpsertJwtWithConsumer(ctx,
 		sdkkonnectops.UpsertJwtWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			JWTID:                       cred.GetKonnectStatus().GetKonnectID(),
 			JWTWithoutParents:           kongCredentialJWTToJWTWithoutParents(cred),
@@ -85,10 +89,12 @@ func deleteKongCredentialJWT(
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	id := cred.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteJwtWithConsumer(ctx,
 		sdkkonnectops.DeleteJwtWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			JWTID:                       id,
 		})
@@ -105,6 +111,7 @@ func adoptKongCredentialJWT(
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -120,6 +127,7 @@ func adoptKongCredentialJWT(
 
 	resp, err := sdk.GetJwtWithConsumer(ctx, sdkkonnectops.GetJwtWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 		JWTID:                       konnectID,
 	})
@@ -187,12 +195,14 @@ func getKongCredentialJWTForUID(
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 
 	req := sdkkonnectops.ListJwtRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cred)),
 	}
 

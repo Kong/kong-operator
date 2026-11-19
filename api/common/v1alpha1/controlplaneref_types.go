@@ -20,6 +20,7 @@ const (
 // +kubebuilder:validation:XValidation:rule="(has(self.type) && self.type == 'konnectNamespacedRef') ? has(self.konnectNamespacedRef) : true", message="when type is konnectNamespacedRef, konnectNamespacedRef must be set"
 // +kubebuilder:validation:XValidation:rule="(has(self.type) && self.type == 'kic') ? !has(self.konnectNamespacedRef) : true", message="when type is kic, konnectNamespacedRef must not be set"
 // +kubebuilder:validation:XValidation:rule="!has(self.type) ? !has(self.konnectNamespacedRef) : true", message="when type is unset, konnectNamespacedRef must not be set"
+// +kubebuilder:validation:XValidation:rule="!has(self.workspace) || (has(self.type) && self.type == 'konnectNamespacedRef')", message="workspace can only be set when type is konnectNamespacedRef"
 type ControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced. Allowed values:
 	// - konnectNamespacedRef
@@ -38,6 +39,18 @@ type ControlPlaneRef struct {
 	// This field is required when the Type is konnectNamespacedRef.
 	// +optional
 	KonnectNamespacedRef *KonnectNamespacedRef `json:"konnectNamespacedRef,omitempty"`
+
+	// Workspace is the name or ID of the Konnect Workspace, in the referenced
+	// Control Plane, that the entity belongs to.
+	// When unset, the entity belongs to the Control Plane's default Workspace.
+	// The Workspace must already exist in Konnect.
+	// It can only be set when Type is konnectNamespacedRef, and the referenced
+	// Control Plane must support Workspaces.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Workspace string `json:"workspace,omitempty"`
 }
 
 // KonnectExtensionControlPlaneRef is the schema for the ControlPlaneRef type used by Konnect Extensions.

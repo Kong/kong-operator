@@ -43252,6 +43252,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -43262,6 +43266,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               id:
                 type: string
               secretRef:
@@ -43298,6 +43304,8 @@ spec:
             x-kubernetes-validations:
             - message: KIC is not supported as control plane
               rule: '!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != ''kic'''
+            - message: 'controlPlaneRef.workspace is not supported: CA Certificates belong to the ControlPlane, not to a Workspace'
+              rule: '!has(self.controlPlaneRef) || !has(self.controlPlaneRef.workspace)'
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates
@@ -43370,6 +43378,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -43490,6 +43500,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -43500,6 +43514,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               key:
                 type: string
                 x-kubernetes-validations:
@@ -43632,6 +43648,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -43960,6 +43978,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -43970,6 +43992,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               name:
                 maxLength: 128
                 pattern: ^[\p{N}\p{L}.\-_~]*$
@@ -44051,6 +44075,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -44176,6 +44202,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -44186,6 +44216,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               tags:
                 items:
                   type: string
@@ -44263,6 +44295,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -44446,6 +44480,8 @@ spec:
                   serverURL:
                     maxLength: 512
                     type: string
+                  workspace:
+                    type: string
                 type: object
             type: object
         required:
@@ -44621,6 +44657,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -44801,6 +44839,8 @@ spec:
                   serverURL:
                     maxLength: 512
                     type: string
+                  workspace:
+                    type: string
                 type: object
             type: object
         required:
@@ -44980,6 +45020,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -45178,6 +45220,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -45430,6 +45474,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -45440,11 +45488,15 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
             required:
             - cert
             - controlPlaneRef
             type: object
             x-kubernetes-validations:
+            - message: 'controlPlaneRef.workspace is not supported: data plane client certificates belong to the ControlPlane, not to a Workspace'
+              rule: '!has(self.controlPlaneRef) || !has(self.controlPlaneRef.workspace)'
             - message: KIC is not supported as control plane
               rule: '!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != ''kic'''
           status:
@@ -45509,6 +45561,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -45619,6 +45673,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -45629,6 +45687,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               jwk:
                 type: string
               keySetRef:
@@ -45761,6 +45821,8 @@ spec:
                   serverURL:
                     maxLength: 512
                     type: string
+                  workspace:
+                    type: string
                 type: object
             type: object
         required:
@@ -45868,6 +45930,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -45878,6 +45944,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               name:
                 minLength: 1
                 type: string
@@ -45964,6 +46032,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -46217,6 +46287,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -46227,6 +46301,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               pluginRef:
                 properties:
                   kind:
@@ -46420,6 +46496,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -46854,6 +46932,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -46864,6 +46946,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               destinations:
                 items:
                   properties:
@@ -47035,6 +47119,8 @@ spec:
                     type: string
                   serviceID:
                     type: string
+                  workspace:
+                    type: string
                 type: object
             type: object
         required:
@@ -47184,6 +47270,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -47194,6 +47284,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               enabled:
                 type: boolean
               host:
@@ -47315,6 +47407,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -47501,6 +47595,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -47696,6 +47792,8 @@ spec:
                     maxLength: 512
                     type: string
                   upstreamID:
+                    type: string
+                  workspace:
                     type: string
                 type: object
             type: object
@@ -48175,6 +48273,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -48185,6 +48287,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               hash_fallback:
                 type: string
               hash_fallback_header:
@@ -48448,6 +48552,8 @@ spec:
                   serverURL:
                     maxLength: 512
                     type: string
+                  workspace:
+                    type: string
                 type: object
             type: object
         required:
@@ -48593,6 +48699,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -48603,6 +48713,8 @@ spec:
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               description:
                 type: string
               prefix:
@@ -48689,6 +48801,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
             required:
@@ -64030,14 +64144,22 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
+                - message: workspace is not supported for KonnectCloudGatewayDataPlaneGroupConfiguration
+                  rule: '!has(self.workspace)'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               dataplane_groups:
                 items:
                   properties:
@@ -64241,6 +64363,8 @@ spec:
                 type: string
               serverURL:
                 maxLength: 512
+                type: string
+              workspace:
                 type: string
             type: object
         required:
@@ -65486,16 +65610,24 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
                   rule: self.type != 'konnectID'
+                - message: workspace is not supported for MCPServer
+                  rule: '!has(self.workspace)'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               mirror:
                 properties:
                   konnect:
@@ -65585,6 +65717,8 @@ spec:
                 type: string
               serverURL:
                 maxLength: 512
+                type: string
+              workspace:
                 type: string
             type: object
         type: object
