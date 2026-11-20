@@ -621,6 +621,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build Konnect SDK: %w", err)
 	}
+	// Expose the current SDK (and therefore the current token) to write
+	// observers so they do not keep using a cached SDK after a token rotation.
+	ctx = sdkops.WithSDK(ctx, sdk)
 
 	// If a type has a KonnectCloudGatewayNetwork ref, handle it.
 	res, err = handleKonnectNetworkRef(ctx, r.Client, ent, sdk)
@@ -891,6 +894,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if inputs, ok := any(ent).(createInputsAware); ok {
 		previousHash = inputs.GetCreateInputsHash()
 	}
+	old := ent.DeepCopyObject().(TEnt)
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, r.ConfigVersionTracker)
 	if inputs, ok := any(ent).(createInputsAware); ok &&
 		(previousID != ent.GetKonnectStatus().GetKonnectID() || previousHash != inputs.GetCreateInputsHash()) {
@@ -901,8 +905,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
-	// Update the status of the object regardless of the error.
-	if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
+	// Persist the status only when it changed. The helper also persists
+	// conditions changed by a verified update, which skips the generic
+	// condition/metric block in ops.Update.
+	if _, errUpd := patch.ApplyStatusPatchIfNotEmpty(
+		ctx, r.Client, logger, ent, old, client.MergeFromWithOptimisticLock{},
+	); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return ctrl.Result{Requeue: true}, nil
 		}
