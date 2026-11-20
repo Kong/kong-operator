@@ -66,12 +66,9 @@ spec:
                       in execution order.
                       The same declared order applies on-prem: the operator rebuilds the ordered
                       consume-policy list of the gw-admin configuration from it.
-                      The parent virtual cluster and every policy must be in the same namespace as
-                      this chain.
-                      An omitted or empty namespace defaults to this chain's namespace; an
-                      explicit namespace must be the same, regardless of KongReferenceGrant
-                      permissions.
                       Each policy must belong to the referenced EventGatewayVirtualCluster.
+                      Namespace defaults to this chain's namespace; a policy in another namespace
+                      needs a KongReferenceGrant in its namespace.
                       List every consume policy exactly once, including roots and nested children.
                       A root schemaValidation parent must precede its immediately contiguous
                       children.

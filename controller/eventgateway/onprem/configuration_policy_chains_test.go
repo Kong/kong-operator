@@ -543,41 +543,44 @@ func TestBuildProducePolicyChainOrderValidation(t *testing.T) {
 	}
 }
 
-// TestProducePolicyOrderKeepsReferencesLocal checks the produce chain contract
-// the API declares: unlike the cluster-level chain, its parent and policies
-// are never of another namespace, whatever a KongReferenceGrant allows.
-func TestProducePolicyOrderKeepsReferencesLocal(t *testing.T) {
-	policy := func(name string) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
-		return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
-			Name: name, Namespace: ns,
-			Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
-				APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
-					EventGatewayVirtualClusterProducePolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
-						Type:                      configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate,
-						ModifyHeadersPolicyCreate: &configurationv1alpha1.EventGatewayModifyHeadersPolicyCreate{},
-					},
-				},
-			},
+// TestProducePolicyOrderAcrossNamespaces checks that the order of a produce
+// chain is checked by the namespace and name of its policies, which may be of
+// another namespace than the chain, as its virtual cluster: the
+// KongReferenceGrants allowing it are checked before.
+func TestProducePolicyOrderAcrossNamespaces(t *testing.T) {
+	policy := func(namespace, name string, parent configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
+		p := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{Name: name, Namespace: namespace}
+		p.Spec.APISpec.ParentPolicyRef = parent
+		p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+			Type:                      configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate,
+			ModifyHeadersPolicyCreate: &configurationv1alpha1.EventGatewayModifyHeadersPolicyCreate{},
 		}
+		if parent.Name == "" {
+			p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfig{
+				Type:                          configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy,
+				ProduceSchemaValidationPolicy: &configurationv1alpha1.EventGatewayProduceSchemaValidationPolicy{},
+			}
+		}
+		return p
 	}
 	chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
 		Name: "chain", Namespace: ns,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainSpec{
 			EventGatewayVirtualClusterRef: namespacedRef("vc"),
-			APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainAPISpec{
-				Policies: []configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{
-					{Name: "first", Namespace: "other"},
-				},
-			},
 		},
 	}
-	problem := producePolicyOrder(chain, []policyRef{{name: "first", namespace: "other"}}, []entityWithParent{policy("first")}, nil)
-	require.Contains(t, problem, "not cross-namespace")
-
 	chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
-	chain.Spec.APISpec.Policies[0].Namespace = ""
-	problem = producePolicyOrder(chain, []policyRef{{name: "first"}}, []entityWithParent{policy("first")}, nil)
-	require.Contains(t, problem, "in the same namespace")
+	// Two parents of the same name, and a child of each.
+	parent := policy("other", "validate", configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{})
+	child := policy("other", "child", configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{Name: "validate"})
+	localParent := policy(ns, "validate", configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{})
+	localChild := policy(ns, "child", configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{Name: "validate"})
+
+	require.Empty(t, producePolicyOrder(chain, []entityWithParent{parent, child, localParent, localChild}, nil))
+	require.Contains(t, producePolicyOrder(chain, []entityWithParent{parent, localChild, localParent, child}, nil),
+		"policy child must follow parent validate in its contiguous group")
+	require.Contains(t, producePolicyOrder(chain, []entityWithParent{localParent, child}, nil),
+		"policy other/child parentPolicyRef other/validate must be included")
 }
 
 func TestClusterPolicyOrderValidation(t *testing.T) {

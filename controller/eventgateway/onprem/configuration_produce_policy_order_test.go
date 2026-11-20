@@ -128,8 +128,13 @@ func TestBuildProducePolicyDefaultOrderKeepsGroupsContiguous(t *testing.T) {
 		got = append(got, names[p.Id.String()])
 	}
 	require.Equal(t, []string{"parse", "first", "second", "root"}, got)
-	require.NoError(t, configurationv1alpha1.ValidateProducePolicyChainOrder(got, map[string]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
-		"parse": parse, "first": first, "second": second, "root": root,
+	var order []client.ObjectKey
+	for _, name := range got {
+		order = append(order, client.ObjectKey{Namespace: parse.Namespace, Name: name})
+	}
+	require.NoError(t, configurationv1alpha1.ValidateProducePolicyChainOrder(parse.Namespace, order, map[client.ObjectKey]*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
+		client.ObjectKeyFromObject(parse): parse, client.ObjectKeyFromObject(first): first,
+		client.ObjectKeyFromObject(second): second, client.ObjectKeyFromObject(root): root,
 	}))
 }
 
