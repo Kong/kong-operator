@@ -485,18 +485,33 @@ func TestRevokeCertificatesDeletesOnPremCertificateSecrets(t *testing.T) {
 
 // TestRevokeCertificatesKeepsKonnectCertificateSecrets checks that revoking a
 // data plane of a Konnect gateway only removes its
-// EventGatewayDataPlaneCertificates, not its Secrets.
+// EventGatewayDataPlaneCertificates, not its Secrets: the Secrets are those
+// the deletion of an OnPremEventGateway data plane would match, controlled by
+// the data plane.
 func TestRevokeCertificatesKeepsKonnectCertificateSecrets(t *testing.T) {
 	egdp := newReconcileEGDP()
 	r := &Reconciler{}
+	controller := metav1.OwnerReference{
+		APIVersion: "eventgateway.konghq.com/v1alpha1", Kind: "KegDataPlane",
+		Name: egdp.Name, UID: egdp.UID, Controller: new(true),
+	}
 	automatic := &corev1.Secret{
-		Namespace: egdp.Namespace, Name: "keg-cert", Labels: r.onPremCertificateLabels(egdp),
+		Namespace: egdp.Namespace, Name: "keg-cert",
+		Labels: r.onPremCertificateLabels(egdp), OwnerReferences: []metav1.OwnerReference{controller},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{corev1.TLSCertKey: []byte("cert"), corev1.TLSPrivateKeyKey: []byte("key")},
 	}
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(egdp, automatic).Build()
+	manualCopy := &corev1.Secret{
+		Namespace: egdp.Namespace, Name: "keg-manual-copy",
+		Labels: map[string]string{secretCopyLabel: secretCopyManualCertificate}, OwnerReferences: []metav1.OwnerReference{controller},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{corev1.TLSCertKey: []byte("cert"), corev1.TLSPrivateKeyKey: []byte("key")},
+	}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(egdp, automatic, manualCopy).Build()
 	require.NoError(t, r.revokeCertificates(t.Context(), cl, egdp))
 
-	var kept corev1.Secret
-	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(automatic), &kept))
+	for _, key := range []client.ObjectKey{client.ObjectKeyFromObject(automatic), client.ObjectKeyFromObject(manualCopy)} {
+		var kept corev1.Secret
+		require.NoError(t, cl.Get(t.Context(), key, &kept), key.Name+" stays")
+	}
 }
