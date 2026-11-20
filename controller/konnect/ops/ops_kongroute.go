@@ -19,6 +19,7 @@ func createRoute(
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
+	workspace := route.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: route, Op: CreateOp}
 	}
@@ -27,6 +28,7 @@ func createRoute(
 		routeID := string(route.GetUID())
 		resp, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
 			ControlPlaneID: cpID,
+			Workspace:      workspace,
 			RouteID:        routeID,
 			Route:          kongRouteToSDKRouteInput(route),
 		})
@@ -45,6 +47,7 @@ func createRoute(
 
 	resp, err := sdk.CreateRoute(ctx, sdkkonnectops.CreateRouteRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Route:          kongRouteToSDKRouteInput(route),
 	})
 
@@ -71,6 +74,7 @@ func updateRoute(
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
+	workspace := route.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: route, Op: UpdateOp}
 	}
@@ -78,6 +82,7 @@ func updateRoute(
 	id := route.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		RouteID:        id,
 		Route:          kongRouteToSDKRouteInput(route),
 	})
@@ -100,6 +105,7 @@ func deleteRoute(
 	id := route.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteRoute(ctx, sdkkonnectops.DeleteRouteRequest{
 		ControlPlaneID: route.Status.Konnect.ControlPlaneID,
+		Workspace:      route.GetWorkspace(),
 		RouteID:        id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, route); errWrap != nil {
@@ -118,6 +124,7 @@ func adoptRoute(
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
+	workspace := route.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -128,6 +135,7 @@ func adoptRoute(
 	resp, err := sdk.GetRoute(ctx, sdkkonnectops.GetRouteRequest{
 		RouteID:        konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -250,6 +258,7 @@ func getKongRouteForUID(
 		// Those will be enforced via subsequent updates.
 		Tags:           new(UIDLabelForObject(r)),
 		ControlPlaneID: r.GetControlPlaneID(),
+		Workspace:      r.GetWorkspace(),
 	}
 
 	resp, err := sdk.ListRoute(ctx, reqList)

@@ -181,10 +181,23 @@ spec:
                             - konnectNamespacedRef
                             - kic
                             type: string
+                          workspace:
+                            description: |-
+                              Workspace is the name or ID of the Konnect Workspace, in the referenced
+                              Control Plane, that the entity belongs to.
+                              When unset, the entity belongs to the Control Plane's default Workspace.
+                              The Workspace must already exist in Konnect.
+                              It can only be set when Type is konnectNamespacedRef, and the referenced
+                              Control Plane must support Workspaces.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
                         type: object
                         x-kubernetes-validations:
                         - message: kic type not supported as controlPlaneRef.
                           rule: self.type != 'kic'
+                        - message: workspace is not supported for KonnectExtension
+                          rule: '!has(self.workspace)'
                         - message: when type is konnectNamespacedRef, konnectNamespacedRef
                             must be set
                           rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
@@ -197,6 +210,9 @@ spec:
                             be set
                           rule: '!has(self.type) ? !has(self.konnectNamespacedRef)
                             : true'
+                        - message: workspace can only be set when type is konnectNamespacedRef
+                          rule: '!has(self.workspace) || (has(self.type) && self.type
+                            == ''konnectNamespacedRef'')'
                     required:
                     - ref
                     type: object

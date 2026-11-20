@@ -19,6 +19,7 @@ func createKongCredentialHMAC(
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: CreateOp}
 	}
@@ -26,6 +27,7 @@ func createKongCredentialHMAC(
 	resp, err := sdk.CreateHmacAuthWithConsumer(ctx,
 		sdkkonnectops.CreateHmacAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			HMACAuthWithoutParents:      kongCredentialHMACToHMACWithoutParents(cred),
 		},
@@ -57,6 +59,7 @@ func updateKongCredentialHMAC(
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
@@ -64,6 +67,7 @@ func updateKongCredentialHMAC(
 	_, err := sdk.UpsertHmacAuthWithConsumer(ctx,
 		sdkkonnectops.UpsertHmacAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			HMACAuthID:                  cred.GetKonnectStatus().GetKonnectID(),
 			HMACAuthWithoutParents:      kongCredentialHMACToHMACWithoutParents(cred),
@@ -85,10 +89,12 @@ func deleteKongCredentialHMAC(
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	id := cred.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteHmacAuthWithConsumer(ctx,
 		sdkkonnectops.DeleteHmacAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			HMACAuthID:                  id,
 		})
@@ -105,6 +111,7 @@ func adoptKongCredentialHMAC(
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -120,6 +127,7 @@ func adoptKongCredentialHMAC(
 
 	resp, err := sdk.GetHmacAuthWithConsumer(ctx, sdkkonnectops.GetHmacAuthWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 		HMACAuthID:                  konnectID,
 	})
@@ -188,12 +196,14 @@ func getKongCredentialHMACForUID(
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 
 	req := sdkkonnectops.ListHmacAuthRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cred)),
 	}
 

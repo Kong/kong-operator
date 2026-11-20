@@ -158,6 +158,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, kongPlugin *config
 					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
 						Name: cpNN.Name,
 					},
+					Workspace: cpNN.Workspace,
 				})
 
 			kpbList := kongPluginBindingList.Items
@@ -362,7 +363,7 @@ func deleteUnusedKongPluginBindings(
 	logger logr.Logger,
 	clientWithNamespace client.Client,
 	kongPlugin *configurationv1.KongPlugin,
-	groupedCombinations map[types.NamespacedName][]Rel,
+	groupedCombinations map[ControlPlaneWorkspace][]Rel,
 	kongPluginBindings []configurationv1alpha1.KongPluginBinding,
 ) error {
 	pluginBindingsToDelete := make(map[types.NamespacedName]configurationv1alpha1.KongPluginBinding)
@@ -387,10 +388,11 @@ func deleteUnusedKongPluginBindings(
 		}
 
 		// If a ControlPlane this KongPluginBinding references, is not found, delete it.
-		combinations, ok := groupedCombinations[types.NamespacedName{
+		combinations, ok := groupedCombinations[ControlPlaneWorkspace{
 			// TODO: implement cross namespace references
 			Namespace: pb.Namespace,
 			Name:      cp.Name,
+			Workspace: cpRef.GetWorkspace(),
 		}]
 		if !ok {
 			pluginBindingsToDelete[client.ObjectKeyFromObject(&pb)] = pb

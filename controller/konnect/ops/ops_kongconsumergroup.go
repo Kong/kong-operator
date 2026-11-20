@@ -23,6 +23,7 @@ func createConsumerGroup(
 
 	resp, err := sdk.CreateConsumerGroup(ctx, sdkkonnectops.CreateConsumerGroupRequest{
 		ControlPlaneID: group.Status.Konnect.ControlPlaneID,
+		Workspace:      group.GetWorkspace(),
 		ConsumerGroup:  kongConsumerGroupToSDKConsumerGroupInput(group),
 	})
 
@@ -49,6 +50,7 @@ func updateConsumerGroup(
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	cpID := group.GetControlPlaneID()
+	workspace := group.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: UpdateOp}
 	}
@@ -56,6 +58,7 @@ func updateConsumerGroup(
 	_, err := sdk.UpsertConsumerGroup(ctx,
 		sdkkonnectops.UpsertConsumerGroupRequest{
 			ControlPlaneID:  cpID,
+			Workspace:       workspace,
 			ConsumerGroupID: group.GetKonnectStatus().GetKonnectID(),
 			ConsumerGroup:   kongConsumerGroupToSDKConsumerGroupInput(group),
 		},
@@ -79,6 +82,7 @@ func deleteConsumerGroup(
 	id := consumer.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteConsumerGroup(ctx, sdkkonnectops.DeleteConsumerGroupRequest{
 		ControlPlaneID:  consumer.Status.Konnect.ControlPlaneID,
+		Workspace:       consumer.GetWorkspace(),
 		ConsumerGroupID: id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
@@ -95,12 +99,14 @@ func adoptConsumerGroup(
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
 	cpID := group.GetControlPlaneID()
+	workspace := group.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: AdoptOp}
 	}
 	konnectID := adoptOptions.Konnect.ID
 	req := sdkkonnectops.GetConsumerGroupRequest{
 		ControlPlaneID:  cpID,
+		Workspace:       workspace,
 		ConsumerGroupID: konnectID,
 	}
 	resp, err := sdk.GetConsumerGroup(ctx, req)
@@ -178,12 +184,14 @@ func getKongConsumerGroupForUID(
 	cg *configurationv1beta1.KongConsumerGroup,
 ) (string, error) {
 	cpID := cg.GetControlPlaneID()
+	workspace := cg.GetWorkspace()
 
 	reqList := sdkkonnectops.ListConsumerGroupRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cg)),
 	}
 

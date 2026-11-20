@@ -166,6 +166,17 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    description: |-
+                      Workspace is the name or ID of the Konnect Workspace, in the referenced
+                      Control Plane, that the entity belongs to.
+                      When unset, the entity belongs to the Control Plane's default Workspace.
+                      The Workspace must already exist in Konnect.
+                      It can only be set when Type is konnectNamespacedRef, and the referenced
+                      Control Plane must support Workspaces.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -179,6 +190,8 @@ spec:
                     : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               pluginRef:
                 description: PluginReference is a reference to the KongPlugin or KongClusterPlugin
                   resource.
@@ -475,6 +488,11 @@ spec:
                     description: ServerURL is the URL of the Konnect server in which
                       the entity exists.
                     maxLength: 512
+                    type: string
+                  workspace:
+                    description: |-
+                      Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to.
+                      Empty means the ControlPlane's default Workspace.
                     type: string
                 type: object
             type: object

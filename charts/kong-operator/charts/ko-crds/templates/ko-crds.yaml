@@ -18292,10 +18292,16 @@ spec:
                             - konnectNamespacedRef
                             - kic
                             type: string
+                          workspace:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
                         type: object
                         x-kubernetes-validations:
                         - message: kic type not supported as controlPlaneRef.
                           rule: self.type != 'kic'
+                        - message: workspace is not supported for KonnectExtension
+                          rule: '!has(self.workspace)'
                         - message: when type is konnectNamespacedRef, konnectNamespacedRef
                             must be set
                           rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
@@ -18308,6 +18314,9 @@ spec:
                             be set
                           rule: '!has(self.type) ? !has(self.konnectNamespacedRef)
                             : true'
+                        - message: workspace can only be set when type is konnectNamespacedRef
+                          rule: '!has(self.workspace) || (has(self.type) && self.type
+                            == ''konnectNamespacedRef'')'
                     required:
                     - ref
                     type: object

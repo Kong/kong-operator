@@ -65,7 +65,10 @@ func TestReconcileInvalidClientCertificateCleansOldBindings(t *testing.T) {
 				Labels:          map[string]string{consts.GatewayOperatorManagedByLabel: "gateway"},
 				OwnerReferences: []metav1.OwnerReference{{APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID}},
 				Spec: konnectv1alpha2.KonnectExtensionSpec{Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
-					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{Ref: commonv1alpha1.KonnectExtensionControlPlaneRef(cpRef)},
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type:                 cpRef.Type,
+						KonnectNamespacedRef: cpRef.KonnectNamespacedRef,
+					}},
 				}},
 			}
 			backend := &corev1.Service{

@@ -4,6 +4,15 @@ import (
 	"fmt"
 )
 
+// GetWorkspace returns the Konnect Workspace set on the ControlPlaneRef,
+// or an empty string for the Control Plane's default Workspace.
+func (r *ControlPlaneRef) GetWorkspace() string {
+	if r == nil {
+		return ""
+	}
+	return r.Workspace
+}
+
 // String returns the string representation of the ControlPlaneRef.
 func (r *ControlPlaneRef) String() string {
 	if r == nil {

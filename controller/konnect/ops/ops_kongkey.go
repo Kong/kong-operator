@@ -21,12 +21,14 @@ func createKey(
 	key *configurationv1alpha1.KongKey,
 ) error {
 	cpID := key.GetControlPlaneID()
+	workspace := key.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: key, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateKey(ctx, sdkkonnectops.CreateKeyRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Key:            kongKeyToKeyInput(key),
 	})
 
@@ -55,6 +57,7 @@ func updateKey(
 	key *configurationv1alpha1.KongKey,
 ) error {
 	cpID := key.GetControlPlaneID()
+	workspace := key.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: key, Op: UpdateOp}
 	}
@@ -62,6 +65,7 @@ func updateKey(
 	_, err := sdk.UpsertKey(ctx,
 		sdkkonnectops.UpsertKeyRequest{
 			ControlPlaneID: cpID,
+			Workspace:      workspace,
 			KeyID:          key.GetKonnectStatus().GetKonnectID(),
 			Key:            kongKeyToKeyInput(key),
 		},
@@ -85,6 +89,7 @@ func deleteKey(
 	id := key.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteKey(ctx, sdkkonnectops.DeleteKeyRequest{
 		ControlPlaneID: key.GetControlPlaneID(),
+		Workspace:      key.GetWorkspace(),
 		KeyID:          id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, key); errWrap != nil {
@@ -100,6 +105,7 @@ func adoptKey(
 	key *configurationv1alpha1.KongKey,
 ) error {
 	cpID := key.GetControlPlaneID()
+	workspace := key.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -110,6 +116,7 @@ func adoptKey(
 	resp, err := sdk.GetKey(ctx, sdkkonnectops.GetKeyRequest{
 		KeyID:          konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -198,6 +205,7 @@ func getKongKeyForUID(
 ) (string, error) {
 	resp, err := sdk.ListKey(ctx, sdkkonnectops.ListKeyRequest{
 		ControlPlaneID: key.GetControlPlaneID(),
+		Workspace:      key.GetWorkspace(),
 		Tags:           new(UIDLabelForObject(key)),
 	})
 	if err != nil {

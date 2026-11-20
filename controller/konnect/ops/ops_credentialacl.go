@@ -19,6 +19,7 @@ func createKongCredentialACL(
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: CreateOp}
 	}
@@ -26,6 +27,7 @@ func createKongCredentialACL(
 	resp, err := sdk.CreateACLWithConsumer(ctx,
 		sdkkonnectops.CreateACLWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			ACLWithoutParents:           kongCredentialACLToACLWithoutParents(cred),
 		},
@@ -57,6 +59,7 @@ func updateKongCredentialACL(
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
@@ -64,6 +67,7 @@ func updateKongCredentialACL(
 	_, err := sdk.UpsertACLWithConsumer(ctx,
 		sdkkonnectops.UpsertACLWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			ACLID:                       cred.GetKonnectStatus().GetKonnectID(),
 			ACLWithoutParents:           kongCredentialACLToACLWithoutParents(cred),
@@ -88,10 +92,12 @@ func deleteKongCredentialACL(
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	id := cred.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteACLWithConsumer(ctx,
 		sdkkonnectops.DeleteACLWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			ACLID:                       id,
 		})
@@ -108,6 +114,7 @@ func adoptKongCredentialACL(
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -123,6 +130,7 @@ func adoptKongCredentialACL(
 
 	resp, err := sdk.GetACLWithConsumer(ctx, sdkkonnectops.GetACLWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 		ACLID:                       konnectID,
 	})
@@ -186,12 +194,14 @@ func getKongCredentialACLForUID(
 	cred *configurationv1alpha1.KongCredentialACL,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 
 	req := sdkkonnectops.ListACLRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cred)),
 	}
 

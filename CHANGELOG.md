@@ -83,6 +83,15 @@
   accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
   a parent of another namespace is matched by namespace and name.
   [#6746](https://github.com/Kong/kong-operator/pull/6746)
+- Konnect entities can now be placed in a Konnect Workspace with
+  `spec.controlPlaneRef.workspace` (name or ID). Child entities, such as a
+  `KongRoute` with a `serviceRef` or credentials of a `KongConsumer`, inherit the
+  Workspace of their parent, and so do `KongPluginBinding`s generated from
+  `konghq.com/plugins` annotations. Entities without the field stay in the default
+  Workspace. The field is rejected on `KongCACertificate` and
+  `KongDataPlaneClientCertificate`, which belong to the Control Plane, and on
+  Control Planes that don't support Workspaces.
+  [#6756](https://github.com/Kong/kong-operator/pull/6756)
 
 ### Fixes
 

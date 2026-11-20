@@ -32,12 +32,14 @@ func createConsumer(
 	consumer *configurationv1.KongConsumer,
 ) error {
 	cpID := consumer.GetControlPlaneID()
+	workspace := consumer.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: CreateOp}
 	}
 
 	resp, err := sdk.CreateConsumer(ctx, sdkkonnectops.CreateConsumerRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Consumer:       kongConsumerToSDKConsumerInput(consumer),
 	})
 
@@ -75,6 +77,7 @@ func updateConsumer(
 	consumer *configurationv1.KongConsumer,
 ) error {
 	cpID := consumer.GetControlPlaneID()
+	workspace := consumer.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: UpdateOp}
 	}
@@ -83,6 +86,7 @@ func updateConsumer(
 	_, err := sdk.UpsertConsumer(ctx,
 		sdkkonnectops.UpsertConsumerRequest{
 			ControlPlaneID: cpID,
+			Workspace:      workspace,
 			ConsumerID:     id,
 			Consumer:       kongConsumerToSDKConsumerInput(consumer),
 		},
@@ -165,6 +169,7 @@ func reconcileConsumerGroupsWithKonnect(
 	// List the ConsumerGroups that the Consumer is assigned to in Konnect.
 	cgsResp, err := sdk.ListConsumerGroupsForConsumer(ctx, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 		ControlPlaneID: cpID,
+		Workspace:      consumer.GetWorkspace(),
 		ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
 	})
 	if err != nil {
@@ -193,6 +198,7 @@ func reconcileConsumerGroupsWithKonnect(
 		)
 		_, err := cgSDK.AddConsumerToGroup(ctx, sdkkonnectops.AddConsumerToGroupRequest{
 			ControlPlaneID:  cpID,
+			Workspace:       consumer.GetWorkspace(),
 			ConsumerGroupID: cgID,
 			RequestBody: &sdkkonnectops.AddConsumerToGroupRequestBody{
 				ConsumerID: new(consumer.GetKonnectStatus().GetKonnectID()),
@@ -210,6 +216,7 @@ func reconcileConsumerGroupsWithKonnect(
 		)
 		_, err := cgSDK.RemoveConsumerFromGroup(ctx, sdkkonnectops.RemoveConsumerFromGroupRequest{
 			ControlPlaneID:  cpID,
+			Workspace:       consumer.GetWorkspace(),
 			ConsumerGroupID: cgID,
 			ConsumerID:      consumer.GetKonnectStatus().GetKonnectID(),
 		})
@@ -307,6 +314,7 @@ func deleteConsumer(
 	id := consumer.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteConsumer(ctx, sdkkonnectops.DeleteConsumerRequest{
 		ControlPlaneID: consumer.Status.Konnect.ControlPlaneID,
+		Workspace:      consumer.GetWorkspace(),
 		ConsumerID:     id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
@@ -325,6 +333,7 @@ func adoptConsumer(
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
 	cpID := consumer.GetControlPlaneID()
+	workspace := consumer.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: AdoptOp}
 	}
@@ -332,6 +341,7 @@ func adoptConsumer(
 	resp, err := sdk.GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{
 		ConsumerID:     konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -410,6 +420,7 @@ func ensureConsumerMatch(
 
 	resp, err := sdk.ListConsumerGroupsForConsumer(ctx, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 		ControlPlaneID: cpID,
+		Workspace:      consumer.GetWorkspace(),
 		ConsumerID:     konnectID,
 	})
 	if err != nil {
@@ -450,11 +461,13 @@ func getKongConsumerForUID(
 	consumer *configurationv1.KongConsumer,
 ) (string, error) {
 	cpID := consumer.GetControlPlaneID()
+	workspace := consumer.GetWorkspace()
 	reqList := sdkkonnectops.ListConsumerRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(consumer)),
 	}
 

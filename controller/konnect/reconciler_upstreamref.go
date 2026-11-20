@@ -187,6 +187,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
 		resource.SetControlPlaneID(cp.Status.ID)
+		setWorkspace(ent, cpRef)
 	}
 
 	cpValidMsg := fmt.Sprintf("Referenced ControlPlane %s is programmed", nn)

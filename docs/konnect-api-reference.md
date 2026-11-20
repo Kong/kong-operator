@@ -947,6 +947,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state 
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `dataplane_groups` _[][KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatusgroup)_ | DataPlaneGroups is a list of deployed data-plane groups. |
 
 _Appears in:_
@@ -1724,6 +1725,7 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `konnectSpec` _[MCPServerKonnectSpec](#konnect-konghq-com-v1alpha1-types-mcpserverkonnectspec)_ | KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version. |
 
 _Appears in:_
@@ -2914,6 +2916,7 @@ with a reference to a ControlPlane.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 
 _Appears in:_
 

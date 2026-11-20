@@ -36,6 +36,7 @@ func createPlugin(
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	controlPlaneID := pluginBinding.GetControlPlaneID()
+	workspace := pluginBinding.GetWorkspace()
 	if controlPlaneID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: pluginBinding, Op: CreateOp}
 	}
@@ -46,6 +47,7 @@ func createPlugin(
 
 	resp, err := sdk.CreatePlugin(ctx, sdkkonnectops.CreatePluginRequest{
 		ControlPlaneID: controlPlaneID,
+		Workspace:      workspace,
 		Plugin:         *pluginInput,
 	})
 
@@ -73,6 +75,7 @@ func updatePlugin(
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	controlPlaneID := pluginBinding.GetControlPlaneID()
+	workspace := pluginBinding.GetWorkspace()
 	if controlPlaneID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: pluginBinding, Op: UpdateOp}
 	}
@@ -86,6 +89,7 @@ func updatePlugin(
 	_, err = sdk.UpsertPlugin(ctx,
 		sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: controlPlaneID,
+			Workspace:      workspace,
 			PluginID:       id,
 			Plugin:         *pluginInput,
 		},
@@ -109,6 +113,7 @@ func deletePlugin(
 	id := pb.GetKonnectID()
 	_, err := sdk.DeletePlugin(ctx, sdkkonnectops.DeletePluginRequest{
 		ControlPlaneID: pb.GetControlPlaneID(),
+		Workspace:      pb.GetWorkspace(),
 		PluginID:       id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, pb); errWrap != nil {
@@ -125,11 +130,13 @@ func getPluginForUID(
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) (string, error) {
 	cpID := pluginBinding.GetControlPlaneID()
+	workspace := pluginBinding.GetWorkspace()
 	reqList := sdkkonnectops.ListPluginRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(pluginBinding)),
 	}
 	resp, err := sdk.ListPlugin(ctx, reqList)
@@ -150,6 +157,7 @@ func adoptPluginBinding(
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	cpID := pluginBinding.GetControlPlaneID()
+	workspace := pluginBinding.GetWorkspace()
 	adoptOptions := pluginBinding.Spec.Adopt
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
@@ -162,6 +170,7 @@ func adoptPluginBinding(
 	resp, err := sdk.GetPlugin(ctx, sdkkonnectops.GetPluginRequest{
 		PluginID:       konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
