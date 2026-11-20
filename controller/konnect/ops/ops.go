@@ -353,6 +353,18 @@ func getKonnectIDForUID[
 	}
 }
 
+// controlPlaneRefRejectedWithoutID reports whether the entity has no ControlPlane ID
+// because its ControlPlaneRef was rejected (ControlPlaneRefValid=False with reason
+// Invalid).
+func controlPlaneRefRejectedWithoutID(ent k8sutils.ConditionsAware) bool {
+	cpEnt, ok := ent.(interface{ GetControlPlaneID() string })
+	if !ok || cpEnt.GetControlPlaneID() != "" {
+		return false
+	}
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.ControlPlaneRefValidConditionType, ent)
+	return ok && cond.Status == metav1.ConditionFalse && cond.Reason == konnectv1alpha1.ControlPlaneRefReasonInvalid
+}
+
 // Delete deletes a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
@@ -360,6 +372,17 @@ func Delete[
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
 	if ent.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(ent) {
+		// An entity whose ControlPlaneRef was rejected (for example one that
+		// references a Control Plane Group) never gets a ControlPlane ID, so it
+		// can't have been created in Konnect: creation requires that ID. There is
+		// nothing to clean up, and probing Konnect without an ID would fail
+		// forever. An empty ControlPlane ID alone proves nothing: a KongRoute gets
+		// its ControlPlane ID from its KongService after the last status patch, so
+		// the UID probe must still run for it.
+		if controlPlaneRefRejectedWithoutID(ent) {
+			return nil
+		}
+
 		// The Konnect ID was never persisted to the status. This can happen if the
 		// operator created the entity in Konnect but was interrupted before writing
 		// the ID to the status (and the in-memory record was lost, e.g. on restart).
