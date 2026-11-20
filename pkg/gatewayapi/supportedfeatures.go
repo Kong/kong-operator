@@ -28,6 +28,8 @@ var commonSupportedFeatures = []features.FeatureName{
 	features.SupportGRPCRoute,
 	features.SupportUDPRoute,
 	features.SupportReferenceGrant,
+	// BackendTLSPolicy v1 is implemented by the embedded ingress controller.
+	features.SupportBackendTLSPolicy,
 
 	// Gateway extended.
 	features.SupportGatewayAddressEmpty,
