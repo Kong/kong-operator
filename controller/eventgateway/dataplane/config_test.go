@@ -22,7 +22,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
@@ -432,4 +435,68 @@ func TestCheckKonnectEventGatewayEndpointsUnexpectedObject(t *testing.T) {
 		&konnectv1alpha1.KonnectEventGateway{},
 	)
 	require.ErrorContains(t, err, "unexpected DataPlane object")
+}
+
+// TestRevokeCertificatesDeletesOnPremCertificateSecrets checks that revoking
+// a data plane of an OnPremEventGateway deletes the certificate material the
+// operator created: the Automatic client certificate Secrets it issued, its
+// copies of the Manual ones, and its EventGatewayDataPlaneCertificates. A
+// Secret it didn't create stays, as the KegDataPlane of a Konnect gateway
+// keeps its Secrets: only an EventGatewayDataPlaneCertificate is removed.
+func TestRevokeCertificatesDeletesOnPremCertificateSecrets(t *testing.T) {
+	egdp := newOnPremEGDP()
+	r := &Reconciler{}
+	controller := metav1.OwnerReference{
+		APIVersion: "eventgateway.konghq.com/v1alpha1", Kind: "KegDataPlane",
+		Name: egdp.Name, UID: egdp.UID, Controller: new(true),
+	}
+	automatic := &corev1.Secret{
+		Namespace: egdp.Namespace, Name: "keg-dp-cert",
+		Labels: r.onPremCertificateLabels(egdp), OwnerReferences: []metav1.OwnerReference{controller},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{corev1.TLSCertKey: []byte("cert"), corev1.TLSPrivateKeyKey: []byte("key")},
+	}
+	manualCopy := &corev1.Secret{
+		Namespace: egdp.Namespace, Name: "keg-dp-manual-copy",
+		Labels: map[string]string{secretCopyLabel: secretCopyManualCertificate}, OwnerReferences: []metav1.OwnerReference{controller},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{corev1.TLSCertKey: []byte("cert"), corev1.TLSPrivateKeyKey: []byte("key")},
+	}
+	unrelated := &corev1.Secret{Namespace: egdp.Namespace, Name: "unrelated"}
+	certificate := &configurationv1alpha1.EventGatewayDataPlaneCertificate{
+		Namespace: egdp.Namespace, Name: "keg-cert", OwnerReferences: []metav1.OwnerReference{controller},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).
+		WithObjects(egdp, automatic, manualCopy, unrelated, certificate).Build()
+	require.NoError(t, r.revokeCertificates(t.Context(), cl, egdp))
+
+	for _, key := range []client.ObjectKey{
+		client.ObjectKeyFromObject(automatic), client.ObjectKeyFromObject(manualCopy),
+	} {
+		var s corev1.Secret
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), key, &s)), key.Name+" is deleted")
+	}
+	var gone configurationv1alpha1.EventGatewayDataPlaneCertificate
+	assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(certificate), &gone)))
+	var kept corev1.Secret
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(unrelated), &kept), "a Secret the operator didn't create stays")
+}
+
+// TestRevokeCertificatesKeepsKonnectCertificateSecrets checks that revoking a
+// data plane of a Konnect gateway only removes its
+// EventGatewayDataPlaneCertificates, not its Secrets.
+func TestRevokeCertificatesKeepsKonnectCertificateSecrets(t *testing.T) {
+	egdp := newReconcileEGDP()
+	r := &Reconciler{}
+	automatic := &corev1.Secret{
+		Namespace: egdp.Namespace, Name: "keg-cert", Labels: r.onPremCertificateLabels(egdp),
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{corev1.TLSCertKey: []byte("cert"), corev1.TLSPrivateKeyKey: []byte("key")},
+	}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(egdp, automatic).Build()
+	require.NoError(t, r.revokeCertificates(t.Context(), cl, egdp))
+
+	var kept corev1.Secret
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(automatic), &kept))
 }
