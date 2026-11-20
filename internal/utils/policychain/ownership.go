@@ -116,15 +116,6 @@ func ParseClaim(claim, parentNamespace string) (client.ObjectKey, string, bool) 
 	}
 }
 
-// NameIn returns how a message about an object of namespace names the object
-// of key: its name, or namespace/name for an object of another namespace.
-func NameIn(key client.ObjectKey, namespace string) string {
-	if key.Namespace == namespace {
-		return key.Name
-	}
-	return key.String()
-}
-
 // Holder returns the chain holding a claim on the parent of parentKey, read
 // into owner, a chain of the kind of the claimant, or nil when the claim is
 // stale, and replaceable: malformed, or the chain it names no longer exists,
@@ -193,7 +184,7 @@ func Claim(ctx context.Context, cl client.Client, chain Chain) (string, error) {
 			return "", err
 		}
 		if holder != nil {
-			return NameIn(client.ObjectKeyFromObject(holder), key.Namespace), nil
+			return configurationv1alpha1.NameIn(client.ObjectKeyFromObject(holder), key.Namespace), nil
 		}
 	}
 	if owner != claim {

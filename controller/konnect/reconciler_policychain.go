@@ -152,7 +152,7 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain policyChain, 
 		res, err := patch.StatusWithCondition(ctx, cl, chain,
 			apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionFalse,
 			apiconsts.ConditionReason("ConflictingChain"),
-			fmt.Sprintf("%s %s is owned by policy chain %s; delete that chain before claiming it", parentKind, policychain.NameIn(parentKey, chain.GetNamespace()), owner))
+			fmt.Sprintf("%s %s is owned by policy chain %s; delete that chain before claiming it", parentKind, configurationv1alpha1.NameIn(parentKey, chain.GetNamespace()), owner))
 		if err != nil || !res.IsZero() {
 			return false, res, err
 		}
