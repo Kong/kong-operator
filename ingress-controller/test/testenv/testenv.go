@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -86,10 +88,41 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
-// KongEnterpriseImageUsed reports whether the Kong Gateway image configured for
-// this test run (via TEST_KONG_IMAGE) is a Kong Enterprise image.
-func KongEnterpriseImageUsed() bool {
-	return KongImage() == "kong/kong-gateway"
+// KongEnterpriseEnabled reports whether Kong Enterprise is used in this test run.
+// TEST_KONG_ENTERPRISE (see KongEnterpriseOverride) takes precedence when set. Otherwise,
+// it's inferred from TEST_KONG_IMAGE: kong/kong-gateway or one of its variants
+// (e.g. kong/kong-gateway-dev), optionally prefixed with a registry, is Kong Enterprise.
+func KongEnterpriseEnabled() bool {
+	if enabled, ok := KongEnterpriseOverride(); ok {
+		return enabled
+	}
+	return isKongEnterpriseImage(KongImage())
+}
+
+// KongEnterpriseOverride returns the value of TEST_KONG_ENTERPRISE and whether it is set.
+// It allows forcing Kong Enterprise on ("true") or off ("false") for custom images whose
+// name doesn't reveal the edition. It panics when the value can't be parsed as a boolean.
+func KongEnterpriseOverride() (enabled bool, set bool) {
+	v := os.Getenv("TEST_KONG_ENTERPRISE")
+	if v == "" {
+		return false, false
+	}
+	enabled, err := strconv.ParseBool(v)
+	if err != nil {
+		panic(fmt.Sprintf("invalid TEST_KONG_ENTERPRISE value %q: %v", v, err))
+	}
+	return enabled, true
+}
+
+// isKongEnterpriseImage reports whether the given image repository (without a tag)
+// is kong/kong-gateway or one of its variants (e.g. kong/kong-gateway-dev),
+// optionally prefixed with a registry host (e.g. docker.io/kong/kong-gateway).
+func isKongEnterpriseImage(image string) bool {
+	// Strip an optional registry host (e.g. docker.io/, localhost:5000/).
+	if host, rest, ok := strings.Cut(image, "/"); ok && (strings.ContainsAny(host, ".:") || host == "localhost") {
+		image = rest
+	}
+	return image == "kong/kong-gateway" || strings.HasPrefix(image, "kong/kong-gateway-")
 }
 
 // KongImageTag is the combined Kong image and tag if both are set, or empty string if not.

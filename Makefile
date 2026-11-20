@@ -676,7 +676,7 @@ test: test.unit
 
 UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
 	./test/mocks/sdkmocks ./test/e2e/chainsaw/fixtures ./scripts/apitypes-funcs ./hack/generators/validating-policy \
-	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
+	./ingress-controller/test/helpers ./ingress-controller/test/testenv ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit
