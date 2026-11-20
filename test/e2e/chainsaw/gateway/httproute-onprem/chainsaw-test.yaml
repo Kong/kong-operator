@@ -1,0 +1,112 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-onprem
+spec:
+  description: |
+    Validates that an operator-managed on-prem Gateway supports HTTPRoute by:
+    1. Creating a GatewayConfiguration and GatewayClass for on-prem mode.
+    2. Creating an HTTP Gateway listener whose SupportedKinds includes HTTPRoute.
+    3. Attaching an HTTPRoute to that listener and verifying AttachedRoutes increments.
+    4. Verifying end-to-end HTTP traffic to an echo backend.
+    5. Deleting the HTTPRoute and verifying AttachedRoutes decrements.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: http_route_name
+      value: httproute-onprem
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: host_header
+      value: ""
+
+  steps:
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-echo-backend
+      description: Create the echo Deployment and Service backend.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+
+    - name: Create-gateway
+      description: Create an operator-managed HTTP Gateway and verify it is programmed.
+      # The default 300s is not enough when four DataPlane proxy pods start at
+      # once on a slow CI node: the Kong pod alone then takes over 5 minutes.
+      timeouts:
+        assert: 15m
+      try:
+        - apply:
+            file: 02-gateway.yaml
+        - assert:
+            file: 02-assert-gateway-without-httproute.yaml
+
+    - name: Create-httproute
+      description: Create an HTTPRoute attached to the Gateway.
+      try:
+        - apply:
+            file: 03-httproute.yaml
+        - assert:
+            file: 03-assert-gateway-with-httproute.yaml
+        - assert:
+            file: 03-assert-httproute.yaml
+
+    - name: Verify-http-traffic
+      description: Verify end-to-end HTTP traffic through the Gateway.
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: /echo
+        - name: http_method
+          value: GET
+        - name: listener_http_port
+          value: "80"
+
+    - name: Delete-httproute
+      description: Delete the HTTPRoute and verify the Gateway listener detaches it.
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
+        - assert:
+            file: 02-assert-gateway-without-httproute.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-httproute-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
