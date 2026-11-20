@@ -84,6 +84,16 @@
   a parent of another namespace is matched by namespace and name.
   [#6746](https://github.com/Kong/kong-operator/pull/6746)
 
+### Changed
+
+- Konnect: Kong Gateway entities are no longer PUT to Konnect on every sync
+  period. The operator sends a PUT only when the entity's desired state changes
+  in Kubernetes, including referenced objects such as KongPlugins and Secrets.
+  Otherwise it polls the control plane's expected config version once per sync
+  period. When the version changes because of a write the operator didn't make,
+  it GETs each entity and sends a PUT only if the entity drifted.
+  [#6741](https://github.com/Kong/kong-operator/pull/6741)
+
 ### Fixes
 
 - The operator now creates the configured cluster CA `Secret` before the

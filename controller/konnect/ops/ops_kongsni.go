@@ -52,6 +52,7 @@ func createSNI(
 func updateSNI(
 	ctx context.Context,
 	sdk sdkkonnectgo.SNIsSDK,
+	g *syncGuard,
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
@@ -62,13 +63,28 @@ func updateSNI(
 		return fmt.Errorf("can't update %T %s without a Konnect Certificate ID", sni, client.ObjectKeyFromObject(sni))
 	}
 	id := sni.GetKonnectID()
+	certID := sni.Status.Konnect.CertificateID
 
-	_, err := sdk.UpsertSniWithCertificate(ctx, sdkkonnectops.UpsertSniWithCertificateRequest{
+	req := sdkkonnectops.UpsertSniWithCertificateRequest{
 		ControlPlaneID:    cpID,
-		CertificateID:     sni.Status.Konnect.CertificateID,
+		CertificateID:     certID,
 		SNIID:             id,
 		SNIWithoutParents: kongSNIToSNIWithoutParents(sni),
-	})
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Sni, error) {
+			resp, err := sdk.GetSniWithCertificate(ctx, sdkkonnectops.GetSniWithCertificateRequest{
+				ControlPlaneID: cpID,
+				CertificateID:  certID,
+				SNIID:          id,
+			})
+			return resp.GetSni(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Sni, error) {
+			resp, err := sdk.UpsertSniWithCertificate(ctx, req)
+			return resp.GetSni(), err
+		},
+	)
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -172,7 +188,7 @@ func adoptSNI(
 	case commonv1alpha1.AdoptModeOverride:
 		sniCopy := sni.DeepCopy()
 		sniCopy.SetKonnectID(konnectID)
-		if err = updateSNI(ctx, sdk, sniCopy); err != nil {
+		if err = updateSNI(ctx, sdk, nil, sniCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
