@@ -9,6 +9,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	hashcompat "github.com/kong/kong-operator/v2/controller/hybridgateway/namegen/internal/hashcompat/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -131,6 +132,21 @@ func serviceLikeName[T gwtypes.SupportedBackendRef](protocolPrefix, namespace st
 	return newNameWithHashSuffix(readableElements, hashElements)
 }
 
+// controlPlaneRefForHash returns the value a ControlPlaneRef is hashed from in
+// generated names. It keeps only the fields the type had when the names were
+// introduced, so adding fields to ControlPlaneRef doesn't change existing names.
+// Hybrid gateway doesn't set a Konnect Workspace on the ControlPlaneRefs it
+// builds, so the Workspace is not part of the hash.
+func controlPlaneRefForHash(cp *commonv1alpha1.ControlPlaneRef) *hashcompat.ControlPlaneRef {
+	if cp == nil {
+		return nil
+	}
+	return &hashcompat.ControlPlaneRef{
+		Type:                 cp.Type,
+		KonnectNamespacedRef: cp.KonnectNamespacedRef,
+	}
+}
+
 // NewKongUpstreamNameForHTTPRouteRule generates a KongUpstream name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
 func NewKongUpstreamNameForHTTPRouteRule(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
 	return serviceLikeName(httpProtocolPrefix, route.Namespace, rule.BackendRefs, hashElementsForServiceLikeName(route, cp, rule))
@@ -174,7 +190,7 @@ func NewKongServiceNameForHTTPRouteRuleBackendNotFound(
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
 	hashElements := []string{
-		defaultCPPrefix + utils.Hash32(cp),
+		defaultCPPrefix + utils.Hash32(controlPlaneRefForHash(cp)),
 		backendNotFoundPrefix + utils.Hash32(struct {
 			Namespace string
 			Name      string
@@ -206,7 +222,7 @@ func NewKongServiceNameForGRPCRouteRuleBackendNotFound(
 		backendRefDisplayNames(route.Namespace, rule.BackendRefs)...,
 	)
 	hashElements := []string{
-		defaultCPPrefix + utils.Hash32(cp),
+		defaultCPPrefix + utils.Hash32(controlPlaneRefForHash(cp)),
 		backendNotFoundPrefix + utils.Hash32(struct {
 			Namespace string
 			Name      string
@@ -241,7 +257,7 @@ func hashElementsForServiceLikeName(
 ) []string {
 	hash := hashForHTTPRouteRuleServiceLikeName(route, rule)
 	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
+		defaultCPPrefix + utils.Hash32(controlPlaneRefForHash(cp)),
 		hash,
 	}
 }
@@ -290,7 +306,7 @@ func hashElementsForServiceLikeNameGRPCRouteRule(
 ) []string {
 	hash := hashForGRPCRouteRuleServiceLikeName(route, rule)
 	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
+		defaultCPPrefix + utils.Hash32(controlPlaneRefForHash(cp)),
 		hash,
 	}
 }
@@ -326,7 +342,7 @@ func hashElementsForServiceLikeNameSimple[T gwtypes.SupportedBackendRef](
 	backendRefs []T,
 ) []string {
 	return []string{
-		defaultCPPrefix + utils.Hash32(cp),
+		defaultCPPrefix + utils.Hash32(controlPlaneRefForHash(cp)),
 		utils.Hash32(backendRefs),
 	}
 }
@@ -344,7 +360,7 @@ func kongRouteName(
 		protocolPrefix,
 		namespace + "-" + name,
 	}
-	hashElements := []string{defaultCPPrefix + utils.Hash32(cp)}
+	hashElements := []string{defaultCPPrefix + utils.Hash32(controlPlaneRefForHash(cp))}
 	if parentRef != nil {
 		hashElements = append(hashElements, parentRefHashElement(parentRef))
 	}
