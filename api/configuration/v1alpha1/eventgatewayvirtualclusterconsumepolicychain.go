@@ -23,16 +23,18 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 		return nil, PolicyChainInvalidError{Message: "spec.apiSpec.policies must be supplied explicitly"}
 	}
 	parent := obj.Spec.EventGatewayVirtualClusterRef
+	// The virtual cluster and the policies may be in other namespaces: the
+	// KongReferenceGrants allowing it are checked before this is called.
 	if parent.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || parent.NamespacedRef == nil ||
-		parent.NamespacedRef.Name == "" ||
-		(parent.NamespacedRef.Namespace != nil && *parent.NamespacedRef.Namespace != "" && *parent.NamespacedRef.Namespace != obj.Namespace) {
-		return nil, PolicyChainInvalidError{Message: "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"}
+		parent.NamespacedRef.Name == "" {
+		return nil, PolicyChainInvalidError{Message: "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster"}
 	}
 
 	var errs []error
 	ids := make([]string, 0, len(obj.Spec.APISpec.Policies))
-	policies := make(map[string]*EventGatewayVirtualClusterConsumePolicy, len(obj.Spec.APISpec.Policies))
-	seenNames := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
+	policies := make(map[client.ObjectKey]*EventGatewayVirtualClusterConsumePolicy, len(obj.Spec.APISpec.Policies))
+	order := make([]client.ObjectKey, 0, len(obj.Spec.APISpec.Policies))
+	seen := make(map[client.ObjectKey]struct{}, len(obj.Spec.APISpec.Policies))
 	seenIDs := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
 	organizationID := obj.GetKonnectStatus().GetOrgID()
 	for i, ref := range obj.Spec.APISpec.Policies {
@@ -45,17 +47,15 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 		if ns == "" {
 			ns = obj.Namespace
 		}
-		if ns != obj.Namespace {
-			errs = append(errs, commonv1alpha1.ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.Namespace})
-			continue
-		}
-		if _, duplicate := seenNames[ref.Name]; duplicate {
+		key := client.ObjectKey{Namespace: ns, Name: ref.Name}
+		if _, duplicate := seen[key]; duplicate {
 			errs = append(errs, PolicyChainInvalidError{Message: fmt.Sprintf("spec.apiSpec.policies[%d] duplicates policy %s/%s", i, ns, ref.Name)})
 			continue
 		}
-		seenNames[ref.Name] = struct{}{}
+		seen[key] = struct{}{}
+		order = append(order, key)
 		var policy EventGatewayVirtualClusterConsumePolicy
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &policy); err != nil {
+		if err := cl.Get(ctx, key, &policy); err != nil {
 			if apierrors.IsNotFound(err) {
 				errs = append(errs, commonv1alpha1.ReferenceNotFoundError{Kind: kind, Namespace: ns, Name: ref.Name, Err: err})
 			} else {
@@ -81,33 +81,31 @@ func (obj *EventGatewayVirtualClusterConsumePolicyChain) ResolveValidatedPolicyI
 			continue
 		}
 		seenIDs[policy.GetKonnectID()] = struct{}{}
-		policies[ref.Name] = &policy
+		policies[key] = &policy
 		ids = append(ids, policy.GetKonnectID())
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	order := make([]string, 0, len(obj.Spec.APISpec.Policies))
-	for _, ref := range obj.Spec.APISpec.Policies {
-		order = append(order, ref.Name)
-	}
-	if err := ValidateConsumePolicyChainOrder(order, policies); err != nil {
+	if err := ValidateConsumePolicyChainOrder(obj.Namespace, order, policies); err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // ValidateConsumePolicyChainOrder checks the complete root/child order shared
-// by Konnect and the on-prem document, without consulting backend status.
-// Each root schemaValidation group is contiguous and precedes its children.
-func ValidateConsumePolicyChainOrder(order []string, policies map[string]*EventGatewayVirtualClusterConsumePolicy) error {
-	currentRoot := ""
-	for _, name := range order {
-		policy := policies[name]
+// by Konnect and the on-prem document, without consulting backend status, of
+// a chain of namespace: policies are the objects the keys of order name, all
+// of them, of any namespace. Each root schemaValidation group is contiguous
+// and precedes its children.
+func ValidateConsumePolicyChainOrder(namespace string, order []client.ObjectKey, policies map[client.ObjectKey]*EventGatewayVirtualClusterConsumePolicy) error {
+	var currentRoot client.ObjectKey
+	for _, key := range order {
+		policy := policies[key]
 		if policy == nil {
-			return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s is missing from the complete consume policy set", name)}
+			return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s is missing from the complete consume policy set", NameIn(key, namespace))}
 		}
-		if err := validateConsumePolicyChainConfig(policy); err != nil {
+		if err := validateConsumePolicyChainConfig(NameIn(key, namespace), policy); err != nil {
 			return err
 		}
 		parentRef := policy.Spec.APISpec.ParentPolicyRef
@@ -116,19 +114,19 @@ func ValidateConsumePolicyChainOrder(order []string, policies map[string]*EventG
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate
 			if parentRef.Kind != "" || parentRef.Namespace != "" || required {
-				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policy.Name)}
+				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", NameIn(key, namespace))}
 			}
-			currentRoot = policy.Name
+			currentRoot = key
 			continue
 		}
-		if err := validateConsumePolicyChainParent(policy, policies, currentRoot); err != nil {
+		if err := validateConsumePolicyChainParent(namespace, key, policy, policies, currentRoot); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateConsumePolicyChainConfig(policy *EventGatewayVirtualClusterConsumePolicy) error {
+func validateConsumePolicyChainConfig(name string, policy *EventGatewayVirtualClusterConsumePolicy) error {
 	config := policy.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig
 	if config != nil {
 		members := 0
@@ -175,17 +173,28 @@ func validateConsumePolicyChainConfig(policy *EventGatewayVirtualClusterConsumeP
 			}
 		}
 	}
-	return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a supported apiSpec.type and exactly its configuration", policy.Name)}
+	return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a supported apiSpec.type and exactly its configuration", name)}
 }
 
-func validateConsumePolicyChainParent(policy *EventGatewayVirtualClusterConsumePolicy, policies map[string]*EventGatewayVirtualClusterConsumePolicy, currentRoot string) error {
+func validateConsumePolicyChainParent(
+	namespace string, key client.ObjectKey, policy *EventGatewayVirtualClusterConsumePolicy,
+	policies map[client.ObjectKey]*EventGatewayVirtualClusterConsumePolicy, currentRoot client.ObjectKey,
+) error {
+	name := NameIn(key, namespace)
 	ref := policy.Spec.APISpec.ParentPolicyRef
-	if (ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterConsumePolicy") ||
-		(ref.Namespace != "" && ref.Namespace != policy.Namespace) {
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef must name an EventGatewayVirtualClusterConsumePolicy in the same namespace", policy.Name)}
+	// A parent of another namespace than the child's is allowed, with a
+	// KongReferenceGrant the child's reconciliation checks: the chain only
+	// requires it to be one of the policies it orders.
+	parentKey := client.ObjectKey{Namespace: policy.Namespace, Name: ref.Name}
+	if ref.Namespace != "" {
+		parentKey.Namespace = ref.Namespace
 	}
-	if ref.Name == policy.Name {
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef cannot reference itself", policy.Name)}
+	parentName := NameIn(parentKey, namespace)
+	if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterConsumePolicy" {
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef must name an EventGatewayVirtualClusterConsumePolicy", name)}
+	}
+	if parentKey == key {
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef cannot reference itself", name)}
 	}
 	switch policy.Spec.APISpec.Type {
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate,
@@ -194,20 +203,20 @@ func validateConsumePolicyChainParent(policy *EventGatewayVirtualClusterConsumeP
 		EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate,
 		EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate:
 	default:
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef is only supported for decryptFields, maskFields, transcode, modifyHeaders and skipRecord", policy.Name)}
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef is only supported for decryptFields, maskFields, transcode, modifyHeaders and skipRecord", name)}
 	}
-	parent, included := policies[ref.Name]
+	parent, included := policies[parentKey]
 	if !included {
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef %s must be included in spec.apiSpec.policies", policy.Name, ref.Name)}
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef %s must be included in spec.apiSpec.policies", name, parentName)}
 	}
 	if parent.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig == nil ||
 		parent.Spec.APISpec.Type != EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy ||
 		parent.Spec.APISpec.ConsumeSchemaValidationPolicy == nil ||
 		parent.Spec.APISpec.ParentPolicyRef != (EventGatewayVirtualClusterConsumePolicyRef{}) {
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef %s must be a root schemaValidation policy; deeper nesting is not supported", policy.Name, ref.Name)}
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef %s must be a root schemaValidation policy; deeper nesting is not supported", name, parentName)}
 	}
-	if currentRoot != parent.Name {
-		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must follow parent %s in its contiguous group; children cannot precede their parent or interleave other root groups", policy.Name, ref.Name)}
+	if currentRoot != parentKey {
+		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must follow parent %s in its contiguous group; children cannot precede their parent or interleave other root groups", name, parentName)}
 	}
 	return nil
 }

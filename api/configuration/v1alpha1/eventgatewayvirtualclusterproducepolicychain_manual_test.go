@@ -162,21 +162,36 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 		{name: "missing list", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
 			c.Spec.APISpec.Policies = nil
 		}, err: "supplied explicitly"},
-		{name: "cross namespace parent", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
+		{name: "virtual cluster and policies of another namespace", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
+			c.Namespace = "chains"
+			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
+			for i := range c.Spec.APISpec.Policies {
+				c.Spec.APISpec.Policies[i].Namespace = "default"
+			}
+		}},
+		{name: "virtual cluster of another namespace than the policies", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
-		}, err: "same namespace"},
+		}, err: "different EventGatewayVirtualCluster"},
 		{name: "parent by ID", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.Type = commonv1alpha1.ObjectRefTypeKonnectID
-		}, err: "same namespace"},
+		}, err: "must reference an EventGatewayVirtualCluster"},
 		{name: "missing name", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
 			c.Spec.APISpec.Policies[0].Name = ""
 		}, err: "must name"},
 		{name: "wrong kind", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterConsumePolicy"
 		}, err: "must name"},
-		{name: "cross namespace policy", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
+		{name: "policy of another namespace", change: func(c *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+			p["parent"].Namespace = "other"
+			p["parent"].Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
 			c.Spec.APISpec.Policies[0].Namespace = "other"
-		}, err: "cross-namespace"},
+			for _, name := range []string{"first", "second"} {
+				p[name].Spec.APISpec.ParentPolicyRef.Namespace = "other"
+			}
+		}},
+		{name: "missing policy of another namespace", change: func(c *EventGatewayVirtualClusterProducePolicyChain, _ map[string]*EventGatewayVirtualClusterProducePolicy) {
+			c.Spec.APISpec.Policies[0].Namespace = "other"
+		}, err: "not found"},
 		{name: "duplicate name", order: []string{"parent", "first", "second", "first"}, err: "duplicates policy"},
 		{name: "duplicate ID", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			p["first"].SetKonnectID("second-id")
@@ -229,10 +244,10 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 		}, err: "contiguous group"},
 		{name: "wrong parent kind", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			p["first"].Spec.APISpec.ParentPolicyRef.Kind = "EventGatewayVirtualClusterConsumePolicy"
-		}, err: "same namespace"},
-		{name: "wrong parent namespace", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
+		}, err: "must name an EventGatewayVirtualClusterProducePolicy"},
+		{name: "parent of another namespace not in the chain", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			p["first"].Spec.APISpec.ParentPolicyRef.Namespace = "other"
-		}, err: "same namespace"},
+		}, err: "parentPolicyRef other/parent must be included"},
 		{name: "self parent", change: func(_ *EventGatewayVirtualClusterProducePolicyChain, p map[string]*EventGatewayVirtualClusterProducePolicy) {
 			p["first"].Spec.APISpec.ParentPolicyRef.Name = "first"
 		}, err: "cannot reference itself"},
@@ -380,4 +395,54 @@ func TestEventGatewayVirtualClusterProducePolicyChainReferences(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestValidateProducePolicyChainOrderAcrossNamespaces checks that policies of
+// the same name in different namespaces are distinct, and that a child's
+// parent is the policy of its parentPolicyRef's namespace, its own by default.
+func TestValidateProducePolicyChainOrderAcrossNamespaces(t *testing.T) {
+	t.Parallel()
+
+	policy := func(ns, name string, parent EventGatewayVirtualClusterProducePolicyRef) *EventGatewayVirtualClusterProducePolicy {
+		p := &EventGatewayVirtualClusterProducePolicy{Name: name, Namespace: ns}
+		p.Spec.APISpec.ParentPolicyRef = parent
+		if parent.Name == "" {
+			p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+				Type: EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy, ProduceSchemaValidationPolicy: &EventGatewayProduceSchemaValidationPolicy{},
+			}
+			return p
+		}
+		p.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{
+			Type: EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate, ModifyHeadersPolicyCreate: &EventGatewayModifyHeadersPolicyCreate{},
+		}
+		return p
+	}
+	key := func(ns, name string) client.ObjectKey { return client.ObjectKey{Namespace: ns, Name: name} }
+	policies := map[client.ObjectKey]*EventGatewayVirtualClusterProducePolicy{
+		key("a", "validate"): policy("a", "validate", EventGatewayVirtualClusterProducePolicyRef{}),
+		key("b", "validate"): policy("b", "validate", EventGatewayVirtualClusterProducePolicyRef{}),
+		// A child of the parent of its own namespace, and one of the parent of
+		// another namespace.
+		key("a", "child"): policy("a", "child", EventGatewayVirtualClusterProducePolicyRef{Name: "validate"}),
+		key("b", "child"): policy("b", "child", EventGatewayVirtualClusterProducePolicyRef{Name: "validate", Namespace: "a"}),
+	}
+
+	require.NoError(t, ValidateProducePolicyChainOrder("a",
+		[]client.ObjectKey{key("a", "validate"), key("a", "child"), key("b", "child"), key("b", "validate")}, policies))
+	// b/child follows b/validate, but its parent is a/validate.
+	require.ErrorContains(t, ValidateProducePolicyChainOrder("a",
+		[]client.ObjectKey{key("a", "validate"), key("a", "child"), key("b", "validate"), key("b", "child")}, policies),
+		"policy b/child must follow parent validate in its contiguous group")
+	// The policies are those the chain lists: b/child's parent, a/validate,
+	// isn't one of them, though one of the same name is.
+	require.ErrorContains(t, ValidateProducePolicyChainOrder("a",
+		[]client.ObjectKey{key("b", "validate"), key("b", "child")},
+		map[client.ObjectKey]*EventGatewayVirtualClusterProducePolicy{
+			key("b", "validate"): policies[key("b", "validate")],
+			key("b", "child"):    policies[key("b", "child")],
+		}),
+		"policy b/child parentPolicyRef validate must be included")
+	require.ErrorContains(t, ValidateProducePolicyChainOrder("a",
+		[]client.ObjectKey{key("c", "missing")}, policies),
+		"policy c/missing is missing")
 }

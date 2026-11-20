@@ -105,8 +105,9 @@ spec:
                       'EventGatewayListenerPolicy', 'EventGatewayListenerPolicyChain',
                       'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle',
                       'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy',
-                      'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterPolicyChain',
-                      'EventGatewayVirtualClusterProducePolicy']
+                      'EventGatewayVirtualClusterConsumePolicyChain', 'EventGatewayVirtualClusterPolicy',
+                      'EventGatewayVirtualClusterPolicyChain', 'EventGatewayVirtualClusterProducePolicy',
+                      'EventGatewayVirtualClusterProducePolicyChain']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com'
                       group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind

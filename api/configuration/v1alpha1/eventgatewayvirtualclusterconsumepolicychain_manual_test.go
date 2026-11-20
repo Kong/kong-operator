@@ -126,21 +126,36 @@ func TestEventGatewayVirtualClusterConsumePolicyChainReferences(t *testing.T) {
 		{name: "omitted list", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			c.Spec.APISpec.Policies = nil
 		}, err: "supplied explicitly"},
-		{name: "cross namespace VC", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
+		{name: "VC and policies of another namespace", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			c.Namespace = "chains"
+			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
+			for i := range c.Spec.APISpec.Policies {
+				c.Spec.APISpec.Policies[i].Namespace = "default"
+			}
+		}},
+		{name: "VC of another namespace than the policies", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("foreign")
-		}, err: "same namespace"},
+		}, err: "different EventGatewayVirtualCluster"},
 		{name: "VC by ID", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.Type = commonv1alpha1.ObjectRefTypeKonnectID
-		}, err: "same namespace"},
+		}, err: "must reference an EventGatewayVirtualCluster"},
 		{name: "empty name", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			c.Spec.APISpec.Policies[0].Name = ""
 		}, err: "must name"},
 		{name: "wrong kind", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			c.Spec.APISpec.Policies[0].Kind = "EventGatewayVirtualClusterProducePolicy"
 		}, err: "must name"},
-		{name: "cross namespace policy", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
+		{name: "policy of another namespace", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			p["parent"].Namespace = "foreign"
+			p["parent"].Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
 			c.Spec.APISpec.Policies[0].Namespace = "foreign"
-		}, err: "cross-namespace"},
+			for _, name := range []string{"mask", "transcode", "decrypt", "skip"} {
+				p[name].Spec.APISpec.ParentPolicyRef.Namespace = "foreign"
+			}
+		}},
+		{name: "missing policy of another namespace", change: func(c *EventGatewayVirtualClusterConsumePolicyChain, _ map[string]*EventGatewayVirtualClusterConsumePolicy) {
+			c.Spec.APISpec.Policies[0].Namespace = "foreign"
+		}, err: "not found"},
 		{name: "duplicate name", order: []string{"parent", "mask", "mask"}, err: "duplicates policy"},
 		{name: "duplicate ID", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			p["mask"].SetKonnectID("parent-id")
@@ -201,10 +216,10 @@ func TestEventGatewayVirtualClusterConsumePolicyChainReferences(t *testing.T) {
 		}, err: "cannot reference itself"},
 		{name: "wrong parent kind", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			p["mask"].Spec.APISpec.ParentPolicyRef.Kind = "EventGatewayVirtualClusterProducePolicy"
-		}, err: "same namespace"},
-		{name: "wrong parent namespace", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
+		}, err: "must name an EventGatewayVirtualClusterConsumePolicy"},
+		{name: "parent of another namespace not in the chain", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			p["mask"].Spec.APISpec.ParentPolicyRef.Namespace = "foreign"
-		}, err: "same namespace"},
+		}, err: "parentPolicyRef foreign/parent must be included"},
 		{name: "malformed parent", change: func(_ *EventGatewayVirtualClusterConsumePolicyChain, p map[string]*EventGatewayVirtualClusterConsumePolicy) {
 			p["mask"].Spec.APISpec.ParentPolicyRef = EventGatewayVirtualClusterConsumePolicyRef{Kind: "EventGatewayVirtualClusterConsumePolicy"}
 		}, err: "valid parentPolicyRef"},
@@ -271,7 +286,7 @@ func TestEventGatewayVirtualClusterConsumePolicyChainReferences(t *testing.T) {
 								return readErr
 							}
 							p, ok := policies[key.Name]
-							if !ok {
+							if !ok || p.Namespace != key.Namespace {
 								return apierrors.NewNotFound(GroupVersion.WithResource("eventgatewayvirtualclusterconsumepolicies").GroupResource(), key.Name)
 							}
 							p.DeepCopyInto(obj.(*EventGatewayVirtualClusterConsumePolicy))
