@@ -11,6 +11,7 @@ import (
 
 type testSDKWrapper struct {
 	SDKWrapper
+
 	serverURL string
 	dpNodes   sdkkonnectgo.DPNodesSDK
 }

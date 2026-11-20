@@ -152,9 +152,7 @@ func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID st
 	// Do not block the write response on the post-write version read. The
 	// rebaseline is bounded by versionReadTimeout and coalesced by
 	// needsRebaseline.
-	t.rebaselineWG.Add(1)
-	go func() {
-		defer t.rebaselineWG.Done()
+	t.rebaselineWG.Go(func() {
 
 		cp.fetchMu.Lock()
 		defer cp.fetchMu.Unlock()
@@ -169,7 +167,7 @@ func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID st
 		versionCtx, cancel := versionReadContext(ctx)
 		defer cancel()
 		_, _ = t.refresh(versionCtx, cp, controlPlaneID, sdk)
-	}()
+	})
 }
 
 // waitForRebaseline waits for in-flight post-write version reads. It is used by
