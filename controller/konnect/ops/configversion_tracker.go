@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -12,7 +13,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+)
+
+const (
+	// versionReadTimeout bounds the config version read performed around a write.
+	// It is deliberately independent from the write request's timeout.
+	versionReadTimeout = 2 * time.Second
 )
 
 // ConfigVersionTracker avoids enforcing unchanged Kong Gateway entities in Konnect on every sync period.
@@ -30,22 +38,29 @@ import (
 // a change before the writes is attributed to an external actor, a change during the writes to the operator.
 // Only an external change made while an operator write is in flight goes undetected.
 type ConfigVersionTracker struct {
-	versionTTL time.Duration
-	now        func() time.Time
+	versionTTL       time.Duration
+	driftCheckPeriod time.Duration
+	now              func() time.Time
 
 	mu            sync.Mutex
+	rebaselineWG  sync.WaitGroup
 	controlPlanes map[string]*controlPlaneConfigVersion
 	entities      map[types.UID]entitySyncRecord
 }
 
 // NewConfigVersionTracker returns a ConfigVersionTracker that checks the config version of a control plane
-// at most once every versionTTL.
-func NewConfigVersionTracker(versionTTL time.Duration) *ConfigVersionTracker {
+// at most once every versionTTL. When driftCheckPeriod is positive, each entity is also verified with a GET
+// at least once per driftCheckPeriod even when the config version did not change.
+func NewConfigVersionTracker(versionTTL, driftCheckPeriod time.Duration) *ConfigVersionTracker {
+	if driftCheckPeriod < 0 {
+		driftCheckPeriod = 0
+	}
 	return &ConfigVersionTracker{
-		versionTTL:    versionTTL,
-		now:           time.Now,
-		controlPlanes: map[string]*controlPlaneConfigVersion{},
-		entities:      map[types.UID]entitySyncRecord{},
+		versionTTL:       versionTTL,
+		driftCheckPeriod: driftCheckPeriod,
+		now:              time.Now,
+		controlPlanes:    map[string]*controlPlaneConfigVersion{},
+		entities:         map[types.UID]entitySyncRecord{},
 	}
 }
 
@@ -53,6 +68,7 @@ type controlPlaneConfigVersion struct {
 	fetchMu sync.Mutex
 
 	// Fields below are guarded by ConfigVersionTracker.mu.
+	serverURL      string
 	sdk            sdkkonnectgo.DPNodesSDK
 	fetchedAt      time.Time
 	fetchErr       bool
@@ -74,8 +90,12 @@ type entitySyncRecord struct {
 // When no other write is in flight and none happened since the config version was last read, it reads the
 // config version first, so that a change made before the write is not attributed to the operator.
 func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID string) {
+	if t == nil {
+		return
+	}
 	t.mu.Lock()
 	cp := t.controlPlane(controlPlaneID)
+	t.observeCurrentSDK(ctx, cp)
 	if !cp.hasCleanBaseline() {
 		cp.ownWrite = true
 		cp.writesInFlight++
@@ -90,12 +110,22 @@ func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID s
 	t.mu.Lock()
 	clean, sdk := cp.hasCleanBaseline(), cp.sdk
 	t.mu.Unlock()
+	var ok bool
 	if clean {
-		t.refresh(ctx, cp, controlPlaneID, sdk)
+		versionCtx, cancel := versionReadContext(ctx)
+		_, ok = t.refresh(versionCtx, cp, controlPlaneID, sdk)
+		cancel()
 	}
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if clean && !ok {
+		// We could not establish a clean pre-write baseline. We cannot tell
+		// whether a version change after this point came from the operator or
+		// from an external actor, so treat the current time as a potential
+		// external change. Entities checked before it will be verified.
+		cp.changedAt = t.now()
+	}
 	cp.ownWrite = true
 	cp.writesInFlight++
 }
@@ -104,8 +134,12 @@ func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID s
 // When no other write is in flight, it reads the config version, so that a later change is attributed to an
 // external actor.
 func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID string) {
+	if t == nil {
+		return
+	}
 	t.mu.Lock()
 	cp := t.controlPlane(controlPlaneID)
+	t.observeCurrentSDK(ctx, cp)
 	if cp.writesInFlight > 0 {
 		cp.writesInFlight--
 	}
@@ -115,15 +149,63 @@ func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID st
 	}
 	t.mu.Unlock()
 
-	cp.fetchMu.Lock()
-	defer cp.fetchMu.Unlock()
+	// Do not block the write response on the post-write version read. The
+	// rebaseline is bounded by versionReadTimeout and coalesced by
+	// needsRebaseline.
+	t.rebaselineWG.Add(1)
+	go func() {
+		defer t.rebaselineWG.Done()
 
-	t.mu.Lock()
-	rebaseline, sdk := cp.needsRebaseline(), cp.sdk
-	t.mu.Unlock()
-	if rebaseline {
-		t.refresh(ctx, cp, controlPlaneID, sdk)
+		cp.fetchMu.Lock()
+		defer cp.fetchMu.Unlock()
+
+		t.mu.Lock()
+		rebaseline, sdk := cp.needsRebaseline(), cp.sdk
+		t.mu.Unlock()
+		if !rebaseline {
+			return
+		}
+
+		versionCtx, cancel := versionReadContext(ctx)
+		defer cancel()
+		_, _ = t.refresh(versionCtx, cp, controlPlaneID, sdk)
+	}()
+}
+
+// waitForRebaseline waits for in-flight post-write version reads. It is used by
+// tests to make asynchronous rebaselines deterministic.
+func (t *ConfigVersionTracker) waitForRebaseline() {
+	if t == nil {
+		return
 	}
+	t.rebaselineWG.Wait()
+}
+
+// observeCurrentSDK records the SDK used by the current write. The SDK instance
+// carries the current token, and its server URL identifies the Konnect instance
+// the state belongs to. Reusing a cached SDK would keep using a rotated token.
+func (t *ConfigVersionTracker) observeCurrentSDK(ctx context.Context, cp *controlPlaneConfigVersion) {
+	wrapper, ok := sdkops.SDKFromContext(ctx)
+	if !ok {
+		return
+	}
+	serverURL := wrapper.GetServerURL()
+	if cp.serverURL != "" && cp.serverURL != serverURL {
+		// The same control plane ID is being used against a different Konnect
+		// instance. Do not reuse the version state from the previous instance.
+		cp.version = ""
+		cp.changedAt = time.Time{}
+		cp.fetchedAt = time.Time{}
+		cp.fetchErr = false
+	}
+	cp.serverURL = serverURL
+	cp.sdk = wrapper.GetDPNodesSDK()
+}
+
+// versionReadContext returns a context for a config version read that is not
+// canceled when the write request is canceled or times out.
+func versionReadContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), versionReadTimeout)
 }
 
 func (cp *controlPlaneConfigVersion) hasCleanBaseline() bool {
@@ -163,7 +245,15 @@ func (t *ConfigVersionTracker) lastExternalChange(
 ) (time.Time, bool) {
 	t.mu.Lock()
 	cp := t.controlPlane(controlPlaneID)
-	cp.sdk = sdk
+	t.observeCurrentSDK(ctx, cp)
+	if cp.sdk == nil {
+		cp.sdk = sdk
+	}
+	if cp.sdk == nil {
+		t.mu.Unlock()
+		return time.Time{}, false
+	}
+	sdk = cp.sdk
 	t.mu.Unlock()
 
 	cp.fetchMu.Lock()
@@ -219,6 +309,9 @@ func (t *ConfigVersionTracker) refresh(
 }
 
 func fetchExpectedConfigVersion(ctx context.Context, sdk sdkkonnectgo.DPNodesSDK, controlPlaneID string) (string, error) {
+	if sdk == nil {
+		return "", errors.New("nil DPNodes SDK")
+	}
 	resp, err := sdk.GetExpectedConfigVersion(ctx, controlPlaneID)
 	if err != nil {
 		return "", err
@@ -241,6 +334,26 @@ func (t *ConfigVersionTracker) store(uid types.UID, rec entitySyncRecord) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.entities[uid] = rec
+}
+
+// driftCheckDue reports whether the entity should be verified even when no
+// control plane config version change was observed.
+func (t *ConfigVersionTracker) driftCheckDue(uid types.UID, rec entitySyncRecord) bool {
+	if t.driftCheckPeriod <= 0 || rec.checkedAt.IsZero() {
+		return false
+	}
+	return !t.now().Before(rec.checkedAt.Add(t.driftCheckPeriod + t.driftJitter(uid)))
+}
+
+// driftJitter returns a deterministic per-entity offset so a large control
+// plane does not verify all its entities at the same time.
+func (t *ConfigVersionTracker) driftJitter(uid types.UID) time.Duration {
+	maxJitter := t.driftCheckPeriod / 10
+	if maxJitter <= 0 {
+		return 0
+	}
+	sum := sha256.Sum256([]byte(uid))
+	return time.Duration(binary.BigEndian.Uint64(sum[:8]) % uint64(maxJitter))
 }
 
 // syncOutcome describes what an update of a Konnect entity guarded by a syncGuard did.
@@ -275,7 +388,7 @@ func (t *ConfigVersionTracker) guard(
 	controlPlaneID string,
 	periodic bool,
 ) *syncGuard {
-	if t == nil || controlPlaneID == "" || uid == "" {
+	if t == nil || sdk == nil || controlPlaneID == "" || uid == "" {
 		return nil
 	}
 	return &syncGuard{
@@ -338,7 +451,7 @@ func upsertUnlessInSync[E any](
 
 	if rec, ok := t.record(g.uid); g.periodic && versionOK && ok && rec.payloadHash == payloadHash {
 		logger := ctrllog.FromContext(ctx)
-		if changedAt.Before(rec.checkedAt) {
+		if !t.driftCheckDue(g.uid, rec) && changedAt.Before(rec.checkedAt) {
 			log.Debug(logger, "entity unchanged and no external change in Konnect, skipping update")
 			g.outcome = syncOutcomeSkipped
 			return nil

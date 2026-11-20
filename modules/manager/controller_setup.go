@@ -1090,7 +1090,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		})
 	}
 
-	konnectConfigVersionTracker := ops.NewConfigVersionTracker(c.KonnectSyncPeriod)
+	konnectConfigVersionTracker := ops.NewConfigVersionTracker(
+		c.KonnectSyncPeriod,
+		consts.DefaultKonnectDriftCheckPeriod,
+	)
 
 	// MCPServer controllers
 	if c.FeatureGates.Enabled(FeatureGateMCPServer) {

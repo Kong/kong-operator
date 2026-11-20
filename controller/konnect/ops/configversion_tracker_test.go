@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	testCPID       = "cp-1"
-	testVersionTTL = time.Minute
+	testCPID             = "cp-1"
+	testVersionTTL       = time.Minute
+	testDriftCheckPeriod = time.Hour
 )
 
 type testClock struct {
@@ -46,7 +47,7 @@ func (c *testClock) Advance(d time.Duration) {
 
 func newTestConfigVersionTracker() (*ConfigVersionTracker, *testClock) {
 	clock := &testClock{now: time.Unix(1_000_000, 0)}
-	tracker := NewConfigVersionTracker(testVersionTTL)
+	tracker := NewConfigVersionTracker(testVersionTTL, testDriftCheckPeriod)
 	tracker.now = clock.Now
 	return tracker, clock
 }
@@ -63,8 +64,11 @@ type fakeConfigVersion struct {
 func newFakeConfigVersion(t *testing.T) *fakeConfigVersion {
 	f := &fakeConfigVersion{sdk: mocks.NewMockDPNodesSDK(t), version: "1"}
 	f.sdk.EXPECT().GetExpectedConfigVersion(mock.Anything, testCPID).RunAndReturn(
-		func(context.Context, string, ...sdkkonnectops.Option) (*sdkkonnectops.GetExpectedConfigVersionResponse, error) {
+		func(ctx context.Context, _ string, _ ...sdkkonnectops.Option) (*sdkkonnectops.GetExpectedConfigVersionResponse, error) {
 			f.calls++
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			if f.err != nil {
 				return nil, f.err
 			}
@@ -277,6 +281,7 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		e.tracker.BeforeWrite(t.Context(), testCPID)
 		e.version.version = version
 		e.tracker.AfterWrite(t.Context(), testCPID)
+		e.tracker.waitForRebaseline()
 	}
 
 	t.Run("config version change caused by operator writes does not trigger a get", func(t *testing.T) {
@@ -326,6 +331,7 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		e.tracker.AfterWrite(t.Context(), testCPID)
 		e.version.version = "3"
 		e.tracker.AfterWrite(t.Context(), testCPID)
+		e.tracker.waitForRebaseline()
 		assert.Equal(t, 2, e.version.calls)
 
 		e.clock.Advance(testVersionTTL)
@@ -343,7 +349,9 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 				e.version.version = "3"
 			}
 			e.tracker.AfterWrite(t.Context(), testCPID)
+			e.tracker.waitForRebaseline()
 			e.tracker.AfterWrite(t.Context(), testCPID)
+			e.tracker.waitForRebaseline()
 			assert.Equal(t, 3, e.version.calls)
 
 			e.clock.Advance(testVersionTTL)
@@ -358,15 +366,58 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		assert.Equal(t, 0, e.version.calls)
 	})
 
-	t.Run("unchanged periodic update is skipped indefinitely without config version changes", func(t *testing.T) {
+	t.Run("unchanged periodic update is skipped between drift checks", func(t *testing.T) {
 		e := synced(t)
 
-		e.clock.Advance(24 * time.Hour)
+		e.clock.Advance(testVersionTTL)
 		assert.Equal(t, syncOutcomeSkipped, update(t, e, true))
 		gets, upserts := e.services.calls()
 		assert.Equal(t, 0, gets)
 		assert.Equal(t, 0, upserts)
 		assert.Equal(t, 1, e.version.calls)
+	})
+
+	t.Run("drift check verifies an unchanged entity without a version change", func(t *testing.T) {
+		e := synced(t)
+
+		e.clock.Advance(testDriftCheckPeriod + testDriftCheckPeriod/10 + time.Millisecond)
+		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
+		gets, upserts := e.services.calls()
+		assert.Equal(t, 1, gets)
+		assert.Equal(t, 0, upserts)
+	})
+
+	t.Run("failed pre-write config version read does not mask an external change", func(t *testing.T) {
+		e := synced(t)
+
+		e.version.version = "2"
+		e.version.err = errors.New("transient")
+		e.tracker.BeforeWrite(t.Context(), testCPID)
+
+		e.version.err = nil
+		e.version.version = "3"
+		e.tracker.AfterWrite(t.Context(), testCPID)
+		e.tracker.waitForRebaseline()
+
+		e.clock.Advance(testVersionTTL)
+		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
+		gets, upserts := e.services.calls()
+		assert.Equal(t, 1, gets)
+		assert.Equal(t, 0, upserts)
+	})
+
+	t.Run("canceled write context does not poison the config version state", func(t *testing.T) {
+		e := synced(t)
+
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		e.tracker.BeforeWrite(ctx, testCPID)
+		e.tracker.AfterWrite(ctx, testCPID)
+		e.tracker.waitForRebaseline()
+
+		cp := e.tracker.controlPlanes[testCPID]
+		assert.False(t, cp.fetchErr)
+		assert.Equal(t, "1", cp.version)
 	})
 
 	t.Run("failure to get the config version sends and is not retried within TTL", func(t *testing.T) {
@@ -439,12 +490,28 @@ func TestConfigVersionTrackerNilGuardAlwaysSends(t *testing.T) {
 	svc := newTestKongService()
 
 	var tracker *ConfigVersionTracker
+	assert.NotPanics(t, func() {
+		tracker.BeforeWrite(t.Context(), testCPID)
+		tracker.AfterWrite(t.Context(), testCPID)
+	})
 	for range 2 {
 		g := tracker.guard(nil, svc.GetUID(), testCPID, true)
 		require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
 	}
 	_, upserts := services.calls()
 	assert.Equal(t, 2, upserts)
+}
+
+func TestConfigVersionTrackerNilSDKGuardAlwaysSends(t *testing.T) {
+	tracker, _ := newTestConfigVersionTracker()
+	services := newFakeKonnectServices(t)
+	svc := newTestKongService()
+
+	g := tracker.guard(nil, svc.GetUID(), testCPID, true)
+	require.Nil(t, g)
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	_, upserts := services.calls()
+	assert.Equal(t, 1, upserts)
 }
 
 func TestConfigVersionTrackerConsumerGroupGetIsWrapped(t *testing.T) {
