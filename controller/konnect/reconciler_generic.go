@@ -168,6 +168,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		logger = logger.WithValues("konnect_id", id)
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
+	// Snapshot the object before this reconcile mutates status. Some type
+	// specific handlers persist only conditions while also setting other
+	// status fields; the final patch must include those fields as well.
+	old := ent.DeepCopyObject().(TEnt)
 
 	// Sync records are only stored after the cleanup finalizer was added, so they
 	// must be dropped on every path that removes it, not only on deletion.
@@ -894,7 +898,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if inputs, ok := any(ent).(createInputsAware); ok {
 		previousHash = inputs.GetCreateInputsHash()
 	}
-	old := ent.DeepCopyObject().(TEnt)
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, r.ConfigVersionTracker)
 	if inputs, ok := any(ent).(createInputsAware); ok &&
 		(previousID != ent.GetKonnectStatus().GetKonnectID() || previousHash != inputs.GetCreateInputsHash()) {
@@ -908,9 +911,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	// Persist the status only when it changed. The helper also persists
 	// conditions changed by a verified update, which skips the generic
 	// condition/metric block in ops.Update.
-	if _, errUpd := patch.ApplyStatusPatchIfNotEmpty(
-		ctx, r.Client, logger, ent, old, client.MergeFromWithOptimisticLock{},
-	); errUpd != nil {
+	// Do not use an optimistic lock here: the snapshot predates status changes
+	// made by earlier handlers and patches in this reconcile, so locking on its
+	// resource version would conflict. The merge patch is field-scoped.
+	if _, errUpd := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, ent, old); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return ctrl.Result{Requeue: true}, nil
 		}
