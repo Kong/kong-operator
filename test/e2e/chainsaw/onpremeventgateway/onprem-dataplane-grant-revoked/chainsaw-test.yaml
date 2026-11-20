@@ -1,0 +1,241 @@
+# On-prem Event Gateway whose data plane, of another namespace, loses the
+# KongReferenceGrant letting it reference the gateway, then gets it back.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-dataplane-grant-revoked
+spec:
+  description: |
+    A KegDataPlane of the namespace dp_namespace, whose OnPremEventGateway of
+    the namespace of the test two KongReferenceGrants let it reference: one
+    for the KegDataPlanes of dp_namespace, one for its
+    EventGatewayDataPlaneCertificates.
+    1. It is Ready, keg proxies produce and consume, and its client
+       certificate gets the configuration of the gateway from gw-admin.
+    2. The grant of the KegDataPlanes is deleted: the data plane reports it
+       may not reference its gateway (RefNotPermitted), its certificates and
+       the certificate Secrets the operator created are removed, gw-admin no
+       longer gives its client certificate the configuration, and its
+       Deployment is no longer labelled for the GWAdmin. The owner of the data
+       plane registers a copy of its key with a certificate of its own: the
+       grant of the certificates trusts it, and gw-admin gives the key the
+       configuration again. Deleting that grant too revokes it.
+    3. Both grants are created again: the data plane is Ready, its new client
+       certificate gets the configuration, keg proxies again, and the
+       certificate of the copied key is registered again.
+  bindings:
+    - name: dp_namespace
+      value: (join('-', [$namespace, 'dp']))
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: backend
+    - name: virtual_cluster_name
+      value: vcluster
+    - name: listener_name
+      value: listener
+    - name: listener_policy_name
+      value: forward
+    - name: consume_policy_name
+      value: modify-headers
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
+    - name: 1-Data-plane-of-another-namespace-granted
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: 01-entities.yaml
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: ($dp_namespace)
+        - apply:
+            file: grant-dataplanes.yaml
+        - apply:
+            file: grant-certificates.yaml
+        - apply:
+            file: dataplane.yaml
+        - assert:
+            file: ../onprem-shared/assert-gateway-programmed.yaml
+        - assert:
+            file: assert-dataplane-ready.yaml
+        - assert:
+            file: ../onprem-shared/assert-consume-policy-programmed.yaml
+        - assert:
+            file: ../onprem-shared/assert-listener-policy-programmed.yaml
+        - script:
+            env: &dp_env
+              - name: NAMESPACE
+                value: ($dp_namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" granted hello-granted
+        - script:
+            env: *dp_env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_DP" "$WORK_DIR/dp"
+        - script:
+            env: &gateway_env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" 200 90
+      cleanup:
+        - script:
+            env: *gateway_env
+            content: ../onprem-shared/onprem.sh remove-dir "$WORK_DIR"
+
+    - name: 2-Grants-revoked
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: dataplanes
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($dp_namespace)
+              status:
+                (conditions[?type == 'OnPremEventGatewayResolved']):
+                  - status: "False"
+                    reason: RefNotPermitted
+        - script:
+            env: *dp_env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh wait-dp-revoked "$KEG_DP" 90
+        - script:
+            env: *gateway_env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" '!200' 210
+        - script:
+            env: *dp_env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh wait-dp-unlabelled "$KEG_DP" 90
+        # The owner of the data plane registers a copy of its key with a
+        # certificate of its own: the grant of the certificates trusts it.
+        - script:
+            env: *dp_env
+            content: ../onprem-shared/onprem.sh create-tls-secret copied-key "$WORK_DIR/dp"
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayDataPlaneCertificate
+              metadata:
+                name: copied-key
+                namespace: ($dp_namespace)
+              spec:
+                parentRef:
+                  group: eventgateway.konghq.com
+                  kind: OnPremEventGateway
+                  name: ($gateway_name)
+                  namespace: ($namespace)
+                apiSpec:
+                  certificate:
+                    type: secretRef
+                    secretRef: {name: copied-key, key: tls.crt}
+        - assert:
+            resource: &copied_key_programmed
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayDataPlaneCertificate
+              metadata:
+                name: copied-key
+                namespace: ($dp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - script:
+            env: *gateway_env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" 200 150
+        # Revoking the data planes of the namespace takes deleting the grant
+        # of its certificates too.
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: certificates
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayDataPlaneCertificate
+              metadata:
+                name: copied-key
+                namespace: ($dp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "False"
+                    reason: RefNotPermitted
+        - script:
+            env: *gateway_env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp" "$GATEWAY" '!200' 210
+
+    - name: 3-Grants-restored
+      try:
+        - apply:
+            file: grant-dataplanes.yaml
+        - apply:
+            file: grant-certificates.yaml
+        - assert:
+            file: assert-dataplane-ready.yaml
+        - script:
+            env: *dp_env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh wait-dp-cert-mounted "$KEG_DP" 180
+        - script:
+            env: *dp_env
+            content: ../onprem-shared/onprem.sh save-dp-cert "$KEG_DP" "$WORK_DIR/dp-restored"
+        - script:
+            env: *gateway_env
+            timeout: 2m
+            content: ../onprem-shared/onprem.sh expect-cp-config "$WORK_DIR/dp-restored" "$GATEWAY" 200 90
+        - script:
+            env: *dp_env
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh roundtrip "$KEG_DP" restored hello-restored
+        # The namespace is trusted again, the copied key with it.
+        - assert:
+            resource: *copied_key_programmed
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
