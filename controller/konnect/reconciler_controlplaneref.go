@@ -47,15 +47,28 @@ func setWorkspace(ent any, cpRef commonv1alpha1.ControlPlaneRef) {
 	}
 }
 
+// controlPlaneClusterType returns the cluster type of the ControlPlane: the one
+// Konnect reports in its status, else the one requested in its spec. A mirrored
+// ControlPlane has no create request, so only its status holds the cluster type.
+// It returns an empty string when neither is known yet.
+func controlPlaneClusterType(cp *konnectv1alpha2.KonnectGatewayControlPlane) string {
+	if cp.Status.ClusterType != "" {
+		return string(cp.Status.ClusterType)
+	}
+	if ct := cp.GetKonnectClusterType(); ct != nil {
+		return string(*ct)
+	}
+	return ""
+}
+
 // controlPlaneSupportsWorkspaces reports whether a ControlPlane with the given
 // cluster type can hold Konnect Workspaces. Workspaces are not supported on
 // Kong Ingress Controller, serverless and control plane group control planes:
 // https://developer.konghq.com/how-to/manage-konnect-workspaces/#konnect-workspace-limitations
-func controlPlaneSupportsWorkspaces(clusterType *sdkkonnectcomp.CreateControlPlaneRequestClusterType) bool {
-	if clusterType == nil {
-		return true
-	}
-	return *clusterType == sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane
+// An unknown (empty) cluster type is allowed, Konnect has the final say.
+func controlPlaneSupportsWorkspaces(clusterType string) bool {
+	return clusterType == "" ||
+		clusterType == string(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane)
 }
 
 // handleControlPlaneRef handles the ControlPlaneRef for the given entity.
@@ -124,14 +137,14 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, nil
 	}
 
-	if cpRef.GetWorkspace() != "" && !controlPlaneSupportsWorkspaces(cp.GetKonnectClusterType()) {
+	if clusterType := controlPlaneClusterType(cp); cpRef.GetWorkspace() != "" && !controlPlaneSupportsWorkspaces(clusterType) {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			fmt.Sprintf("Workspace %q is set, but ControlPlane %s with cluster type %s does not support Workspaces",
-				cpRef.GetWorkspace(), cpnn, *cp.GetKonnectClusterType()),
+				cpRef.GetWorkspace(), cpnn, clusterType),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
