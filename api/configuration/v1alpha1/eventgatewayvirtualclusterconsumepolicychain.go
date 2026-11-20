@@ -103,9 +103,9 @@ func ValidateConsumePolicyChainOrder(namespace string, order []client.ObjectKey,
 	for _, key := range order {
 		policy := policies[key]
 		if policy == nil {
-			return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s is missing from the complete consume policy set", policyNameIn(key, namespace))}
+			return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s is missing from the complete consume policy set", NameIn(key, namespace))}
 		}
-		if err := validateConsumePolicyChainConfig(policyNameIn(key, namespace), policy); err != nil {
+		if err := validateConsumePolicyChainConfig(NameIn(key, namespace), policy); err != nil {
 			return err
 		}
 		parentRef := policy.Spec.APISpec.ParentPolicyRef
@@ -114,7 +114,7 @@ func ValidateConsumePolicyChainOrder(namespace string, order []client.ObjectKey,
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate ||
 				policy.Spec.APISpec.Type == EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate
 			if parentRef.Kind != "" || parentRef.Namespace != "" || required {
-				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", policyNameIn(key, namespace))}
+				return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s must have a valid parentPolicyRef", NameIn(key, namespace))}
 			}
 			currentRoot = key
 			continue
@@ -180,7 +180,7 @@ func validateConsumePolicyChainParent(
 	namespace string, key client.ObjectKey, policy *EventGatewayVirtualClusterConsumePolicy,
 	policies map[client.ObjectKey]*EventGatewayVirtualClusterConsumePolicy, currentRoot client.ObjectKey,
 ) error {
-	name := policyNameIn(key, namespace)
+	name := NameIn(key, namespace)
 	ref := policy.Spec.APISpec.ParentPolicyRef
 	// A parent of another namespace than the child's is allowed, with a
 	// KongReferenceGrant the child's reconciliation checks: the chain only
@@ -189,7 +189,7 @@ func validateConsumePolicyChainParent(
 	if ref.Namespace != "" {
 		parentKey.Namespace = ref.Namespace
 	}
-	parentName := policyNameIn(parentKey, namespace)
+	parentName := NameIn(parentKey, namespace)
 	if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterConsumePolicy" {
 		return PolicyChainInvalidError{Message: fmt.Sprintf("policy %s parentPolicyRef must name an EventGatewayVirtualClusterConsumePolicy", name)}
 	}

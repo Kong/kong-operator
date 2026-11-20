@@ -349,7 +349,7 @@ func addPolicyChains[C chainObject, E any](ctx context.Context, c *configuration
 			return err
 		}
 		if owner != "" {
-			message := fmt.Sprintf("%s %s is owned by policy chain %s; delete that chain before claiming it", chain.GetParentGVK().Kind, policychain.NameIn(parent, chain.GetNamespace()), owner)
+			message := fmt.Sprintf("%s %s is owned by policy chain %s; delete that chain before claiming it", chain.GetParentGVK().Kind, configurationv1alpha1.NameIn(parent, chain.GetNamespace()), owner)
 			status.conditions = []metav1.Condition{entityCondition(chain, "PolicyChainOwnerValid", metav1.ConditionFalse, "ConflictingChain", message)}
 			c.exclude(status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 			continue
@@ -619,7 +619,7 @@ func policyOrder[C chainObject, E any](
 			return nil, "", err
 		}
 		if message == "" {
-			return nil, fmt.Sprintf("spec.apiSpec.policies must list every %s exactly once; policy %s is missing", s.listWhat, policychain.NameIn(key, parentKey.Namespace)), nil
+			return nil, fmt.Sprintf("spec.apiSpec.policies must list every %s exactly once; policy %s is missing", s.listWhat, configurationv1alpha1.NameIn(key, parentKey.Namespace)), nil
 		}
 	}
 	return ordered, "", nil
