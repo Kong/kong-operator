@@ -18,11 +18,16 @@ example (HTTPRoute name: default/httproute-echo):
 ## KongService
 Are identified by the Control Plane (controlPlaneRef) and the host fields (which will be filled with a KongUpstream name).
 
-A KongService is uniquely identified from a set of BackendRefs of an HTTPRoute. If the same set of BackendRefs appears in different rules of even different HTTPRoutes, only one KongService should be created referenced by multiple KongRoutes.
+A KongService is uniquely identified from a set of BackendRefs of an HTTPRoute and
+the rule-level Service settings that cannot be merged: the `backendRequest`
+timeout and the `retry.attempts` value. If the same set of BackendRefs appears in
+different rules of even different HTTPRoutes with the same timeout and retry
+settings, only one KongService should be created referenced by multiple
+KongRoutes. Rules with conflicting values get distinct KongServices.
 
 Auto-generated name:
 
-`<GatewayAPI protocol>.cp<HASH(<Conrol Plane>).HASH(HR.spec.rule[x].backendRefs)>`
+`<GatewayAPI protocol>.cp<HASH(<Conrol Plane>).HASH(HR.spec.rule[x].backendRefs, timeout, retries)>`
 
 example:
 ```
@@ -38,7 +43,7 @@ Each pair of generated KongService and KongUpstream have an identical name.
 
 Auto-generated name:
 
-`cp<HASH(<Conrol Plane>).HASH(HR.spec.rule[x].backendRefs)>`
+`cp<HASH(<Conrol Plane>).HASH(HR.spec.rule[x].backendRefs, timeout, retries)>`
 
 example:
 ```
