@@ -15,11 +15,10 @@ spec:
     config.consumerClaims maps the token's client_id claim to an AIGatewayConsumer's
     apiSpec.customID. See aigateway/auth-strategy-openid-connect for a minimal, bare (no
     ACL/consumer group) counterpart. Requests with no bearer token, or an invalid one,
-    fall through openid-connect as an anonymous consumer, which the ACL then denies with
-    403 (rather than openid-connect itself rejecting with 401). Scenarios covered:
+    are rejected with 401. Scenarios covered:
 
-      1. Requests without an Authorization header are rejected (403).
-      2. Requests with an invalid Bearer token are rejected (403).
+      1. Requests without an Authorization header are rejected (401).
+      2. Requests with an invalid Bearer token are rejected (401).
       3. A real access token obtained from the mock OIDC provider's client_credentials
          grant, for a consumer in the allowed AIGatewayConsumerGroup, succeeds (200).
       4. Removing/restoring a consumer's group membership at runtime immediately flips it
@@ -200,8 +199,6 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
-    # No bearer token / an invalid one falls through openid-connect as an anonymous
-    # consumer, which the ACL then denies with 403 (not openid-connect's own 401).
     - name: Reject-request-without-bearer-token
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
@@ -212,7 +209,7 @@ spec:
             - name: route_path
               value: ($http_agent_route_path)
             - name: expected_status
-              value: "403"
+              value: "401"
             - name: oidc_token_url
               value: ''
             - name: oidc_client_id
@@ -231,7 +228,7 @@ spec:
             - name: request_headers
               value: "Authorization:Bearer not-a-real-token"
             - name: expected_status
-              value: "403"
+              value: "401"
             - name: oidc_token_url
               value: ''
             - name: oidc_client_id

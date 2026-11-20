@@ -15,10 +15,9 @@ spec:
     provider behind it (see ai-proxy/ai-proxy-mirror/aigateway-policy for that). Consumer/
     credential/ACL enforcement happens in front of the route regardless of what backs it, so
     this suite intentionally skips model-routing entirely to stay fast and focused. Requests
-    with no credential, or with one key-auth can't validate (missing/garbage/
-    deleted), fall through key-auth as an anonymous consumer, which the ACL then denies
-    with 403 (rather than key-auth itself rejecting with 401). Scenarios covered:
-      1. No credential, a garbage credential, or a deleted credential are all rejected (403).
+    with no credential, or with one key-auth can't validate (missing/garbage/deleted), are
+    rejected with 401. Scenarios covered:
+      1. No credential, a garbage credential, or a deleted credential are all rejected (401).
       2. A valid credential for a consumer in the allowed group succeeds (200).
       3. Removing/restoring a consumer's group membership at runtime immediately flips it
          between denied (403) and allowed (200).
@@ -199,7 +198,7 @@ spec:
         - name: route_path
           value: ($http_agent_route_path)
         - name: expected_status
-          value: "403"
+          value: "401"
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
     - name: 12-Reject-request-without-credential-from-host
@@ -209,7 +208,7 @@ spec:
         - name: route_path
           value: ($http_agent_route_path)
         - name: expected_status
-          value: "403"
+          value: "401"
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
     - name: 13-Reject-request-with-invalid-credential-from-cluster
@@ -221,7 +220,7 @@ spec:
         - name: request_headers
           value: (join('', ['apikey:', ($invalid_api_key_value)]))
         - name: expected_status
-          value: "403"
+          value: "401"
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
     - name: 14-Accept-request-with-valid-credential-from-cluster
@@ -437,7 +436,7 @@ spec:
         - name: request_headers
           value: (join('', ['apikey:', ($api_key_value)]))
         - name: expected_status
-          value: "403"
+          value: "401"
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
     - name: 32-Reject-request-after-credential-revoked-from-host
@@ -449,7 +448,7 @@ spec:
         - name: request_headers
           value: (join('', ['apikey:', ($api_key_value)]))
         - name: expected_status
-          value: "403"
+          value: "401"
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-host.yaml
   catch:
