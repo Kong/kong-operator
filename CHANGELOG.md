@@ -92,6 +92,7 @@
   Otherwise it polls the control plane's expected config version once per sync
   period. When the version changes because of a write the operator didn't make,
   it GETs each entity and sends a PUT only if the entity drifted.
+  [#6741](https://github.com/Kong/kong-operator/pull/6741)
 
 ### Fixes
 
