@@ -552,10 +552,39 @@ func TestDelete(t *testing.T) {
 			// For example a KongService whose controlPlaneRef points at a Control
 			// Plane Group: the ref is rejected, so the ControlPlane ID is never set
 			// and the entity can't exist in Konnect.
-			name: "no Konnect ID and no ControlPlane ID - Konnect is not called",
+			name: "no Konnect ID, no ControlPlane ID and rejected ControlPlaneRef - Konnect is not called",
 			entity: &configurationv1alpha1.KongService{
 				Name:      "test-svc",
 				Namespace: "test-ns",
+				Status: configurationv1alpha1.KongServiceStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   konnectv1alpha1.ControlPlaneRefValidConditionType,
+							Status: metav1.ConditionFalse,
+							Reason: konnectv1alpha1.ControlPlaneRefReasonInvalid,
+						},
+					},
+				},
+			},
+		},
+		{
+			// An empty ControlPlane ID alone proves nothing (a KongRoute gets its
+			// ControlPlane ID from its KongService after the last status patch), so
+			// without a rejected ControlPlaneRef the UID probe still runs.
+			name: "no Konnect ID and no ControlPlane ID but ControlPlaneRef not rejected - Konnect is probed by UID",
+			entity: &configurationv1alpha1.KongService{
+				Name:      "test-svc",
+				Namespace: "test-ns",
+			},
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				sdk.ServicesSDK.EXPECT().
+					ListService(mock.Anything, mock.Anything).
+					Return(&sdkkonnectops.ListServiceResponse{
+						Object: &sdkkonnectops.ListServiceResponseBody{
+							Data: []sdkkonnectcomp.Service{},
+						},
+					}, nil)
+				return sdk
 			},
 		},
 		{
