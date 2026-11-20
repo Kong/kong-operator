@@ -60,11 +60,9 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", service.Name, err)
 		}
 		nn := ControlPlaneWorkspace{
-			NamespacedName: types.NamespacedName{
-				// TODO: implement cross namespace references
-				Namespace: service.Namespace,
-				Name:      cp.Name,
-			},
+			// TODO: implement cross namespace references
+			Namespace: service.Namespace,
+			Name:      cp.Name,
 			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
@@ -84,10 +82,8 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			}
 
 			nn := ControlPlaneWorkspace{
-				NamespacedName: types.NamespacedName{
-					Namespace: route.Namespace,
-					Name:      cp.Name,
-				},
+				Namespace: route.Namespace,
+				Name:      cp.Name,
 				Workspace: cpRef.GetWorkspace(),
 			}
 			fr := ret[nn]
@@ -118,11 +114,9 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		}
 
 		nn := ControlPlaneWorkspace{
-			NamespacedName: types.NamespacedName{
-				// TODO: implement cross namespace references
-				Namespace: route.Namespace,
-				Name:      cp.Name,
-			},
+			// TODO: implement cross namespace references
+			Namespace: route.Namespace,
+			Name:      cp.Name,
 			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
@@ -139,11 +133,9 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumer %s: %w", consumer.Name, err)
 		}
 		nn := ControlPlaneWorkspace{
-			NamespacedName: types.NamespacedName{
-				// TODO: implement cross namespace references
-				Namespace: consumer.Namespace,
-				Name:      cp.Name,
-			},
+			// TODO: implement cross namespace references
+			Namespace: consumer.Namespace,
+			Name:      cp.Name,
 			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
@@ -160,11 +152,9 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumerGroup %s: %w", group.Name, err)
 		}
 		nn := ControlPlaneWorkspace{
-			NamespacedName: types.NamespacedName{
-				// TODO: implement cross namespace references
-				Namespace: group.Namespace,
-				Name:      cp.Name,
-			},
+			// TODO: implement cross namespace references
+			Namespace: group.Namespace,
+			Name:      cp.Name,
 			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]

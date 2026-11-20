@@ -389,11 +389,9 @@ func deleteUnusedKongPluginBindings(
 
 		// If a ControlPlane this KongPluginBinding references, is not found, delete it.
 		combinations, ok := groupedCombinations[ControlPlaneWorkspace{
-			NamespacedName: types.NamespacedName{
-				// TODO: implement cross namespace references
-				Namespace: pb.Namespace,
-				Name:      cp.Name,
-			},
+			// TODO: implement cross namespace references
+			Namespace: pb.Namespace,
+			Name:      cp.Name,
 			Workspace: cpRef.GetWorkspace(),
 		}]
 		if !ok {
