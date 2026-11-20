@@ -366,6 +366,28 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		assert.Equal(t, 0, e.version.calls)
 	})
 
+	t.Run("write without a baseline does not mask a later external change", func(t *testing.T) {
+		e := synced(t)
+
+		// Simulate losing the control plane baseline (for example after a
+		// server URL change) while the entity sync record is still present.
+		e.tracker.mu.Lock()
+		e.tracker.controlPlanes[testCPID].version = ""
+		e.tracker.mu.Unlock()
+
+		e.version.version = "1"
+		e.tracker.BeforeWrite(t.Context(), testCPID)
+		e.version.version = "2"
+		e.tracker.AfterWrite(t.Context(), testCPID)
+		e.tracker.waitForRebaseline()
+
+		e.clock.Advance(testVersionTTL)
+		assert.Equal(t, syncOutcomeVerified, update(t, e, true))
+		gets, upserts := e.services.calls()
+		assert.Equal(t, 1, gets)
+		assert.Equal(t, 0, upserts)
+	})
+
 	t.Run("unchanged periodic update is skipped between drift checks", func(t *testing.T) {
 		e := synced(t)
 
