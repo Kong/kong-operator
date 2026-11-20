@@ -386,13 +386,14 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           ARCH: ${{ matrix.arch }}
-        run: echo "${DIGEST}" > "digest-image-linux-${ARCH}.sha256"
+          TAG_SUFFIX: ${{ env.TAG_SUFFIX }}
+        run: echo "${DIGEST}" > "digest-image-linux-${ARCH}${TAG_SUFFIX}.sha256"
       - name: Upload the per-arch digest
         if: ${{ inputs.push }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: digest-image-linux-${{ matrix.arch }}.sha256
-          path: digest-image-linux-${{ matrix.arch }}.sha256
+          name: digest-image-linux-${{ matrix.arch }}${{ env.TAG_SUFFIX }}.sha256
+          path: digest-image-linux-${{ matrix.arch }}${{ env.TAG_SUFFIX }}.sha256
 
       - name: Send slack notification if job fails.
         if: ${{ failure() && inputs.slack-send }}
@@ -585,6 +586,12 @@ jobs:
     if: ${{ needs.build-multi-arch.outputs.index_digest != '' }}
     permissions:
       contents: read
+
+    # Two callers can push in the same run (the default image and the Red Hat variant), so
+    # every artifact this job names needs the suffix to stay unique.
+    env:
+      TAG_SUFFIX: ${{ inputs.tag-suffix != '' && format('-{0}', inputs.tag-suffix) || '' }}
+
     strategy:
       # One instance per architecture, so one arch's failure does not affect the other.
       fail-fast: false
@@ -601,7 +608,7 @@ jobs:
       - name: Download the per-arch digest
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: digest-image-linux-${{ matrix.arch }}.sha256
+          name: digest-image-linux-${{ matrix.arch }}${{ env.TAG_SUFFIX }}.sha256
 
       # `imagetools inspect` and the scanners below read ~/.docker/config.json; anonymous Docker Hub
       # pulls are rate limited. Pull-scoped on purpose: this job never pushes.
@@ -621,9 +628,10 @@ jobs:
           REGISTRY: ${{ inputs.registry }}
           IMAGE_NAME: ${{ inputs.image-name }}
           ARCH: ${{ matrix.arch }}
+          TAG_SUFFIX: ${{ env.TAG_SUFFIX }}
         run: |
           set -euo pipefail
-          index_digest="$(cat "digest-image-linux-${ARCH}.sha256")"
+          index_digest="$(cat "digest-image-linux-${ARCH}${TAG_SUFFIX}.sha256")"
           child_digest="$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}@${index_digest}" --raw \
             | jq -r --arg arch "${ARCH}" \
               '[.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest] | .[0] // ""')"
@@ -639,7 +647,7 @@ jobs:
       - name: Scan the image
         uses: Kong/public-shared-actions/security-actions/scan-docker-image@a92df3beb1e69e27d86be56346488f15fecaf0de # scan-docker-image@6.1.1
         with:
-          asset_prefix: image-linux-${{ matrix.arch }}
+          asset_prefix: image-linux-${{ matrix.arch }}${{ env.TAG_SUFFIX }}
           image: ${{ env.IMAGE }}
           registry_username: ${{ inputs.pull-username }}
           registry_password: ${{ secrets.dockerhub-pull-token }}
@@ -654,6 +662,11 @@ jobs:
     permissions:
       contents: read
 
+    # The source SBOM is identical for both variants, but the artifact name must still be
+    # unique when two callers push in the same run.
+    env:
+      TAG_SUFFIX: ${{ inputs.tag-suffix != '' && format('-{0}', inputs.tag-suffix) || '' }}
+
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
@@ -665,6 +678,6 @@ jobs:
         # fail_build stays false: gating on findings is a separate decision, not this PR's.
         with:
           dir: '.'
-          asset_prefix: source
+          asset_prefix: source${{ env.TAG_SUFFIX }}
           fail_build: false
           codeql_upload: false
