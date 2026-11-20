@@ -98,12 +98,31 @@ func gvToPathKey(gv schema.GroupVersion) string {
 	return "apis/" + gv.Group + "/" + gv.Version
 }
 
+// typeConverterSnapshotter is implemented by TypeConverters whose schema can be
+// swapped at runtime, such as TypeConverterProvider.
+type typeConverterSnapshotter interface {
+	Snapshot() managedfields.TypeConverter
+}
+
+// stableTypeConverter returns a TypeConverter that keeps one schema for the
+// whole operation. TypedValue.Compare and Merge require both values to come
+// from the same schema, and TypeConverterProvider can swap its schema between
+// two ObjectToTyped calls when CRDs change, which fails with "expected objects
+// with types from the same schema".
+func stableTypeConverter(tc managedfields.TypeConverter) managedfields.TypeConverter {
+	if s, ok := tc.(typeConverterSnapshotter); ok {
+		return s.Snapshot()
+	}
+	return tc
+}
+
 // MergeObjects merges userOverlay into base using structured-merge-diff.
 // User-provided values in userOverlay win on conflicts; the base supplies
 // default values for fields the user has not specified. Returns an
 // *unstructured.Unstructured so the caller can use the result directly with
 // ApplyIfChanged or convert it to a typed struct.
 func MergeObjects(tc managedfields.TypeConverter, base, userOverlay runtime.Object) (*unstructured.Unstructured, error) {
+	tc = stableTypeConverter(tc)
 	baseTyped, err := tc.ObjectToTyped(base)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert base to TypedValue: %w", err)
@@ -170,6 +189,7 @@ func ApplyIfChanged(
 		return op.Noop, err
 	}
 
+	tc = stableTypeConverter(tc)
 	existingTyped, err := tc.ObjectToTyped(existing)
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed to convert existing object to TypedValue: %w", err)
@@ -297,6 +317,7 @@ func ApplyStatusIfChanged(
 		}}
 	}
 
+	tc = stableTypeConverter(tc)
 	existingTyped, err := tc.ObjectToTyped(statusOnlyObj(existingStatus))
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed to convert existing status to TypedValue: %w", err)
