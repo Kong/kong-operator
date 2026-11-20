@@ -91,6 +91,11 @@
   and metrics scraping for installations such as OLM that cannot create the
   `Secret` in advance. Existing `Secret`s are never overwritten.
   [#6728](https://github.com/Kong/kong-operator/pull/6728)
+- `OnPremEventGateway`: a status the operator computed for an entity is no
+  longer written to another entity of the same name created since. A static
+  key deleted and created again no longer gets the fingerprint of the value
+  of the one it replaces, which stopped the push of its gateway for good.
+  [#6764](https://github.com/Kong/kong-operator/pull/6764)
 
 ## [v2.4.0]
 
