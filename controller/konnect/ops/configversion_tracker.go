@@ -97,6 +97,13 @@ func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID s
 	cp := t.controlPlane(controlPlaneID)
 	t.observeCurrentSDK(ctx, cp)
 	if !cp.hasCleanBaseline() {
+		if cp.version == "" {
+			// Without a baseline the version read cannot tell an operator write
+			// from an external change. Treat the current time as a potential
+			// external change so entities checked before it are verified once
+			// the version can be read.
+			cp.changedAt = t.now()
+		}
 		cp.ownWrite = true
 		cp.writesInFlight++
 		t.mu.Unlock()

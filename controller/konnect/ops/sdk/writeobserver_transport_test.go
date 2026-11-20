@@ -113,3 +113,24 @@ func TestWriteObservingTransport(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteObservingTransportNilObserver(t *testing.T) {
+	var called bool
+	base := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		called = true
+		return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: req}, nil
+	})
+
+	tr := NewWriteObservingTransport(base, nil)
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPut,
+		"https://us.api.konghq.com/v2/control-planes/cp-1/core-entities/services/svc-1",
+		strings.NewReader("{}"),
+	)
+	require.NoError(t, err)
+	resp, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.True(t, called)
+}

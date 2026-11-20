@@ -27,6 +27,10 @@ func NewWriteObservingTransport(base http.RoundTripper, observer WriteObserver) 
 	if base == nil {
 		base = http.DefaultTransport
 	}
+	if observer == nil {
+		// Nothing to report: keep the base transport.
+		return base
+	}
 	return &writeObservingTransport{base: base, observer: observer}
 }
 
