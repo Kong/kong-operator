@@ -110,7 +110,7 @@ func TestConsumePolicyChainGuardedOperations(t *testing.T) {
 				if op == CreateOp {
 					_, err = Create(ctx, sdk, cl, &metricsmocks.MockRecorder{}, chain)
 				} else {
-					_, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain, nil)
+					_, _, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain, nil)
 				}
 				if tt.getErr != nil {
 					require.ErrorIs(t, err, tt.getErr)
@@ -171,7 +171,7 @@ func TestConsumePolicyChainChecksWithinSyncPeriod(t *testing.T) {
 							EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: tt.desired},
 						}, nil).Once()
 				}
-				result, err := Update(WithResolvedPolicyChainIDs(t.Context(), chain, tt.desired), sdk, period, cl, &metricsmocks.MockRecorder{}, chain, nil)
+				result, _, err := Update(WithResolvedPolicyChainIDs(t.Context(), chain, tt.desired), sdk, period, cl, &metricsmocks.MockRecorder{}, chain, nil)
 				if tt.err != "" {
 					require.ErrorContains(t, err, tt.err)
 					require.True(t, apimeta.IsStatusConditionFalse(chain.GetConditions(), "Programmed"))
@@ -244,7 +244,7 @@ func TestConsumePolicyChainRejectsForeignOrganizationBeforeSDK(t *testing.T) {
 			if op == CreateOp {
 				_, err = Create(t.Context(), sdk, cl, &metricsmocks.MockRecorder{}, chain)
 			} else {
-				_, err = Update(t.Context(), sdk, time.Hour, cl, &metricsmocks.MockRecorder{}, chain, nil)
+				_, _, err = Update(t.Context(), sdk, time.Hour, cl, &metricsmocks.MockRecorder{}, chain, nil)
 			}
 			require.ErrorContains(t, err, "policy default/policy belongs to Konnect organization foreign-org, expected organization chain-org")
 			_, invalid := errors.AsType[configurationv1alpha1.PolicyChainInvalidError](err)

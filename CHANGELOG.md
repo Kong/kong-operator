@@ -93,6 +93,11 @@
   period. When the version changes because of a write the operator didn't make,
   it GETs each entity and sends a PUT only if the entity drifted.
   [#6741](https://github.com/Kong/kong-operator/pull/6741)
+- Konnect: the per-entity sync state is now persisted in the status of Kong
+  Gateway configuration entities. After a restart or leader change the
+  operator verifies unchanged entities with a GET instead of sending one PUT
+  per entity, while keeping the in-memory tracker as the fast path.
+  [#6765](https://github.com/Kong/kong-operator/issues/6765)
 
 ### Fixes
 

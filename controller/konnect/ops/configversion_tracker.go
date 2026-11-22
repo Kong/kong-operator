@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 )
@@ -21,6 +24,16 @@ const (
 	// versionReadTimeout bounds the config version read performed around a write.
 	// It is deliberately independent from the write request's timeout.
 	versionReadTimeout = 2 * time.Second
+
+	// SyncHashVersion is the version of the payload and representation hash
+	// scheme persisted in a status.SyncStatus.
+	//
+	// Bump it whenever the canonicalization or hashing changes. Entities whose
+	// persisted hashes carry a different version are treated as unverified and
+	// sent to Konnect once more.
+	SyncHashVersion = "v1"
+
+	hashPrefix = "sha256:"
 )
 
 // ConfigVersionTracker avoids enforcing unchanged Kong Gateway entities in Konnect on every sync period.
@@ -80,9 +93,27 @@ type controlPlaneConfigVersion struct {
 
 type hash [sha256.Size]byte
 
+func (h hash) String() string {
+	return hashPrefix + hex.EncodeToString(h[:])
+}
+
+func parseHash(s string) (hash, bool) {
+	if !strings.HasPrefix(s, hashPrefix) {
+		return hash{}, false
+	}
+	b, err := hex.DecodeString(strings.TrimPrefix(s, hashPrefix))
+	if err != nil || len(b) != sha256.Size {
+		return hash{}, false
+	}
+	var h hash
+	copy(h[:], b)
+	return h, true
+}
+
 type entitySyncRecord struct {
 	payloadHash hash
 	reprHash    hash
+	hasReprHash bool
 	checkedAt   time.Time
 }
 
@@ -383,6 +414,12 @@ type syncGuard struct {
 	// periodic is true when the update is only due to the sync period having elapsed,
 	// in which case it can be skipped or verified with a GET instead of being sent.
 	periodic bool
+	// persisted is the sync state loaded from the entity status, when present.
+	// Its hashes are unverified until a GET confirms them.
+	persisted *configurationv1alpha1.SyncStatus
+	// pending is the record produced by a real PUT. It is persisted in status by
+	// the reconcile and committed to memory only after the status patch succeeds.
+	pending *entitySyncRecord
 
 	outcome syncOutcome
 }
@@ -392,6 +429,7 @@ func (t *ConfigVersionTracker) guard(
 	uid types.UID,
 	controlPlaneID string,
 	periodic bool,
+	persisted *configurationv1alpha1.SyncStatus,
 ) *syncGuard {
 	if t == nil || sdk == nil || controlPlaneID == "" || uid == "" {
 		return nil
@@ -402,6 +440,7 @@ func (t *ConfigVersionTracker) guard(
 		uid:            uid,
 		controlPlaneID: controlPlaneID,
 		periodic:       periodic,
+		persisted:      persisted,
 	}
 }
 
@@ -420,6 +459,53 @@ func (g *syncGuard) invalidate() {
 	if g != nil {
 		g.tracker.Forget(g.uid)
 	}
+}
+
+// recordFromStatus returns the persisted sync state as an in-memory record with
+// a zero checkedAt, so the first reconcile after a restart verifies the entity
+// with a GET instead of trusting it.
+//
+// Missing hashes and hashes from another scheme are unverified: they produce no
+// record, so the entity is sent to Konnect and recorded again.
+func (g *syncGuard) recordFromStatus() (entitySyncRecord, bool) {
+	if g == nil || g.persisted == nil || g.persisted.HashVersion != SyncHashVersion {
+		return entitySyncRecord{}, false
+	}
+	payloadHash, payloadOK := parseHash(g.persisted.PayloadHash)
+	reprHash, reprOK := parseHash(g.persisted.RepresentationHash)
+	if !payloadOK || !reprOK {
+		return entitySyncRecord{}, false
+	}
+	return entitySyncRecord{
+		payloadHash: payloadHash,
+		reprHash:    reprHash,
+		hasReprHash: true,
+	}, true
+}
+
+// pendingStatus returns the status representation of the record produced by a
+// real PUT, or nil when the update did not send the entity to Konnect.
+func (g *syncGuard) pendingStatus() *configurationv1alpha1.SyncStatus {
+	if g == nil || g.pending == nil {
+		return nil
+	}
+	status := &configurationv1alpha1.SyncStatus{
+		PayloadHash: g.pending.payloadHash.String(),
+		HashVersion: SyncHashVersion,
+	}
+	if g.pending.hasReprHash {
+		status.RepresentationHash = g.pending.reprHash.String()
+	}
+	return status
+}
+
+// pendingRecord returns the in-memory record produced by a real PUT. It must be
+// committed only after the status carrying the same record is persisted.
+func (g *syncGuard) pendingRecord() (entitySyncRecord, bool) {
+	if g == nil || g.pending == nil {
+		return entitySyncRecord{}, false
+	}
+	return *g.pending, true
 }
 
 // upsertUnlessInSync sends the entity to Konnect using upsert, unless the guard determines that Konnect already
@@ -454,7 +540,11 @@ func upsertUnlessInSync[E any](
 	// the first write, so that the write is attributed to the operator.
 	changedAt, versionOK := t.lastExternalChange(ctx, g.sdk, g.controlPlaneID)
 
-	if rec, ok := t.record(g.uid); g.periodic && versionOK && ok && rec.payloadHash == payloadHash {
+	rec, ok := t.record(g.uid)
+	if !ok {
+		rec, ok = g.recordFromStatus()
+	}
+	if g.periodic && versionOK && ok && rec.payloadHash == payloadHash {
 		logger := ctrllog.FromContext(ctx)
 		if !t.driftCheckDue(g.uid, rec) && changedAt.Before(rec.checkedAt) {
 			log.Debug(logger, "entity unchanged and no external change in Konnect, skipping update")
@@ -469,7 +559,12 @@ func upsertUnlessInSync[E any](
 			reprHash, err := representationHash(ent)
 			if err == nil && reprHash == rec.reprHash {
 				log.Debug(logger, "entity unchanged in Konnect, skipping update")
-				t.store(g.uid, entitySyncRecord{payloadHash: payloadHash, reprHash: reprHash, checkedAt: checkedAt})
+				t.store(g.uid, entitySyncRecord{
+					payloadHash: payloadHash,
+					reprHash:    reprHash,
+					hasReprHash: true,
+					checkedAt:   checkedAt,
+				})
 				g.outcome = syncOutcomeVerified
 				return nil
 			}
@@ -483,11 +578,14 @@ func upsertUnlessInSync[E any](
 		t.Forget(g.uid)
 		return err
 	}
-	rec := entitySyncRecord{payloadHash: payloadHash, checkedAt: sentAt}
+	rec = entitySyncRecord{payloadHash: payloadHash, checkedAt: sentAt}
 	if reprHash, err := representationHash(ent); err == nil {
 		rec.reprHash = reprHash
+		rec.hasReprHash = true
 	}
-	t.store(g.uid, rec)
+	// Do not advance the in-memory record before the status carrying it is
+	// persisted. The caller commits it after a successful status patch.
+	g.pending = &rec
 	g.outcome = syncOutcomeSent
 	return nil
 }
@@ -511,9 +609,39 @@ func representationHash(v any) (hash, error) {
 	if err := json.Unmarshal(b, &m); err != nil {
 		return hash{}, err
 	}
-	if obj, ok := m.(map[string]any); ok {
-		delete(obj, "created_at")
-		delete(obj, "updated_at")
+	return hashJSON(canonicalizeRepresentation(m))
+}
+
+// canonicalizeRepresentation makes a Konnect representation stable across
+// equivalent responses: object keys are sorted by encoding/json, and fields
+// Konnect changes without the entity changing are removed recursively.
+func canonicalizeRepresentation(v any) any {
+	switch value := v.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(value))
+		for k, child := range value {
+			if isVolatileRepresentationField(k) {
+				continue
+			}
+			out[k] = canonicalizeRepresentation(child)
+		}
+		return out
+	case []any:
+		out := make([]any, len(value))
+		for i, child := range value {
+			out[i] = canonicalizeRepresentation(child)
+		}
+		return out
+	default:
+		return value
 	}
-	return hashJSON(m)
+}
+
+func isVolatileRepresentationField(key string) bool {
+	switch key {
+	case "created_at", "updated_at":
+		return true
+	default:
+		return false
+	}
 }

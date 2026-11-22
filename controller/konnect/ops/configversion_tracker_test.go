@@ -173,8 +173,12 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 	}
 	update := func(t *testing.T, e env, periodic bool) syncOutcome {
 		t.Helper()
-		g := e.tracker.guard(e.version.sdk, e.svc.GetUID(), testCPID, periodic)
+		g := e.tracker.guard(e.version.sdk, e.svc.GetUID(), testCPID, periodic, nil)
 		require.NoError(t, updateService(t.Context(), e.services.sdk, g, e.svc))
+		// Model the reconciler committing the record after a successful status patch.
+		if rec, ok := g.pendingRecord(); ok {
+			e.tracker.store(e.svc.GetUID(), rec)
+		}
 		return g.outcome
 	}
 	synced := func(t *testing.T) env {
@@ -500,7 +504,7 @@ func TestConfigVersionTrackerUpdateService(t *testing.T) {
 		svc := newTestKongService()
 		sdk.EXPECT().UpsertService(mock.Anything, mock.Anything).Return(nil, errors.New("boom")).Once()
 
-		g := tracker.guard(version.sdk, svc.GetUID(), testCPID, true)
+		g := tracker.guard(version.sdk, svc.GetUID(), testCPID, true, nil)
 		require.Error(t, updateService(t.Context(), sdk, g, svc))
 		_, ok := tracker.record(svc.GetUID())
 		assert.False(t, ok)
@@ -517,7 +521,7 @@ func TestConfigVersionTrackerNilGuardAlwaysSends(t *testing.T) {
 		tracker.AfterWrite(t.Context(), testCPID)
 	})
 	for range 2 {
-		g := tracker.guard(nil, svc.GetUID(), testCPID, true)
+		g := tracker.guard(nil, svc.GetUID(), testCPID, true, nil)
 		require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
 	}
 	_, upserts := services.calls()
@@ -529,7 +533,7 @@ func TestConfigVersionTrackerNilSDKGuardAlwaysSends(t *testing.T) {
 	services := newFakeKonnectServices(t)
 	svc := newTestKongService()
 
-	g := tracker.guard(nil, svc.GetUID(), testCPID, true)
+	g := tracker.guard(nil, svc.GetUID(), testCPID, true, nil)
 	require.Nil(t, g)
 	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
 	_, upserts := services.calls()
@@ -592,8 +596,11 @@ func TestConfigVersionTrackerConsumerGroupGetIsWrapped(t *testing.T) {
 
 			sdk.EXPECT().UpsertConsumerGroup(mock.Anything, mock.Anything).
 				Return(&sdkkonnectops.UpsertConsumerGroupResponse{ConsumerGroup: konnectGroup(1)}, nil).Once()
-			g := tracker.guard(version.sdk, group.GetUID(), testCPID, true)
+			g := tracker.guard(version.sdk, group.GetUID(), testCPID, true, nil)
 			require.NoError(t, updateConsumerGroup(t.Context(), sdk, g, group))
+			if rec, ok := g.pendingRecord(); ok {
+				tracker.store(group.GetUID(), rec)
+			}
 
 			version.version = "2"
 			clock.Advance(testVersionTTL)
@@ -606,7 +613,7 @@ func TestConfigVersionTrackerConsumerGroupGetIsWrapped(t *testing.T) {
 					Return(&sdkkonnectops.UpsertConsumerGroupResponse{ConsumerGroup: konnectGroup(3)}, nil).Once()
 			}
 
-			g = tracker.guard(version.sdk, group.GetUID(), testCPID, true)
+			g = tracker.guard(version.sdk, group.GetUID(), testCPID, true, nil)
 			require.NoError(t, updateConsumerGroup(t.Context(), sdk, g, group))
 			assert.Equal(t, tc.expectedOutcome, g.outcome)
 		})
@@ -642,8 +649,11 @@ func TestConfigVersionTrackerConsumerGroupAssignments(t *testing.T) {
 		}, nil).Once()
 	}
 	update := func() syncOutcome {
-		g := tracker.guard(version.sdk, consumer.GetUID(), testCPID, true)
+		g := tracker.guard(version.sdk, consumer.GetUID(), testCPID, true, nil)
 		require.NoError(t, updateConsumer(t.Context(), sdk, cgSDK, cl, g, consumer))
+		if rec, ok := g.pendingRecord(); ok {
+			tracker.store(consumer.GetUID(), rec)
+		}
 		return g.outcome
 	}
 
@@ -682,6 +692,167 @@ func TestRepresentationHash(t *testing.T) {
 	e, err := representationHash(map[string]any{"a": map[string]any{"x": 2, "y": 1}, "b": 1})
 	require.NoError(t, err)
 	assert.Equal(t, d, e, "key order must be ignored")
+
+	f, err := representationHash(map[string]any{
+		"a": map[string]any{"created_at": 1, "updated_at": 2, "value": "x"},
+	})
+	require.NoError(t, err)
+	g, err := representationHash(map[string]any{
+		"a": map[string]any{"value": "x"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, f, g, "volatile fields must be ignored recursively")
+}
+
+func TestSyncHashEncoding(t *testing.T) {
+	h, err := hashJSON("payload")
+	require.NoError(t, err)
+	assert.Regexp(t, `^sha256:[0-9a-f]{64}$`, h.String())
+
+	parsed, ok := parseHash(h.String())
+	require.True(t, ok)
+	assert.Equal(t, h, parsed)
+
+	for _, invalid := range []string{"", "sha256:", "sha256:zz", "md5:abcd"} {
+		_, ok := parseHash(invalid)
+		assert.False(t, ok, "hash %q must be rejected", invalid)
+	}
+}
+
+func TestConfigVersionTrackerHydratesSyncStatus(t *testing.T) {
+	tracker, _ := newTestConfigVersionTracker()
+	version := newFakeConfigVersion(t)
+	services := newFakeKonnectServices(t)
+	svc := newTestKongService()
+
+	g := tracker.guard(version.sdk, svc.GetUID(), testCPID, true, nil)
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	require.Equal(t, syncOutcomeSent, g.outcome)
+	persisted := g.pendingStatus()
+	require.NotNil(t, persisted)
+	svc.SetSyncStatus(persisted)
+	services.calls()
+
+	// A new tracker has no in-memory record: the status hashes must be treated as
+	// unverified and the entity checked with a GET.
+	restarted, _ := newTestConfigVersionTracker()
+	g = restarted.guard(version.sdk, svc.GetUID(), testCPID, true, svc.GetSyncStatus())
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	assert.Equal(t, syncOutcomeVerified, g.outcome)
+	gets, upserts := services.calls()
+	assert.Equal(t, 1, gets)
+	assert.Equal(t, 0, upserts)
+
+	record, ok := restarted.record(svc.GetUID())
+	require.True(t, ok, "verified GET must hydrate the in-memory record")
+	assert.False(t, record.checkedAt.IsZero())
+	assert.Equal(t, *persisted, *svc.GetSyncStatus(), "verified GET must not change status")
+}
+
+func TestConfigVersionTrackerStatusMismatchSends(t *testing.T) {
+	testCases := []struct {
+		name   string
+		mutate func(*configurationv1alpha1.SyncStatus)
+	}{
+		{
+			name: "payload hash mismatch",
+			mutate: func(s *configurationv1alpha1.SyncStatus) {
+				h, err := hashJSON("other")
+				require.NoError(t, err)
+				s.PayloadHash = h.String()
+			},
+		},
+		{
+			name: "hash version mismatch",
+			mutate: func(s *configurationv1alpha1.SyncStatus) {
+				s.HashVersion = "v0"
+			},
+		},
+		{
+			name: "missing representation hash",
+			mutate: func(s *configurationv1alpha1.SyncStatus) {
+				s.RepresentationHash = ""
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tracker, _ := newTestConfigVersionTracker()
+			version := newFakeConfigVersion(t)
+			services := newFakeKonnectServices(t)
+			svc := newTestKongService()
+
+			// Record the real hashes first, then corrupt exactly the field under test.
+			g := tracker.guard(version.sdk, svc.GetUID(), testCPID, true, nil)
+			require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+			status := g.pendingStatus()
+			require.NotNil(t, status)
+			tc.mutate(status)
+			svc.SetSyncStatus(status)
+			services.calls()
+
+			// A new tracker sees only the corrupted status.
+			restarted, _ := newTestConfigVersionTracker()
+			g = restarted.guard(version.sdk, svc.GetUID(), testCPID, true, svc.GetSyncStatus())
+			require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+			assert.Equal(t, syncOutcomeSent, g.outcome)
+			gets, upserts := services.calls()
+			assert.Equal(t, 0, gets)
+			assert.Equal(t, 1, upserts)
+		})
+	}
+}
+
+func TestUpdatePersistsSyncStatus(t *testing.T) {
+	tracker, _ := newTestConfigVersionTracker()
+	sdk := sdkmocks.NewMockSDKWrapperWithT(t)
+	services := newFakeKonnectServices(t)
+	sdk.ServicesSDK = services.sdk
+	version := newFakeConfigVersion(t)
+	sdk.DPNodesSDK = version.sdk
+	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
+	svc := newTestKongService()
+
+	_, syncResult, err := Update(t.Context(), sdk, time.Minute, cl, &metricsmocks.MockRecorder{}, svc, tracker)
+	require.NoError(t, err)
+	require.NotNil(t, syncResult)
+
+	require.NotNil(t, svc.GetSyncStatus(), "a real PUT must persist the sync state in status")
+	assert.Equal(t, SyncHashVersion, svc.GetSyncStatus().HashVersion)
+	assert.Regexp(t, `^sha256:[0-9a-f]{64}$`, svc.GetSyncStatus().PayloadHash)
+	assert.Regexp(t, `^sha256:[0-9a-f]{64}$`, svc.GetSyncStatus().RepresentationHash)
+
+	_, ok := tracker.record(svc.GetUID())
+	assert.False(t, ok, "memory must not advance before the status patch succeeds")
+
+	syncResult.Commit()
+	_, ok = tracker.record(svc.GetUID())
+	assert.True(t, ok)
+}
+
+func TestConfigVersionTrackerSkipDoesNotChangeStatus(t *testing.T) {
+	tracker, clock := newTestConfigVersionTracker()
+	version := newFakeConfigVersion(t)
+	services := newFakeKonnectServices(t)
+	svc := newTestKongService()
+
+	g := tracker.guard(version.sdk, svc.GetUID(), testCPID, true, nil)
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	persisted := g.pendingStatus()
+	require.NotNil(t, persisted)
+	svc.SetSyncStatus(persisted)
+	if record, ok := g.pendingRecord(); ok {
+		tracker.store(svc.GetUID(), record)
+	}
+	services.calls()
+
+	before := *svc.GetSyncStatus()
+	clock.Advance(testVersionTTL)
+	g = tracker.guard(version.sdk, svc.GetUID(), testCPID, true, svc.GetSyncStatus())
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	assert.Equal(t, syncOutcomeSkipped, g.outcome)
+	assert.Equal(t, before, *svc.GetSyncStatus(), "a skipped update must not change status")
 }
 
 func TestUpdateSkipsPeriodicUpdateInSyncWithKonnect(t *testing.T) {
@@ -696,15 +867,17 @@ func TestUpdateSkipsPeriodicUpdateInSyncWithKonnect(t *testing.T) {
 	svc.Generation = 1
 	syncPeriod := time.Minute
 
-	_, err := Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, svc, tracker)
+	_, syncResult, err := Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, svc, tracker)
 	require.NoError(t, err)
+	require.NotNil(t, syncResult)
+	syncResult.Commit()
 	_, upserts := services.calls()
 	require.Equal(t, 1, upserts)
 
 	lastUpdate := metav1.NewTime(time.Now().Add(-2 * syncPeriod).Truncate(time.Second))
 	svc.Status.Conditions[0].LastTransitionTime = lastUpdate
 
-	res, err := Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, svc, tracker)
+	res, _, err := Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, svc, tracker)
 	require.NoError(t, err)
 	assert.Equal(t, syncPeriod, res.RequeueAfter)
 	gets, upserts := services.calls()
@@ -715,7 +888,7 @@ func TestUpdateSkipsPeriodicUpdateInSyncWithKonnect(t *testing.T) {
 	assert.Equal(t, lastUpdate, svc.Status.Conditions[0].LastTransitionTime, "skipped update must not touch the status")
 
 	svc.Generation = 2
-	_, err = Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, svc, tracker)
+	_, _, err = Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, svc, tracker)
 	require.NoError(t, err)
 	_, upserts = services.calls()
 	assert.Equal(t, 1, upserts, "generation change must be sent")

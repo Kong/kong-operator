@@ -898,7 +898,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if inputs, ok := any(ent).(createInputsAware); ok {
 		previousHash = inputs.GetCreateInputsHash()
 	}
-	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, r.ConfigVersionTracker)
+	var syncResult *ops.SyncResult
+	res, syncResult, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, r.ConfigVersionTracker)
 	if inputs, ok := any(ent).(createInputsAware); ok &&
 		(previousID != ent.GetKonnectStatus().GetKonnectID() || previousHash != inputs.GetCreateInputsHash()) {
 		r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), pendingKonnectEntityStatus{
@@ -920,6 +921,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
 	}
+	// The status now carries the sync record produced by the update. Only now is
+	// it safe to advance the in-memory fast path with the same record.
+	syncResult.Commit()
 	if err != nil {
 		logger.Error(err, "failed to update")
 
