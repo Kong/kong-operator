@@ -97,7 +97,7 @@
   Gateway configuration entities. After a restart or leader change the
   operator verifies unchanged entities with a GET instead of sending one PUT
   per entity, while keeping the in-memory tracker as the fast path.
-  [#6765](https://github.com/Kong/kong-operator/issues/6765)
+  [#6768](https://github.com/Kong/kong-operator/pull/6768)
 
 ### Fixes
 
