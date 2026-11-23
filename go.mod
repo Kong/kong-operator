@@ -363,4 +363,4 @@ replace (
 	k8s.io/streaming => k8s.io/streaming v0.37.2
 )
 
-replace github.com/Kong/sdk-konnect-go => github.com/Kong/sdk-konnect-go-internal v0.8.0
+replace github.com/Kong/sdk-konnect-go => github.com/Kong/sdk-konnect-go-internal v0.8.1
