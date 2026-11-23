@@ -9,10 +9,14 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 )
 
-// kongEnterpriseUsed reports whether DataPlanes run Kong Enterprise: either TEST_KONG_IMAGE
-// points at it or it's not set and the operator's default (Enterprise) image is used.
+// kongEnterpriseUsed reports whether DataPlanes run Kong Enterprise: TEST_KONG_ENTERPRISE
+// forces it when set; otherwise either TEST_KONG_IMAGE points at it or it's not set and
+// the operator's default (Enterprise) image is used.
 func kongEnterpriseUsed() bool {
-	return testenv.KongImage() == "" || testenv.KongEnterpriseImageUsed()
+	if enabled, ok := testenv.KongEnterpriseOverride(); ok {
+		return enabled
+	}
+	return testenv.KongImage() == "" || testenv.KongEnterpriseEnabled()
 }
 
 // SkipIfEnterpriseNotEnabled skips the test when Kong Enterprise is not enabled.

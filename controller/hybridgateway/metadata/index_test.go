@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/v2/internal/types"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	objScheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -94,7 +94,7 @@ func TestHybridRouteOwnerIndexFunc(t *testing.T) {
 }
 
 func TestHybridRouteOwnerIndexKey(t *testing.T) {
-	route := &types.HTTPRoute{
+	route := &gwtypes.HTTPRoute{
 		Namespace: "ns", Name: "route-a",
 	}
 	route.SetGroupVersionKind(httpRouteGVK)
@@ -110,8 +110,8 @@ func TestListOwnedChildResources(t *testing.T) {
 		ctx = context.Background()
 		s   = objScheme.Get()
 		gvk = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
-		rA  = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
-		rB  = &types.HTTPRoute{Namespace: "ns", Name: "route-b"}
+		rA  = &gwtypes.HTTPRoute{Namespace: "ns", Name: "route-a"}
+		rB  = &gwtypes.HTTPRoute{Namespace: "ns", Name: "route-b"}
 	)
 	rA.SetGroupVersionKind(httpRouteGVK)
 	rB.SetGroupVersionKind(httpRouteGVK)
@@ -145,7 +145,7 @@ func TestListOwnedChildResources(t *testing.T) {
 	})
 
 	t.Run("gateway root keeps the broad managed-by listing", func(t *testing.T) {
-		gw := &types.Gateway{Namespace: "ns", Name: "gw-a"}
+		gw := &gwtypes.Gateway{Namespace: "ns", Name: "gw-a"}
 		gw.SetGroupVersionKind(schema.GroupVersionKind{
 			Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway",
 		})
@@ -199,7 +199,7 @@ func TestListOwnedChildResourcesLive(t *testing.T) {
 		ctx = context.Background()
 		s   = objScheme.Get()
 		gvk = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
-		rA  = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
+		rA  = &gwtypes.HTTPRoute{Namespace: "ns", Name: "route-a"}
 	)
 	rA.SetGroupVersionKind(httpRouteGVK)
 
@@ -223,7 +223,7 @@ func TestListOwnedChildResourcesLive(t *testing.T) {
 	})
 
 	t.Run("gateway root", func(t *testing.T) {
-		gw := &types.Gateway{Namespace: "ns", Name: "gw-a"}
+		gw := &gwtypes.Gateway{Namespace: "ns", Name: "gw-a"}
 		gw.SetGroupVersionKind(schema.GroupVersionKind{
 			Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway",
 		})
@@ -283,7 +283,7 @@ func TestListOwnedChildResourcesReturnsNonIndexErrors(t *testing.T) {
 	var (
 		ctx      = context.Background()
 		gvk      = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
-		rA       = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
+		rA       = &gwtypes.HTTPRoute{Namespace: "ns", Name: "route-a"}
 		cacheErr = errors.New("cache failure")
 	)
 	rA.SetGroupVersionKind(httpRouteGVK)

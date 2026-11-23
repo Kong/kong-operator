@@ -138,7 +138,7 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 				if op == CreateOp {
 					_, err = Create(ctx, sdk, cl, &metricsmocks.MockRecorder{}, chain)
 				} else {
-					_, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain)
+					_, _, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain, nil)
 				}
 				if tt.resolved {
 					require.Zero(t, policyReads, "resolved IDs must not trigger another reference lookup")

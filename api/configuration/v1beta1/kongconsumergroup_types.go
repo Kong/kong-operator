@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
@@ -83,6 +84,10 @@ type KongConsumerGroupStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+
+	// Sync contains the internal Konnect synchronization state of the entity.
+	// +optional
+	Sync *configurationv1alpha1.SyncStatus `json:"sync,omitempty"`
 
 	// Conditions describe the current conditions of the KongConsumerGroup.
 	//

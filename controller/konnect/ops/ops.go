@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -530,6 +531,19 @@ func Delete[
 	return err
 }
 
+// isProgrammedForCurrentGeneration reports whether the entity was successfully programmed in Konnect
+// for its current generation.
+func isProgrammedForCurrentGeneration[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	condProgrammed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok &&
+		condProgrammed.Status == metav1.ConditionTrue &&
+		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration()
+}
+
 func shouldUpdate[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -540,17 +554,13 @@ func shouldUpdate[
 	now time.Time,
 ) (bool, ctrl.Result) {
 	var (
-		condProgrammed, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+		condProgrammed, _  = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		timeFromLastUpdate = time.Since(condProgrammed.LastTransitionTime.Time)
 	)
 
 	// If the entity is already programmed and the last update was less than
 	// the configured sync period, requeue after the remaining time.
-	if ok &&
-		condProgrammed.Status == metav1.ConditionTrue &&
-		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
-		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
-		timeFromLastUpdate <= syncPeriod {
+	if isProgrammedForCurrentGeneration(ent) && timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
 			"no need for update, requeueing after configured sync period",
@@ -567,8 +577,37 @@ func shouldUpdate[
 	return true, ctrl.Result{}
 }
 
+// syncStatusStater is implemented by entities that persist their internal Konnect synchronization state in status.
+type syncStatusStater interface {
+	GetSyncStatus() *configurationv1alpha1.SyncStatus
+	SetSyncStatus(*configurationv1alpha1.SyncStatus)
+}
+
+// SyncResult carries the in-memory sync record produced by a real PUT in Update.
+//
+// The record is persisted in the entity status by the reconciler together with
+// the other status changes. Commit stores it in the in-memory tracker and must
+// be called only after the status patch succeeds, so a failed status write
+// cannot make the tracker believe an unpersisted state is durable.
+type SyncResult struct {
+	tracker *ConfigVersionTracker
+	uid     types.UID
+	record  entitySyncRecord
+	ok      bool
+}
+
+// Commit stores the record in the in-memory tracker.
+func (r *SyncResult) Commit() {
+	if r == nil || !r.ok || r.tracker == nil {
+		return
+	}
+	r.tracker.store(r.uid, r.record)
+}
+
 // Update updates a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
+// When tracker is not nil, periodic updates of Kong Gateway entities that are in sync with Konnect are skipped.
+// The returned SyncResult, when non-nil, must be committed after the status carrying it is persisted.
 func Update[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -579,7 +618,8 @@ func Update[
 	cl client.Client,
 	metricRecorder metrics.Recorder,
 	e TEnt,
-) (ctrl.Result, error) {
+	tracker *ConfigVersionTracker,
+) (ctrl.Result, *SyncResult, error) {
 	now := time.Now()
 
 	update, res := shouldUpdate(ctx, e, syncPeriod, now)
@@ -588,12 +628,12 @@ func Update[
 		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
 			*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
 		default:
-			return res, nil
+			return res, nil, nil
 		}
 	}
 
 	if e.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(e) {
-		return ctrl.Result{}, fmt.Errorf(
+		return ctrl.Result{}, nil, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
 			e, client.ObjectKeyFromObject(e),
 		)
@@ -604,7 +644,17 @@ func Update[
 		entityType = e.GetTypeName()
 		statusCode int
 		start      = time.Now()
+		g          *syncGuard
 	)
+	if cpEnt, ok := any(e).(interface{ GetControlPlaneID() string }); ok && tracker != nil {
+		var persisted *configurationv1alpha1.SyncStatus
+		if stater, ok := any(e).(syncStatusStater); ok {
+			persisted = stater.GetSyncStatus()
+		}
+		g = tracker.guard(
+			sdk.GetDPNodesSDK(), e.GetUID(), cpEnt.GetControlPlaneID(), isProgrammedForCurrentGeneration(e), persisted,
+		)
+	}
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		// if the ControlPlane is of type origin, enforce the spec on Konnect.
@@ -618,41 +668,41 @@ func Update[
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		err = updateService(ctx, sdk.GetServicesSDK(), ent)
+		err = updateService(ctx, sdk.GetServicesSDK(), g, ent)
 	case *configurationv1alpha1.KongRoute:
-		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
+		err = updateRoute(ctx, sdk.GetRoutesSDK(), g, ent)
 	case *configurationv1.KongConsumer:
-		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
+		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, g, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), g, ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
+		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, g, ent)
 	case *configurationv1alpha1.KongUpstream:
-		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialACL:
-		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
+		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialJWT:
-		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
+		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCACertificate:
-		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), ent)
+		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), g, ent)
 	case *configurationv1alpha1.KongCertificate:
-		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), ent)
+		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), g, ent)
 	case *configurationv1alpha1.KongTarget:
-		err = updateTarget(ctx, sdk.GetTargetsSDK(), ent)
+		err = updateTarget(ctx, sdk.GetTargetsSDK(), g, ent)
 	case *configurationv1alpha1.KongVault:
 		err = updateVault(ctx, cl, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
-		err = updateKey(ctx, sdk.GetKeysSDK(), ent)
+		err = updateKey(ctx, sdk.GetKeysSDK(), g, ent)
 	case *configurationv1alpha1.KongKeySet:
-		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), g, ent)
 	case *configurationv1alpha1.KongSNI:
-		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
+		err = updateSNI(ctx, sdk.GetSNIsSDK(), g, ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
@@ -669,7 +719,7 @@ func Update[
 		var applied bool
 		applied, err = applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent, UpdateOp, update)
 		if err == nil && !applied {
-			return res, nil
+			return res, nil, nil
 		}
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
 		var applied bool
@@ -685,7 +735,7 @@ func Update[
 			if res.IsZero() {
 				res.RequeueAfter = syncPeriod
 			}
-			return res, nil
+			return res, nil, nil
 		}
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
@@ -695,6 +745,27 @@ func Update[
 	// TODO: add other manually maintained Konnect types here
 	default:
 		err = UpdateGeneratedOps(ctx, sdk, cl, e)
+	}
+
+	// Persist the sync state produced by a real PUT together with the rest of the
+	// status. The caller commits the in-memory record only after the status patch
+	// that carries it succeeds.
+	var syncResult *SyncResult
+	if err == nil && g != nil {
+		if status := g.pendingStatus(); status != nil {
+			if stater, ok := any(e).(syncStatusStater); ok {
+				stater.SetSyncStatus(status)
+				if record, ok := g.pendingRecord(); ok {
+					syncResult = &SyncResult{tracker: tracker, uid: e.GetUID(), record: record, ok: true}
+				}
+			}
+		}
+	}
+
+	// Leave the status untouched so that its Programmed condition keeps the time
+	// of the last update sent to Konnect.
+	if err == nil && g.notSent() {
+		return ctrl.Result{RequeueAfter: syncPeriod}, nil, nil
 	}
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
@@ -751,13 +822,13 @@ func Update[
 		*configurationv1alpha1.EventGatewayListenerPolicyChain,
 		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
 		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
-		return ctrl.Result{}, policyChainOperationError(err)
+		return ctrl.Result{}, nil, policyChainOperationError(err)
 	}
 	logger := loggerForEntity(ctx, e, UpdateOp)
 	err = IgnoreUnrecoverableAPIErr(err, logger)
 	err = IgnoreAlreadyHandledErr(err, logger)
 
-	return ctrl.Result{}, err
+	return ctrl.Result{}, syncResult, err
 }
 
 // Adopt adopts an exiting entity in Konnect and take over the management of the entity.

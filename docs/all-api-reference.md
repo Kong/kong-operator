@@ -10306,6 +10306,7 @@ KongConsumerStatus represents the current status of the KongConsumer resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongConsumer.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
@@ -15684,6 +15685,7 @@ KongCACertificateStatus defines the observed state of KongCACertificate.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -15763,6 +15765,7 @@ KongCertificateStatus defines the observed state of KongCertificate.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -15813,6 +15816,7 @@ KongCredentialACLStatus represents the current status of the ACL credential reso
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -15863,6 +15867,7 @@ KongCredentialAPIKeyStatus represents the current status of the API Key credenti
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -15915,6 +15920,7 @@ KongCredentialBasicAuthStatus represents the current status of the BasicAuth cre
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -15969,6 +15975,7 @@ KongCredentialHMACStatus represents the current status of the HMAC credential re
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16027,6 +16034,7 @@ KongCredentialJWTStatus represents the current status of the JWT credential reso
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16179,6 +16187,7 @@ KongKeySetStatus defines the status for a KongKeySet.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16217,6 +16226,7 @@ KongKeyStatus defines the status for a KongKey.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16309,6 +16319,7 @@ KongPluginBindingStatus represents the current status of the KongBinding resourc
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16428,6 +16439,7 @@ KongRouteStatus represents the current status of the Kong Route resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandservicerefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16478,6 +16490,7 @@ KongSNIStatus defines the status for a KongSNI.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16558,6 +16571,7 @@ KongServiceStatus represents the current status of the Kong Service resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16610,6 +16624,7 @@ KongTargetStatus defines the observed state of KongTarget.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -16698,6 +16713,7 @@ KongUpstreamStatus represents the current status of the Kong Upstream resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -17287,6 +17303,45 @@ ServiceRef is a reference to a KongService.
 _Appears in:_
 
 - [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
+
+#### SyncStatus
+
+
+SyncStatus contains the internal synchronization state of a Kong Gateway
+configuration entity managed in Konnect.<br /><br />It lets the operator skip periodic PUT requests for entities that did not
+change, also across operator restarts and leader changes. The values are
+internal implementation details: do not rely on them, and do not edit them.<br /><br />If the CRD schema installed in the cluster predates this field, Kubernetes
+prunes it from the status. The operator then falls back to the in-memory
+tracker: it sends one PUT per entity after a restart instead of one PUT per
+sync period, and it does not retry the pruned status write on every reconcile.
+
+
+
+| Field | Description |
+| --- | --- |
+| `payloadHash` _string_ | PayloadHash is the canonical hash of the payload the operator last sent to Konnect for this entity. |
+| `representationHash` _string_ | RepresentationHash is the canonical hash of the entity representation the operator last received from Konnect. |
+| `hashVersion` _string_ | HashVersion identifies the hashing scheme used to compute PayloadHash and RepresentationHash. A change of hash version makes the stored hashes unverifiable, so the entity is sent to Konnect once more. |
+
+_Appears in:_
+
+- [KongCACertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcacertificatestatus)
+- [KongCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcertificatestatus)
+- [KongConsumerGroupStatus](#configuration-konghq-com-v1beta1-types-kongconsumergroupstatus)
+- [KongConsumerStatus](#configuration-konghq-com-v1-types-kongconsumerstatus)
+- [KongCredentialACLStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialaclstatus)
+- [KongCredentialAPIKeyStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeystatus)
+- [KongCredentialBasicAuthStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthstatus)
+- [KongCredentialHMACStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacstatus)
+- [KongCredentialJWTStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtstatus)
+- [KongKeySetStatus](#configuration-konghq-com-v1alpha1-types-kongkeysetstatus)
+- [KongKeyStatus](#configuration-konghq-com-v1alpha1-types-kongkeystatus)
+- [KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)
+- [KongRouteStatus](#configuration-konghq-com-v1alpha1-types-kongroutestatus)
+- [KongSNIStatus](#configuration-konghq-com-v1alpha1-types-kongsnistatus)
+- [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
+- [KongTargetStatus](#configuration-konghq-com-v1alpha1-types-kongtargetstatus)
+- [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
 
 #### TLSCertificate
 
@@ -17940,6 +17995,7 @@ KongConsumerGroupStatus represents the current status of the KongConsumerGroup r
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongConsumerGroup.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_

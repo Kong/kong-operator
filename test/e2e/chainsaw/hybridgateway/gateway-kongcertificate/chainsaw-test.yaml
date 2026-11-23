@@ -481,3 +481,19 @@ spec:
               apiVersion: konnect.konghq.com/v1alpha2
               kind: KonnectGatewayControlPlane
               name: ($cp_name)
+
+  catch:
+    # Capture debug snapshot on test failure for CI debugging.
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-gateway-kongcertificate
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($certificate_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

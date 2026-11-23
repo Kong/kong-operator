@@ -55,7 +55,7 @@ func TestKongClientGoldenTestsOutputs(t *testing.T) {
 		return !strings.Contains(path, "-ee/") // Skip Enterprise tests.
 	})
 	// If the Kong Enterprise is enabled, run all tests.
-	if testenv.KongEnterpriseImageUsed() {
+	if testenv.KongEnterpriseEnabled() {
 		goldenTestsOutputsPaths = allGoldenTestsOutputsPaths(t)
 	}
 
