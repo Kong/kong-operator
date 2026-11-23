@@ -194,7 +194,9 @@ def main():
             while time.monotonic() < deadline:
                 if forward.poll() is not None:
                     log.seek(0)
-                    raise RuntimeError("Port-forward exited: " + log.read().decode())
+                    forward_log = log.read().decode(errors="replace")
+                    report_failure(port, ca, secret_name, attempts, last_error, forward_log)
+                    raise RuntimeError("Port-forward exited: " + forward_log)
                 if last_error != logged_error:
                     # Log each change of state once, so the timeline shows whether TLS ever progressed.
                     trace("attempt " + str(attempts) + " after " + str(int(time.monotonic() - started)) +
