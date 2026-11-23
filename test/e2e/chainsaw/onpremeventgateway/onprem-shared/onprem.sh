@@ -794,7 +794,10 @@ wait-dp-cert-mounted) # dp timeout: waits for the Deployment of the data plane t
   until_result data_plane "$1"
   ;;
 create-tls-secret) # name cert_dir: creates or replaces the TLS Secret of the certificate and key saved in cert_dir, e.g. a copy of the key of a data plane
-  kubectl create secret tls "$1" -n "$(ns)" --cert="$2/tls.crt" --key="$2/tls.key" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  # Labelled konghq.com/secret: the operator only sees the Secrets an entity
+  # reads that carry it.
+  kubectl create secret tls "$1" -n "$(ns)" --cert="$2/tls.crt" --key="$2/tls.key" --dry-run=client -o yaml |
+    kubectl label --local -f - konghq.com/secret=true -o yaml | kubectl apply -f - >/dev/null
   result secret "$1" fingerprint "$(fingerprint "$2/tls.crt")"
   ;;
 wait-dp-unlabelled) # dp timeout: waits for the Deployment of the data plane not to be labelled for a GWAdmin
