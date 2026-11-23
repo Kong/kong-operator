@@ -100,12 +100,8 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 			}
 
 			t.Log("Update RequestRedirect filter of HTTPRoute to test preserving path in request redirect")
-			assert.Eventually(t, func() bool {
-				httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-				if err != nil {
-					return false
-				}
-				httpRoute.Spec.Rules = []gatewayapi.HTTPRouteRule{
+			_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(namespace), httpRoute.Name, func(r *gatewayapi.HTTPRoute) {
+				r.Spec.Rules = []gatewayapi.HTTPRouteRule{
 					{
 						Matches: []gatewayapi.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/").Build(),
@@ -118,9 +114,8 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 						},
 					},
 				}
-				_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
-				return err == nil
-			}, consts.IngressWait, consts.WaitTick)
+			})
+			assert.NoError(t, err)
 			t.Logf("Verify that no path modifier preserves path in the request")
 			assert.Eventually(
 				t, func() bool {

@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
+	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -240,15 +241,10 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			cluster := GetClusterFromCtx(ctx)
 
 			t.Log("Fixing TLS verification depth to a sufficient value = 1")
-			require.Eventually(t, func() bool {
-				svc, err := cluster.Client().CoreV1().Services(service.Namespace).Get(ctx, service.Name, metav1.GetOptions{})
-				if err != nil {
-					return false
-				}
+			_, err := helpers.UpdateWithRetry(ctx, cluster.Client().CoreV1().Services(service.Namespace), service.Name, func(svc *corev1.Service) {
 				svc.Annotations[annotations.AnnotationPrefix+annotations.TLSVerifyDepthKey] = "1"
-				_, err = cluster.Client().CoreV1().Services(service.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
-				return err == nil
-			}, consts.StatusWait, consts.WaitTick)
+			})
+			require.NoError(t, err)
 
 			proxyURL := GetHTTPSURLFromCtx(ctx)
 			insecureClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec
