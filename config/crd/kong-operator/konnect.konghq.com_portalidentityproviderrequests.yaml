@@ -66,9 +66,8 @@ spec:
                   spec fields.
                 properties:
                   config:
-                    description: |-
-                      PortalIdentityProviderRequestConfig represents a union type for config.
-                      Only one of the fields should be set based on the Type.
+                    description: The configuration data for creating an authentication
+                      integration.
                     properties:
                       oidc:
                         description: OIDC configuration.
@@ -104,6 +103,7 @@ spec:
                             description: The Client Secret assigned to your application
                               by the identity provider.
                             maxLength: 253
+                            minLength: 1
                             type: string
                           issuerURL:
                             description: |-
@@ -113,18 +113,20 @@ spec:
                             minLength: 1
                             type: string
                           scopes:
+                            additionalProperties:
+                              type: string
                             description: |-
                               The scopes requested by your application when authenticating with the
                               identity provider.
-                            items:
-                              type: string
-                            type: array
+                              Must include `openid`.
+                            type: object
                         required:
                         - clientID
+                        - clientSecret
                         - issuerURL
                         type: object
-                      saml:
-                        description: SAML configuration.
+                      portalSAML:
+                        description: PortalSAML configuration.
                         properties:
                           idpMetadataURL:
                             description: |-
@@ -144,7 +146,7 @@ spec:
                         description: Type designates the type of configuration.
                         enum:
                         - oidc
-                        - saml
+                        - portalSAML
                         minLength: 1
                         type: string
                     required:

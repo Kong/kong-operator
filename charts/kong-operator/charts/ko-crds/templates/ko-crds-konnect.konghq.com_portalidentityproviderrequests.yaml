@@ -74,20 +74,22 @@ spec:
                             type: string
                           clientSecret:
                             maxLength: 253
+                            minLength: 1
                             type: string
                           issuerURL:
                             maxLength: 253
                             minLength: 1
                             type: string
                           scopes:
-                            items:
+                            additionalProperties:
                               type: string
-                            type: array
+                            type: object
                         required:
                         - clientID
+                        - clientSecret
                         - issuerURL
                         type: object
-                      saml:
+                      portalSAML:
                         properties:
                           idpMetadataURL:
                             maxLength: 253
@@ -99,7 +101,7 @@ spec:
                       type:
                         enum:
                         - oidc
-                        - saml
+                        - portalSAML
                         minLength: 1
                         type: string
                     required:

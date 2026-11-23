@@ -662,6 +662,41 @@ _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 
+#### CreateOIDCIdentityProviderConfig
+
+
+CreateOIDCIdentityProviderConfig The configuration data for creating an OIDC
+authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[CreateOIDCIdentityProviderScopes](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderscopes)_ | The scopes requested by your application when authenticating with the identity provider. Must include `openid`. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+#### CreateOIDCIdentityProviderScopes
+
+_Underlying type:_ `object`
+
+CreateOIDCIdentityProviderScopes The scopes requested by your application
+when authenticating with the identity provider.
+Must include `openid`.
+
+
+
+
+_Appears in:_
+
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
+
 
 
 #### CreatePortalCustomDomainSSLStandard
@@ -1842,7 +1877,7 @@ authentication.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### OIDCIdentityProviderClientID
 
@@ -1856,7 +1891,7 @@ the identity provider.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### OIDCIdentityProviderClientSecret
 
@@ -1870,7 +1905,7 @@ application by the identity provider.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### OIDCIdentityProviderIssuer
 
@@ -1884,7 +1919,7 @@ This is the URL where the provider's metadata can be obtained.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### PageContent
 
@@ -1975,6 +2010,8 @@ PortalAPISpec defines the API spec fields for Portal.
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+
 
 #### PortalCustomDomainAPISpec
 
@@ -2216,7 +2253,7 @@ PortalIdentityProviderRequestAPISpec defines the API spec fields for PortalIdent
 
 | Field | Description |
 | --- | --- |
-| `config` _[PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)_ |  |
+| `config` _[PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)_ | The configuration data for creating an authentication integration. |
 | `enabled` _string_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
 | `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
 
@@ -2235,8 +2272,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
-| `oidc` _[PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)_ | OIDC configuration. |
-| `saml` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
+| `oidc` _[CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)_ | OIDC configuration. |
+| `portalSAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | PortalSAML configuration. |
 
 _Appears in:_
 
@@ -2260,7 +2297,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `oidc` |  |
-| `saml` |  |
+| `portalSAML` |  |
 
 
 
@@ -2315,26 +2352,6 @@ _Appears in:_
 
 - [Menu](#konnect-konghq-com-v1alpha1-types-menu)
 - [PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)
-
-#### PortalOIDCIdentityProviderConfig
-
-
-PortalOIDCIdentityProviderConfig The identity provider that contains
-configuration data for the OIDC authentication integration.
-
-
-
-| Field | Description |
-| --- | --- |
-| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
-| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
-| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
-| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
-| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
-
-_Appears in:_
-
-- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
 
 #### PortalPageAPISpec
 
@@ -2637,6 +2654,7 @@ Theme The theme settings for this portal.
 
 | Field | Description |
 | --- | --- |
+| `borderRadius` _string_ | The corner roundness to apply to this portal's theme. |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
 | `name` _string_ | The theme name to apply to this portal. Supported names are 'mesa', 'grove', 'pebble', or 'ocean'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |

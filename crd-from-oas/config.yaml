@@ -2168,14 +2168,14 @@ apiGroupVersions:
                 - typeValue: oidc
                   variantField: OIDC
                   responseTypeValue: oidc
-                  responseVariantField: PortalOIDCIdentityProviderConfigOutput
+                  responseVariantField: PortalOIDCIdentityProviderConfig
                   matchFields:
                     - objectField: IssuerURL
                       responseField: GetIssuerURL()
                     - objectField: ClientID
                       responseField: GetClientID()
-                - typeValue: saml
-                  variantField: SAML
+                - typeValue: portalSAML
+                  variantField: PortalSAML
                   responseTypeValue: saml
                   responseVariantField: PortalSAMLIdentityProviderConfig
                   # Both SAML metadata fields are optional and only one is

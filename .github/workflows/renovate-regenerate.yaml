@@ -1,10 +1,12 @@
 name: regenerate after dependency bump
 
 # The API types, CRDs, documentation and AI Gateway controller code are generated from the
-# OpenAPI spec that ships in the github.com/Kong/sdk-konnect-go module. A bump of that module
-# changes the spec, so the generated files must change with it. Renovate only rewrites go.mod,
-# so this workflow runs the generators on the bump pull request and pushes the result to the
-# pull request branch.
+# OpenAPI spec that ships in the SDK module. The operator consumes the internal SDK through a
+# replace directive: github.com/Kong/sdk-konnect-go is replaced with
+# github.com/Kong/sdk-konnect-go-internal. A bump of the replace version changes the spec, so
+# the generated files must change with it. Renovate only rewrites go.mod, so this workflow
+# runs the generators on the bump pull request and pushes the result to the pull request
+# branch.
 on:
   # pull_request_target, not pull_request: a pull_request run reads the workflow file from the
   # pull request's own tree, so this file would not run on release-branch pull requests until
@@ -27,10 +29,10 @@ concurrency:
 jobs:
   regenerate:
     # Renovate names the branch after the package, for example
-    # renovate/main-github.com-kong-sdk-konnect-go-0.x. On release branches Renovate groups
-    # every update under the release-branch-updates slug, so the package name is only in the
-    # pull request body. The actor check keeps the run that the pushed commit starts from
-    # regenerating the files a second time.
+    # renovate/main-github.com-kong-sdk-konnect-go-internal-0.x. On release branches Renovate
+    # groups every update under the release-branch-updates slug, so the package name is only
+    # in the pull request body. The actor check keeps the run that the pushed commit starts
+    # from regenerating the files a second time.
     if: >-
       github.actor == 'renovate[bot]' &&
       (contains(github.head_ref, 'sdk-konnect-go') ||
@@ -92,6 +94,6 @@ jobs:
           git config user.name "Kong's Team k8s bot"
           git config user.email "team-k8s+github-bot@konghq.com"
           git add --all
-          git commit --message "chore: regenerate files after github.com/Kong/sdk-konnect-go bump"
+          git commit --message "chore: regenerate files after sdk-konnect-go-internal bump"
           git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$APP_TOKEN" | base64)" \
             push origin "HEAD:${HEAD_REF}"

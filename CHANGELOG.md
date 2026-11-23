@@ -73,6 +73,28 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- The Konnect Portal identity provider `spec.apiSpec.config` discriminator
+  renamed `saml` to `portalSAML`: entries must use `type: portalSAML` with the
+  `portalSAML` field instead of `type: saml` with `saml`. This follows the
+  rename in the Konnect API.
+- The Konnect Portal identity provider OIDC `config.oidc.scopes` field changed
+  from a list of strings to an object, and `config.oidc.clientSecret` is now
+  required.
+- `AIGatewayAuthStrategy` key-auth entries no longer accept
+  `spec.apiSpec.key-auth.config.anonymous`, and Konnect now validates
+  `principals.directory` against `^[a-zA-Z0-9_-]+$`. The openid-connect
+  variant gained minimum constraints on `leeway` and `timeout`, and the same
+  `principals.directory` pattern.
+
+### Changed
+
+- The operator now uses the internal Konnect SDK (`sdk-konnect-go-internal`) so
+  it can access Konnect APIs that are not yet released, including AI Gateway
+  2.4 endpoints.
+  [#6747](https://github.com/Kong/kong-operator/issues/6747)
+
 ### Added
 
 - `EventGatewayVirtualClusterProducePolicyChain`s and

@@ -6731,7 +6731,20 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 					itemProps = prop.Items.Properties
 					itemOneOf, itemAnyOf = len(prop.Items.OneOf) > 0, len(prop.Items.AnyOf) > 0
 				}
-				if len(itemProps) == 1 && !itemOneOf && !itemAnyOf && jsonName(itemProps[0].Name) == ref.ResolvesTo {
+				// The item keeps its shape when it is not a union, the
+				// resolvesTo property is present, and every other property
+				// declares an OAS default: Konnect fills the defaulted ones
+				// in (e.g. the AIGatewayModelDatastoreRef purpose).
+				hasResolvesTo, othersDefaulted := false, len(itemProps) > 0
+				for _, p := range itemProps {
+					switch {
+					case jsonName(p.Name) == ref.ResolvesTo && p.Default == nil:
+						hasResolvesTo = true
+					case p.Default == nil:
+						othersDefaulted = false
+					}
+				}
+				if !itemOneOf && !itemAnyOf && hasResolvesTo && othersDefaulted {
 					itemObjectKey = ref.ResolvesTo
 				}
 			}

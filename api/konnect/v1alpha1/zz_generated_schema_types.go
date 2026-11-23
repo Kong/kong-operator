@@ -109,6 +109,48 @@ type AISettingsFeaturesMcpServer struct {
 	WriteOperationsEnabled string `json:"writeOperationsEnabled,omitzero"`
 }
 
+// CreateOIDCIdentityProviderConfig The configuration data for creating an OIDC
+// authentication integration.
+type CreateOIDCIdentityProviderConfig struct {
+	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
+	// used by your application for
+	// authentication.
+	//
+	//
+	// +optional
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
+	// The client ID assigned to your application by the identity provider.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
+	// The Client Secret assigned to your application by the identity provider.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
+	// The issuer URI of the identity provider.
+	// This is the URL where the provider's metadata can be obtained.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
+	// The scopes requested by your application when authenticating with the
+	// identity provider.
+	// Must include `openid`.
+	//
+	// +optional
+	Scopes CreateOIDCIdentityProviderScopes `json:"scopes,omitzero"`
+}
+
+// CreateOIDCIdentityProviderScopes The scopes requested by your application
+// when authenticating with the identity provider.
+// Must include `openid`.
+type CreateOIDCIdentityProviderScopes map[string]string
+
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL = apiextensionsv1.JSON
 
@@ -297,6 +339,10 @@ type PageTitle string
 // used.
 type PageVisibilityStatus string
 
+// PortalCreateIdentityProviderConfig The configuration data for creating an
+// authentication integration.
+type PortalCreateIdentityProviderConfig map[string]string
+
 // PortalFooterMenuSection is a type alias.
 type PortalFooterMenuSection struct {
 	//
@@ -338,41 +384,6 @@ type PortalMenuItem struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
 	Visibility string `json:"visibility,omitzero"`
-}
-
-// PortalOIDCIdentityProviderConfig The identity provider that contains
-// configuration data for the OIDC authentication integration.
-type PortalOIDCIdentityProviderConfig struct {
-	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
-	// used by your application for
-	// authentication.
-	//
-	//
-	// +optional
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
-	// The client ID assigned to your application by the identity provider.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
-	// The Client Secret assigned to your application by the identity provider.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
-	// The issuer URI of the identity provider.
-	// This is the URL where the provider's metadata can be obtained.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
-	// The scopes requested by your application when authenticating with the
-	// identity provider.
-	//
-	// +optional
-	Scopes []string `json:"scopes,omitempty"`
 }
 
 // PortalSAMLIdentityProviderConfig The identity provider that contains

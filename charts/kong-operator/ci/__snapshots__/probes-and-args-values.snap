@@ -483,8 +483,6 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
-                    required:
-                    - url
                     type: object
                   displayName:
                     maxLength: 256
@@ -713,9 +711,6 @@ spec:
                     properties:
                       config:
                         properties:
-                          anonymous:
-                            maxLength: 253
-                            type: string
                           hideCredentials:
                             enum:
                             - Enabled
@@ -758,6 +753,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -1575,6 +1571,7 @@ spec:
                             - Disabled
                             type: string
                           leeway:
+                            minimum: 0
                             type: number
                           loginAction:
                             enum:
@@ -1660,6 +1657,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -2196,6 +2194,7 @@ spec:
                             - Disabled
                             type: string
                           timeout:
+                            minimum: 0
                             type: number
                           tlsClientAuthCertID:
                             maxLength: 253
@@ -6389,7 +6388,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -7092,8 +7090,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                        required:
-                        - url
                         type: object
                       datastores:
                         items:
@@ -9542,7 +9538,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -10507,7 +10502,6 @@ spec:
                         required:
                         - route
                         - toolsCacheTtlSeconds
-                        - url
                         type: object
                       datastores:
                         items:
@@ -66072,6 +66066,13 @@ spec:
                     type: object
                   theme:
                     properties:
+                      borderRadius:
+                        enum:
+                        - soft
+                        - sharp
+                        - round
+                        maxLength: 253
+                        type: string
                       colors:
                         properties:
                           primary:
@@ -66444,20 +66445,22 @@ spec:
                             type: string
                           clientSecret:
                             maxLength: 253
+                            minLength: 1
                             type: string
                           issuerURL:
                             maxLength: 253
                             minLength: 1
                             type: string
                           scopes:
-                            items:
+                            additionalProperties:
                               type: string
-                            type: array
+                            type: object
                         required:
                         - clientID
+                        - clientSecret
                         - issuerURL
                         type: object
-                      saml:
+                      portalSAML:
                         properties:
                           idpMetadataURL:
                             maxLength: 253
@@ -66469,7 +66472,7 @@ spec:
                       type:
                         enum:
                         - oidc
-                        - saml
+                        - portalSAML
                         minLength: 1
                         type: string
                     required:
