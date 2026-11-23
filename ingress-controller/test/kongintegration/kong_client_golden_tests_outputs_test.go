@@ -110,8 +110,8 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	if test.KonnectAccessToken() == "" {
 		t.Skip("Konnect token is not available, skipping test")
 	}
-	if testenv.KongImage() != "kong/kong-gateway" {
-		t.Skip("Non EE image is used, skipping Konnect test")
+	if !testenv.KongEnterpriseEnabled() {
+		t.Skip("Kong Enterprise is not enabled, skipping Konnect test")
 	}
 	t.Parallel()
 
