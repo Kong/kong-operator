@@ -214,6 +214,9 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 			r.CertTTL,
 		)
 		if err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		if res != op.Noop {
@@ -226,6 +229,9 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	// Ensure "preview" Ingress service.
 	res, previewIngressService, err := r.ensurePreviewIngressService(ctx, logger, dataplane)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		cErr := r.ensureRolledOutCondition(ctx, logger, dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview ingress Service")
 		return ctrl.Result{}, fmt.Errorf("failed ensuring preview Ingress service for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
@@ -242,6 +248,9 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	// Ensure "preview" Deployment.
 	deployment, res, err := r.ensureDeploymentForDataPlane(ctx, logger, dataplane, certSecretName, adminAPIDisabled)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		cErr := r.ensureRolledOutCondition(ctx, logger, dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
@@ -354,6 +363,9 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	}
 
 	if err := r.reduceLiveDeployments(ctx, logger, dataplane); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("failed to reduce live deployments: %w", err)
 	}
 
@@ -645,7 +657,11 @@ func (r *BlueGreenReconciler) reduceLiveDeployments(
 		if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
 			return fmt.Errorf("failed executing pre delete hook: %w", err)
 		}
-		if err := r.Delete(ctx, &deployment); err != nil {
+		var opts []client.DeleteOption
+		if deployment.UID != "" {
+			opts = append(opts, client.Preconditions{UID: &deployment.UID})
+		}
+		if err := r.Delete(ctx, &deployment, opts...); client.IgnoreNotFound(err) != nil {
 			return fmt.Errorf("failed deleting live deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
 		}
 	}

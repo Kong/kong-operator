@@ -169,6 +169,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		k8sresources.IPFamilyPolicyServiceOpt(r.DataPlaneIPFamily),
 	)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		return ctrl.Result{}, err
 	}
 	if serviceRes == op.Created || serviceRes == op.Updated {
@@ -204,6 +207,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 			r.CertTTL,
 		)
 		if err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		if res != op.Noop {
@@ -259,6 +265,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", client.ObjectKeyFromObject(dataplane), err)
 	}
 	if res != op.Noop {
