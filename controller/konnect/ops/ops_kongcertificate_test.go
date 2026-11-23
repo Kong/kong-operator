@@ -776,7 +776,7 @@ func TestUpdateCertificate(t *testing.T) {
 			sdk := mocks.NewMockCertificatesSDK(t)
 			tt.setupMock(sdk)
 
-			err := updateCertificate(ctx, cl, sdk, tt.cert)
+			err := updateCertificate(ctx, cl, sdk, nil, tt.cert)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)

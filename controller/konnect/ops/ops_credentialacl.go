@@ -54,6 +54,7 @@ func createKongCredentialACL(
 func updateKongCredentialACL(
 	ctx context.Context,
 	sdk sdkkonnectgo.ACLsSDK,
+	g *syncGuard,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -61,13 +62,28 @@ func updateKongCredentialACL(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertACLWithConsumer(ctx,
-		sdkkonnectops.UpsertACLWithConsumerRequest{
-			ControlPlaneID:              cpID,
-			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-			ACLID:                       cred.GetKonnectStatus().GetKonnectID(),
-			ACLWithoutParents:           kongCredentialACLToACLWithoutParents(cred),
-		})
+	id := cred.GetKonnectStatus().GetKonnectID()
+	consumerID := cred.Status.Konnect.GetConsumerID()
+	req := sdkkonnectops.UpsertACLWithConsumerRequest{
+		ControlPlaneID:              cpID,
+		ConsumerIDForNestedEntities: consumerID,
+		ACLID:                       id,
+		ACLWithoutParents:           kongCredentialACLToACLWithoutParents(cred),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.ACL, error) {
+			resp, err := sdk.GetACLWithConsumer(ctx, sdkkonnectops.GetACLWithConsumerRequest{
+				ControlPlaneID:              cpID,
+				ConsumerIDForNestedEntities: consumerID,
+				ACLID:                       id,
+			})
+			return resp.GetACL(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.ACL, error) {
+			resp, err := sdk.UpsertACLWithConsumer(ctx, req)
+			return resp.GetACL(), err
+		},
+	)
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -153,7 +169,7 @@ func adoptKongCredentialACL(
 	case commonv1alpha1.AdoptModeOverride:
 		credCopy := cred.DeepCopy()
 		credCopy.SetKonnectID(konnectID)
-		if err = updateKongCredentialACL(ctx, sdk, credCopy); err != nil {
+		if err = updateKongCredentialACL(ctx, sdk, nil, credCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

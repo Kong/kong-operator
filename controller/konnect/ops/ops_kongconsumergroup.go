@@ -46,6 +46,7 @@ func createConsumerGroup(
 func updateConsumerGroup(
 	ctx context.Context,
 	sdk sdkkonnectgo.ConsumerGroupsSDK,
+	g *syncGuard,
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	cpID := group.GetControlPlaneID()
@@ -53,11 +54,24 @@ func updateConsumerGroup(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertConsumerGroup(ctx,
-		sdkkonnectops.UpsertConsumerGroupRequest{
-			ControlPlaneID:  cpID,
-			ConsumerGroupID: group.GetKonnectStatus().GetKonnectID(),
-			ConsumerGroup:   kongConsumerGroupToSDKConsumerGroupInput(group),
+	id := group.GetKonnectStatus().GetKonnectID()
+	req := sdkkonnectops.UpsertConsumerGroupRequest{
+		ControlPlaneID:  cpID,
+		ConsumerGroupID: id,
+		ConsumerGroup:   kongConsumerGroupToSDKConsumerGroupInput(group),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.ConsumerGroup, error) {
+			// Unlike the upsert, the get wraps the consumer group in a "consumer_group" object.
+			resp, err := sdk.GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
+				ControlPlaneID:  cpID,
+				ConsumerGroupID: id,
+			})
+			return resp.GetConsumerGroupInsideWrapper().GetConsumerGroup(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.ConsumerGroup, error) {
+			resp, err := sdk.UpsertConsumerGroup(ctx, req)
+			return resp.GetConsumerGroup(), err
 		},
 	)
 
@@ -134,7 +148,7 @@ func adoptConsumerGroup(
 	case commonv1alpha1.AdoptModeOverride:
 		groupCopy := group.DeepCopy()
 		groupCopy.SetKonnectID(konnectID)
-		if err = updateConsumerGroup(ctx, sdk, groupCopy); err != nil {
+		if err = updateConsumerGroup(ctx, sdk, nil, groupCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
