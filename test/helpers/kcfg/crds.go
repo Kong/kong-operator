@@ -61,12 +61,15 @@ func GatewayAPIExperimentalCRDsPath() string {
 	return filepath.Join(gatewayAPIModulePath, "config", "crd", "experimental")
 }
 
-// GatewayAPIStandardCRDsPath returns the standard-channel CRDs of the pinned
-// module. Content-equivalent to the Makefile's standard chart source (a
-// kustomize build of the module's config/crd root, whose kustomization
-// references only standard/* files).
+// GatewayAPIStandardCRDsPath returns the standard-channel CRD source of the
+// pinned module: the config/crd root. The root carries the kustomization.yaml
+// that kubectl apply -k needs (the standard/ subdirectory has none), and its
+// resource list contains only standard/* files, so a kustomize build of it is
+// the standard channel set. This is the same source the Makefile uses for the
+// gwapi-standard-crds chart. envtest skips non-CRD files, so the
+// kustomization.yaml does not break the envtest path.
 func GatewayAPIStandardCRDsPath() string {
-	return filepath.Join(gatewayAPIModulePath, "config", "crd", "standard")
+	return filepath.Join(gatewayAPIModulePath, "config", "crd")
 }
 
 // envGatewayAPIVersionOverride allows tests to run against Gateway API CRDs of
