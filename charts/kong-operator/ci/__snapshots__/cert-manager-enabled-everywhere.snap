@@ -43357,6 +43357,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -43617,6 +43629,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44038,6 +44062,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         type: object
         x-kubernetes-validations:
@@ -44250,6 +44286,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
           username:
             maxLength: 128
@@ -44432,6 +44480,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -44606,6 +44666,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44787,6 +44859,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -44965,6 +45049,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45163,6 +45259,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45747,6 +45855,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -45949,6 +46069,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -46405,6 +46537,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47021,6 +47165,18 @@ spec:
                   serviceID:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -47302,6 +47458,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -47486,6 +47654,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47681,6 +47861,18 @@ spec:
                     maxLength: 512
                     type: string
                   upstreamID:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -48432,6 +48624,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object

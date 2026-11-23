@@ -23,6 +23,7 @@ package v1
 import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -271,6 +272,11 @@ func (in *KongConsumerStatus) DeepCopyInto(out *KongConsumerStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(configurationv1alpha1.SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
