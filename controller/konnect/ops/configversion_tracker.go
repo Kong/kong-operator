@@ -525,11 +525,7 @@ func upsertUnlessInSync[E any](
 	}
 
 	t := g.tracker
-	payloadHash, err := hashJSON(struct {
-		ControlPlaneID string `json:"control_plane_id"`
-		ID             string `json:"id"`
-		Payload        any    `json:"payload"`
-	}{g.controlPlaneID, konnectID, payload})
+	payloadHash, err := entityPayloadHash(g.controlPlaneID, konnectID, payload)
 	if err != nil {
 		t.Forget(g.uid)
 		_, err := upsert(ctx)
@@ -596,6 +592,16 @@ func hashJSON(v any) (hash, error) {
 		return hash{}, err
 	}
 	return sha256.Sum256(b), nil
+}
+
+// entityPayloadHash hashes the desired Konnect request together with the control
+// plane and entity identifiers so changes to either invalidate the cached hash.
+func entityPayloadHash(controlPlaneID, konnectID string, payload any) (hash, error) {
+	return hashJSON(struct {
+		ControlPlaneID string `json:"control_plane_id"`
+		ID             string `json:"id"`
+		Payload        any    `json:"payload"`
+	}{controlPlaneID, konnectID, payload})
 }
 
 // representationHash hashes the Konnect representation of an entity, ignoring the fields that Konnect

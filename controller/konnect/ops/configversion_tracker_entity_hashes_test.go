@@ -266,12 +266,3 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 		})
 	}
 }
-
-// entityPayloadHash mirrors the payload wrapper used by upsertUnlessInSync.
-func entityPayloadHash(controlPlaneID, entityID string, payload any) (hash, error) {
-	return hashJSON(struct {
-		ControlPlaneID string `json:"control_plane_id"`
-		ID             string `json:"id"`
-		Payload        any    `json:"payload"`
-	}{controlPlaneID, entityID, payload})
-}
