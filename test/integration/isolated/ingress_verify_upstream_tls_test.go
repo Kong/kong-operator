@@ -240,9 +240,15 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			cluster := GetClusterFromCtx(ctx)
 
 			t.Log("Fixing TLS verification depth to a sufficient value = 1")
-			service.Annotations[annotations.AnnotationPrefix+annotations.TLSVerifyDepthKey] = "1"
-			_, err := cluster.Client().CoreV1().Services(service.Namespace).Update(ctx, service, metav1.UpdateOptions{})
-			require.NoError(t, err)
+			require.Eventually(t, func() bool {
+				svc, err := cluster.Client().CoreV1().Services(service.Namespace).Get(ctx, service.Name, metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				svc.Annotations[annotations.AnnotationPrefix+annotations.TLSVerifyDepthKey] = "1"
+				_, err = cluster.Client().CoreV1().Services(service.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
+				return err == nil
+			}, consts.StatusWait, consts.WaitTick)
 
 			proxyURL := GetHTTPSURLFromCtx(ctx)
 			insecureClient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}} //nolint:gosec

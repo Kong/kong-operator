@@ -100,23 +100,27 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 			}
 
 			t.Log("Update RequestRedirect filter of HTTPRoute to test preserving path in request redirect")
-			httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-			assert.NoError(t, err)
-			httpRoute.Spec.Rules = []gatewayapi.HTTPRouteRule{
-				{
-					Matches: []gatewayapi.HTTPRouteMatch{
-						builder.NewHTTPRouteMatch().WithPathPrefix("/").Build(),
+			assert.Eventually(t, func() bool {
+				httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, httpRoute.Name, metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				httpRoute.Spec.Rules = []gatewayapi.HTTPRouteRule{
+					{
+						Matches: []gatewayapi.HTTPRouteMatch{
+							builder.NewHTTPRouteMatch().WithPathPrefix("/").Build(),
+						},
+						Filters: []gatewayapi.HTTPRouteFilter{
+							builder.NewHTTPRouteRequestRedirectFilter().
+								WithRequestRedirectStatusCode(http.StatusMovedPermanently).
+								WithRequestRedirectScheme("http").
+								WithRequestRedirectHost("example.com").Build(),
+						},
 					},
-					Filters: []gatewayapi.HTTPRouteFilter{
-						builder.NewHTTPRouteRequestRedirectFilter().
-							WithRequestRedirectStatusCode(http.StatusMovedPermanently).
-							WithRequestRedirectScheme("http").
-							WithRequestRedirectHost("example.com").Build(),
-					},
-				},
-			}
-			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
-			assert.NoError(t, err)
+				}
+				_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
+				return err == nil
+			}, consts.IngressWait, consts.WaitTick)
 			t.Logf("Verify that no path modifier preserves path in the request")
 			assert.Eventually(
 				t, func() bool {

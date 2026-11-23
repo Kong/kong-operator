@@ -259,24 +259,27 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			clients := GetFromCtxForT[*clientset.Clientset](ctx, t)
 
-			httpRoute, err := gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, "http-route", metav1.GetOptions{})
-			require.NoError(t, err)
-
 			t.Log("updating HTTPRoute to use Services with different KongUpstreamPolicies in a single rule")
-			httpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.HTTPBackendRef{
-				{
-					Kind: new(gatewayapi.Kind("Service")),
-					Name: "service-1",
-					Port: new(gatewayapi.PortNumber(80)),
-				},
-				{
-					Kind: new(gatewayapi.Kind("Service")),
-					Name: "service-2",
-					Port: new(gatewayapi.PortNumber(80)),
-				},
-			}
-			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
-			require.NoError(t, err)
+			require.Eventually(t, func() bool {
+				httpRoute, err := gatewayClient.GatewayV1().HTTPRoutes(namespace).Get(ctx, "http-route", metav1.GetOptions{})
+				if err != nil {
+					return false
+				}
+				httpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.HTTPBackendRef{
+					{
+						Kind: new(gatewayapi.Kind("Service")),
+						Name: "service-1",
+						Port: new(gatewayapi.PortNumber(80)),
+					},
+					{
+						Kind: new(gatewayapi.Kind("Service")),
+						Name: "service-2",
+						Port: new(gatewayapi.PortNumber(80)),
+					},
+				}
+				_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})
+				return err == nil
+			}, consts.IngressWait, consts.WaitTick)
 
 			t.Log("ensuring conflicted Services are not Accepted and Programmed")
 			require.Eventually(t, func() bool {
