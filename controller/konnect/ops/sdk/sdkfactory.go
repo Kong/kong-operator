@@ -34,6 +34,7 @@ type SDKWrapper interface {
 	GetKeySetsSDK() sdkkonnectgo.KeySetsSDK
 	GetSNIsSDK() sdkkonnectgo.SNIsSDK
 	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
+	GetDPNodesSDK() sdkkonnectgo.DPNodesSDK
 	GetCloudGatewaysSDK() CloudGatewaysSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
 	GetConfigStoreSecretsSDK() sdkkonnectgo.ConfigStoreSecretsSDK
@@ -170,6 +171,11 @@ func (w sdkWrapper) GetKeySetsSDK() sdkkonnectgo.KeySetsSDK {
 // GetDataPlaneCertificatesSDK returns the SDK to operate data plane certificates.
 func (w sdkWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK {
 	return w.sdk.DPCertificates
+}
+
+// GetDPNodesSDK returns the SDK to operate data plane nodes of Kong Gateway control planes.
+func (w sdkWrapper) GetDPNodesSDK() sdkkonnectgo.DPNodesSDK {
+	return w.sdk.DPNodes
 }
 
 // GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
