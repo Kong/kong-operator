@@ -113,6 +113,9 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	if !testenv.KongEnterpriseEnabled() {
 		t.Skip("Kong Enterprise is not enabled, skipping Konnect test")
 	}
+	if testenv.KongTag() == "" {
+		t.Skip("TEST_KONG_TAG is not set, skipping Konnect test")
+	}
 	t.Parallel()
 
 	ctx := t.Context()
