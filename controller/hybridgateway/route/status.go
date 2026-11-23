@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
@@ -534,6 +535,7 @@ func isConditionEqual(a, b metav1.Condition) bool {
 // 1. Filters listeners that match the ParentReference (section name, port, protocol)
 // 2. Checks if the route namespace is allowed by the gateway listeners
 // 3. Validates that route hostnames intersect with listener hostnames
+// 4. Validates that HTTPRoute retry settings can be honored by Kong Gateway
 //
 // Parameters:
 //   - ctx: The context for API calls
@@ -585,6 +587,21 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	if cond != nil {
 		log.Debug(logger, "Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
 		return SetConditionMeta(*cond, route), nil
+	}
+
+	// Kong Gateway cannot retry based on response codes and cannot apply a
+	// configurable backoff. Reject those fields through the Route status instead
+	// of accepting the Route and silently ignoring them.
+	if httproute, ok := any(route).(*gwtypes.HTTPRoute); ok {
+		if err := gatewayapipkg.ValidateHTTPRouteRetries(httproute.Spec.Rules); err != nil {
+			log.Debug(logger, "HTTPRoute contains unsupported retry configuration", "parentRef", pRef, "gateway", gateway.Name, "error", err)
+			return SetConditionMeta(metav1.Condition{
+				Type:    string(gwtypes.RouteConditionAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(gwtypes.RouteReasonUnsupportedValue),
+				Message: err.Error(),
+			}, route), nil
+		}
 	}
 
 	// If we have listeners that match the hostnames, we can accept the route.

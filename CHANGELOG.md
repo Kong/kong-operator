@@ -241,6 +241,14 @@
 
 ### Added
 
+- Gateway API: honor `HTTPRoute.spec.rules[].retry.attempts` for
+  connection-error retries in standard and hybrid Gateway modes, and advertise
+  the `HTTPRouteRetryConnectionError` conformance feature. Kong Gateway retries
+  transport-level failures only, so `retry.codes`, `retry.backoff`, and
+  `attempts` above Kong's limit are rejected with `Accepted=False` and reason
+  `UnsupportedValue`. The `konghq.com/retries` Service annotation takes
+  precedence over the native Route setting.
+  [#6718](https://github.com/Kong/kong-operator/pull/6718)
 - Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect and on-prem
   Consume policy-chain ordering using Kubernetes references to the complete set
   of root and nested policies on one virtual cluster. Parent groups remain

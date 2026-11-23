@@ -53,6 +53,8 @@ type (
 	HTTPRouteList                             = gatewayv1.HTTPRouteList
 	HTTPRouteMatch                            = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule                             = gatewayv1.HTTPRouteRule
+	HTTPRouteRetry                            = gatewayv1.HTTPRouteRetry
+	HTTPRouteRetryStatusCode                  = gatewayv1.HTTPRouteRetryStatusCode
 	HTTPRouteTimeouts                         = gatewayv1.HTTPRouteTimeouts
 	LocalObjectReference                      = gatewayv1.LocalObjectReference
 	HTTPRouteSpec                             = gatewayv1.HTTPRouteSpec
@@ -187,6 +189,7 @@ const (
 	RouteReasonNotAllowedByListeners      = gatewayv1.RouteReasonNotAllowedByListeners
 	RouteReasonRefNotPermitted            = gatewayv1.RouteReasonRefNotPermitted
 	RouteReasonResolvedRefs               = gatewayv1.RouteReasonResolvedRefs
+	RouteReasonUnsupportedValue           = gatewayv1.RouteReasonUnsupportedValue
 	TCPProtocolType                       = gatewayv1.TCPProtocolType
 	TLSModePassthrough                    = gatewayv1.TLSModePassthrough
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
