@@ -81,6 +81,11 @@
   operator no longer rejects the configuration.
   [#6801](https://github.com/Kong/kong-operator/pull/6801)
   [#6804](https://github.com/Kong/kong-operator/pull/6804)
+- `OnPremEventGateway`: a status the operator computed for an entity is no
+  longer written to another entity of the same name created since. A static
+  key deleted and created again no longer gets the fingerprint of the value
+  of the one it replaces, which stopped the push of its gateway for good.
+  [#6764](https://github.com/Kong/kong-operator/pull/6764)
 
 ## [v2.4.0]
 
