@@ -1548,16 +1548,14 @@ func TestKongState_dropPluginsWithUnsupportedCondition(t *testing.T) {
 	condition := `http.path.startsWith("/api")`
 	plugin := func(cond *string) Plugin {
 		p := Plugin{
-			Plugin: kong.Plugin{Name: new("correlation-id")},
+			Name: new("correlation-id"),
 			K8sParent: &configurationv1.KongPlugin{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1.GroupVersion.String(),
-					Kind:       "KongPlugin",
-				},
-				ObjectMeta: metav1.ObjectMeta{Name: "plugin", Namespace: "default"},
+				APIVersion: configurationv1.GroupVersion.String(),
+				Kind:       "KongPlugin",
+				Name:       "plugin", Namespace: "default",
 			},
-		}
-		p.Condition = cond
+
+			Condition: cond}
 		return p
 	}
 
