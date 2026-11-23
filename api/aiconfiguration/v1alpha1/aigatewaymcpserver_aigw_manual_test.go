@@ -164,7 +164,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 						Logging: AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging{
 							Payloads: "Disabled",
 						},
-						MaxRequestBodySize: 1024,
+						MaxRequestBodySize: new(1024),
 						CaCertificates:     []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
 						Certificates:       []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
 					},
@@ -617,7 +617,7 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 							Logging: AIGatewayMCPServerConversionListenerConfigLogging{
 								Audits: "Enabled",
 							},
-							MaxRequestBodySize: 1024,
+							MaxRequestBodySize: new(1024),
 							Server: AIGatewayMCPServerServerConfigBase{
 								ForwardClientHeaders: "Disabled",
 								Session: AIGatewayMCPServerServerConfigBaseSession{

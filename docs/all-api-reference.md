@@ -1180,7 +1180,7 @@ The structure varies depending on the agent type.
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream agent endpoint. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayAgent's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream agent endpoint. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayAgent's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayAgentConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
@@ -2591,7 +2591,7 @@ to modes where Kong answers as the MCP server.
 | `cache` _[AIGatewayMCPServerConversionListenerConfigCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigcache)_ | Cache hints Kong emits on the cacheable operations it serves. Only clients on a protocol revision that defines them receive them.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerConversionListenerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfiglogging)_ |  |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
@@ -2736,7 +2736,7 @@ where Kong answers as the MCP server.
 | `allowedVersions` _[]string_ | The MCP protocol revisions this server accepts. Leave unset to accept every revision Kong implements, which is the default. When set, `server/discover` advertises exactly this list and a request declaring anything else is rejected. Listing only per-request revisions refuses handshake clients.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `cache` _[AIGatewayMCPServerListenerConfigCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconfigcache)_ | Cache hints Kong emits on the cacheable operations it serves. Only clients on a protocol revision that defines them receive them.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `logging` _[AIGatewayMCPServerListenerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconfiglogging)_ |  |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
 
@@ -3217,7 +3217,7 @@ configuration for the MCP Server.
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerUpstreamServerServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)_ | Server-side configuration specific to `upstream-server` mode. |
 | `toolsCacheTtlSeconds` _int_ | The time-to-live (TTL) for the upstream tools cache in seconds. Set to `0` to refresh on every client call. |
@@ -3417,7 +3417,7 @@ configuration for the MCP Server.
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerWithUpstreamConfigServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserver)_ | Server-side configuration for the MCP Server. |
@@ -3515,7 +3515,7 @@ and request body size limits for the MCP Server.
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
@@ -3693,7 +3693,7 @@ for the model.
 | --- | --- |
 | `balancer` _[AIGatewayModelAPIConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
 | `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
 | `route` _[AIGatewayModelRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | Configuration for an AI Gateway route. |
@@ -4220,7 +4220,7 @@ for the model.
 | --- | --- |
 | `balancer` _[AIGatewayModelModelConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
 | `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `model` _[AIGatewayModelModelConfigModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigmodel)_ |  |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |

@@ -1098,6 +1098,11 @@ func (in *AIGatewayAgentConfig) DeepCopyInto(out *AIGatewayAgentConfig) {
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Proxy.DeepCopyInto(&out.Proxy)
 	in.Route.DeepCopyInto(&out.Route)
 	in.Upstream.DeepCopyInto(&out.Upstream)
@@ -3239,6 +3244,11 @@ func (in *AIGatewayMCPServerConversionListenerConfig) DeepCopyInto(out *AIGatewa
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Route.DeepCopyInto(&out.Route)
 	in.Server.DeepCopyInto(&out.Server)
 	in.Upstream.DeepCopyInto(&out.Upstream)
@@ -3452,6 +3462,11 @@ func (in *AIGatewayMCPServerListenerConfig) DeepCopyInto(out *AIGatewayMCPServer
 	}
 	out.Cache = in.Cache
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Route.DeepCopyInto(&out.Route)
 	in.Server.DeepCopyInto(&out.Server)
 }
@@ -4007,6 +4022,11 @@ func (in *AIGatewayMCPServerUpstreamServerConfig) DeepCopyInto(out *AIGatewayMCP
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Route.DeepCopyInto(&out.Route)
 	in.Server.DeepCopyInto(&out.Server)
 	in.Upstream.DeepCopyInto(&out.Upstream)
@@ -4189,6 +4209,11 @@ func (in *AIGatewayMCPServerWithUpstreamConfig) DeepCopyInto(out *AIGatewayMCPSe
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Proxy.DeepCopyInto(&out.Proxy)
 	in.Route.DeepCopyInto(&out.Route)
 	in.Server.DeepCopyInto(&out.Server)
@@ -4287,6 +4312,11 @@ func (in *AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig) DeepCopyInt
 		copy(*out, *in)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Route.DeepCopyInto(&out.Route)
 	in.Upstream.DeepCopyInto(&out.Upstream)
 }
@@ -4506,6 +4536,11 @@ func (in *AIGatewayModelAPIConfig) DeepCopyInto(out *AIGatewayModelAPIConfig) {
 		(*in).DeepCopyInto(*out)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	in.Proxy.DeepCopyInto(&out.Proxy)
 	in.Route.DeepCopyInto(&out.Route)
 }
@@ -5085,6 +5120,11 @@ func (in *AIGatewayModelModelConfig) DeepCopyInto(out *AIGatewayModelModelConfig
 		(*in).DeepCopyInto(*out)
 	}
 	out.Logging = in.Logging
+	if in.MaxRequestBodySize != nil {
+		in, out := &in.MaxRequestBodySize, &out.MaxRequestBodySize
+		*out = new(int)
+		**out = **in
+	}
 	out.Model = in.Model
 	in.Proxy.DeepCopyInto(&out.Proxy)
 	in.Route.DeepCopyInto(&out.Route)
