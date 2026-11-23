@@ -235,6 +235,9 @@ spec:
             value: ($test.metadata.name)
           - name: NAMESPACE
             value: ($namespace)
+          # The data plane, its certificates and their Secrets live there.
+          - name: ADDITIONAL_NAMESPACES
+            value: ($dp_namespace)
           - name: OPERATOR_NAMESPACE
             value: kong-system
         content: |
