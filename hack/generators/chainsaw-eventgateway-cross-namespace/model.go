@@ -388,10 +388,43 @@ func policyChain(name, ns string, v, p *object) *object {
 	}
 }
 
+// sidePolicyChain orders the single produce or consume policy of its virtual
+// cluster.
+func sidePolicyChain(side, name, ns string, v, p *object) *object {
+	k := sideKind(side) + "Chain"
+	return &object{
+		Kind: k, Name: name, NS: ns, Group: groupConfiguration,
+		Template: "apply-" + strings.ToLower(k[:1]) + k[1:] + ".yaml",
+		Own:      own("chain_name", name, "chain_namespace", ns),
+		Refs: []ref{
+			vcRef(v),
+			{Type: refSibling, Target: p, NameKey: "policy_name", NSKey: "policy_namespace"},
+		},
+	}
+}
+
+// nestedSidePolicyChain orders the produce or consume policies of its virtual
+// cluster: a schemaValidation parent, then its single child.
+func nestedSidePolicyChain(side, name, ns string, v, parent, child *object) *object {
+	o := sidePolicyChain(side, name, ns, v, child)
+	o.Template = strings.TrimSuffix(o.Template, ".yaml") + "-nested.yaml"
+	o.Refs = []ref{
+		vcRef(v),
+		{Type: refSibling, Target: parent, NameKey: "parent_policy_name", NSKey: "parent_policy_namespace"},
+		{Type: refSibling, Target: child, NameKey: "policy_name", NSKey: "policy_namespace"},
+	}
+	return o
+}
+
 // isPolicyChain tells the kind is a policy chain: it orders the policies of
 // its virtual cluster or listener, with code of its own.
 func isPolicyChain(kind string) bool {
-	return kind == "EventGatewayVirtualClusterPolicyChain" || kind == "EventGatewayListenerPolicyChain"
+	switch kind {
+	case "EventGatewayVirtualClusterPolicyChain", "EventGatewayListenerPolicyChain",
+		"EventGatewayVirtualClusterProducePolicyChain", "EventGatewayVirtualClusterConsumePolicyChain":
+		return true
+	}
+	return false
 }
 
 // chainParent names the parent of a policy chain of the kind.
