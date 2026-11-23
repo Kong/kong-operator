@@ -58,7 +58,9 @@ spec:
               Condition is an expression evaluated for every request right before the plugin's
               `access` phase. When it evaluates to false, the plugin is skipped for that request.
               When it evaluates to true or is unset, the plugin runs as usual.
-              Requires Kong Gateway 3.14 or later.
+              Requires Kong Gateway 3.14 or later. Kong Gateway 3.15 and later use CEL syntax.
+              Kong Gateway 3.14 shipped the field as a beta using ATC syntax, which is not
+              compatible with CEL: 3.14 expressions must be rewritten when upgrading to 3.15.
             type: string
           config:
             description: |-

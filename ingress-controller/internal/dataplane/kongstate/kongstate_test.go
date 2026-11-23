@@ -1544,6 +1544,75 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	}
 }
 
+func TestKongState_dropPluginsWithUnsupportedCondition(t *testing.T) {
+	condition := `http.path.startsWith("/api")`
+	plugin := func(cond *string) Plugin {
+		p := Plugin{
+			Plugin: kong.Plugin{Name: new("correlation-id")},
+			K8sParent: &configurationv1.KongPlugin{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: configurationv1.GroupVersion.String(),
+					Kind:       "KongPlugin",
+				},
+				ObjectMeta: metav1.ObjectMeta{Name: "plugin", Namespace: "default"},
+			},
+		}
+		p.Condition = cond
+		return p
+	}
+
+	testCases := []struct {
+		name             string
+		kongVersion      semver.Version
+		plugins          []Plugin
+		expectedPlugins  []Plugin
+		expectedFailures int
+	}{
+		{
+			name:            "gateway supports condition",
+			kongVersion:     versions.KongPluginConditionCutoff,
+			plugins:         []Plugin{plugin(new(condition))},
+			expectedPlugins: []Plugin{plugin(new(condition))},
+		},
+		{
+			name:             "gateway below cutoff drops the plugin",
+			kongVersion:      semver.Version{Major: 3, Minor: 13, Patch: 5},
+			plugins:          []Plugin{plugin(new(condition))},
+			expectedPlugins:  []Plugin{},
+			expectedFailures: 1,
+		},
+		{
+			name:             "plugin attached to several entities is reported once",
+			kongVersion:      semver.Version{Major: 3, Minor: 13, Patch: 5},
+			plugins:          []Plugin{plugin(new(condition)), plugin(new(condition)), plugin(new(condition))},
+			expectedPlugins:  []Plugin{},
+			expectedFailures: 1,
+		},
+		{
+			name:            "plugin without condition on a gateway below cutoff is kept",
+			kongVersion:     semver.Version{Major: 3, Minor: 13, Patch: 5},
+			plugins:         []Plugin{plugin(nil)},
+			expectedPlugins: []Plugin{plugin(nil)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			ks := KongState{Plugins: tc.plugins}
+
+			ks.dropPluginsWithUnsupportedCondition(failuresCollector, tc.kongVersion)
+
+			require.Equal(t, tc.expectedPlugins, ks.Plugins)
+			resourceFailures := failuresCollector.PopResourceFailures()
+			require.Len(t, resourceFailures, tc.expectedFailures)
+			if tc.expectedFailures > 0 {
+				require.Contains(t, resourceFailures[0].Message(), versions.KongPluginConditionCutoff.String())
+			}
+		})
+	}
+}
+
 func TestKongState_FillUpstreamOverrides(t *testing.T) {
 	const (
 		kongIngressName        = "kongIngress"

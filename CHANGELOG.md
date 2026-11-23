@@ -267,7 +267,10 @@
   The field is sent to Kong Gateway by the ingress controller, to Konnect through
   `KongPluginBinding`s and `HTTPRoute`/`GRPCRoute` `ExtensionRef` filters in
   hybrid gateways, and is checked by the admission webhook. Requires Kong
-  Gateway 3.14 or later.
+  Gateway 3.14 or later: 3.15 and later use CEL syntax, while 3.14 shipped the
+  field as a beta using ATC syntax, which must be rewritten when upgrading.
+  On older Kong Gateway versions the ingress controller skips plugins that set
+  a condition and records a Warning event on them.
   [#5276](https://github.com/Kong/kong-operator/issues/5276)
   [#6715](https://github.com/Kong/kong-operator/pull/6715)
 - Gateway API: honor `HTTPRoute.spec.rules[].retry.attempts` for
