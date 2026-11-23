@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+      sectionName: http
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: single-header-1
+              value: v1
+      backendRefs:
+        - name: ($echo_deployment_name)
+          port: 1027
