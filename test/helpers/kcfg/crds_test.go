@@ -41,6 +41,18 @@ func TestGatewayAPICRDsPath(t *testing.T) {
 	})
 }
 
+func TestGatewayAPICRDsKustomizePath(t *testing.T) {
+	t.Run("defaults to the experimental channel", func(t *testing.T) {
+		t.Setenv(envGatewayAPICRDsChannel, "experimental")
+		require.Equal(t, GatewayAPIExperimentalCRDsPath(), GatewayAPICRDsKustomizePath())
+	})
+
+	t.Run("standard channel returns the config/crd root", func(t *testing.T) {
+		t.Setenv(envGatewayAPICRDsChannel, "standard")
+		require.Equal(t, GatewayAPIStandardCRDsKustomizePath(), GatewayAPICRDsKustomizePath())
+	})
+}
+
 func TestConstructModulePath(t *testing.T) {
 	tests := []struct {
 		name       string

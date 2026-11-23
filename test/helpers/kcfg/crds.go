@@ -61,14 +61,19 @@ func GatewayAPIExperimentalCRDsPath() string {
 	return filepath.Join(gatewayAPIModulePath, "config", "crd", "experimental")
 }
 
-// GatewayAPIStandardCRDsPath returns the standard-channel CRD source of the
-// pinned module: the config/crd root. The root carries the kustomization.yaml
-// that kubectl apply -k needs (the standard/ subdirectory has none), and its
-// resource list contains only standard/* files, so a kustomize build of it is
-// the standard channel set. This is the same source the Makefile uses for the
-// gwapi-standard-crds chart. envtest skips non-CRD files, so the
-// kustomization.yaml does not break the envtest path.
+// GatewayAPIStandardCRDsPath returns config/crd/standard: the directory with
+// the standard channel CRD files. Consumers that read plain CRD files, such
+// as envtest, use this. The directory has no kustomization.yaml.
 func GatewayAPIStandardCRDsPath() string {
+	return filepath.Join(gatewayAPIModulePath, "config", "crd", "standard")
+}
+
+// GatewayAPIStandardCRDsKustomizePath returns config/crd: the directory with
+// the kustomization.yaml that builds the standard channel set. Kustomize
+// consumers such as kubectl apply -k need it, because the standard/
+// subdirectory carries no kustomization.yaml of its own. The same source the
+// Makefile uses for the gwapi-standard-crds chart.
+func GatewayAPIStandardCRDsKustomizePath() string {
 	return filepath.Join(gatewayAPIModulePath, "config", "crd")
 }
 
@@ -102,10 +107,25 @@ const envGatewayAPICRDsChannel = "TEST_GATEWAY_API_CRDS_CHANNEL"
 
 // GatewayAPICRDsPath returns the path of the Gateway API CRDs to install in
 // test clusters, based on TEST_GATEWAY_API_CRDS_CHANNEL (default: experimental).
+// The returned directory carries plain CRD files, for consumers such as
+// envtest. For kustomize consumers use GatewayAPICRDsKustomizePath.
 func GatewayAPICRDsPath() string {
 	switch os.Getenv(envGatewayAPICRDsChannel) {
 	case "standard":
 		return GatewayAPIStandardCRDsPath()
+	default:
+		return GatewayAPIExperimentalCRDsPath()
+	}
+}
+
+// GatewayAPICRDsKustomizePath is the channel-aware variant for kustomize
+// consumers such as kubectl apply -k, which needs a directory with a
+// kustomization.yaml. The standard channel source is the config/crd root;
+// the experimental channel source carries its own kustomization.yaml.
+func GatewayAPICRDsKustomizePath() string {
+	switch os.Getenv(envGatewayAPICRDsChannel) {
+	case "standard":
+		return GatewayAPIStandardCRDsKustomizePath()
 	default:
 		return GatewayAPIExperimentalCRDsPath()
 	}
