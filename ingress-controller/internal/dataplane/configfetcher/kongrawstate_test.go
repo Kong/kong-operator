@@ -298,6 +298,213 @@ func TestKongRawStateToKongState(t *testing.T) {
 			},
 		},
 		{
+			name: "assigns each consumer only its own credentials when there are multiple consumers",
+			kongRawState: &utils.KongRawState{
+				Consumers: []*kong.Consumer{
+					{
+						ID:       new("consumer-1"),
+						Username: new("consumer-1"),
+					},
+					{
+						ID:       new("consumer-2"),
+						Username: new("consumer-2"),
+					},
+				},
+				KeyAuths: []*kong.KeyAuth{
+					{
+						ID:  new("keyAuth-1"),
+						Key: new("key-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:  new("keyAuth-2"),
+						Key: new("key-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+				HMACAuths: []*kong.HMACAuth{
+					{
+						ID:       new("hmacAuth-1"),
+						Username: new("hmac-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:       new("hmacAuth-2"),
+						Username: new("hmac-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+				JWTAuths: []*kong.JWTAuth{
+					{
+						ID:  new("jwtAuth-1"),
+						Key: new("jwt-key-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:  new("jwtAuth-2"),
+						Key: new("jwt-key-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+				BasicAuths: []*kong.BasicAuthOptions{
+					{
+						ID:       new("basicAuth-1"),
+						Username: new("basic-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:       new("basicAuth-2"),
+						Username: new("basic-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+				ACLGroups: []*kong.ACLGroup{
+					{
+						ID:    new("aclGroup-1"),
+						Group: new("group-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:    new("aclGroup-2"),
+						Group: new("group-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+				Oauth2Creds: []*kong.Oauth2Credential{
+					{
+						ID:   new("oauth2Cred-1"),
+						Name: new("oauth2-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:   new("oauth2Cred-2"),
+						Name: new("oauth2-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+				MTLSAuths: []*kong.MTLSAuth{
+					{
+						ID:          new("mTLSAuth-1"),
+						SubjectName: new("subject-1"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-1"),
+						},
+					},
+					{
+						ID:          new("mTLSAuth-2"),
+						SubjectName: new("subject-2"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer-2"),
+						},
+					},
+				},
+			},
+			expectedKongState: &kongstate.KongState{
+				Consumers: []kongstate.Consumer{
+					{
+						Username: new("consumer-1"),
+						KeyAuths: []*kongstate.KeyAuth{
+							{
+								Key: new("key-1"),
+							},
+						},
+						HMACAuths: []*kongstate.HMACAuth{
+							{
+								Username: new("hmac-1"),
+							},
+						},
+						JWTAuths: []*kongstate.JWTAuth{
+							{
+								Key: new("jwt-key-1"),
+							},
+						},
+						BasicAuths: []*kongstate.BasicAuth{
+							{
+								Username: new("basic-1"),
+							},
+						},
+						ACLGroups: []*kongstate.ACLGroup{
+							{
+								Group: new("group-1"),
+							},
+						},
+						Oauth2Creds: []*kongstate.Oauth2Credential{
+							{
+								Name: new("oauth2-1"),
+							},
+						},
+						MTLSAuths: []*kongstate.MTLSAuth{
+							{
+								SubjectName: new("subject-1"),
+							},
+						},
+					},
+					{
+						Username: new("consumer-2"),
+						KeyAuths: []*kongstate.KeyAuth{
+							{
+								Key: new("key-2"),
+							},
+						},
+						HMACAuths: []*kongstate.HMACAuth{
+							{
+								Username: new("hmac-2"),
+							},
+						},
+						JWTAuths: []*kongstate.JWTAuth{
+							{
+								Key: new("jwt-key-2"),
+							},
+						},
+						BasicAuths: []*kongstate.BasicAuth{
+							{
+								Username: new("basic-2"),
+							},
+						},
+						ACLGroups: []*kongstate.ACLGroup{
+							{
+								Group: new("group-2"),
+							},
+						},
+						Oauth2Creds: []*kongstate.Oauth2Credential{
+							{
+								Name: new("oauth2-2"),
+							},
+						},
+						MTLSAuths: []*kongstate.MTLSAuth{
+							{
+								SubjectName: new("subject-2"),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:         "doesn't panic when KongRawState is nil",
 			kongRawState: nil,
 		},
