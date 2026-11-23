@@ -66387,9 +66387,9 @@ spec:
                             minLength: 1
                             type: string
                           scopes:
-                            additionalProperties:
+                            items:
                               type: string
-                            type: object
+                            type: array
                         required:
                         - clientID
                         - clientSecret

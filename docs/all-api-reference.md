@@ -22415,7 +22415,7 @@ _Appears in:_
 
 #### CreateOIDCIdentityProviderScopes
 
-_Underlying type:_ `object`
+_Underlying type:_ `string array`
 
 CreateOIDCIdentityProviderScopes The scopes requested by your application
 when authenticating with the identity provider.

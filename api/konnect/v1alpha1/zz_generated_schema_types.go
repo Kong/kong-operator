@@ -149,7 +149,7 @@ type CreateOIDCIdentityProviderConfig struct {
 // CreateOIDCIdentityProviderScopes The scopes requested by your application
 // when authenticating with the identity provider.
 // Must include `openid`.
-type CreateOIDCIdentityProviderScopes map[string]string
+type CreateOIDCIdentityProviderScopes []string
 
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL = apiextensionsv1.JSON

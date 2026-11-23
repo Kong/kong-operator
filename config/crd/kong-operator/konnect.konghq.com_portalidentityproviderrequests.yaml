@@ -113,13 +113,13 @@ spec:
                             minLength: 1
                             type: string
                           scopes:
-                            additionalProperties:
-                              type: string
                             description: |-
                               The scopes requested by your application when authenticating with the
                               identity provider.
                               Must include `openid`.
-                            type: object
+                            items:
+                              type: string
+                            type: array
                         required:
                         - clientID
                         - clientSecret

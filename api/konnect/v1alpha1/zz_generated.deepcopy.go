@@ -397,9 +397,7 @@ func (in *CreateOIDCIdentityProviderConfig) DeepCopyInto(out *CreateOIDCIdentity
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
 		*out = make(CreateOIDCIdentityProviderScopes, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		copy(*out, *in)
 	}
 }
 
@@ -418,9 +416,7 @@ func (in CreateOIDCIdentityProviderScopes) DeepCopyInto(out *CreateOIDCIdentityP
 	{
 		in := &in
 		*out = make(CreateOIDCIdentityProviderScopes, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		copy(*out, *in)
 	}
 }
 
