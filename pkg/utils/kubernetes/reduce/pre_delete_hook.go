@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/samber/lo"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -15,18 +16,42 @@ import (
 // operator attempts to delete the object, it removes the finalizer that prevents the object from being deleted
 // accidentally by users.
 func OwnedObjectPreDeleteHook(ctx context.Context, cl client.Client, obj client.Object) error {
-	finalizers := obj.GetFinalizers()
-
 	// If there's no finalizer, we don't need to do anything.
-	if !slices.Contains(finalizers, consts.DataPlaneOwnedWaitForOwnerFinalizer) {
+	if !slices.Contains(obj.GetFinalizers(), consts.DataPlaneOwnedWaitForOwnerFinalizer) {
 		return nil
 	}
 
-	// Otherwise, we delete the finalizer and update the object.
-	obj.SetFinalizers(lo.Reject(finalizers, func(s string, _ int) bool {
-		return s == consts.DataPlaneOwnedWaitForOwnerFinalizer
-	}))
-	if err := cl.Update(ctx, obj); err != nil {
+	// Objects passed to this hook usually come from the informer cache and can be stale by the
+	// time the hook runs. Re-read the object and retry on conflict so that a concurrent update
+	// (for example, a status or label update by another controller) doesn't make removing the
+	// finalizer fail the whole reconcile.
+	key := client.ObjectKeyFromObject(obj)
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		current := obj.DeepCopyObject().(client.Object)
+		if err := cl.Get(ctx, key, current); err != nil {
+			return err
+		}
+
+		// The original object is gone and another one with the same name has been created
+		// in the meantime. Do not remove the finalizer from the replacement object.
+		if current.GetUID() != obj.GetUID() {
+			return nil
+		}
+
+		// Another actor may have removed the finalizer while we were retrying.
+		if !slices.Contains(current.GetFinalizers(), consts.DataPlaneOwnedWaitForOwnerFinalizer) {
+			return nil
+		}
+		current.SetFinalizers(slices.DeleteFunc(current.GetFinalizers(), func(finalizer string) bool {
+			return finalizer == consts.DataPlaneOwnedWaitForOwnerFinalizer
+		}))
+		return cl.Update(ctx, current)
+	})
+	// The object is already gone, which is exactly what the caller wants.
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
 		return fmt.Errorf("failed to remove %q finalizer before deletion: %w", consts.DataPlaneOwnedWaitForOwnerFinalizer, err)
 	}
 	return nil
