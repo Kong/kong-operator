@@ -94,20 +94,6 @@
   it can access Konnect APIs that are not yet released, including AI Gateway
   2.4 endpoints.
   [#6787](https://github.com/Kong/kong-operator/pull/6787)
-
-### Added
-
-- `EventGatewayVirtualClusterProducePolicyChain`s and
-  `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
-  cluster, and order policies, in another namespace, with a
-  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
-  `OnPremEventGateway`s, as the other policy chains can. `KongReferenceGrant`
-  accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
-  a parent of another namespace is matched by namespace and name.
-  [#6746](https://github.com/Kong/kong-operator/pull/6746)
-
-### Changed
-
 - Konnect: Kong Gateway entities are no longer PUT to Konnect on every sync
   period. The operator sends a PUT only when the entity's desired state changes
   in Kubernetes, including referenced objects such as KongPlugins and Secrets.
@@ -120,6 +106,17 @@
   operator verifies unchanged entities with a GET instead of sending one PUT
   per entity, while keeping the in-memory tracker as the fast path.
   [#6768](https://github.com/Kong/kong-operator/pull/6768)
+
+### Added
+
+- `EventGatewayVirtualClusterProducePolicyChain`s and
+  `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
+  cluster, and order policies, in another namespace, with a
+  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
+  `OnPremEventGateway`s, as the other policy chains can. `KongReferenceGrant`
+  accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
+  a parent of another namespace is matched by namespace and name.
+  [#6746](https://github.com/Kong/kong-operator/pull/6746)
 
 ### Fixes
 
