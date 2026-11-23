@@ -2148,6 +2148,9 @@ apiGroupVersions:
           delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/identity-providers
+        dataSources:
+          - path: spec.apiSpec.config.oidc.clientSecret
+            type: Secret
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK

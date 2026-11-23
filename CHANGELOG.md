@@ -80,7 +80,8 @@
   `portalSAML` field instead of `type: saml` with `saml`. This follows the
   rename in the Konnect API.
 - The Konnect Portal identity provider create request now requires at least
-  one OIDC scope, and `config.oidc.clientSecret` is now required.
+  one OIDC scope, and `config.oidc.clientSecret` is now required. The client
+  secret can be provided inline or referenced from a Kubernetes Secret.
 - `AIGatewayAuthStrategy` key-auth entries no longer accept
   `spec.apiSpec.key-auth.config.anonymous`, and Konnect now validates
   `principals.directory` against `^[a-zA-Z0-9_-]+$`. The openid-connect

@@ -128,9 +128,7 @@ type CreateOIDCIdentityProviderConfig struct {
 	// The Client Secret assigned to your application by the identity provider.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
+	ClientSecret SensitiveDataSource `json:"clientSecret,omitzero"`
 	// The issuer URI of the identity provider.
 	// This is the URL where the provider's metadata can be obtained.
 	//

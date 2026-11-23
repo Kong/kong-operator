@@ -34,9 +34,12 @@ func TestIdentityProviderRequest(t *testing.T) {
 					Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
 						Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
 						OIDC: &konnectv1alpha1.CreateOIDCIdentityProviderConfig{
-							ClientID:     "client-id",
-							ClientSecret: "client-secret",
-							IssuerURL:    "https://issuer.example.com",
+							ClientID: "client-id",
+							ClientSecret: konnectv1alpha1.SensitiveDataSource{
+								Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+								Value: new("client-secret"),
+							},
+							IssuerURL: "https://issuer.example.com",
 						},
 					},
 				},

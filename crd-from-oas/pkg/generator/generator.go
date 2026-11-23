@@ -362,6 +362,21 @@ func (g *Generator) walkSensitiveLeafPath(
 		containerGoName := entityName + "Config"
 		containerObjectFieldPath := objectFieldPath + "." + containerGoName
 		containerAcc := acc.withUnionContainer(containerGoName)
+		if objectFieldPath != "Spec.APISpec" {
+			// A union reached through a nested $ref (e.g. the portal identity
+			// provider's config field): the walked field already holds the
+			// union wrapper, so the variant selectors hang off it directly —
+			// the walked field only gains a nil guard.
+			containerObjectFieldPath = objectFieldPath
+			if len(acc.parts) > 0 {
+				parts := make([]selectorPart, len(acc.parts))
+				copy(parts, acc.parts)
+				parts[len(parts)-1].isUnionContainer = true
+				containerAcc = selectorAccumulator{parts: parts}
+			} else {
+				containerAcc = acc
+			}
+		}
 
 		// "*" fans out across every variant instead of selecting one by name — used
 		// when a secret leaf lives at the same relative path in multiple (but not
@@ -395,6 +410,28 @@ func (g *Generator) walkSensitiveLeafPath(
 			if jsonName(k) == targetJSON || k == targetJSON {
 				variantRef = v
 				break
+			}
+		}
+		// Unions without an OAS discriminator derive their variant values from
+		// the member names (uniqueUnionDiscriminatorValues, e.g.
+		// CreateOIDCIdentityProviderConfig → oidc); match the segment against
+		// those so a dataSources path can reach into such a union.
+		if variantRef == "" && len(schema.OneOf) > 0 {
+			rawNames := make([]string, 0, len(schema.OneOf))
+			for _, v := range schema.OneOf {
+				name := v.Name
+				if v.RefName != "" {
+					name = v.RefName
+				}
+				rawNames = append(rawNames, name)
+			}
+			for i, dv := range uniqueUnionDiscriminatorValues(rawNames) {
+				if jsonName(dv) == targetJSON || dv == targetJSON {
+					if v := schema.OneOf[i]; v.RefName != "" {
+						variantRef = v.RefName
+						break
+					}
+				}
 			}
 		}
 		if variantRef == "" {

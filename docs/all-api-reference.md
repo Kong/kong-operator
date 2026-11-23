@@ -22461,7 +22461,7 @@ authentication integration.
 | --- | --- |
 | `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
 | `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
-| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
+| `clientSecret` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | The Client Secret assigned to your application by the identity provider. |
 | `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
 | `scopes` _[CreateOIDCIdentityProviderScopes](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderscopes)_ | The scopes requested by your application when authenticating with the identity provider. Must include `openid`. |
 
@@ -23681,19 +23681,7 @@ _Appears in:_
 
 - [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
-#### OIDCIdentityProviderClientSecret
 
-_Underlying type:_ `string`
-
-OIDCIdentityProviderClientSecret The Client Secret assigned to your
-application by the identity provider.
-
-
-
-
-_Appears in:_
-
-- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### OIDCIdentityProviderIssuer
 
@@ -24410,6 +24398,64 @@ _Appears in:_
 
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
+
+#### SensitiveDataSecretRef
+
+
+SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `key` _string_ | Key is the data key within the Secret. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+
+_Appears in:_
+
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
+
+#### SensitiveDataSource
+
+
+SensitiveDataSource holds a sensitive string value that can be provided
+either inline or sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
+| `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
+| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+
+_Appears in:_
+
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
+
+#### SensitiveDataSourceType
+
+_Underlying type:_ `string`
+
+SensitiveDataSourceType is the type of source for the sensitive data.
+
+
+
+
+_Appears in:_
+
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
 
 #### SpecRenderer
 

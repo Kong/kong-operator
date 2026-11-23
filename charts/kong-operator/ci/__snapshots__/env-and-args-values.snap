@@ -66648,9 +66648,41 @@ spec:
                             minLength: 1
                             type: string
                           clientSecret:
-                            maxLength: 253
-                            minLength: 1
-                            type: string
+                            properties:
+                              secretRef:
+                                properties:
+                                  key:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           issuerURL:
                             maxLength: 253
                             minLength: 1

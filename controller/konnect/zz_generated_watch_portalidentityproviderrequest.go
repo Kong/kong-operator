@@ -5,6 +5,7 @@ package konnect
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -37,6 +38,14 @@ func PortalIdentityProviderRequestReconciliationWatchOptions(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.PortalIdentityProviderRequestList](cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.Secret{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForSecretRef[konnectv1alpha1.PortalIdentityProviderRequestList](cl, index.IndexFieldPortalIdentityProviderRequestOnSecretRef),
 				),
 			)
 		},
