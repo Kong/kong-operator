@@ -24,6 +24,22 @@ import (
 // PreDeleteHook is a function that can be executed before deleting an object.
 type PreDeleteHook func(ctx context.Context, cl client.Client, obj client.Object) error
 
+func deleteObjectWithPreDeleteHooks(ctx context.Context, k8sClient client.Client, obj client.Object, preDeleteHooks ...PreDeleteHook) error {
+	for _, hook := range preDeleteHooks {
+		if err := hook(ctx, k8sClient, obj); err != nil {
+			return fmt.Errorf("failed to execute pre delete hook: %w", err)
+		}
+	}
+	var opts []client.DeleteOption
+	if uid := obj.GetUID(); uid != "" {
+		opts = append(opts, client.Preconditions{UID: &uid})
+	}
+	if err := k8sClient.Delete(ctx, obj, opts...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	return nil
+}
+
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=delete
 
 // ReduceSecrets detects the best secret in the set and deletes all the others.
@@ -31,12 +47,7 @@ type PreDeleteHook func(ctx context.Context, cl client.Client, obj client.Object
 func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev1.Secret, preDeleteHooks ...PreDeleteHook) error {
 	filteredSecrets := filterSecrets(secrets)
 	for _, secret := range filteredSecrets {
-		for _, hook := range preDeleteHooks {
-			if err := hook(ctx, k8sClient, &secret); err != nil {
-				return fmt.Errorf("failed to execute pre delete hook: %w", err)
-			}
-		}
-		if err := k8sClient.Delete(ctx, &secret); client.IgnoreNotFound(err) != nil {
+		if err := deleteObjectWithPreDeleteHooks(ctx, k8sClient, &secret, preDeleteHooks...); err != nil {
 			return err
 		}
 	}
@@ -50,12 +61,7 @@ func ReduceSecrets(ctx context.Context, k8sClient client.Client, secrets []corev
 func ReduceDeployments(ctx context.Context, k8sClient client.Client, deployments []appsv1.Deployment, preDeleteHooks ...PreDeleteHook) error {
 	filteredDeployments := filterDeployments(deployments)
 	for _, deployment := range filteredDeployments {
-		for _, hook := range preDeleteHooks {
-			if err := hook(ctx, k8sClient, &deployment); err != nil {
-				return fmt.Errorf("failed to execute pre delete hook: %w", err)
-			}
-		}
-		if err := k8sClient.Delete(ctx, &deployment); client.IgnoreNotFound(err) != nil {
+		if err := deleteObjectWithPreDeleteHooks(ctx, k8sClient, &deployment, preDeleteHooks...); err != nil {
 			return err
 		}
 	}
@@ -83,12 +89,7 @@ func ReduceServices(ctx context.Context, k8sClient client.Client, services []cor
 	}
 	filteredServices := filterServices(services, mappedEndpointSlices)
 	for _, service := range filteredServices {
-		for _, hook := range preDeleteHooks {
-			if err := hook(ctx, k8sClient, &service); err != nil {
-				return fmt.Errorf("failed to execute pre delete hook: %w", err)
-			}
-		}
-		if err := k8sClient.Delete(ctx, &service); client.IgnoreNotFound(err) != nil {
+		if err := deleteObjectWithPreDeleteHooks(ctx, k8sClient, &service, preDeleteHooks...); err != nil {
 			return err
 		}
 	}
@@ -102,12 +103,7 @@ func ReduceServicesByName(ctx context.Context, k8sClient client.Client, services
 		return svc.Name != name
 	})
 	for _, service := range filteredServices {
-		for _, hook := range preDeleteHooks {
-			if err := hook(ctx, k8sClient, &service); err != nil {
-				return fmt.Errorf("failed to execute pre delete hook: %w", err)
-			}
-		}
-		if err := k8sClient.Delete(ctx, &service); client.IgnoreNotFound(err) != nil {
+		if err := deleteObjectWithPreDeleteHooks(ctx, k8sClient, &service, preDeleteHooks...); err != nil {
 			return err
 		}
 	}

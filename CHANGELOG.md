@@ -111,6 +111,10 @@
   key deleted and created again no longer gets the fingerprint of the value
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
+- The operator now retries removing the `gateway-operator.konghq.com/wait-for-owner`
+  finalizer from DataPlane-owned resources when the object was modified
+  concurrently, instead of failing the reconcile with a conflict error.
+  [#6790](https://github.com/Kong/kong-operator/pull/6790)
 
 ## [v2.4.0]
 

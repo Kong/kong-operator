@@ -322,7 +322,11 @@ func deleteSecret(ctx context.Context, cl client.Client, secret *corev1.Secret) 
 	if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, cl, secret); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	return client.IgnoreNotFound(cl.Delete(ctx, secret))
+	var opts []client.DeleteOption
+	if secret.UID != "" {
+		opts = append(opts, client.Preconditions{UID: &secret.UID})
+	}
+	return client.IgnoreNotFound(cl.Delete(ctx, secret, opts...))
 }
 
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.

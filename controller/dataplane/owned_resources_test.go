@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -10,13 +11,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/builder"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -807,4 +813,77 @@ func TestDeleteUnreferencedAdminCertSecrets(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDataPlaneReconcileRequeuesOnIngressServiceReduceConflict(t *testing.T) {
+	ctx := t.Context()
+
+	s := runtime.NewScheme()
+	require.NoError(t, scheme.AddToScheme(s))
+	require.NoError(t, operatorv1beta1.AddToScheme(s))
+
+	dp := builder.NewDataPlaneBuilder().
+		WithObjectMeta(metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "dp-1",
+			UID:       "dp-uid",
+		}).
+		WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
+		Build()
+	k8sutils.InitReady(dp)
+	dp.Status.Selector = "selector-1"
+
+	liveLabelOpt := func(svc *corev1.Service) {
+		svc.Labels[consts.DataPlaneServiceStateLabel] = consts.DataPlaneStateLabelValueLive
+	}
+	adminSvc, err := k8sresources.GenerateNewAdminServiceForDataPlane(
+		dp,
+		k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dp),
+		liveLabelOpt,
+	)
+	require.NoError(t, err)
+	adminSvc.Name = "dataplane-admin-dp-1"
+	adminSvc.UID = "admin-uid"
+
+	newIngressSvc := func(name string, uid k8stypes.UID) *corev1.Service {
+		svc, err := k8sresources.GenerateNewIngressServiceForDataPlane(
+			dp,
+			k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dp),
+			k8sresources.ServicePortsFromDataPlaneIngressOpt(dp),
+			liveLabelOpt,
+		)
+		require.NoError(t, err)
+		k8sutils.SetOwnerForObject(svc, dp)
+		svc.Name = name
+		svc.UID = uid
+		return svc
+	}
+	ingressSvc1 := newIngressSvc("dataplane-ingress-dp-1-a", "ing-uid-1")
+	ingressSvc2 := newIngressSvc("dataplane-ingress-dp-1-b", "ing-uid-2")
+
+	var patchCalls int
+	cl := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(dp, adminSvc, ingressSvc1, ingressSvc2).
+		WithStatusSubresource(dp).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				if _, ok := obj.(*corev1.Service); ok {
+					patchCalls++
+					return apierrors.NewConflict(
+						schema.GroupResource{Resource: "services"},
+						obj.GetName(),
+						errors.New("the object has been modified"),
+					)
+				}
+				return cl.Patch(ctx, obj, patch, opts...)
+			},
+		}).
+		Build()
+
+	reconciler := &Reconciler{Client: cl}
+	res, err := reconciler.Reconcile(ctx, dp)
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, res)
+	require.Positive(t, patchCalls)
 }
