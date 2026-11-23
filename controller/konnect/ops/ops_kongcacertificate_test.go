@@ -1004,7 +1004,7 @@ func TestUpdateCACertificate(t *testing.T) {
 			sdk := mocks.NewMockCACertificatesSDK(t)
 			tt.setupMock(sdk)
 
-			err := updateCACertificate(ctx, cl, sdk, tt.cert)
+			err := updateCACertificate(ctx, cl, sdk, nil, tt.cert)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)

@@ -30,7 +30,7 @@ func TestUpdateWhenParentDoesNotExistInKonnect(t *testing.T) {
 	ent.SetKonnectID("auth-strategy-id")
 
 	update := func(syncPeriod time.Duration) error {
-		_, err := Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, ent)
+		_, err := Update(t.Context(), sdk, syncPeriod, cl, &metricsmocks.MockRecorder{}, ent, nil)
 		return err
 	}
 
@@ -42,7 +42,7 @@ func TestUpdateWhenParentDoesNotExistInKonnect(t *testing.T) {
 	assert.Contains(t, cond.Message, "gateway gateway-id")
 
 	t.Run("no request in the sync period", func(t *testing.T) {
-		res, err := Update(t.Context(), sdk, time.Minute, cl, &metricsmocks.MockRecorder{}, ent)
+		res, err := Update(t.Context(), sdk, time.Minute, cl, &metricsmocks.MockRecorder{}, ent, nil)
 		require.NoError(t, err)
 		assert.Equal(t, int64(2), requests.Load())
 		assert.Positive(t, res.RequeueAfter)

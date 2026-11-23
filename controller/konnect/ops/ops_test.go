@@ -250,7 +250,7 @@ func TestUpdateAIGatewayConsumerCredential_NoopsBecauseImmutable(t *testing.T) {
 		Build()
 	sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 
-	_, err := Update(t.Context(), sdk, 0, fakeClient, &metricsmocks.MockRecorder{}, credential)
+	_, err := Update(t.Context(), sdk, 0, fakeClient, &metricsmocks.MockRecorder{}, credential, nil)
 	require.NoError(t, err)
 
 	require.Len(t, credential.Status.Conditions, 1)

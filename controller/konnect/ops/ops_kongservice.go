@@ -67,18 +67,28 @@ func createService(
 func updateService(
 	ctx context.Context,
 	sdk sdkkonnectgo.ServicesSDK,
+	g *syncGuard,
 	svc *configurationv1alpha1.KongService,
 ) error {
-	if svc.GetControlPlaneID() == "" {
+	cpID := svc.GetControlPlaneID()
+	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: svc, Op: UpdateOp}
 	}
 
 	id := svc.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.UpsertService(ctx,
-		sdkkonnectops.UpsertServiceRequest{
-			ControlPlaneID: svc.GetControlPlaneID(),
-			ServiceID:      id,
-			Service:        kongServiceToSDKServiceInput(svc),
+	req := sdkkonnectops.UpsertServiceRequest{
+		ControlPlaneID: cpID,
+		ServiceID:      id,
+		Service:        kongServiceToSDKServiceInput(svc),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.ServiceOutput, error) {
+			resp, err := sdk.GetService(ctx, id, cpID)
+			return resp.GetService(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.ServiceOutput, error) {
+			resp, err := sdk.UpsertService(ctx, req)
+			return resp.GetService(), err
 		},
 	)
 
@@ -140,7 +150,7 @@ func adoptService(
 	case commonv1alpha1.AdoptModeOverride:
 		svcCopy := svc.DeepCopy()
 		svcCopy.SetKonnectID(konnectID)
-		if err = updateService(ctx, sdk, svcCopy); err != nil {
+		if err = updateService(ctx, sdk, nil, svcCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

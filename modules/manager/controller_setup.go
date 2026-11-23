@@ -46,6 +46,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/kongplugininstallation"
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/mcpserver"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
@@ -877,23 +878,31 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		})
 	}
 
+	konnectConfigVersionTracker := ops.NewConfigVersionTracker(
+		c.KonnectSyncPeriod,
+		consts.DefaultKonnectDriftCheckPeriod,
+	)
+
 	// MCPServer controllers
 	if c.FeatureGates.Enabled(FeatureGateMCPServer) {
-		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider, metricRecorder)...)
+		controllers = append(controllers,
+			newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider, metricRecorder, konnectConfigVersionTracker)...,
+		)
 	}
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
+		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c, konnectConfigVersionTracker)))
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
-			sdkFactory:        sdkFactory,
-			loggingMode:       c.LoggingMode,
-			client:            mgr.GetClient(),
-			syncPeriod:        c.KonnectSyncPeriod,
-			controllerOptions: ctrlOpts,
-			metricRecorder:    metricRecorder,
+			configVersionTracker: konnectConfigVersionTracker,
+			sdkFactory:           sdkFactory,
+			loggingMode:          c.LoggingMode,
+			client:               mgr.GetClient(),
+			syncPeriod:           c.KonnectSyncPeriod,
+			controllerOptions:    ctrlOpts,
+			metricRecorder:       metricRecorder,
 		}
 
 		// Add additional Konnect controllers
@@ -1054,12 +1063,13 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 }
 
 type konnectControllerFactory struct {
-	sdkFactory        sdkops.SDKFactory
-	loggingMode       logging.Mode
-	client            client.Client
-	syncPeriod        time.Duration
-	metricRecorder    metrics.Recorder
-	controllerOptions controller.Options
+	sdkFactory           sdkops.SDKFactory
+	loggingMode          logging.Mode
+	client               client.Client
+	syncPeriod           time.Duration
+	metricRecorder       metrics.Recorder
+	controllerOptions    controller.Options
+	configVersionTracker *ops.ConfigVersionTracker
 }
 
 func newKonnectEntityController[
@@ -1075,6 +1085,7 @@ func newKonnectEntityController[
 			konnect.WithKonnectEntitySyncPeriod[T, TEnt](f.syncPeriod),
 			konnect.WithMetricRecorder[T, TEnt](f.metricRecorder),
 			konnect.WithControllerOptions[T, TEnt](f.controllerOptions),
+			konnect.WithConfigVersionTracker[T, TEnt](f.configVersionTracker),
 		),
 	}
 }
@@ -1112,19 +1123,21 @@ func newMCPServerControllers(
 	ctrlOpts controller.Options,
 	ssaProvider *controllerpkgssa.TypeConverterProvider,
 	metricsRecorder metrics.Recorder,
+	configVersionTracker *ops.ConfigVersionTracker,
 ) []ControllerDef {
 	var (
 		reconcileEventCh     = make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
 		sm                   = mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
-		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
+		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c, configVersionTracker)))
 		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()))
 		controllerFactory    = konnectControllerFactory{
-			sdkFactory:        sdkFactory,
-			metricRecorder:    metricsRecorder,
-			loggingMode:       c.LoggingMode,
-			client:            mgr.GetClient(),
-			syncPeriod:        c.KonnectSyncPeriod,
-			controllerOptions: ctrlOpts,
+			sdkFactory:           sdkFactory,
+			metricRecorder:       metricsRecorder,
+			loggingMode:          c.LoggingMode,
+			client:               mgr.GetClient(),
+			syncPeriod:           c.KonnectSyncPeriod,
+			controllerOptions:    ctrlOpts,
+			configVersionTracker: configVersionTracker,
 		}
 	)
 	return []ControllerDef{

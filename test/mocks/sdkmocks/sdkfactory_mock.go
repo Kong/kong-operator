@@ -39,6 +39,7 @@ type MockSDKWrapper struct {
 	KeySetsSDK                  *mocks.MockKeySetsSDK
 	SNIsSDK                     *mocks.MockSNIsSDK
 	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
+	DPNodesSDK                  *mocks.MockDPNodesSDK
 	MCPServersSDK               *sdkkonnectgo.MCPServers
 
 	server server.Server
@@ -73,6 +74,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KeySetsSDK:                  mocks.NewMockKeySetsSDK(t),
 		SNIsSDK:                     mocks.NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    mocks.NewMockDPCertificatesSDK(t),
+		DPNodesSDK:                  mocks.NewMockDPNodesSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
@@ -177,6 +179,10 @@ func (m MockSDKWrapper) GetSNIsSDK() sdkkonnectgo.SNIsSDK {
 
 func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK {
 	return m.DataPlaneCertificatesSDK
+}
+
+func (m MockSDKWrapper) GetDPNodesSDK() sdkkonnectgo.DPNodesSDK {
+	return m.DPNodesSDK
 }
 
 func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
