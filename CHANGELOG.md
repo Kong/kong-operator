@@ -116,7 +116,7 @@
   changes with `internal validation error` while another `Gateway` is starting.
   It now validates against a Kong Gateway that already received its
   configuration and license, instead of one still waiting for its first sync.
-  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
+  [#6808](https://github.com/Kong/kong-operator/pull/6808)
 - The operator now creates the configured cluster CA `Secret` before the
   manager starts when the `Secret` is missing. This enables certificate issuance
   and metrics scraping for installations such as OLM that cannot create the
