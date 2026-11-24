@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -544,6 +545,20 @@ func isProgrammedForCurrentGeneration[
 		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration()
 }
 
+// isParentNotFoundForCurrentState reports whether the last attempt found that the parent
+// does not exist in Konnect, for the current generation and parent IDs of the entity.
+func isParentNotFoundForCurrentState[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	condProgrammed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok &&
+		condProgrammed.Status == metav1.ConditionFalse &&
+		condProgrammed.Reason == string(kcfgkonnect.KonnectEntitiesParentNotFoundReason) &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
+		condProgrammed.Message == NewParentNotFoundInKonnectError(ent, nil).Error()
+}
+
 func shouldUpdate[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -560,7 +575,10 @@ func shouldUpdate[
 
 	// If the entity is already programmed and the last update was less than
 	// the configured sync period, requeue after the remaining time.
-	if isProgrammedForCurrentGeneration(ent) && timeFromLastUpdate <= syncPeriod {
+	// Do the same if its parent did not exist in Konnect at the last attempt,
+	// so that events from other objects do not cause more attempts.
+	if (isProgrammedForCurrentGeneration(ent) || isParentNotFoundForCurrentState(ent)) &&
+		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
 			"no need for update, requeueing after configured sync period",
@@ -770,8 +788,14 @@ func Update[
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
 	errRelationsFailed, isRelationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](err)
+	errParentNotFound, isParentNotFound := errors.AsType[ParentNotFoundInKonnectError](err)
 
 	switch {
+	case isParentNotFound:
+		if isSDKErr {
+			statusCode = errSDK.StatusCode
+		}
+		SetKonnectEntityProgrammedConditionParentNotFound(e, errParentNotFound)
 	case isSDKErr:
 		statusCode = errSDK.StatusCode
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK)
@@ -1189,14 +1213,52 @@ func ClearInstanceFromError(err error) error {
 		return &c
 	}
 
-	// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
-	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode >= http.StatusInternalServerError {
+	// The SDK returns a generic SDKError for status codes that the API spec does
+	// not declare (e.g. 404 on some AI Gateway creates). Its body is the raw
+	// problem+json with the per-request instance.
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 		c := *errSDK
-		c.Body = ""
+		if errSDK.StatusCode >= http.StatusInternalServerError {
+			// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
+			c.Body = ""
+		} else {
+			// Keep the 4xx details, as they tell the user what to fix.
+			c.Body = clearPerRequestIDsFromBody(errSDK.Body)
+		}
 		return &c
 	}
 
 	return err
+}
+
+// perRequestIDBodyFields are the error body fields whose values change with each request.
+var perRequestIDBodyFields = []string{"instance", "request_id"}
+
+// clearPerRequestIDsFromBody sets perRequestIDBodyFields to "" in a JSON object body.
+// It returns the body unchanged if it is not a JSON object.
+func clearPerRequestIDsFromBody(body string) string {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(body), &fields); err != nil {
+		return body
+	}
+	var changed bool
+	for _, f := range perRequestIDBodyFields {
+		if _, ok := fields[f]; ok {
+			fields[f] = json.RawMessage(`""`)
+			changed = true
+		}
+	}
+	if !changed {
+		return body
+	}
+	// Do not escape HTML, so that the details read as Konnect sent them.
+	var b strings.Builder
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(fields); err != nil {
+		return body
+	}
+	return strings.TrimSuffix(b.String(), "\n")
 }
 
 // MirrorableEntity is implemented by generated Konnect CRD types that opted into

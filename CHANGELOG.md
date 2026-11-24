@@ -85,6 +85,28 @@
   `principals.directory` pattern.
   [#6787](https://github.com/Kong/kong-operator/pull/6787)
 
+### Added
+
+- Added the `condition` field to `KongPlugin` and `KongClusterPlugin`. It sets the
+  plugin's `condition`, an expression Kong Gateway evaluates for each request
+  right before the plugin's `access` phase, skipping the plugin when it is false.
+  The field is sent to Kong Gateway by the ingress controller, to Konnect through
+  `KongPluginBinding`s and `HTTPRoute`/`GRPCRoute` `ExtensionRef` filters in
+  hybrid gateways, and is checked by the admission webhook. Requires Kong
+  Gateway 3.14 or later: 3.15 and later use CEL syntax, while 3.14 shipped the
+  field as a beta using ATC syntax, which must be rewritten when upgrading.
+  On older Kong Gateway versions the ingress controller skips plugins that set
+  a condition and records a Warning event on them.
+  [#6715](https://github.com/Kong/kong-operator/pull/6715)
+- `EventGatewayVirtualClusterProducePolicyChain`s and
+  `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
+  cluster, and order policies, in another namespace, with a
+  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
+  `OnPremEventGateway`s, as the other policy chains can. `KongReferenceGrant`
+  accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
+  a parent of another namespace is matched by namespace and name.
+  [#6746](https://github.com/Kong/kong-operator/pull/6746)
+
 ### Changed
 
 - The operator now uses the internal Konnect SDK (`sdk-konnect-go-internal`) so
@@ -104,17 +126,6 @@
   per entity, while keeping the in-memory tracker as the fast path.
   [#6768](https://github.com/Kong/kong-operator/pull/6768)
 
-### Added
-
-- `EventGatewayVirtualClusterProducePolicyChain`s and
-  `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
-  cluster, and order policies, in another namespace, with a
-  `KongReferenceGrant` in its namespace, on both `KonnectEventGateway`s and
-  `OnPremEventGateway`s, as the other policy chains can. `KongReferenceGrant`
-  accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
-  a parent of another namespace is matched by namespace and name.
-  [#6746](https://github.com/Kong/kong-operator/pull/6746)
-
 ### Fixes
 
 - The operator now creates the configured cluster CA `Secret` before the
@@ -127,6 +138,18 @@
   key deleted and created again no longer gets the fingerprint of the value
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
+  puts the per-request trace ID in the `Programmed` condition.
+  [#6797](https://github.com/Kong/kong-operator/pull/6797)
+- Konnect entities: when an entity is not found in Konnect and cannot be
+  created again because its parent no longer exists in Konnect, the operator
+  sets the `Programmed` condition to `False` with the `ParentNotFound` reason.
+  [#6798](https://github.com/Kong/kong-operator/pull/6798)
+- `AIGatewayModelProvider`: a `gemini` provider with GCP workload identity
+  federation now works. On-prem, the operator no longer drops the auth JSON
+  and the AWS credentials from the rendered configuration. On Konnect, the
+  operator no longer rejects the configuration.
+  [#6801](https://github.com/Kong/kong-operator/pull/6801)
 
 ## [v2.4.0]
 

@@ -25,7 +25,7 @@ routes:
     service:
       id: 947a4e23-b483-5a65-8165-da9aed24565b
     paths:
-      - /chat/chat/completions
+      - /gemini/chat/completions
     methods:
       - POST
       - OPTIONS
@@ -35,6 +35,19 @@ routes:
     strip_path: false
   - id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
     name: openai-chat-2
+    service:
+      id: 947a4e23-b483-5a65-8165-da9aed24565b
+    paths:
+      - /chat/chat/completions
+    methods:
+      - POST
+      - OPTIONS
+    protocols:
+      - http
+      - https
+    strip_path: false
+  - id: 10bf6bcb-e990-5997-afc1-265030165eed
+    name: openai-chat-3
     service:
       id: 947a4e23-b483-5a65-8165-da9aed24565b
     paths:
@@ -142,6 +155,48 @@ plugins:
       llm_format: openai
       targets:
         - auth:
+            aws_access_key_id: mock-access-key-id
+            aws_secret_access_key: mock-secret-access-key
+            aws_session_token: mock-session-token
+            gcp_workload_identity_federation_auth_json: '{"type":"external_account"}'
+            gcp_workload_identity_federation_source: aws_iam
+          description: gemini-2.5-flash
+          logging:
+            log_payloads: false
+            log_statistics: true
+          model:
+            model_alias: mock-gemini-model
+            name: gemini-2.5-flash
+            options:
+              bedrock:
+                aws_assume_role_arn: arn:aws:iam::123456789012:role/mock
+                aws_region: us-east-1
+                aws_role_session_name: mock-session
+                aws_sts_endpoint_url: https://sts.us-east-1.amazonaws.com
+            provider: gemini
+          route_type: llm/v1/chat
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+    model:
+      id: 74c0e62d-4996-5ac2-bfb3-b3898d3a226c
+  - id: dcebfb31-cc0f-5469-b6d7-9d8807a4e8d2
+    name: ai-model-selector
+    config:
+      max_request_body_size: 8388608
+      sources:
+        - body_path: model
+          source: body
+    route:
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
+  - id: 75ff22ed-6245-594b-895f-6a9fa36f4581
+    name: ai-proxy-advanced
+    config:
+      balancer:
+        algorithm: round-robin
+      genai_category: text/generation
+      llm_format: openai
+      targets:
+        - auth:
             header_name: apikey
             header_value: test-ai-gateway-key
           description: qwen2.5:0.5b
@@ -156,10 +211,10 @@ plugins:
             provider: openai
           route_type: llm/v1/chat
     route:
-      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: dcebfb31-cc0f-5469-b6d7-9d8807a4e8d2
+  - id: 5477cac7-3c38-581b-899b-f9d520e9d5e4
     name: ai-model-selector
     config:
       max_request_body_size: 8388608
@@ -167,8 +222,8 @@ plugins:
         - body_path: model
           source: body
     route:
-      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
-  - id: 75ff22ed-6245-594b-895f-6a9fa36f4581
+      id: 10bf6bcb-e990-5997-afc1-265030165eed
+  - id: 628550fd-b362-5247-b3ba-f2f6fa95de13
     name: ai-proxy-advanced
     config:
       balancer:
@@ -211,24 +266,24 @@ plugins:
         strategy: pgvector
         threshold: 0.7
     route:
-      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
+      id: 10bf6bcb-e990-5997-afc1-265030165eed
     model:
       id: 714889d8-0b23-5657-9672-0ebbfa7e5574
-  - id: 351b19c1-1c2e-50df-864f-815aac3b5e20
+  - id: 378aaf88-6e61-5147-9ca7-e1e3cd1cea54
     name: rate-limiting
     config:
       minute: 5
     route:
-      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: a65f789a-70c0-5107-9ee9-d927e92b799b
+  - id: b252d9ae-40ff-561f-9275-9a1ee78ca8a4
     name: mock-custom-policy
     route:
-      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: 509b86a4-d650-5125-8f69-105b25bd0f9e
+  - id: a5480b47-69e6-5b50-85bd-94c6b7ea4989
     name: acl
     config:
       allow:
@@ -236,13 +291,13 @@ plugins:
       always_use_authenticated_groups: true
       include_consumer_groups: true
     route:
-      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: 14b95fe8-855a-59e8-ac9d-18e05903fca5
+  - id: 5ac8b36e-1447-5980-9c0f-92e43394a235
     name: key-auth
     route:
-      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
 custom_plugins:
   - id: e70214f8-4e9a-55e4-b2b3-319cee69d7cd
     name: mock-custom-policy
@@ -293,6 +348,8 @@ snis:
     certificate:
       id: de16e9ec-471b-586a-9849-fa4746ab7cf8
 ai_models:
+  - id: 74c0e62d-4996-5ac2-bfb3-b3898d3a226c
+    name: mock-gemini-model
   - id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
     name: mock-model
   - id: 714889d8-0b23-5657-9672-0ebbfa7e5574

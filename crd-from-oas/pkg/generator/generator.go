@@ -8525,6 +8525,33 @@ func (g *Generator) collectSDKOpsConstFieldsFromProperty(
 	if prop.AdditionalProperties != nil {
 		g.collectSDKOpsConstFieldsFromProperty(prop.AdditionalProperties, append(append([]string(nil), path...), "{}"), discs, visited, seen, fields)
 	}
+	// The map-returning marshalSDKOpsPayload injects const fields before union
+	// flattening, so a union member's fields sit under its discriminator
+	// mapping key (see collectSDKOpsBoolFieldsFromProperty). The union is
+	// either inline or a $ref to a oneOf schema. The byte-returning
+	// marshalSDKOpsPayload flattens first, so these paths do not match there.
+	oneOf, mapping := prop.OneOf, prop.DiscriminatorMapping
+	if len(oneOf) == 0 && prop.RefName != "" {
+		if refSchema := g.parsed.Schemas[prop.RefName]; refSchema != nil {
+			oneOf, mapping = refSchema.OneOf, refSchema.DiscriminatorMapping
+		}
+	}
+	if len(oneOf) == 0 {
+		return
+	}
+	for memberKey, refName := range mapping {
+		memberSchema := g.parsed.Schemas[refName]
+		if memberSchema == nil {
+			continue
+		}
+		if _, done := visited[refName]; done {
+			continue
+		}
+		visited[refName] = struct{}{}
+		for _, memberProp := range memberSchema.Properties {
+			g.collectSDKOpsConstFieldsFromProperty(memberProp, append(append([]string(nil), path...), memberKey, memberProp.Name), discs, visited, seen, fields)
+		}
+	}
 }
 
 func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.Property, error) {
