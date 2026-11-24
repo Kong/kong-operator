@@ -80,6 +80,7 @@
   and the AWS credentials from the rendered configuration. On Konnect, the
   operator no longer rejects the configuration.
   [#6801](https://github.com/Kong/kong-operator/pull/6801)
+  [#6804](https://github.com/Kong/kong-operator/pull/6804)
 
 ## [v2.4.0]
 
