@@ -821,3 +821,59 @@ func TestHandleSecretRef_PortalIdentityProviderRequestSensitiveDataSource(t *tes
 		assert.Equal(t, metav1.ConditionTrue, cond.Status)
 	})
 }
+
+func TestHandleSecretRef_PortalIdentityProviderRequestStaleSecretRefValid(t *testing.T) {
+	// A secretRef that failed validation must not leave a stale
+	// SecretRefValid=False behind once the user switches clientSecret to an
+	// inline value.
+	ctx := context.Background()
+	scheme := scheme.Get()
+
+	obj := &konnectv1alpha1.PortalIdentityProviderRequest{
+		Name:       "idp",
+		Namespace:  "default",
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "PortalIdentityProviderRequest",
+		Spec: konnectv1alpha1.PortalIdentityProviderRequestSpec{
+			APISpec: konnectv1alpha1.PortalIdentityProviderRequestAPISpec{
+				Type: "oidc",
+				Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
+					Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
+					OIDC: &konnectv1alpha1.CreateOIDCIdentityProviderConfig{
+						ClientID: "client-id",
+						ClientSecret: konnectv1alpha1.SensitiveDataSource{
+							Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+							SecretRef: &konnectv1alpha1.SensitiveDataSecretRef{Name: "missing-secret", Key: "clientSecret"},
+						},
+						IssuerURL: "https://issuer.example.com",
+					},
+				},
+			},
+		},
+	}
+	cl := newFakeClientBuilder(scheme).WithObjects(obj).WithStatusSubresource(obj).Build()
+
+	_, stop, err := handleSecretRef(ctx, cl, obj)
+	require.Error(t, err)
+	assert.True(t, stop)
+	updated := &konnectv1alpha1.PortalIdentityProviderRequest{}
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+	cond, found := findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+	require.True(t, found)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+
+	// Switch clientSecret to an inline value: the condition is dropped.
+	updated.Spec.APISpec.Config.OIDC.ClientSecret = konnectv1alpha1.SensitiveDataSource{
+		Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+		Value: new("s3cret"),
+	}
+	require.NoError(t, cl.Update(ctx, updated))
+
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+	_, stop, err = handleSecretRef(ctx, cl, updated)
+	require.NoError(t, err)
+	assert.False(t, stop)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+	_, found = findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+	assert.False(t, found, "stale SecretRefValid condition must be dropped once no Secret is referenced")
+}
