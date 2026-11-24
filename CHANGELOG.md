@@ -122,7 +122,7 @@
   federation now works. On-prem, the operator no longer drops the auth JSON
   and the AWS credentials from the rendered configuration. On Konnect, the
   operator no longer rejects the configuration.
-  [#6800](https://github.com/Kong/kong-operator/issues/6800)
+  [#6801](https://github.com/Kong/kong-operator/pull/6801)
 
 ## [v2.4.0]
 
