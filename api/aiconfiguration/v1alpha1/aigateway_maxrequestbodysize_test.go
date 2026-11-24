@@ -1,77 +1,106 @@
 package v1alpha1
 
 import (
-	"encoding/json"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// maxRequestBodySize documents 0 as "unlimited", so the generator emits it as
-// *int (crd-from-oas `_allowZero`): an explicit 0 must survive the round trip
-// instead of being dropped and replaced by the API's 8 MiB default.
+// maxRequestBodySize documents 0 as "unlimited", so crd-from-oas config.yaml
+// sets `_allowZero` on it and the field is generated as *int with omitempty: an
+// explicit 0 must reach Konnect and on-prem AI Gateways instead of being dropped
+// and replaced by the API's 8 MiB default.
 
-func TestMaxRequestBodySize_JSONRoundTrip(t *testing.T) {
-	t.Parallel()
+// maxRequestBodySizeSDKDefault is the API default applied when the field is omitted.
+const maxRequestBodySizeSDKDefault = 8388608
 
-	testCases := []struct {
-		name     string
-		value    *int
-		wantJSON string
-	}{
-		{name: "unset is omitted", value: nil, wantJSON: `{}`},
-		{name: "explicit zero is kept", value: new(0), wantJSON: `{"maxRequestBodySize":0}`},
-		{name: "non-zero is kept", value: new(1024), wantJSON: `{"maxRequestBodySize":1024}`},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// One shared schema type per affected entity, plus the Agent's inline type.
-			objs := map[string]any{
-				"AIGatewayAgentConfig":                   &AIGatewayAgentConfig{MaxRequestBodySize: tc.value},
-				"AIGatewayModelAPIConfig":                &AIGatewayModelAPIConfig{MaxRequestBodySize: tc.value},
-				"AIGatewayMCPServerListenerConfig":       &AIGatewayMCPServerListenerConfig{MaxRequestBodySize: tc.value},
-				"AIGatewayModelModelConfig":              &AIGatewayModelModelConfig{MaxRequestBodySize: tc.value},
-				"AIGatewayMCPServerUpstreamServerConfig": &AIGatewayMCPServerUpstreamServerConfig{MaxRequestBodySize: tc.value},
-			}
-			for name, obj := range objs {
-				data, err := json.Marshal(obj)
-				require.NoError(t, err, name)
-
-				var got map[string]any
-				require.NoError(t, json.Unmarshal(data, &got), name)
-				var want map[string]any
-				require.NoError(t, json.Unmarshal([]byte(tc.wantJSON), &want))
-				require.Equal(t, want["maxRequestBodySize"], got["maxRequestBodySize"], name)
-			}
-
-			var decoded AIGatewayModelAPIConfig
-			require.NoError(t, json.Unmarshal([]byte(tc.wantJSON), &decoded))
-			require.Equal(t, tc.value, decoded.MaxRequestBodySize)
-		})
-	}
-}
-
-func TestAIGatewayAgent_MaxRequestBodySize_Conversion(t *testing.T) {
+// TestMaxRequestBodySize_IsPointerEverywhere walks every type registered for
+// this group and checks that each maxRequestBodySize field is *int with
+// omitempty. It catches a config.yaml path that misses one of the (shared,
+// per-variant) generated types, including ones added by a future OAS.
+func TestMaxRequestBodySize_IsPointerEverywhere(t *testing.T) {
 	t.Parallel()
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 
-	testCases := []struct {
-		name  string
-		value *int
-	}{
-		{name: "unset", value: nil},
-		{name: "explicit zero", value: new(0)},
-		{name: "non-zero", value: new(1024)},
+	visited := map[reflect.Type]bool{}
+	var owners []string
+	var walk func(reflect.Type)
+	walk = func(typ reflect.Type) {
+		for typ.Kind() == reflect.Pointer || typ.Kind() == reflect.Slice || typ.Kind() == reflect.Map {
+			typ = typ.Elem()
+		}
+		if typ.Kind() != reflect.Struct || typ.PkgPath() != reflect.TypeFor[AIGatewayAgent]().PkgPath() || visited[typ] {
+			return
+		}
+		visited[typ] = true
+		for field := range typ.Fields() {
+			name, opts, _ := strings.Cut(field.Tag.Get("json"), ",")
+			if name == "maxRequestBodySize" {
+				owners = append(owners, typ.Name())
+				require.Equal(t, reflect.TypeFor[*int](), field.Type, "%s.%s", typ.Name(), field.Name)
+				require.Contains(t, strings.Split(opts, ","), "omitempty", "%s.%s", typ.Name(), field.Name)
+			}
+			walk(field.Type)
+		}
+	}
+	for gvk, typ := range scheme.AllKnownTypes() {
+		if gvk.GroupVersion() == GroupVersion {
+			walk(typ)
+		}
 	}
 
-	for _, tc := range testCases {
+	// Guards the walker itself: these are the types known to carry the field today.
+	require.Subset(t, owners, []string{
+		"AIGatewayAgentConfig",
+		"AIGatewayMCPServerConversionListenerConfig",
+		"AIGatewayMCPServerListenerConfig",
+		"AIGatewayMCPServerUpstreamServerConfig",
+		"AIGatewayMCPServerWithUpstreamConfig",
+		"AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig",
+		"AIGatewayModelAPIConfig",
+		"AIGatewayModelModelConfig",
+	})
+}
+
+var maxRequestBodySizeCases = []struct {
+	name  string
+	value *int
+}{
+	{name: "unset", value: nil},
+	{name: "explicit zero", value: new(0)},
+	{name: "non-zero", value: new(1024)},
+}
+
+// requireSDKMaxRequestBodySize checks the value in a Konnect SDK request: unset
+// falls back to the SDK default (8 MiB), not to 0 (unlimited).
+func requireSDKMaxRequestBodySize(t *testing.T, want *int, got *int64) {
+	t.Helper()
+	require.NotNil(t, got)
+	if want == nil {
+		require.EqualValues(t, maxRequestBodySizeSDKDefault, *got)
+		return
+	}
+	require.EqualValues(t, *want, *got)
+}
+
+func newMaxRequestBodySizeClient(t *testing.T) client.Client {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	return fake.NewClientBuilder().WithScheme(scheme).Build()
+}
+
+func TestAIGatewayAgent_MaxRequestBodySize_Conversion(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range maxRequestBodySizeCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -85,25 +114,59 @@ func TestAIGatewayAgent_MaxRequestBodySize_Conversion(t *testing.T) {
 					},
 				},
 			}
-			cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+			cl := newMaxRequestBodySizeClient(t)
 
-			t.Run("Konnect create request", func(t *testing.T) {
-				req, err := obj.ToCreateAIGatewayAgentRequest(t.Context(), cl)
-				require.NoError(t, err)
-				require.NotNil(t, req.Config.MaxRequestBodySize)
-				if tc.value == nil {
-					// Unset falls back to the SDK's default (8 MiB), not to 0 (unlimited).
-					require.EqualValues(t, 8388608, *req.Config.MaxRequestBodySize)
-					return
-				}
-				require.EqualValues(t, *tc.value, *req.Config.MaxRequestBodySize)
-			})
+			req, err := obj.ToCreateAIGatewayAgentRequest(t.Context(), cl)
+			require.NoError(t, err)
+			requireSDKMaxRequestBodySize(t, tc.value, req.Config.MaxRequestBodySize)
 
-			t.Run("on-prem aigw agent", func(t *testing.T) {
-				agent, err := obj.ToAIGWAgent(t.Context(), cl)
-				require.NoError(t, err)
-				require.Equal(t, tc.value, agent.Config.MaxRequestBodySize)
-			})
+			agent, err := obj.ToAIGWAgent(t.Context(), cl)
+			require.NoError(t, err)
+			require.Equal(t, tc.value, agent.Config.MaxRequestBodySize)
+		})
+	}
+}
+
+// TestAIGatewayMCPServer_MaxRequestBodySize_Conversion covers an entity whose
+// apiSpec is a root union, which marshals through the union's own MarshalJSON
+// rather than the plain struct path the Agent uses.
+func TestAIGatewayMCPServer_MaxRequestBodySize_Conversion(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range maxRequestBodySizeCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			obj := &AIGatewayMCPServer{
+				Name: "github-mcp", Namespace: "default",
+				Spec: AIGatewayMCPServerSpec{
+					APISpec: AIGatewayMCPServerAPISpec{
+						AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+							Type: AIGatewayMCPServerConfigTypePassthroughListener,
+							PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+								Name:        "github-mcp",
+								DisplayName: "GitHub MCP",
+								Config: AIGatewayMCPServerWithUpstreamConfig{
+									URL:                "https://api.githubcopilot.com/mcp",
+									Route:              AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp/github"}},
+									MaxRequestBodySize: tc.value,
+								},
+							},
+						},
+					},
+				},
+			}
+			cl := newMaxRequestBodySizeClient(t)
+
+			req, err := obj.ToCreateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+			require.NotNil(t, req.AIGatewayMCPServerPassthroughListener)
+			cfg := req.AIGatewayMCPServerPassthroughListener.GetConfig()
+			requireSDKMaxRequestBodySize(t, tc.value, cfg.GetMaxRequestBodySize())
+
+			mcp, err := obj.ToAIGWMCPServer(t.Context(), cl)
+			require.NoError(t, err)
+			require.Equal(t, tc.value, mcp.Config.MaxRequestBodySize)
 		})
 	}
 }
