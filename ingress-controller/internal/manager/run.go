@@ -292,11 +292,10 @@ func New(
 		return nil, err
 	}
 
-	// For admission validator, a client has to see all namespaces to allow validation.
-	// See dispatchValidationNoMatcher(), which returns the first found validator, because
-	// it can't decide robustly which one has cache with a namespace that is needed to
-	// validate against e.g. for handleHTTPRoute where in the chain function
-	// ensureHTTPRouteIsManagedByController(...), is called which fetches Gateway resource.
+	// For admission validator, a client has to see all namespaces to allow validation:
+	// pickValidator can hand the object to any instance, and validation reads objects in
+	// other namespaces, e.g. handleHTTPRoute -> ensureHTTPRouteIsManagedByController()
+	// reads the Gateway a route's parentRef points to.
 	setupLog.Info("Registering admission validator")
 	allNamespacesClient, err := newManagerClient(
 		mgr.GetConfig(),
