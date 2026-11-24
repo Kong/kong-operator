@@ -93,6 +93,13 @@ func TestHandleUpdateErrorWhenCreateFails(t *testing.T) {
 			parentNotFound: true,
 		},
 		{
+			name: "relations error with not found",
+			createErr: KonnectEntityCreatedButRelationsFailedError{
+				KonnectID: "new-id",
+				Err:       notFound,
+			},
+		},
+		{
 			name:      "other error",
 			createErr: &sdkkonnecterrs.SDKError{Message: "API error occurred", StatusCode: 400},
 		},

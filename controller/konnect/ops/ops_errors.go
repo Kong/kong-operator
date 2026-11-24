@@ -564,7 +564,9 @@ func handleUpdateError[
 		id := ent.GetKonnectStatus().GetKonnectID()
 		logEntityNotFoundRecreating(ctx, ent, id)
 		if createErr := createFunc(ctx); createErr != nil {
-			if ErrIsNotFound(createErr) {
+			// A relations error means that the entity was created, so its parent exists.
+			_, relationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](createErr)
+			if ErrIsNotFound(createErr) && !relationsFailed {
 				return FailedKonnectOpError[T]{
 					Op:  CreateOp,
 					Err: NewParentNotFoundInKonnectError(ent, createErr),
