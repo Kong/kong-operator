@@ -598,8 +598,10 @@ func (r *Reconciler) setEntityStatusFields(ctx context.Context, obj entityObject
 func (r *Reconciler) setUnownedEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
 	ownership := entityConditionOwnership(obj)
 	err := r.applyEntityConditions(ctx, obj, ownership, false, desiredEntityConditions(obj, ownership, removed, conds), r.recordedInputsHash(obj))
-	if apierrors.IsConflict(err) {
-		// Someone else set one of them since: it is theirs.
+	if isFieldManagerConflict(err) {
+		// Someone else set one of them since: it is theirs. A conflict on
+		// its resource version is returned: it changed since it was read,
+		// and the gateway, requeued, reads it again.
 		return nil
 	}
 	return err
@@ -717,8 +719,9 @@ func (r *Reconciler) clearForeignStatus(ctx context.Context, obj entityObject, o
 // applyEntityConditions applies the conditions as the ones the controller sets
 // on the entity, when they differ from those it set: the server removes those
 // it set and no longer applies, and leaves what someone else set. With force,
-// it takes over a condition someone else set; without, it returns a conflict.
-// An entity deleted meanwhile is left alone. inputsHash is the fingerprint of
+// it takes over a condition someone else set; without, it returns a conflict
+// (see isFieldManagerConflict). An entity changed since it was read returns a
+// conflict too, and one deleted meanwhile is left alone. inputsHash is the fingerprint of
 // a static key, applied with them when set: once applied, it would be dropped
 // by an apply leaving it out.
 func (r *Reconciler) applyEntityConditions(
@@ -739,11 +742,12 @@ func (r *Reconciler) applyEntityConditions(
 		}
 		conditions = append(conditions, u)
 	}
-	// The UID is a precondition: an entity deleted, or deleted and created
-	// again, since it was read isn't written; its creation triggers its
-	// gateway.
+	// The resource version locks the write: an entity changed or recreated
+	// since it was read conflicts, and its gateway is requeued. The UID is no
+	// precondition on a CRD status write, since the API server ignores it; it
+	// is sent only so the fake client doesn't recreate a deleted entity.
 	u := &unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": obj.GetName(), "namespace": obj.GetNamespace(), "uid": string(obj.GetUID())},
+		"metadata": map[string]any{"name": obj.GetName(), "namespace": obj.GetNamespace(), "uid": string(obj.GetUID()), "resourceVersion": obj.GetResourceVersion()},
 		"status":   map[string]any{"conditions": conditions},
 	}}
 	if inputsHash != "" {
@@ -755,13 +759,28 @@ func (r *Reconciler) applyEntityConditions(
 		opts = append(opts, client.ForceOwnership)
 	}
 	if err := r.Status().Apply(ctx, client.ApplyConfigurationFromUnstructured(u), opts...); err != nil {
-		if apierrors.IsNotFound(err) || (force && apierrors.IsConflict(err)) {
-			// Forced, only the UID precondition conflicts.
+		if apierrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to set the conditions of the entity %s: %w", client.ObjectKeyFromObject(obj), err)
 	}
 	return nil
+}
+
+// isFieldManagerConflict tells whether the error is the conflict of an apply
+// without force on fields someone else owns, not the one of an optimistic
+// lock on an object changed since it was read.
+func isFieldManagerConflict(err error) bool {
+	status, ok := errors.AsType[*apierrors.StatusError](err)
+	if !apierrors.IsConflict(err) || !ok || status.Status().Details == nil {
+		return false
+	}
+	for _, cause := range status.Status().Details.Causes {
+		if cause.Type == metav1.CauseTypeFieldManagerConflict {
+			return true
+		}
+	}
+	return false
 }
 
 // entityConditionsChange tells whether applying the desired conditions changes

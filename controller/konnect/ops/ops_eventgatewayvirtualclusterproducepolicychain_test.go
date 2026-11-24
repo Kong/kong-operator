@@ -118,7 +118,7 @@ func TestProducePolicyChainGuardedOperations(t *testing.T) {
 				if op == CreateOp {
 					_, err = Create(ctx, sdk, cl, &metricsmocks.MockRecorder{}, chain)
 				} else {
-					_, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain)
+					_, _, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain, nil)
 				}
 				if tt.getErr != nil {
 					require.ErrorIs(t, err, tt.getErr)
@@ -248,7 +248,7 @@ func TestProducePolicyChainScopeWatchWithinSyncPeriod(t *testing.T) {
 					EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: tt.desired},
 				}, nil).Once()
 			}
-			result, err := Update(ctx, sdk, time.Hour, cl, &metricsmocks.MockRecorder{}, chain)
+			result, _, err := Update(ctx, sdk, time.Hour, cl, &metricsmocks.MockRecorder{}, chain, nil)
 			programmed := apimeta.FindStatusCondition(chain.Status.Conditions, "Programmed")
 			require.NotNil(t, programmed)
 			if tt.wantErr != "" {

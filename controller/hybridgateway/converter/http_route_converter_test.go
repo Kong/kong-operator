@@ -1104,6 +1104,9 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				invalidGroup := gwtypes.Group("invalid.group")
 				gatewayKind := gwtypes.Kind("Gateway")
 				route := newHTTPRouteWithHostnames("api.example.com")
+				route.Spec.Rules[0].Retry = &gwtypes.HTTPRouteRetry{
+					Codes: []gwtypes.HTTPRouteRetryStatusCode{500},
+				}
 				route.Spec.ParentRefs = []gwtypes.ParentReference{{
 					Name:  "missing-gateway",
 					Group: &invalidGroup,

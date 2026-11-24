@@ -75,6 +75,17 @@
 
 ### Added
 
+- Added the `condition` field to `KongPlugin` and `KongClusterPlugin`. It sets the
+  plugin's `condition`, an expression Kong Gateway evaluates for each request
+  right before the plugin's `access` phase, skipping the plugin when it is false.
+  The field is sent to Kong Gateway by the ingress controller, to Konnect through
+  `KongPluginBinding`s and `HTTPRoute`/`GRPCRoute` `ExtensionRef` filters in
+  hybrid gateways, and is checked by the admission webhook. Requires Kong
+  Gateway 3.14 or later: 3.15 and later use CEL syntax, while 3.14 shipped the
+  field as a beta using ATC syntax, which must be rewritten when upgrading.
+  On older Kong Gateway versions the ingress controller skips plugins that set
+  a condition and records a Warning event on them.
+  [#6715](https://github.com/Kong/kong-operator/pull/6715)
 - `EventGatewayVirtualClusterProducePolicyChain`s and
   `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
   cluster, and order policies, in another namespace, with a
@@ -83,6 +94,21 @@
   accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
   a parent of another namespace is matched by namespace and name.
   [#6746](https://github.com/Kong/kong-operator/pull/6746)
+
+### Changed
+
+- Konnect: Kong Gateway entities are no longer PUT to Konnect on every sync
+  period. The operator sends a PUT only when the entity's desired state changes
+  in Kubernetes, including referenced objects such as KongPlugins and Secrets.
+  Otherwise it polls the control plane's expected config version once per sync
+  period. When the version changes because of a write the operator didn't make,
+  it GETs each entity and sends a PUT only if the entity drifted.
+  [#6741](https://github.com/Kong/kong-operator/pull/6741)
+- Konnect: the per-entity sync state is now persisted in the status of Kong
+  Gateway configuration entities. After a restart or leader change the
+  operator verifies unchanged entities with a GET instead of sending one PUT
+  per entity, while keeping the in-memory tracker as the fast path.
+  [#6768](https://github.com/Kong/kong-operator/pull/6768)
 
 ### Fixes
 
@@ -96,6 +122,31 @@
   and metrics scraping for installations such as OLM that cannot create the
   `Secret` in advance. Existing `Secret`s are never overwritten.
   [#6728](https://github.com/Kong/kong-operator/pull/6728)
+- `OnPremEventGateway`: a status the operator computed for an entity is no
+  longer written to another entity of the same name created since. A static
+  key deleted and created again no longer gets the fingerprint of the value
+  of the one it replaces, which stopped the push of its gateway for good.
+  [#6764](https://github.com/Kong/kong-operator/pull/6764)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
+  puts the per-request trace ID in the `Programmed` condition.
+  [#6797](https://github.com/Kong/kong-operator/pull/6797)
+- Konnect entities: when an entity is not found in Konnect and cannot be
+  created again because its parent no longer exists in Konnect, the operator
+  sets the `Programmed` condition to `False` with the `ParentNotFound` reason.
+  [#6798](https://github.com/Kong/kong-operator/pull/6798)
+- `AIGatewayModelProvider`: a `gemini` provider with GCP workload identity
+  federation now works. On-prem, the operator no longer drops the auth JSON
+  and the AWS credentials from the rendered configuration. On Konnect, the
+  operator no longer rejects the configuration.
+  [#6801](https://github.com/Kong/kong-operator/pull/6801)
+- `KegDataPlane`: revoking the `KongReferenceGrant` that lets a data plane of
+  another namespace reference its `OnPremEventGateway` now also deletes the
+  client certificate `Secret`s the operator created for it: the Automatic ones
+  and the copies of a Manual one. A `KongReferenceGrant` letting the
+  `EventGatewayDataPlaneCertificate`s of that namespace reference the gateway
+  still trusts any certificate they register: revoking the data planes of a
+  namespace takes deleting that grant too.
+  [#6762](https://github.com/Kong/kong-operator/pull/6762)
 
 ## [v2.4.0]
 
@@ -246,6 +297,14 @@
 
 ### Added
 
+- Gateway API: honor `HTTPRoute.spec.rules[].retry.attempts` for
+  connection-error retries in standard and hybrid Gateway modes, and advertise
+  the `HTTPRouteRetryConnectionError` conformance feature. Kong Gateway retries
+  transport-level failures only, so `retry.codes`, `retry.backoff`, and
+  `attempts` above Kong's limit are rejected with `Accepted=False` and reason
+  `UnsupportedValue`. The `konghq.com/retries` Service annotation takes
+  precedence over the native Route setting.
+  [#6718](https://github.com/Kong/kong-operator/pull/6718)
 - Added `EventGatewayVirtualClusterConsumePolicyChain` to declare Konnect and on-prem
   Consume policy-chain ordering using Kubernetes references to the complete set
   of root and nested policies on one virtual cluster. Parent groups remain

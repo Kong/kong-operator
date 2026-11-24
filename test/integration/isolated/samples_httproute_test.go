@@ -256,12 +256,11 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			namespace := GetNamespaceForT(ctx, t)
 			client := GetFromCtxForT[*clientset.Clientset](ctx, t)
 
-			plugin, err := client.ConfigurationV1().KongPlugins(namespace).Get(ctx, "response-transformer", metav1.GetOptions{})
-			require.NoError(t, err)
-			plugin.Config = apiextensionsv1.JSON{
-				Raw: []byte(`{"test": "test"}`),
-			}
-			_, err = client.ConfigurationV1().KongPlugins(namespace).Update(ctx, plugin, metav1.UpdateOptions{})
+			plugin, err := helpers.UpdateWithRetry(ctx, client.ConfigurationV1().KongPlugins(namespace), "response-transformer", func(p *configurationv1.KongPlugin) {
+				p.Config = apiextensionsv1.JSON{
+					Raw: []byte(`{"test": "test"}`),
+				}
+			})
 			require.NoError(t, err)
 
 			k8sClient := GetClusterFromCtx(ctx).Client()
@@ -287,10 +286,9 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		Assess("modify working route /httproute-testing to /new-route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayclient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			route, err := gatewayclient.GatewayV1().HTTPRoutes(namespace).Get(ctx, "httproute-testing", metav1.GetOptions{})
-			require.NoError(t, err)
-			route.Spec.Rules[0].Matches[0].Path.Value = new("/new-route")
-			_, err = gatewayclient.GatewayV1().HTTPRoutes(namespace).Update(ctx, route, metav1.UpdateOptions{})
+			_, err := helpers.UpdateWithRetry(ctx, gatewayclient.GatewayV1().HTTPRoutes(namespace), "httproute-testing", func(route *gatewayapi.HTTPRoute) {
+				route.Spec.Rules[0].Matches[0].Path.Value = new("/new-route")
+			})
 			require.NoError(t, err)
 
 			return ctx

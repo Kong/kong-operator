@@ -84,6 +84,10 @@ type KongCredentialHMACStatus struct {
 	// +optional
 	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs `json:"konnect,omitempty"`
 
+	// Sync contains the internal Konnect synchronization state of the entity.
+	// +optional
+	Sync *SyncStatus `json:"sync,omitempty"`
+
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map
 	// +listMapKey=type

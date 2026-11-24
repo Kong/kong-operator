@@ -3556,6 +3556,65 @@ func TestCollectSDKOpsBoolFields(t *testing.T) {
 	}, g.collectSDKOpsBoolFields(schema))
 }
 
+func TestCollectSDKOpsConstFields_DescendsUnionMembers(t *testing.T) {
+	g := NewGenerator(Config{})
+	g.parsed = &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"UpstreamAuth": {
+				Name:                 "UpstreamAuth",
+				OneOf:                []*parser.Property{{RefName: "UpstreamAuthAWS"}},
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"aws": "UpstreamAuthAWS"},
+			},
+			"UpstreamAuthAWS": {
+				Name: "UpstreamAuthAWS",
+				Properties: []*parser.Property{
+					{Name: "type", Type: "string", Enum: []any{"aws"}},
+					{Name: "region", Type: "string"},
+				},
+			},
+			"WorkloadIdentityFederation": {
+				Name:                 "WorkloadIdentityFederation",
+				OneOf:                []*parser.Property{{RefName: "WorkloadIdentityFederationAwsIam"}},
+				Discriminator:        "source",
+				DiscriminatorMapping: map[string]string{"aws_iam": "WorkloadIdentityFederationAwsIam"},
+			},
+			"WorkloadIdentityFederationAwsIam": {
+				Name: "WorkloadIdentityFederationAwsIam",
+				Properties: []*parser.Property{
+					{Name: "source", Type: "string", Enum: []any{"aws_iam"}},
+					{Name: "aws", RefName: "UpstreamAuthAWS"},
+				},
+			},
+			"AuthGCP": {
+				Name: "AuthGCP",
+				Properties: []*parser.Property{
+					{Name: "workload_identity_federation", RefName: "WorkloadIdentityFederation"},
+				},
+			},
+		},
+	}
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name:                 "auth",
+				OneOf:                []*parser.Property{{RefName: "AuthGCP"}},
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"gcp": "AuthGCP"},
+			},
+		},
+	}
+
+	assert.Equal(t, []sdkOpsConstField{
+		{
+			Label: "auth.gcp.workload_identity_federation.aws_iam.aws.type",
+			Path:  []string{"auth", "gcp", "workload_identity_federation", "aws_iam", "aws"},
+			Key:   "type",
+			Value: "aws",
+		},
+	}, g.collectSDKOpsConstFields(schema))
+}
+
 func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{

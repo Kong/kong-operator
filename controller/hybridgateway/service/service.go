@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
@@ -90,6 +91,10 @@ func ServiceForRuleWithName[
 	// annotation takes precedence over the route-level timeout. nil for route types or rules that
 	// set no backendRequest timeout.
 	var backendRequestTimeout *int64
+	// routeRetries is the Kong Service retries value derived from an HTTPRoute rule's
+	// spec.retry.attempts. The konghq.com/retries Service annotation, when present,
+	// takes precedence below.
+	var routeRetries *int64
 
 	switch r := any(parentRoute).(type) {
 	case *gwtypes.HTTPRoute:
@@ -102,6 +107,10 @@ func ServiceForRuleWithName[
 		backendRefs = utils.HTTPBackendRefsToBackendRefs(httpRule.BackendRefs)
 		defaultProtocol = "http"
 		backendRequestTimeout = namegen.BackendRequestTimeoutMilliseconds(httpRule)
+		routeRetries, err = gatewayapipkg.KongRetriesForHTTPRouteRule(httpRule)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to resolve HTTPRoute retry configuration: %w", err)
+		}
 
 	case *gwtypes.GRPCRoute:
 		grpcRule, ok := any(rule).(gwtypes.GRPCRouteRule)
@@ -181,6 +190,11 @@ func ServiceForRuleWithName[
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	// The Service annotation has always overridden Service settings derived from a
+	// Route. Keep that precedence for retries, matching connect/read/write timeouts.
+	if retries != nil {
+		routeRetries = retries
+	}
 
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, fmt.Sprintf("Generating KongService for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
@@ -227,7 +241,7 @@ func ServiceForRuleWithName[
 		WithConnectTimeout(connectTimeout).
 		WithReadTimeout(readTimeout).
 		WithWriteTimeout(writeTimeout).
-		WithRetries(retries).
+		WithRetries(routeRetries).
 		WithClientCertificateRef(clientCertRef).
 		WithControlPlaneRef(*cp).
 		Build()

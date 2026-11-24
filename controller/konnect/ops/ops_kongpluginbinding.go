@@ -70,6 +70,7 @@ func updatePlugin(
 	ctx context.Context,
 	sdk sdkkonnectgo.PluginsSDK,
 	cl client.Client,
+	g *syncGuard,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	controlPlaneID := pluginBinding.GetControlPlaneID()
@@ -83,11 +84,19 @@ func updatePlugin(
 	}
 
 	id := pluginBinding.GetKonnectID()
-	_, err = sdk.UpsertPlugin(ctx,
-		sdkkonnectops.UpsertPluginRequest{
-			ControlPlaneID: controlPlaneID,
-			PluginID:       id,
-			Plugin:         *pluginInput,
+	req := sdkkonnectops.UpsertPluginRequest{
+		ControlPlaneID: controlPlaneID,
+		PluginID:       id,
+		Plugin:         *pluginInput,
+	}
+	err = upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Plugin, error) {
+			resp, err := sdk.GetPlugin(ctx, sdkkonnectops.GetPluginRequest{ControlPlaneID: controlPlaneID, PluginID: id})
+			return resp.GetPlugin(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Plugin, error) {
+			resp, err := sdk.UpsertPlugin(ctx, req)
+			return resp.GetPlugin(), err
 		},
 	)
 
@@ -190,7 +199,7 @@ func adoptPluginBinding(
 		// Update the remote plugin to match the spec.
 		pluginBindingCopy := pluginBinding.DeepCopy()
 		pluginBindingCopy.SetKonnectID(konnectID)
-		if err := updatePlugin(ctx, sdk, cl, pluginBindingCopy); err != nil {
+		if err := updatePlugin(ctx, sdk, cl, nil, pluginBindingCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
@@ -361,6 +370,9 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 	if plugin.InstanceName != "" {
 		pluginInput.InstanceName = new(plugin.InstanceName)
 	}
+	if plugin.Condition != "" {
+		pluginInput.Condition = new(plugin.Condition)
+	}
 	if len(plugin.Protocols) > 0 {
 		pluginInput.Protocols = lo.Map(
 			plugin.Protocols,
@@ -429,6 +441,9 @@ func pluginBindingMatches(
 		return false, nil
 	}
 	if stringValueOrEmpty(desired.InstanceName) != stringValueOrEmpty(konnectPlugin.InstanceName) {
+		return false, nil
+	}
+	if stringValueOrEmpty(desired.Condition) != stringValueOrEmpty(konnectPlugin.Condition) {
 		return false, nil
 	}
 	if !protocolsEqual(desired.Protocols, konnectPlugin.Protocols) {

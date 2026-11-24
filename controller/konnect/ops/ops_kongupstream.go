@@ -46,18 +46,28 @@ func createUpstream(
 func updateUpstream(
 	ctx context.Context,
 	sdk sdkkonnectgo.UpstreamsSDK,
+	g *syncGuard,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
-	if upstream.GetControlPlaneID() == "" {
+	cpID := upstream.GetControlPlaneID()
+	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: upstream, Op: UpdateOp}
 	}
 
 	id := upstream.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.UpsertUpstream(ctx,
-		sdkkonnectops.UpsertUpstreamRequest{
-			ControlPlaneID: upstream.GetControlPlaneID(),
-			UpstreamID:     id,
-			Upstream:       kongUpstreamToSDKUpstreamInput(upstream),
+	req := sdkkonnectops.UpsertUpstreamRequest{
+		ControlPlaneID: cpID,
+		UpstreamID:     id,
+		Upstream:       kongUpstreamToSDKUpstreamInput(upstream),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Upstream, error) {
+			resp, err := sdk.GetUpstream(ctx, sdkkonnectops.GetUpstreamRequest{ControlPlaneID: cpID, UpstreamID: id})
+			return resp.GetUpstream(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Upstream, error) {
+			resp, err := sdk.UpsertUpstream(ctx, req)
+			return resp.GetUpstream(), err
 		},
 	)
 
@@ -125,7 +135,7 @@ func adoptUpstream(
 	case commonv1alpha1.AdoptModeOverride:
 		upstreamCopy := upstream.DeepCopy()
 		upstreamCopy.SetKonnectID(konnectID)
-		if err = updateUpstream(ctx, sdk, upstreamCopy); err != nil {
+		if err = updateUpstream(ctx, sdk, nil, upstreamCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
