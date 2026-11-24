@@ -43748,6 +43748,8 @@ spec:
         properties:
           apiVersion:
             type: string
+          condition:
+            type: string
           config:
             type: object
             x-kubernetes-preserve-unknown-fields: true
@@ -46655,6 +46657,8 @@ spec:
       openAPIV3Schema:
         properties:
           apiVersion:
+            type: string
+          condition:
             type: string
           config:
             type: object
