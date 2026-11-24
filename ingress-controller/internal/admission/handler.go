@@ -54,7 +54,9 @@ func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
 	return ctrlref.CacheIndexers{}, false
 }
 
-// dispatchValidationNoMatcher returns the first validator if exists, without any matching.
+// dispatchValidationNoMatcher returns a validator if exists, without any matching. It prefers
+// a ready validator: a Kong Gateway that has not received its first configuration has no license
+// and fails requests that use Enterprise features. If no validator is ready, it returns any of them.
 // Existing of a reference indexers is not guaranteed, so the second return boolean value
 // indicates it.
 // There is no specific matching further so it's safe to do it this way, see related entities:
@@ -66,10 +68,14 @@ func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
 func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
 	h.validatorsMut.RLock()
 	defer h.validatorsMut.RUnlock()
-	if len(h.validators) > 0 {
-		return lo.Values(h.validators)[0], true
+	var notReady KongValidator
+	for _, v := range h.validators {
+		if v.IsReady() {
+			return v, true
+		}
+		notReady = v
 	}
-	return nil, false
+	return notReady, notReady != nil
 }
 
 // dispatchValidationIngressClassMatcher based on IngressClass returns the first validator if exists.

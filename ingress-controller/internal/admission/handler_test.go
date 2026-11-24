@@ -369,3 +369,24 @@ func TestHandleSecret(t *testing.T) {
 		})
 	}
 }
+
+func TestDispatchValidationNoMatcherPrefersReadyValidator(t *testing.T) {
+	ready := KongFakeValidator{Message: "ready"}
+	notReady := KongFakeValidator{Message: "not ready", NotReady: true}
+
+	h := RequestHandler{validators: map[string]KongValidator{"a": notReady, "b": ready, "c": notReady}}
+	// Map iteration order is random, so pick several times.
+	for range 50 {
+		v, ok := h.dispatchValidationNoMatcher()
+		require.True(t, ok)
+		require.Equal(t, ready, v)
+	}
+
+	h = RequestHandler{validators: map[string]KongValidator{"a": notReady}}
+	v, ok := h.dispatchValidationNoMatcher()
+	require.True(t, ok)
+	require.Equal(t, notReady, v, "falls back to a not ready validator when no other exists")
+
+	_, ok = (&RequestHandler{}).dispatchValidationNoMatcher()
+	require.False(t, ok)
+}

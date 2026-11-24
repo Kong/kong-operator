@@ -31,9 +31,14 @@ type KongFakeValidator struct {
 	Result            bool
 	Message           string
 	Error             error
+	NotReady          bool
 }
 
 var _ KongValidator = KongFakeValidator{}
+
+func (v KongFakeValidator) IsReady() bool {
+	return !v.NotReady
+}
 
 func (v KongFakeValidator) ValidateConsumer(
 	_ context.Context,

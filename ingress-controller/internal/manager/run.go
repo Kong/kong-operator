@@ -316,6 +316,7 @@ func New(
 		translatorFeatureFlags,
 		storer,
 		referenceIndexers,
+		synchronizer.IsReady,
 	)
 
 	setupLog.Info("Starting enabled Controllers")
