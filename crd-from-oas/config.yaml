@@ -2177,8 +2177,8 @@ apiGroupVersions:
                       responseField: GetIssuerURL()
                     - objectField: ClientID
                       responseField: GetClientID()
-                - typeValue: portalSAML
-                  variantField: PortalSAML
+                - typeValue: saml
+                  variantField: SAML
                   responseTypeValue: saml
                   responseVariantField: PortalSAMLIdentityProviderConfig
                   # Both SAML metadata fields are optional and only one is

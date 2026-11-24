@@ -4774,7 +4774,7 @@ func cleanSingleVariantName(name string) string {
 	for _, suffix := range []string{"Config", "Configuration", "Provider", "Request", "IdentityProvider"} {
 		result = strings.TrimSuffix(result, suffix)
 	}
-	for _, prefix := range []string{"Configure", "Create", "Update"} {
+	for _, prefix := range []string{"Configure", "Create", "Update", "Portal"} {
 		result = strings.TrimPrefix(result, prefix)
 	}
 	return result

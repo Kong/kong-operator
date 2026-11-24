@@ -146,8 +146,8 @@ func getPortalIdentityProviderRequestForUID(
 				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
-	case "portalSAML":
-		selected := unionField.PortalSAML
+	case "saml":
+		selected := unionField.SAML
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 		}

@@ -142,8 +142,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
 				IdpMetadataURL: "https://idp.example.com/metadata",
 			},
 		}
@@ -177,8 +177,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
 				IdpMetadataURL: "https://idp.example.com/metadata",
 			},
 		}
@@ -215,8 +215,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{
 				IdpMetadataXML: "<EntityDescriptor id=\"ours\"/>",
 			},
 		}
@@ -252,8 +252,8 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 		obj.SetPortalID("portal-1")
 		obj.Spec.APISpec.Type = "saml"
 		obj.Spec.APISpec.Config = &konnectv1alpha1.PortalIdentityProviderRequestConfig{
-			Type:       konnectv1alpha1.PortalIdentityProviderRequestConfigTypePortalSAML,
-			PortalSAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{},
+			Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeSAML,
+			SAML: &konnectv1alpha1.PortalSAMLIdentityProviderConfig{},
 		}
 
 		sdk.EXPECT().

@@ -24049,7 +24049,7 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
 | `oidc` _[CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)_ | OIDC configuration. |
-| `portalSAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | PortalSAML configuration. |
+| `saml` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
 
 _Appears in:_
 
@@ -24073,7 +24073,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `oidc` |  |
-| `portalSAML` |  |
+| `saml` |  |
 
 
 

@@ -3054,8 +3054,8 @@ func (in *PortalIdentityProviderRequestConfig) DeepCopyInto(out *PortalIdentityP
 		*out = new(CreateOIDCIdentityProviderConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.PortalSAML != nil {
-		in, out := &in.PortalSAML, &out.PortalSAML
+	if in.SAML != nil {
+		in, out := &in.SAML, &out.SAML
 		*out = new(PortalSAMLIdentityProviderConfig)
 		**out = **in
 	}
