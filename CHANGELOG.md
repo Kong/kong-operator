@@ -114,6 +114,10 @@
 - Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
   puts the per-request trace ID in the `Programmed` condition.
   [#6797](https://github.com/Kong/kong-operator/pull/6797)
+- Konnect entities: when an entity is not found in Konnect and cannot be
+  created again because its parent no longer exists in Konnect, the operator
+  sets the `Programmed` condition to `False` with the `ParentNotFound` reason.
+  [#6798](https://github.com/Kong/kong-operator/pull/6798)
 
 ## [v2.4.0]
 
