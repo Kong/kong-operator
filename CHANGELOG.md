@@ -118,6 +118,11 @@
   created again because its parent no longer exists in Konnect, the operator
   sets the `Programmed` condition to `False` with the `ParentNotFound` reason.
   [#6798](https://github.com/Kong/kong-operator/pull/6798)
+- `AIGatewayModelProvider`: a `gemini` provider with GCP workload identity
+  federation now works. On-prem, the operator no longer drops the auth JSON
+  and the AWS credentials from the rendered configuration. On Konnect, the
+  operator no longer rejects the configuration.
+  [#6801](https://github.com/Kong/kong-operator/pull/6801)
 
 ## [v2.4.0]
 

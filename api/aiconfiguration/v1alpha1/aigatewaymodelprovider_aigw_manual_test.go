@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/Kong/ai-deck-converter/aigw"
@@ -235,6 +236,124 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, obj.Spec.APISpec.Azure.Config.Auth.Azure.ClientSecret.Value,
 		"secretRef must not be resolved in place on the caller's object")
+}
+
+// TestAIGatewayModelProvider_GeminiWorkloadIdentityFederation covers the gemini GCP workload
+// identity federation aws_iam arm on the on-prem and the Konnect paths.
+func TestAIGatewayModelProvider_GeminiWorkloadIdentityFederation(t *testing.T) {
+	t.Parallel()
+
+	newObj := func() *AIGatewayModelProvider {
+		return &AIGatewayModelProvider{
+			Name: "gemini-federated", Namespace: "default",
+			Spec: AIGatewayModelProviderSpec{
+				APISpec: AIGatewayModelProviderAPISpec{
+					AIGatewayModelProviderConfig: &AIGatewayModelProviderConfig{
+						Type: AIGatewayModelProviderConfigTypeGemini,
+						Gemini: &AIGatewayModelProviderGemini{
+							Name:        "gemini-federated",
+							DisplayName: "Gemini federated",
+							Config: AIGatewayModelProviderGeminiConfig{
+								Auth: &AIGatewayModelProviderGeminiConfigAuth{
+									Type: AIGatewayModelProviderGeminiConfigAuthTypeGCP,
+									GCP: &AIGatewayModelProviderConfigAuthGCP{
+										WorkloadIdentityFederation: &AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation{
+											Source: AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationTypeAuthGCPWorkloadIdentityFederationAwsIam,
+											AuthGCPWorkloadIdentityFederationAwsIam: &AuthGCPWorkloadIdentityFederationAwsIam{
+												AuthJSON: "{vault://ai/gcp-auth-json}",
+												Aws: AIGatewayUpstreamAuthAWS{
+													AccessKeyID:     "{vault://env/aws-key-id}",
+													SecretAccessKey: "{vault://env/aws-secret}",
+													SessionToken:    "{vault://env/aws-session-token}",
+													Region:          "us-east-1",
+													AssumeRoleArn:   "arn:aws:iam::123456789012:role/bedrock",
+													RoleSessionName: "kong-session",
+													StsEndpointURL:  "https://sts.us-east-1.amazonaws.com",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	t.Run("on-prem", func(t *testing.T) {
+		t.Parallel()
+
+		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+		got, err := newObj().ToAIGWProvider(t.Context(), cl)
+		require.NoError(t, err)
+
+		require.Equal(t, "gcp", got.Config.Auth.Type)
+		wif := got.Config.Auth.WorkloadIdentityFederation
+		require.NotNil(t, wif)
+		require.Equal(t, "aws_iam", wif.Source)
+		require.Equal(t, "{vault://ai/gcp-auth-json}", wif.AuthJSON)
+		require.Equal(t, "{vault://env/aws-key-id}", wif.AWSAccessKeyID)
+		require.Equal(t, "{vault://env/aws-secret}", wif.AWSSecretAccessKey)
+		require.Equal(t, "{vault://env/aws-session-token}", wif.AWSSessionToken)
+		require.Equal(t, "us-east-1", wif.AWSRegion)
+		require.Equal(t, "arn:aws:iam::123456789012:role/bedrock", wif.AWSAssumeRoleARN)
+		require.Equal(t, "kong-session", wif.AWSRoleSessionName)
+		require.Equal(t, "https://sts.us-east-1.amazonaws.com", wif.AWSSTSEndpointURL)
+	})
+
+	wantKonnectWIF := `{
+		"source": "aws_iam",
+		"auth_json": "{vault://ai/gcp-auth-json}",
+		"aws": {
+			"type": "aws",
+			"access_key_id": "{vault://env/aws-key-id}",
+			"secret_access_key": "{vault://env/aws-secret}",
+			"session_token": "{vault://env/aws-session-token}",
+			"region": "us-east-1",
+			"assume_role_arn": "arn:aws:iam::123456789012:role/bedrock",
+			"role_session_name": "kong-session",
+			"sts_endpoint_url": "https://sts.us-east-1.amazonaws.com"
+		}
+	}`
+	konnectWIF := func(t *testing.T, req any) string {
+		t.Helper()
+		data, err := json.Marshal(req)
+		require.NoError(t, err)
+		var decoded struct {
+			Config struct {
+				Auth struct {
+					WorkloadIdentityFederation json.RawMessage `json:"workload_identity_federation"`
+				} `json:"auth"`
+			} `json:"config"`
+		}
+		require.NoError(t, json.Unmarshal(data, &decoded))
+		return string(decoded.Config.Auth.WorkloadIdentityFederation)
+	}
+
+	t.Run("konnect create", func(t *testing.T) {
+		t.Parallel()
+
+		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+		req, err := newObj().ToCreateAIGatewayModelProviderRequest(t.Context(), cl)
+		require.NoError(t, err)
+		require.JSONEq(t, wantKonnectWIF, konnectWIF(t, req))
+	})
+
+	t.Run("konnect update", func(t *testing.T) {
+		t.Parallel()
+
+		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+		req, err := newObj().ToUpdateAIGatewayModelProviderRequest(t.Context(), cl)
+		require.NoError(t, err)
+		require.JSONEq(t, wantKonnectWIF, konnectWIF(t, req))
+	})
 }
 
 // TestAIGatewayModelProvider_ToAIGWProvider_StrictRoundTrip guards against a dropped or renamed
