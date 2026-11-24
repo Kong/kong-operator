@@ -138,6 +138,76 @@ func (e CantPerformOperationWithoutParentIDError) Error() string {
 	)
 }
 
+// ParentNotFoundInKonnectError is returned when an entity was not found in
+// Konnect on update, and its creation also failed with not found. This means
+// that its parent does not exist in Konnect.
+type ParentNotFoundInKonnectError struct {
+	EntityType string
+	EntityKey  string
+	ParentIDs  string
+	Err        error
+}
+
+// NewParentNotFoundInKonnectError returns a ParentNotFoundInKonnectError for the entity.
+func NewParentNotFoundInKonnectError(ent entity, err error) ParentNotFoundInKonnectError {
+	return ParentNotFoundInKonnectError{
+		EntityType: ent.GetTypeName(),
+		EntityKey:  client.ObjectKeyFromObject(ent).String(),
+		ParentIDs:  konnectParentIDs(ent),
+		Err:        err,
+	}
+}
+
+// Error does not include the wrapped error, so that the message stays the
+// same between attempts and can be compared with the Programmed condition.
+func (e ParentNotFoundInKonnectError) Error() string {
+	return fmt.Sprintf("can't create %s %s in Konnect: its parent (%s) does not exist in Konnect",
+		e.EntityType, e.EntityKey, e.ParentIDs,
+	)
+}
+
+func (e ParentNotFoundInKonnectError) Unwrap() error {
+	return e.Err
+}
+
+// konnectParentIDs returns the Konnect IDs of the parents of the entity in a fixed order.
+func konnectParentIDs(ent any) string {
+	var ids []string
+	add := func(kind, id string) {
+		if id != "" {
+			ids = append(ids, kind+" "+id)
+		}
+	}
+	if e, ok := ent.(interface{ GetControlPlaneID() string }); ok {
+		add("control plane", e.GetControlPlaneID())
+	}
+	if e, ok := ent.(interface{ GetGatewayID() string }); ok {
+		add("gateway", e.GetGatewayID())
+	}
+	if e, ok := ent.(interface{ GetPortalID() string }); ok {
+		add("portal", e.GetPortalID())
+	}
+	if e, ok := ent.(interface{ GetNetworkID() string }); ok {
+		add("network", e.GetNetworkID())
+	}
+	if e, ok := ent.(interface{ GetVirtualClusterID() string }); ok {
+		add("virtual cluster", e.GetVirtualClusterID())
+	}
+	if e, ok := ent.(interface{ GetEventGatewayListenerID() string }); ok {
+		add("listener", e.GetEventGatewayListenerID())
+	}
+	if e, ok := ent.(interface{ GetEventGatewayBackendClusterID() string }); ok {
+		add("backend cluster", e.GetEventGatewayBackendClusterID())
+	}
+	if e, ok := ent.(interface{ GetConsumerID() string }); ok {
+		add("consumer", e.GetConsumerID())
+	}
+	if len(ids) == 0 {
+		return "unknown"
+	}
+	return strings.Join(ids, ", ")
+}
+
 type sdkErrorDetails struct {
 	TypeAt   string   `json:"@type"`
 	Type     string   `json:"type"`
@@ -438,6 +508,14 @@ func handleUpdateError[
 		id := ent.GetKonnectStatus().GetKonnectID()
 		logEntityNotFoundRecreating(ctx, ent, id)
 		if createErr := createFunc(ctx); createErr != nil {
+			// A relations error means that the entity was created, so its parent exists.
+			_, relationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](createErr)
+			if ErrIsNotFound(createErr) && !relationsFailed {
+				return FailedKonnectOpError[T]{
+					Op:  CreateOp,
+					Err: NewParentNotFoundInKonnectError(ent, createErr),
+				}
+			}
 			return FailedKonnectOpError[T]{
 				Op:  CreateOp,
 				Err: fmt.Errorf("failed to create %s %s: %w", ent.GetTypeName(), id, createErr),
@@ -478,6 +556,13 @@ func handleDeleteError[
 // reconciler to endlessly requeue, and wraps transient errors with a fixed retry-after
 // duration to avoid controller-runtime's exponential backoff.
 func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
+	// The entity cannot be created until its parent exists in Konnect again.
+	// The Programmed condition shows this, and shouldUpdate limits the attempts.
+	if _, ok := errors.AsType[ParentNotFoundInKonnectError](err); ok {
+		log.Debug(logger, "parent does not exist in Konnect, consult object's status for details", "err", err)
+		return nil
+	}
+
 	// If the error is a rate limit error, wrap it with the retry-after duration
 	// so the reconciler can use it to set RequeueAfter.
 	if retryAfter, isRateLimited := GetRetryAfterFromRateLimitError(err); isRateLimited {

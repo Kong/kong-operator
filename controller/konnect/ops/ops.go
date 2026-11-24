@@ -437,6 +437,20 @@ func Delete[
 	return err
 }
 
+// isParentNotFoundForCurrentState reports whether the last attempt found that the parent
+// does not exist in Konnect, for the current generation and parent IDs of the entity.
+func isParentNotFoundForCurrentState[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	condProgrammed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok &&
+		condProgrammed.Status == metav1.ConditionFalse &&
+		condProgrammed.Reason == string(kcfgkonnect.KonnectEntitiesParentNotFoundReason) &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
+		condProgrammed.Message == NewParentNotFoundInKonnectError(ent, nil).Error()
+}
+
 func shouldUpdate[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -453,10 +467,13 @@ func shouldUpdate[
 
 	// If the entity is already programmed and the last update was less than
 	// the configured sync period, requeue after the remaining time.
-	if ok &&
+	// Do the same if its parent did not exist in Konnect at the last attempt,
+	// so that events from other objects do not cause more attempts.
+	programmed := ok &&
 		condProgrammed.Status == metav1.ConditionTrue &&
 		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
-		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration()
+	if (programmed || isParentNotFoundForCurrentState(ent)) &&
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
@@ -570,8 +587,14 @@ func Update[
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
 	errRelationsFailed, isRelationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](err)
+	errParentNotFound, isParentNotFound := errors.AsType[ParentNotFoundInKonnectError](err)
 
 	switch {
+	case isParentNotFound:
+		if isSDKErr {
+			statusCode = errSDK.StatusCode
+		}
+		SetKonnectEntityProgrammedConditionParentNotFound(e, errParentNotFound)
 	case isSDKErr:
 		statusCode = errSDK.StatusCode
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK)
