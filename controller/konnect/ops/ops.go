@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -1189,14 +1190,49 @@ func ClearInstanceFromError(err error) error {
 		return &c
 	}
 
-	// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
-	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode >= http.StatusInternalServerError {
+	// The SDK returns a generic SDKError for status codes that the API spec does
+	// not declare (e.g. 404 on some AI Gateway creates). Its body is the raw
+	// problem+json with the per-request instance.
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 		c := *errSDK
-		c.Body = ""
+		if errSDK.StatusCode >= http.StatusInternalServerError {
+			// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
+			c.Body = ""
+		} else {
+			// Keep the 4xx details, as they tell the user what to fix.
+			c.Body = clearPerRequestIDsFromBody(errSDK.Body)
+		}
 		return &c
 	}
 
 	return err
+}
+
+// perRequestIDBodyFields are the error body fields whose values change with each request.
+var perRequestIDBodyFields = []string{"instance", "request_id"}
+
+// clearPerRequestIDsFromBody sets perRequestIDBodyFields to "" in a JSON object body.
+// It returns the body unchanged if it is not a JSON object.
+func clearPerRequestIDsFromBody(body string) string {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(body), &fields); err != nil {
+		return body
+	}
+	var changed bool
+	for _, f := range perRequestIDBodyFields {
+		if _, ok := fields[f]; ok {
+			fields[f] = json.RawMessage(`""`)
+			changed = true
+		}
+	}
+	if !changed {
+		return body
+	}
+	b, err := json.Marshal(fields)
+	if err != nil {
+		return body
+	}
+	return string(b)
 }
 
 // MirrorableEntity is implemented by generated Konnect CRD types that opted into

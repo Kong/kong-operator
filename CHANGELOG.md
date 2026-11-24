@@ -111,6 +111,12 @@
   key deleted and created again no longer gets the fingerprint of the value
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, for
+  example a 404 when an AI Gateway auth strategy or consumer group is created
+  under a deleted AI Gateway, no longer puts the per-request trace ID in the
+  `Programmed` condition. Before, the status changed on each attempt, and the
+  entity and the entities that refer to it sent requests to Konnect in a loop.
+  [#6758](https://github.com/Kong/kong-operator/issues/6758)
 
 ## [v2.4.0]
 
