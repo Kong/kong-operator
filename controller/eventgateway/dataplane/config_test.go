@@ -543,3 +543,55 @@ func TestRevokeCertificatesDeletesKonnectCertificateSecrets(t *testing.T) {
 		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(kept), &s), kept.Name+" stays")
 	}
 }
+
+// TestRevokeCertificatesKeepsSecretsWhileCertificatesLeft checks that the
+// client certificate Secret of a revoked data plane stays while one of its
+// EventGatewayDataPlaneCertificates is still held by its finalizer: the Konnect
+// reconciler may need the Secret to find the entity to delete. A certificate
+// of another data plane doesn't hold it. Once the certificate is gone, the
+// next revocation deletes the Secret.
+func TestRevokeCertificatesKeepsSecretsWhileCertificatesLeft(t *testing.T) {
+	egdp := newReconcileEGDP()
+	r := &Reconciler{}
+	ownerRef := func(name string, uid types.UID) []metav1.OwnerReference {
+		return []metav1.OwnerReference{{
+			APIVersion: "eventgateway.konghq.com/v1alpha1", Kind: "KegDataPlane",
+			Name: name, UID: uid, Controller: new(true),
+		}}
+	}
+	const finalizer = "konnect.konghq.com/delete"
+	certificate := &configurationv1alpha1.EventGatewayDataPlaneCertificate{
+		Namespace: egdp.Namespace, Name: "keg-cert",
+		OwnerReferences: ownerRef(egdp.Name, egdp.UID), Finalizers: []string{finalizer},
+	}
+	ofOther := &configurationv1alpha1.EventGatewayDataPlaneCertificate{
+		Namespace: egdp.Namespace, Name: "other-cert",
+		OwnerReferences: ownerRef("other-dp", "other-uid"), Finalizers: []string{finalizer},
+	}
+	automatic := &corev1.Secret{
+		Namespace: egdp.Namespace, Name: "keg-dp-cert",
+		Labels: map[string]string{
+			consts.GatewayOperatorManagedByLabel:      consts.KEGDataPlaneManagedByLabelValue,
+			consts.SecretProvisioningLabelKey:         consts.SecretProvisioningAutomaticLabelValue,
+			consts.SecretKEGDataPlaneCertificateLabel: "true",
+		},
+		OwnerReferences: ownerRef(egdp.Name, egdp.UID),
+		Type:            corev1.SecretTypeTLS,
+		Data:            map[string][]byte{corev1.TLSCertKey: []byte("cert"), corev1.TLSPrivateKeyKey: []byte("key")},
+	}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).
+		WithObjects(egdp, certificate, ofOther, automatic).Build()
+
+	require.NoError(t, r.revokeCertificates(t.Context(), cl, egdp))
+	var held configurationv1alpha1.EventGatewayDataPlaneCertificate
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(certificate), &held), "its finalizer holds the certificate")
+	require.NotNil(t, held.DeletionTimestamp)
+	var s corev1.Secret
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(automatic), &s), "the Secret stays while the certificate is left")
+
+	held.Finalizers = nil
+	require.NoError(t, cl.Update(t.Context(), &held))
+	require.NoError(t, r.revokeCertificates(t.Context(), cl, egdp))
+	assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(automatic), &s)),
+		"the Secret is deleted once the certificate is gone, though one of another data plane is left")
+}
