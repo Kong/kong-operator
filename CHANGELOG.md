@@ -111,6 +111,9 @@
   key deleted and created again no longer gets the fingerprint of the value
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
+  puts the per-request trace ID in the `Programmed` condition.
+  [#6797](https://github.com/Kong/kong-operator/pull/6797)
 
 ## [v2.4.0]
 
