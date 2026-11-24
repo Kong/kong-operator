@@ -1228,11 +1228,14 @@ func clearPerRequestIDsFromBody(body string) string {
 	if !changed {
 		return body
 	}
-	b, err := json.Marshal(fields)
-	if err != nil {
+	// Do not escape HTML, so that the details read as Konnect sent them.
+	var b strings.Builder
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(fields); err != nil {
 		return body
 	}
-	return string(b)
+	return strings.TrimSuffix(b.String(), "\n")
 }
 
 // MirrorableEntity is implemented by generated Konnect CRD types that opted into

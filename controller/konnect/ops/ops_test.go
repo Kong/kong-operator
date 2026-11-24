@@ -712,4 +712,17 @@ func TestClearInstanceFromErrorSDKError(t *testing.T) {
 
 		assert.Equal(t, original.Error(), ClearInstanceFromError(original).Error())
 	})
+
+	t.Run("4xx body keeps HTML characters", func(t *testing.T) {
+		t.Parallel()
+		original := &sdkkonnecterrs.SDKError{
+			Message:    "bad",
+			StatusCode: 400,
+			Body:       `{"detail":"invalid character '<' in a & b > c","instance":"konnect:trace:abc"}`,
+		}
+
+		cleared := ClearInstanceFromError(original)
+		assert.Contains(t, cleared.Error(), `invalid character '<' in a & b > c`)
+		assert.NotContains(t, cleared.Error(), "konnect:trace:abc")
+	})
 }
