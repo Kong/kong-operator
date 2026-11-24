@@ -71,6 +71,7 @@ func createRoute(
 func updateRoute(
 	ctx context.Context,
 	sdk sdkkonnectgo.RoutesSDK,
+	g *syncGuard,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
@@ -80,12 +81,22 @@ func updateRoute(
 	}
 
 	id := route.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.UpsertRoute(ctx, sdkkonnectops.UpsertRouteRequest{
+	req := sdkkonnectops.UpsertRouteRequest{
 		ControlPlaneID: cpID,
 		Workspace:      workspace,
 		RouteID:        id,
 		Route:          kongRouteToSDKRouteInput(route),
-	})
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Route, error) {
+			resp, err := sdk.GetRoute(ctx, sdkkonnectops.GetRouteRequest{ControlPlaneID: cpID, Workspace: workspace, RouteID: id})
+			return resp.GetRoute(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Route, error) {
+			resp, err := sdk.UpsertRoute(ctx, req)
+			return resp.GetRoute(), err
+		},
+	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, route); errWrap != nil {
 		return errWrap
@@ -188,7 +199,7 @@ func adoptRoute(
 	case commonv1alpha1.AdoptModeOverride:
 		routeCopy := route.DeepCopy()
 		routeCopy.SetKonnectID(konnectID)
-		if err = updateRoute(ctx, sdk, routeCopy); err != nil {
+		if err = updateRoute(ctx, sdk, nil, routeCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

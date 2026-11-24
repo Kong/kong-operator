@@ -1,0 +1,131 @@
+# KongPlugin condition test for an on-prem Gateway.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongplugin-condition-onprem
+spec:
+  description: |
+    Validates that the KongPlugin spec.condition reaches Kong Gateway through the
+    ingress controller of an operator-managed on-prem Gateway:
+    1. A request-termination KongPlugin with a condition on the request path is
+       attached to an HTTPRoute through an ExtensionRef filter.
+    2. Requests matching the condition are terminated, other requests reach the backend.
+    3. Removing the condition makes the plugin terminate every request.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_name
+      value: (join('-', [($namespace), 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: listener_http_port
+      value: 80
+    - name: host_header
+      value: ""
+    - name: http_method
+      value: GET
+    - name: httpbin_deployment_name
+      value: httpbin
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
+    - name: plugin_name
+      value: conditional-termination
+    - name: http_route_name
+      value: kongplugin-condition
+
+  steps:
+    - name: Create-gateway-configuration
+      description: Create an on-prem GatewayConfiguration.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 01-gatewayconfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create a GatewayClass pointing at the on-prem GatewayConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create an operator-managed Gateway with an HTTP listener.
+      # The default 300s is not enough when four DataPlane proxy pods start at
+      # once on a slow CI node: the Kong pod alone then takes over 5 minutes.
+      timeouts:
+        assert: 15m
+      try:
+        - apply:
+            file: 02-gateway.yaml
+        - assert:
+            file: 02-assert-gateway.yaml
+
+    - name: Create-httpbin-backend
+      description: Create the httpbin backend Deployment and Service.
+      use:
+        template: ../../common/_step_templates/apply-assert-httpbinService.yaml
+
+    - name: Create-kongplugin-and-httproute
+      description: Create a conditional request-termination KongPlugin and an HTTPRoute referencing it.
+      try:
+        - apply:
+            file: 03-kongplugin-httproute.yaml
+        - assert:
+            file: 03-assert-httproute.yaml
+
+    - name: Verify-condition-matches
+      description: Verify a request matching the condition is terminated by the plugin.
+      bindings:
+        - name: route_path
+          value: /anything/blocked
+        - name: expected_status
+          value: "418"
+      use:
+        template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+    - name: Verify-condition-does-not-match
+      description: Verify a request not matching the condition reaches the backend.
+      bindings:
+        - name: route_path
+          value: /anything/allowed
+        - name: expected_status
+          value: "200"
+      use:
+        template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+    - name: Remove-condition
+      description: Remove the condition from the KongPlugin.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              condition: null
+
+    - name: Verify-plugin-applies-without-condition
+      description: Verify the plugin terminates requests it skipped while the condition was set.
+      bindings:
+        - name: route_path
+          value: /anything/allowed
+        - name: expected_status
+          value: "418"
+      use:
+        template: ../../common/_step_templates/verify-method-match-routing.yaml
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-kongplugin-condition-onprem
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

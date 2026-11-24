@@ -138,6 +138,7 @@ func PluginsForRule(
 			WithTagsFromAnnotations(plugin).
 			WithTags(plugin.Tags).
 			WithOrdering(plugin.Ordering).
+			WithCondition(plugin.Condition).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)

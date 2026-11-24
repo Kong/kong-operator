@@ -6,6 +6,8 @@ CERTIFICATE_NAMESPACE, MATERIAL_SECRET_NAME, CA_SECRET_NAME, CONFIG_STORE_NAME,
 CONTROL_PLANE_NAME, HOSTNAME, TEST_LABEL, KONNECT_TOKEN.
 MODE=rotate additionally requires BASELINE (the JSON output of MODE=check).
 KONNECT_SERVER_URL defaults to eu.api.konghq.tech.
+
+stdout carries only the JSON result. Progress and failure diagnostics go to stderr.
 """
 
 import base64
@@ -16,9 +18,62 @@ import os
 import socket
 import ssl
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
+
+
+def trace(message):
+    print(time.strftime("%H:%M:%S") + " " + message, file=sys.stderr, flush=True)
+
+
+def describe_certificate(der):
+    """Return subject, issuer, validity, SANs and fingerprint of a DER certificate."""
+    fingerprint = hashlib.sha256(der).hexdigest()
+    try:
+        details = subprocess.run([
+            "openssl", "x509", "-inform", "DER", "-noout", "-subject", "-issuer",
+            "-dates", "-ext", "subjectAltName",
+        ], input=der, check=True, capture_output=True, timeout=10).stdout.decode().strip()
+    except (OSError, subprocess.SubprocessError) as error:
+        details = "openssl failed: " + str(error)
+    return details + "\nsha256 fingerprint=" + fingerprint
+
+
+def served_certificate(port):
+    """Return a description of the certificate served for HOSTNAME, without verifying it."""
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=10) as raw:
+            with context.wrap_socket(raw, server_hostname=os.environ["HOSTNAME"]) as tls:
+                return describe_certificate(tls.getpeercert(binary_form=True))
+    except (OSError, ssl.SSLError) as error:
+        return "unavailable: " + str(error)
+
+
+def pem_leaf(pem):
+    return pem.split("-----END CERTIFICATE-----", 1)[0] + "-----END CERTIFICATE-----\n"
+
+
+def report_failure(port, ca, secret_name, attempts, last_error, forward_log):
+    """Print what was served and what was expected, so a timeout shows which side lagged."""
+    sections = [
+        ("Last error after " + str(attempts) + " attempts", last_error),
+        ("Certificate served for SNI " + os.environ["HOSTNAME"] + " (unverified)", served_certificate(port)),
+    ]
+    try:
+        pem = base64.b64decode(get("secret", secret_name)["data"]["tls.crt"]).decode()
+        expected = describe_certificate(ssl.PEM_cert_to_DER_cert(pem_leaf(pem)))
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
+        expected = "unavailable: " + str(error)
+    sections.append(("Expected leaf from Secret " + secret_name, expected))
+    sections.append(("Trusted CA", describe_certificate(ssl.PEM_cert_to_DER_cert(pem_leaf(ca)))))
+    sections.append(("kubectl port-forward output", forward_log.strip() or "(empty)"))
+    for title, body in sections:
+        print("=== " + title + " ===\n" + body, file=sys.stderr, flush=True)
 
 
 def get(kind, name, namespace=None):
@@ -129,19 +184,31 @@ def main():
             "service/" + service, str(port) + ":443", "--address=127.0.0.1",
         ], stdout=log, stderr=log)
         try:
-            deadline = time.monotonic() + 180
+            started = time.monotonic()
+            deadline = started + 180
             last_error = "TLS not ready"
+            logged_error = None
+            attempts = 0
+            trace("Checking Listener TLS for " + os.environ["HOSTNAME"] + " via service/" + service +
+                " (mode " + os.environ.get("MODE", "check") + ")")
             while time.monotonic() < deadline:
                 if forward.poll() is not None:
                     log.seek(0)
-                    raise RuntimeError("Port-forward exited: " + log.read().decode())
+                    forward_log = log.read().decode(errors="replace")
+                    report_failure(port, ca, secret_name, attempts, last_error, forward_log)
+                    raise RuntimeError("Port-forward exited: " + forward_log)
+                if last_error != logged_error:
+                    # Log each change of state once, so the timeline shows whether TLS ever progressed.
+                    trace("attempt " + str(attempts) + " after " + str(int(time.monotonic() - started)) +
+                        "s: " + last_error)
+                    logged_error = last_error
+                attempts += 1
                 try:
                     fingerprint, status = proxy_request(context, port, os.environ["HOSTNAME"])
                     if status != 200:
                         raise RuntimeError("Proxy returned HTTP " + str(status))
                     pem = base64.b64decode(get("secret", secret_name)["data"]["tls.crt"]).decode()
-                    leaf = pem.split("-----END CERTIFICATE-----", 1)[0] + "-----END CERTIFICATE-----\n"
-                    expected = hashlib.sha256(ssl.PEM_cert_to_DER_cert(leaf)).hexdigest()
+                    expected = hashlib.sha256(ssl.PEM_cert_to_DER_cert(pem_leaf(pem))).hexdigest()
                     if fingerprint == expected and (not baseline or fingerprint != baseline["fingerprint"]):
                         _, unmatched_status = proxy_request(context, port, "unmatched.example.test")
                         assert unmatched_status == 404, "HTTPRoute did not inherit the Listener hostname"
@@ -154,10 +221,14 @@ def main():
                             assert json.loads(json.dumps(current)) == baseline["snapshot"], "Entities or Pods changed during rotation"
                         print(json.dumps({"fingerprint": fingerprint, "snapshot": current}))
                         return
-                    last_error = "Proxy certificate does not match the newly issued Secret"
+                    last_error = ("Proxy certificate " + fingerprint[:16] + " does not match the newly issued "
+                                  "Secret leaf " + expected[:16] +
+                                  (" (baseline " + baseline["fingerprint"][:16] + ")" if baseline else ""))
                 except (OSError, http.client.HTTPException, RuntimeError) as error:
                     last_error = str(error)
                 time.sleep(3)
+            log.seek(0)
+            report_failure(port, ca, secret_name, attempts, last_error, log.read().decode(errors="replace"))
             raise RuntimeError("Verified Listener TLS did not converge: " + last_error)
         finally:
             forward.terminate()

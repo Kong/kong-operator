@@ -56,6 +56,7 @@ func createKongCredentialHMAC(
 func updateKongCredentialHMAC(
 	ctx context.Context,
 	sdk sdkkonnectgo.HMACAuthCredentialsSDK,
+	g *syncGuard,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -64,14 +65,30 @@ func updateKongCredentialHMAC(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertHmacAuthWithConsumer(ctx,
-		sdkkonnectops.UpsertHmacAuthWithConsumerRequest{
-			ControlPlaneID:              cpID,
-			Workspace:                   workspace,
-			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-			HMACAuthID:                  cred.GetKonnectStatus().GetKonnectID(),
-			HMACAuthWithoutParents:      kongCredentialHMACToHMACWithoutParents(cred),
-		})
+	id := cred.GetKonnectStatus().GetKonnectID()
+	consumerID := cred.Status.Konnect.GetConsumerID()
+	req := sdkkonnectops.UpsertHmacAuthWithConsumerRequest{
+		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
+		ConsumerIDForNestedEntities: consumerID,
+		HMACAuthID:                  id,
+		HMACAuthWithoutParents:      kongCredentialHMACToHMACWithoutParents(cred),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.HMACAuth, error) {
+			resp, err := sdk.GetHmacAuthWithConsumer(ctx, sdkkonnectops.GetHmacAuthWithConsumerRequest{
+				ControlPlaneID:              cpID,
+				Workspace:                   workspace,
+				ConsumerIDForNestedEntities: consumerID,
+				HMACAuthID:                  id,
+			})
+			return resp.GetHMACAuth(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.HMACAuth, error) {
+			resp, err := sdk.UpsertHmacAuthWithConsumer(ctx, req)
+			return resp.GetHMACAuth(), err
+		},
+	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
 		return errWrap
@@ -158,7 +175,7 @@ func adoptKongCredentialHMAC(
 	case commonv1alpha1.AdoptModeOverride:
 		credCopy := cred.DeepCopy()
 		credCopy.SetKonnectID(konnectID)
-		if err = updateKongCredentialHMAC(ctx, sdk, credCopy); err != nil {
+		if err = updateKongCredentialHMAC(ctx, sdk, nil, credCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

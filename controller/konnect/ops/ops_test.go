@@ -326,7 +326,7 @@ func TestUpdateAIGatewayConsumerCredential_NoopsBecauseImmutable(t *testing.T) {
 		Build()
 	sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 
-	_, err := Update(t.Context(), sdk, 0, fakeClient, &metricsmocks.MockRecorder{}, credential)
+	_, _, err := Update(t.Context(), sdk, 0, fakeClient, &metricsmocks.MockRecorder{}, credential, nil)
 	require.NoError(t, err)
 
 	require.Len(t, credential.Status.Conditions, 1)
@@ -568,6 +568,25 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
+			// A KongService whose referenced ControlPlane was never programmed (for
+			// example its creation in Konnect keeps failing): the ControlPlane ID is
+			// never set, so the entity can't exist in Konnect either.
+			name: "no Konnect ID, no ControlPlane ID and ControlPlaneRef not programmed - Konnect is not called",
+			entity: &configurationv1alpha1.KongService{
+				Name:      "test-svc",
+				Namespace: "test-ns",
+				Status: configurationv1alpha1.KongServiceStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   konnectv1alpha1.ControlPlaneRefValidConditionType,
+							Status: metav1.ConditionFalse,
+							Reason: konnectv1alpha1.ControlPlaneRefReasonNotProgrammed,
+						},
+					},
+				},
+			},
+		},
+		{
 			// An empty ControlPlane ID alone proves nothing (a KongRoute gets its
 			// ControlPlane ID from its KongService after the last status patch), so
 			// without a rejected ControlPlaneRef the UID probe still runs.
@@ -755,10 +774,43 @@ func TestClearInstanceFromErrorSDKError(t *testing.T) {
 		assert.JSONEq(t, body, original.Body, "original error must keep the body for logs")
 	})
 
-	t.Run("4xx is returned as is", func(t *testing.T) {
+	t.Run("4xx body keeps details without per-request IDs", func(t *testing.T) {
 		t.Parallel()
-		original := &sdkkonnecterrs.SDKError{Message: "bad", StatusCode: 422, Body: body}
+		const problem = `{"status":404,"title":"Not Found","instance":"konnect:trace:eff7b05399903925fcf0608cc4e57bb8","detail":"gateway not found"}`
+		original := &sdkkonnecterrs.SDKError{Message: "API error occurred", StatusCode: 404, Body: problem}
 
-		assert.Equal(t, original, ClearInstanceFromError(original))
+		cleared := ClearInstanceFromError(fmt.Errorf("create failed: %w", original))
+		assert.NotContains(t, cleared.Error(), "eff7b05399903925fcf0608cc4e57bb8")
+		assert.Contains(t, cleared.Error(), "Status 404")
+		assert.Contains(t, cleared.Error(), "gateway not found")
+		assert.JSONEq(t, problem, original.Body, "original error must keep the body for logs")
+	})
+
+	t.Run("4xx with different per-request IDs gives the same message", func(t *testing.T) {
+		t.Parallel()
+		first := &sdkkonnecterrs.SDKError{Message: "bad", StatusCode: 422, Body: body}
+		second := &sdkkonnecterrs.SDKError{Message: "bad", StatusCode: 422, Body: `{"message":"An unexpected error occurred","request_id":"def456"}`}
+
+		assert.Equal(t, ClearInstanceFromError(first).Error(), ClearInstanceFromError(second).Error())
+	})
+
+	t.Run("4xx body that is not JSON is kept", func(t *testing.T) {
+		t.Parallel()
+		original := &sdkkonnecterrs.SDKError{Message: "bad", StatusCode: 400, Body: "plain text"}
+
+		assert.Equal(t, original.Error(), ClearInstanceFromError(original).Error())
+	})
+
+	t.Run("4xx body keeps HTML characters", func(t *testing.T) {
+		t.Parallel()
+		original := &sdkkonnecterrs.SDKError{
+			Message:    "bad",
+			StatusCode: 400,
+			Body:       `{"detail":"invalid character '<' in a & b > c","instance":"konnect:trace:abc"}`,
+		}
+
+		cleared := ClearInstanceFromError(original)
+		assert.Contains(t, cleared.Error(), `invalid character '<' in a & b > c`)
+		assert.NotContains(t, cleared.Error(), "konnect:trace:abc")
 	})
 }

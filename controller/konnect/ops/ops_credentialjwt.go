@@ -56,6 +56,7 @@ func createKongCredentialJWT(
 func updateKongCredentialJWT(
 	ctx context.Context,
 	sdk sdkkonnectgo.JWTsSDK,
+	g *syncGuard,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -64,14 +65,30 @@ func updateKongCredentialJWT(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertJwtWithConsumer(ctx,
-		sdkkonnectops.UpsertJwtWithConsumerRequest{
-			ControlPlaneID:              cpID,
-			Workspace:                   workspace,
-			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-			JWTID:                       cred.GetKonnectStatus().GetKonnectID(),
-			JWTWithoutParents:           kongCredentialJWTToJWTWithoutParents(cred),
-		})
+	id := cred.GetKonnectStatus().GetKonnectID()
+	consumerID := cred.Status.Konnect.GetConsumerID()
+	req := sdkkonnectops.UpsertJwtWithConsumerRequest{
+		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
+		ConsumerIDForNestedEntities: consumerID,
+		JWTID:                       id,
+		JWTWithoutParents:           kongCredentialJWTToJWTWithoutParents(cred),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Jwt, error) {
+			resp, err := sdk.GetJwtWithConsumer(ctx, sdkkonnectops.GetJwtWithConsumerRequest{
+				ControlPlaneID:              cpID,
+				Workspace:                   workspace,
+				ConsumerIDForNestedEntities: consumerID,
+				JWTID:                       id,
+			})
+			return resp.GetJwt(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Jwt, error) {
+			resp, err := sdk.UpsertJwtWithConsumer(ctx, req)
+			return resp.GetJwt(), err
+		},
+	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
 		return errWrap
@@ -158,7 +175,7 @@ func adoptKongCredentialJWT(
 	case commonv1alpha1.AdoptModeOverride:
 		credCopy := cred.DeepCopy()
 		credCopy.SetKonnectID(konnectID)
-		if err = updateKongCredentialJWT(ctx, sdk, credCopy); err != nil {
+		if err = updateKongCredentialJWT(ctx, sdk, nil, credCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

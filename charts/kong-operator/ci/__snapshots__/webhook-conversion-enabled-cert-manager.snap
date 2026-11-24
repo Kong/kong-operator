@@ -43382,6 +43382,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -43652,6 +43664,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -43716,6 +43740,8 @@ spec:
       openAPIV3Schema:
         properties:
           apiVersion:
+            type: string
+          condition:
             type: string
           config:
             type: object
@@ -44079,6 +44105,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         type: object
         x-kubernetes-validations:
@@ -44299,6 +44337,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
           username:
             maxLength: 128
@@ -44483,6 +44533,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -44659,6 +44721,18 @@ spec:
                     maxLength: 512
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44842,6 +44916,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -45022,6 +45108,18 @@ spec:
                     maxLength: 512
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45222,6 +45320,18 @@ spec:
                     maxLength: 512
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45824,6 +45934,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -46034,6 +46156,18 @@ spec:
                     maxLength: 512
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -46500,6 +46634,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -46564,6 +46710,8 @@ spec:
       openAPIV3Schema:
         properties:
           apiVersion:
+            type: string
+          condition:
             type: string
           config:
             type: object
@@ -47122,6 +47270,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -47411,6 +47571,18 @@ spec:
                   workspace:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -47597,6 +47769,18 @@ spec:
                     maxLength: 512
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47794,6 +47978,18 @@ spec:
                   upstreamID:
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -48553,6 +48749,18 @@ spec:
                     maxLength: 512
                     type: string
                   workspace:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object

@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 )
 
 // MaxKongServiceTimeout is the largest timeout Kong accepts for Service connect, read, and
@@ -292,6 +293,19 @@ func hashForHTTPRouteRuleServiceLikeName(route *gwtypes.HTTPRoute, rule gatewayv
 		}{
 			Base:                    hash,
 			BackendRequestTimeoutMS: *timeoutMS,
+		})
+	}
+
+	// Fold the retry attempts into the hash for the same reason: a KongService can carry
+	// only one retries value, so rules sharing backends but requesting different retry
+	// behavior must map to distinct KongServices.
+	if retries, err := gatewayapipkg.KongRetriesForHTTPRouteRule(rule); err == nil && retries != nil {
+		hash = utils.Hash32(struct {
+			Base    string
+			Retries int64
+		}{
+			Base:    hash,
+			Retries: *retries,
 		})
 	}
 

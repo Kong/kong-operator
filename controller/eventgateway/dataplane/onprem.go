@@ -945,6 +945,44 @@ func (r *Reconciler) forgetDeletedDataPlanes(ctx context.Context, cl client.Clie
 	return nil
 }
 
+// deleteOnPremCertificateSecrets deletes the client certificate Secrets of a
+// data plane of an OnPremEventGateway the operator created: the Automatic ones
+// it issued, and its copies of the Manual ones. A Manual Secret of the user
+// stays. The Deployment, no longer reconciled while the data plane is revoked,
+// still mounts them: its running pods keep their certificate, which gw-admin no
+// longer trusts, and a pod started meanwhile waits for its Secret. Once a
+// KongReferenceGrant lets the data plane in again, a certificate is issued or
+// copied again, and the Deployment rolls out onto it.
+func (r *Reconciler) deleteOnPremCertificateSecrets(
+	ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane,
+) error {
+	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	if err != nil {
+		return err
+	}
+	for i := range owned {
+		if err := cl.Delete(ctx, &owned[i]); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete the mTLS certificate Secret %s/%s of the revoked data plane %s/%s: %w",
+				owned[i].Namespace, owned[i].Name, egdp.Namespace, egdp.Name, err)
+		}
+	}
+	var copies corev1.SecretList
+	if err := cl.List(ctx, &copies, client.InNamespace(egdp.Namespace), client.MatchingLabels{secretCopyLabel: secretCopyManualCertificate}); err != nil {
+		return fmt.Errorf("failed to list the copies of the Manual client certificates of %s/%s: %w", egdp.Namespace, egdp.Name, err)
+	}
+	for i := range copies.Items {
+		copied := &copies.Items[i]
+		if !metav1.IsControlledBy(copied, egdp) {
+			continue
+		}
+		if err := cl.Delete(ctx, copied); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete the copy %s/%s of a Manual client certificate of the revoked data plane %s/%s: %w",
+				copied.Namespace, copied.Name, egdp.Namespace, egdp.Name, err)
+		}
+	}
+	return nil
+}
+
 // cleanupStaleOnPremCertificates deletes the client certificate Secrets of a
 // data plane of an OnPremEventGateway but the current one, once no
 // EventGatewayDataPlaneCertificate of the data plane references them

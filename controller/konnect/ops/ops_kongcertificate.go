@@ -94,6 +94,7 @@ func updateCertificate(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.CertificatesSDK,
+	g *syncGuard,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -109,12 +110,21 @@ func updateCertificate(
 		return err
 	}
 
-	_, err = sdk.UpsertCertificate(ctx,
-		sdkkonnectops.UpsertCertificateRequest{
-			ControlPlaneID:     cpID,
-			Workspace:          workspace,
-			CertificateID:      cert.GetKonnectStatus().GetKonnectID(),
-			CertificateRequest: input,
+	id := cert.GetKonnectStatus().GetKonnectID()
+	req := sdkkonnectops.UpsertCertificateRequest{
+		ControlPlaneID:     cpID,
+		Workspace:          workspace,
+		CertificateID:      id,
+		CertificateRequest: input,
+	}
+	err = upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Certificate, error) {
+			resp, err := sdk.GetCertificate(ctx, sdkkonnectops.GetCertificateRequest{ControlPlaneID: cpID, Workspace: workspace, CertificateID: id})
+			return resp.GetCertificate(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Certificate, error) {
+			resp, err := sdk.UpsertCertificate(ctx, req)
+			return resp.GetCertificate(), err
 		},
 	)
 
@@ -192,7 +202,7 @@ func adoptCertificate(
 	case commonv1alpha1.AdoptModeOverride:
 		certCopy := cert.DeepCopy()
 		certCopy.SetKonnectID(konnectID)
-		if err = updateCertificate(ctx, cl, sdk, certCopy); err != nil {
+		if err = updateCertificate(ctx, cl, sdk, nil, certCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

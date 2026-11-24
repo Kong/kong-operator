@@ -380,6 +380,9 @@ func (validator KongHTTPValidator) ValidatePlugin(
 		plugin.RunOn = new(k8sPlugin.RunOn)
 	}
 	plugin.Ordering = k8sPlugin.Ordering
+	if k8sPlugin.Condition != "" {
+		plugin.Condition = new(k8sPlugin.Condition)
+	}
 	plugin.Protocols = kong.StringSlice(configurationv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 
 	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)
@@ -427,6 +430,9 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 	}
 
 	plugin.Ordering = k8sPlugin.Ordering
+	if k8sPlugin.Condition != "" {
+		plugin.Condition = new(k8sPlugin.Condition)
+	}
 	plugin.Protocols = kong.StringSlice(configurationv1.KongProtocolsToStrings(k8sPlugin.Protocols)...)
 
 	errText, err := validator.validatePluginAgainstGatewaySchema(ctx, plugin)

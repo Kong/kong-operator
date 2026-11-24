@@ -267,6 +267,47 @@ func resources() []resource {
 		}},
 	}})
 
+	for _, side := range []string{"produce", "consume"} {
+		res = append(res, resource{dir: side + "policychain", kind: sideKind(side) + "Chain", axes: []axis{
+			{name: "vc", what: "its virtual cluster", build: func(tag string, p placement, _ *ports) built {
+				b := backendCluster("backend-"+tag, nsGateway)
+				v := virtualCluster("vc-"+tag, p.tns, b)
+				// The policy beside the chain: the policy axis checks the
+				// reference of the chain to a policy of another namespace.
+				pol := modifyHeaders(side, "headers-"+tag, p.rns, v)
+				o := sidePolicyChain(side, "chain-"+tag, p.rns, v, pol)
+				return built{objs: []*object{b, v, pol, o}, referrer: o, target: v, hop2: hop2Of(v, 0, p)}
+			}},
+			{name: "pol", what: "the " + side + " policy it orders", build: func(tag string, p placement, _ *ports) built {
+				vns := nsGateway
+				if p.tns != nsGateway {
+					vns = p.zns
+				}
+				b := backendCluster("backend-"+tag, vns)
+				v := virtualCluster("vc-"+tag, vns, b)
+				pol := modifyHeaders(side, "headers-"+tag, p.tns, v)
+				o := sidePolicyChain(side, "chain-"+tag, p.rns, v, pol)
+				return built{objs: []*object{b, v, pol, o}, referrer: o, target: pol, hop2: hop2Of(pol, 0, p)}
+			}},
+			{name: "par", what: "the parent policy it orders", build: func(tag string, p placement, _ *ports) built {
+				// The child beside the chain, its schemaValidation parent in
+				// the target namespace: the chain orders a child whose
+				// parent is of another namespace.
+				vns := nsGateway
+				if p.tns != nsGateway {
+					vns = p.zns
+				}
+				b := backendCluster("backend-"+tag, vns)
+				v := virtualCluster("vc-"+tag, vns, b)
+				r := schemaRegistry("registry-"+tag, p.tns, p.tns)
+				parent := schemaValidation(side, "validate-"+tag, p.tns, v, r)
+				child := childPolicy(side, "validated-"+tag, p.rns, v, parent)
+				o := nestedSidePolicyChain(side, "chain-"+tag, p.rns, v, parent, child)
+				return built{objs: []*object{b, v, r, parent, child, o}, referrer: o, target: parent, hop2: hop2Of(parent, 0, p)}
+			}},
+		}})
+	}
+
 	res = append(res, resource{dir: "listenerpolicychain", kind: "EventGatewayListenerPolicyChain", tls: true, axes: []axis{
 		{name: "lst", what: "its listener", build: func(tag string, p placement, pt *ports) built {
 			// The policy beside the chain: the policy axis checks the

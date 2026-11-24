@@ -249,7 +249,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// process annotation plugins
-	result.FillPlugins(t.logger, t.storer, t.failuresCollector)
+	result.FillPlugins(t.logger, t.storer, t.failuresCollector, t.kongVersion)
 	for i := range result.Plugins {
 		t.registerSuccessfullyTranslatedObject(result.Plugins[i].K8sParent)
 	}

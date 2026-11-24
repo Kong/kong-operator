@@ -368,7 +368,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			sdk, svc := tc.mockUpstreamPair(t)
 
-			err := updateUpstream(ctx, sdk, svc)
+			err := updateUpstream(ctx, sdk, nil, svc)
 
 			if tc.assertions != nil {
 				tc.assertions(t, svc)

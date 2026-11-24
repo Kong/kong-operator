@@ -509,6 +509,45 @@ func TestNewKongServiceName_BackendRequestTimeout(t *testing.T) {
 	)
 }
 
+func TestNewKongServiceName_HTTPRouteRetries(t *testing.T) {
+	backendNS := gatewayv1.Namespace("gateway-conformance-infra")
+	port := gatewayv1.PortNumber(8080)
+	route := testRoute("gateway-conformance-infra", "httproute-retries")
+	cp := testControlPlaneRef("same-namespace")
+
+	ruleWith := func(attempts *int) gatewayv1.HTTPRouteRule {
+		rule := gatewayv1.HTTPRouteRule{
+			BackendRefs: []gatewayv1.HTTPBackendRef{testBackendRef("infra-backend-v1", &backendNS, &port)},
+		}
+		if attempts != nil {
+			rule.Retry = &gatewayv1.HTTPRouteRetry{Attempts: attempts}
+		}
+		return rule
+	}
+
+	noRetry := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(nil))
+	disabled := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(new(0)))
+	oneRetry := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(new(1)))
+	threeRetries := NewKongServiceNameForHTTPRouteRule(route, cp, ruleWith(new(3)))
+
+	// Rules sharing backends but requesting different retry behavior must map to
+	// distinct KongServices: a KongService can carry only one retries value.
+	assert.NotEqual(t, noRetry, disabled)
+	assert.NotEqual(t, disabled, oneRetry)
+	assert.NotEqual(t, oneRetry, threeRetries)
+
+	// Same backend + same retries but different matches must still merge.
+	ruleA := ruleWith(new(3))
+	ruleA.Matches = testPathMatch("/a")
+	ruleB := ruleWith(new(3))
+	ruleB.Matches = testPathMatch("/b")
+	assert.Equal(t,
+		NewKongServiceNameForHTTPRouteRule(route, cp, ruleA),
+		NewKongServiceNameForHTTPRouteRule(route, cp, ruleB),
+		"same backend + same retries must not split into different KongServices",
+	)
+}
+
 func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	port := func(value gatewayv1.PortNumber) *gatewayv1.PortNumber { return &value }
 	backendRef := func(name string, namespace *gatewayv1.Namespace, portNumber *gatewayv1.PortNumber) gatewayv1.HTTPBackendRef {

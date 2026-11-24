@@ -3391,6 +3391,102 @@ func TestServiceForRule_BackendRequestTimeout(t *testing.T) {
 	}
 }
 
+func TestServiceForRule_HTTPRouteRetries(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	upstreamName := "test-upstream"
+	port80 := gatewayv1.PortNumber(80)
+	backendRef := gatewayv1.HTTPBackendRef{Name: "my-svc", Port: &port80}
+
+	tests := []struct {
+		name            string
+		retry           *gatewayv1.HTTPRouteRetry
+		annotations     map[string]string
+		expectedRetries *int64
+		wantErr         string
+	}{
+		{
+			name:            "no retry stanza leaves retries unset",
+			expectedRetries: nil,
+		},
+		{
+			name:            "retry stanza defaults attempts to one",
+			retry:           &gatewayv1.HTTPRouteRetry{},
+			expectedRetries: new(int64(1)),
+		},
+		{
+			name:            "attempts are applied",
+			retry:           &gatewayv1.HTTPRouteRetry{Attempts: new(3)},
+			expectedRetries: new(int64(3)),
+		},
+		{
+			name:            "zero attempts disables retries",
+			retry:           &gatewayv1.HTTPRouteRetry{Attempts: new(0)},
+			expectedRetries: new(int64(0)),
+		},
+		{
+			name:            "konghq.com/retries annotation takes precedence",
+			retry:           &gatewayv1.HTTPRouteRetry{Attempts: new(3)},
+			annotations:     map[string]string{"konghq.com/retries": "7"},
+			expectedRetries: new(int64(7)),
+		},
+		{
+			name:    "retry codes are rejected",
+			retry:   &gatewayv1.HTTPRouteRetry{Codes: []gatewayv1.HTTPRouteRetryStatusCode{500}},
+			wantErr: "retry.codes is unsupported",
+		},
+		{
+			name:    "retry backoff is rejected",
+			retry:   &gatewayv1.HTTPRouteRetry{Backoff: new(gatewayv1.Duration("100ms"))},
+			wantErr: "retry.backoff is unsupported",
+		},
+		{
+			name:    "attempts above Kong maximum are rejected",
+			retry:   &gatewayv1.HTTPRouteRetry{Attempts: new(32768)},
+			wantErr: "must not exceed 32767",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				Name: "test-route", Namespace: "test-namespace",
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
+				},
+			}
+			rule := gwtypes.HTTPRouteRule{
+				BackendRefs: []gatewayv1.HTTPBackendRef{backendRef},
+				Retry:       tt.retry,
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")}},
+				},
+			}
+			svc := corev1.Service{Name: "my-svc", Namespace: "test-namespace", Annotations: tt.annotations}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&svc).Build()
+
+			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, service)
+			assertInt64Ptr(t, tt.expectedRetries, service.Spec.Retries, "Retries")
+		})
+	}
+}
+
 func assertInt64Ptr(t *testing.T, expected, got *int64, field string) {
 	t.Helper()
 	if expected == nil {
