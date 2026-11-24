@@ -87,8 +87,9 @@
 ### Fixes
 
 - Deleting a Konnect entity whose `controlPlaneRef` was never resolved, for
-  example one that references a Control Plane Group, no longer hangs on the
-  `gateway.konghq.com/konnect-cleanup` finalizer.
+  example one that references a Control Plane Group or a Control Plane that was
+  never programmed, no longer hangs on the `gateway.konghq.com/konnect-cleanup`
+  finalizer.
   [#6755](https://github.com/Kong/kong-operator/pull/6755)
 - The operator now creates the configured cluster CA `Secret` before the
   manager starts when the `Secret` is missing. This enables certificate issuance
