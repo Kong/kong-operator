@@ -85,7 +85,6 @@
   field as a beta using ATC syntax, which must be rewritten when upgrading.
   On older Kong Gateway versions the ingress controller skips plugins that set
   a condition and records a Warning event on them.
-  [#5276](https://github.com/Kong/kong-operator/issues/5276)
   [#6715](https://github.com/Kong/kong-operator/pull/6715)
 - `EventGatewayVirtualClusterProducePolicyChain`s and
   `EventGatewayVirtualClusterConsumePolicyChain`s can reference their virtual
