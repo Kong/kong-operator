@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -18,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
@@ -370,23 +372,64 @@ func TestHandleSecret(t *testing.T) {
 	}
 }
 
-func TestDispatchValidationNoMatcherPrefersReadyValidator(t *testing.T) {
+func TestDispatchValidationPrefersReadyValidator(t *testing.T) {
 	ready := KongFakeValidator{Message: "ready"}
 	notReady := KongFakeValidator{Message: "not ready", NotReady: true}
+	readyOtherClass := KongFakeValidator{Message: "ready, other ingress class", NoClassMatch: true}
 
-	h := RequestHandler{validators: map[string]KongValidator{"a": notReady, "b": ready, "c": notReady}}
-	// Map iteration order is random, so pick several times.
-	for range 50 {
-		v, ok := h.dispatchValidationNoMatcher()
-		require.True(t, ok)
-		require.Equal(t, ready, v)
+	dispatchers := map[string]struct {
+		dispatch     func(*RequestHandler) (KongValidator, bool)
+		matchesClass bool
+	}{
+		"no matcher": {
+			dispatch: func(h *RequestHandler) (KongValidator, bool) { return h.dispatchValidationNoMatcher() },
+		},
+		"ingress class": {
+			dispatch: func(h *RequestHandler) (KongValidator, bool) {
+				return h.dispatchValidationIngressClassMatcher(metav1.ObjectMeta{})
+			},
+			matchesClass: true,
+		},
+		"ingress": {
+			dispatch: func(h *RequestHandler) (KongValidator, bool) {
+				return h.dispatchValidationForIngress(netv1.Ingress{})
+			},
+			matchesClass: true,
+		},
+		"custom entity": {
+			dispatch: func(h *RequestHandler) (KongValidator, bool) {
+				return h.dispatchValidationForCustomEntity(configurationv1alpha1.KongCustomEntity{})
+			},
+			matchesClass: true,
+		},
 	}
 
-	h = RequestHandler{validators: map[string]KongValidator{"a": notReady}}
-	v, ok := h.dispatchValidationNoMatcher()
-	require.True(t, ok)
-	require.Equal(t, notReady, v, "falls back to a not ready validator when no other exists")
+	for name, d := range dispatchers {
+		t.Run(name, func(t *testing.T) {
+			h := &RequestHandler{validators: map[string]KongValidator{"a": notReady, "b": ready, "c": notReady}}
+			// Map iteration order is random, so pick several times.
+			for range 50 {
+				v, ok := d.dispatch(h)
+				require.True(t, ok)
+				require.Equal(t, ready, v)
+			}
 
-	_, ok = (&RequestHandler{}).dispatchValidationNoMatcher()
-	require.False(t, ok)
+			h = &RequestHandler{validators: map[string]KongValidator{"a": notReady}}
+			v, ok := d.dispatch(h)
+			require.True(t, ok)
+			require.Equal(t, notReady, v, "falls back to a not ready validator when no other exists")
+
+			_, ok = d.dispatch(&RequestHandler{})
+			require.False(t, ok)
+
+			if d.matchesClass {
+				h = &RequestHandler{validators: map[string]KongValidator{"a": readyOtherClass, "b": notReady}}
+				for range 50 {
+					v, ok := d.dispatch(h)
+					require.True(t, ok)
+					require.Equal(t, notReady, v, "a ready validator for another ingress class is never picked")
+				}
+			}
+		})
+	}
 }

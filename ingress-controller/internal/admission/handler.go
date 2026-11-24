@@ -54,9 +54,27 @@ func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
 	return ctrlref.CacheIndexers{}, false
 }
 
-// dispatchValidationNoMatcher returns a validator if exists, without any matching. It prefers
-// a ready validator: a Kong Gateway that has not received its first configuration has no license
-// and fails requests that use Enterprise features. If no validator is ready, it returns any of them.
+// pickValidator returns a validator for which matches returns true. It prefers a ready validator:
+// a Kong Gateway that has not received its first configuration has no license yet and fails
+// validation calls. If no matching validator is ready, it returns any matching one.
+// The second return value is false when no validator matches.
+func (h *RequestHandler) pickValidator(matches func(KongValidator) bool) (KongValidator, bool) {
+	h.validatorsMut.RLock()
+	defer h.validatorsMut.RUnlock()
+	var notReady KongValidator
+	for _, v := range h.validators {
+		if !matches(v) {
+			continue
+		}
+		if v.IsReady() {
+			return v, true
+		}
+		notReady = v
+	}
+	return notReady, notReady != nil
+}
+
+// dispatchValidationNoMatcher returns a validator if exists, without any matching, see pickValidator.
 // Existing of a reference indexers is not guaranteed, so the second return boolean value
 // indicates it.
 // There is no specific matching further so it's safe to do it this way, see related entities:
@@ -66,76 +84,46 @@ func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
 // - h.handleGateway -> ValidateGateway
 // - h.handleHTTPRoute -> ValidateHTTPRoute.
 func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
-	h.validatorsMut.RLock()
-	defer h.validatorsMut.RUnlock()
-	var notReady KongValidator
-	for _, v := range h.validators {
-		if v.IsReady() {
-			return v, true
-		}
-		notReady = v
-	}
-	return notReady, notReady != nil
+	return h.pickValidator(func(KongValidator) bool { return true })
 }
 
-// dispatchValidationIngressClassMatcher based on IngressClass returns the first validator if exists.
+// dispatchValidationIngressClassMatcher based on IngressClass returns a validator if exists, see pickValidator.
 // Existing of a reference indexers is not guaranteed, so the second return boolean value indicates it.
+// Objects not managed by any existing and running controller are ignored.
 // On that matching below entities rely:
 // - h.handleKongConsumer -> ValidateConsumer
 // - h.handleKongConsumerGroup -> ValidateConsumerGroup
 // - h.handleKongVault -> ValidateVault.
 func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.ObjectMeta) (KongValidator, bool) {
-	h.validatorsMut.RLock()
-	defer h.validatorsMut.RUnlock()
-	for _, v := range h.validators {
-		if v.IngressClassMatcher(&obj) {
-			return v, true
-		}
-	}
-	// Ignore object that are being not managed by any existing and running controller.
-	return nil, false
+	return h.pickValidator(func(v KongValidator) bool { return v.IngressClassMatcher(&obj) })
 }
 
-// dispatchValidationForIngress has a specific matching function for Ingress resources. It returns the
-// first validator if exists. Existing of a reference indexers is not guaranteed, so the second return
-// boolean value indicates it.
+// dispatchValidationForIngress has a specific matching function for Ingress resources. It returns a
+// validator if exists, see pickValidator. Existing of a reference indexers is not guaranteed, so the
+// second return boolean value indicates it.
+// Ingresses not managed by any existing and running controller are ignored.
 // On that matching below entities rely:
 // - h.handleIngress-> ValidateIngress.
 func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongValidator, bool) {
-	h.validatorsMut.RLock()
-	defer h.validatorsMut.RUnlock()
-	for _, v := range h.validators {
-		if v.IngressClassMatcher(&ing.ObjectMeta) ||
-			v.IngressV1ClassMatcher(&ing) {
-			return v, true
-		}
-	}
-	// Ignore Ingresses that are being managed by any existing and running controller.
-	return nil, false
+	return h.pickValidator(func(v KongValidator) bool {
+		return v.IngressClassMatcher(&ing.ObjectMeta) || v.IngressV1ClassMatcher(&ing)
+	})
 }
 
 // dispatchValidationForCustomEntity has a specific matching function for KongCustomEntity resources.
-// It returns the first validator if exists. Existing of a reference indexers is not guaranteed,
-// so the second return boolean value indicates it.
+// It returns a validator if exists, see pickValidator. Existing of a reference indexers is not
+// guaranteed, so the second return boolean value indicates it.
+// If neither the ingress class annotation nor spec.controllerName match the ingress class name,
+// the entity is ignored as it is not managed by any existing and running controller.
 // On that matching below entities rely:
 // - h.handleKongCustomEntity -> ValidateCustomEntity.
 func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv1alpha1.KongCustomEntity) (KongValidator, bool) {
-	h.validatorsMut.RLock()
-	defer h.validatorsMut.RUnlock()
-	for _, v := range h.validators {
-		if v.IngressClassMatcher(&entity.ObjectMeta) ||
-			v.IngressClassMatcher(&metav1.ObjectMeta{
-				Annotations: map[string]string{
-					annotations.IngressClassKey: entity.Spec.ControllerName,
-				},
-			}) {
-			return v, true
-		}
+	controllerName := metav1.ObjectMeta{
+		Annotations: map[string]string{annotations.IngressClassKey: entity.Spec.ControllerName},
 	}
-	// If the spec.controllerName does not match the ingress class name,
-	// and the ingress class annotation does not match the ingress class name either,
-	// ignore it as it is not managed by any existing and running controller.
-	return nil, false
+	return h.pickValidator(func(v KongValidator) bool {
+		return v.IngressClassMatcher(&entity.ObjectMeta) || v.IngressClassMatcher(&controllerName)
+	})
 }
 
 // mgrID is an interface that represents a manager ID.

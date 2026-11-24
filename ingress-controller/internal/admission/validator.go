@@ -166,7 +166,7 @@ func NewKongHTTPValidator(
 }
 
 // IsReady reports whether the validator's Kong Gateway has received its first configuration.
-// Until then Kong has no license and rejects Enterprise features with 403. A validator without
+// Until then Kong has no license and rejects validation calls with 403. A validator without
 // a readiness check is always ready.
 func (validator KongHTTPValidator) IsReady() bool {
 	return validator.isReady == nil || validator.isReady()

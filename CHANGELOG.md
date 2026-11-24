@@ -112,10 +112,11 @@
 
 ### Fixes
 
-- The admission webhook no longer fails `KongPlugin` and `KongClusterPlugin`
-  changes with `internal validation error` while another `Gateway` is starting.
-  It now validates against a Kong Gateway that already received its
-  configuration and license, instead of one still waiting for its first sync.
+- The admission webhook no longer fails or wrongly rejects changes while
+  another `Gateway` is starting, for example `KongPlugin` changes failing with
+  `internal validation error`. It now validates against a Kong Gateway that
+  already received its configuration and license, instead of one still
+  waiting for its first sync.
   [#6808](https://github.com/Kong/kong-operator/pull/6808)
 - The operator now creates the configured cluster CA `Secret` before the
   manager starts when the `Secret` is missing. This enables certificate issuance
