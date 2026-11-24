@@ -87,6 +87,15 @@
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
   [#6794](https://github.com/Kong/kong-operator/pull/6794)
+- `KegDataPlane`: revoking the `KongReferenceGrant` that lets a data plane of
+  another namespace reference its `OnPremEventGateway` now also deletes the
+  client certificate `Secret`s the operator created for it: the Automatic ones
+  and the copies of a Manual one. A `KongReferenceGrant` letting the
+  `EventGatewayDataPlaneCertificate`s of that namespace reference the gateway
+  still trusts any certificate they register: revoking the data planes of a
+  namespace takes deleting that grant too.
+  [#6762](https://github.com/Kong/kong-operator/pull/6762)
+  [#6822](https://github.com/Kong/kong-operator/pull/6822)
 
 ## [v2.4.0]
 

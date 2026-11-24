@@ -226,6 +226,27 @@ dp_certificates() {
     jq -r --arg dp "$1" '.items[] | select(any(.metadata.ownerReferences[]?; .kind == "KegDataPlane" and .name == $dp)) | .metadata.name'
 }
 
+# dp_revoked dp: the data plane holds no certificate material the operator
+# created: no EventGatewayDataPlaneCertificate, no Automatic client certificate
+# Secret and no copy of a Manual one it controls.
+dp_revoked() {
+  local certs secrets
+  certs=$(dp_certificates "$1")
+  secrets=$(kubectl get secrets -n "$(ns)" -o json | jq -r --arg dp "$1" '.items[]
+    | select(.metadata.labels["konghq.com/keg-dp-cert"] == "true" or .metadata.labels["gateway-operator.konghq.com/secret-copy"] == "manual-certificate")
+    | select(any(.metadata.ownerReferences[]?; .kind == "KegDataPlane" and .name == $dp))
+    | .metadata.name')
+  [ -z "$certs" ] && [ -z "$secrets" ] || { echo "$1 still holds certificates [$certs] and Secrets [$secrets]" >&2; return 1; }
+}
+
+# dp_cert_mounted dp: the Secret of the client certificate the Deployment of
+# the data plane mounts exists, e.g. once a revoked data plane got a new one.
+dp_cert_mounted() {
+  local secret
+  secret=$(kubectl get deployment -n "$(ns)" "$1" -o json | jq -er '.spec.template.spec.volumes[] | select(.name == "konnect-cert") | .secret.secretName') &&
+    kubectl get secret -n "$(ns)" "$secret" >/dev/null 2>&1
+}
+
 # dp_cert_fingerprint dp: prints the fingerprint of the client certificate of the
 # Secret the Deployment of the data plane mounts.
 dp_cert_fingerprint() {
@@ -762,6 +783,22 @@ wait-dp-gateway-id) # dp gateway timeout: waits for the data plane to run keg wi
   until_true "$3" "$1 runs keg with the UID of $2" dp_gateway_id_is "$1" "$2"
   kubectl rollout status deployment -n "$(ns)" "$1" --timeout="$3s" >/dev/null
   until_result data_plane "$1" gateway "$2"
+  ;;
+wait-dp-revoked) # dp timeout: waits for the data plane to hold no certificate material the operator created, e.g. once it may no longer reference its gateway
+  until_true "$2" "$1 holds no certificate or certificate Secret" dp_revoked "$1"
+  until_result data_plane "$1"
+  ;;
+wait-dp-cert-mounted) # dp timeout: waits for the Deployment of the data plane to mount an existing client certificate Secret, rolled out, e.g. once a revoked data plane is granted again
+  until_true "$2" "the Deployment $1 mounts an existing client certificate Secret" dp_cert_mounted "$1"
+  kubectl rollout status deployment -n "$(ns)" "$1" --timeout="$2s" >/dev/null
+  until_result data_plane "$1"
+  ;;
+create-tls-secret) # name cert_dir: creates or replaces the TLS Secret of the certificate and key saved in cert_dir, e.g. a copy of the key of a data plane
+  # Labelled konghq.com/secret: the operator only sees the Secrets an entity
+  # reads that carry it.
+  kubectl create secret tls "$1" -n "$(ns)" --cert="$2/tls.crt" --key="$2/tls.key" --dry-run=client -o yaml |
+    kubectl label --local -f - konghq.com/secret=true -o yaml | kubectl apply -f - >/dev/null
+  result secret "$1" fingerprint "$(fingerprint "$2/tls.crt")"
   ;;
 wait-dp-unlabelled) # dp timeout: waits for the Deployment of the data plane not to be labelled for a GWAdmin
   until_true "$2" "the Deployment $1 is no longer labelled for its GWAdmin" dp_unlabelled "$1"
