@@ -18,6 +18,8 @@ const (
 	gwName = "gw"
 
 	providerName         = "openai-provider"
+	geminiProviderName   = "gemini-federated-provider"
+	geminiModelName      = "mock-gemini-model"
 	providerCredentials  = "openai-credentials"
 	modelName            = "mock-model"
 	semanticModelName    = "mock-semantic-model"
@@ -184,6 +186,82 @@ func representativeObjects(t *testing.T) []any {
 									Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{
 										UpstreamURL: upstreamURL,
 									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// The gemini provider uses GCP workload identity federation with an
+	// aws_iam source. Its auth renders only into the targets of a model that
+	// references it.
+	geminiProvider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
+		ObjectMeta: namespacedName(geminiProviderName),
+		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
+			AIGatewayRef: onPremRef(),
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
+				AIGatewayModelProviderConfig: &aiconfigurationv1alpha1.AIGatewayModelProviderConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelProviderConfigTypeGemini,
+					Gemini: &aiconfigurationv1alpha1.AIGatewayModelProviderGemini{
+						Name:        geminiProviderName,
+						DisplayName: "Gemini federated (mock)",
+						Config: aiconfigurationv1alpha1.AIGatewayModelProviderGeminiConfig{
+							Auth: &aiconfigurationv1alpha1.AIGatewayModelProviderGeminiConfigAuth{
+								Type: aiconfigurationv1alpha1.AIGatewayModelProviderGeminiConfigAuthTypeGCP,
+								GCP: &aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthGCP{
+									WorkloadIdentityFederation: &aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation{
+										Source: aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationTypeAuthGCPWorkloadIdentityFederationAwsIam,
+										AuthGCPWorkloadIdentityFederationAwsIam: &aiconfigurationv1alpha1.AuthGCPWorkloadIdentityFederationAwsIam{
+											AuthJSON: `{"type":"external_account"}`,
+											Aws: aiconfigurationv1alpha1.AIGatewayUpstreamAuthAWS{
+												AccessKeyID:     "mock-access-key-id",
+												SecretAccessKey: "mock-secret-access-key",
+												SessionToken:    "mock-session-token",
+												Region:          "us-east-1",
+												AssumeRoleArn:   "arn:aws:iam::123456789012:role/mock",
+												RoleSessionName: "mock-session",
+												StsEndpointURL:  "https://sts.us-east-1.amazonaws.com",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	geminiModel := &aiconfigurationv1alpha1.AIGatewayModel{
+		ObjectMeta: namespacedName(geminiModelName),
+		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+			AIGatewayRef: onPremRef(),
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelConfigTypeModel,
+					Model: &aiconfigurationv1alpha1.AIGatewayModelModel{
+						Name:         geminiModelName,
+						DisplayName:  "Mock gemini model",
+						Capabilities: []string{"generate"},
+						Formats:      []aiconfigurationv1alpha1.AIGatewayModelFormat{{Type: "openai"}},
+						Config: aiconfigurationv1alpha1.AIGatewayModelModelConfig{
+							Route: aiconfigurationv1alpha1.AIGatewayModelRouteConfig{
+								Paths: []string{"/gemini"},
+							},
+						},
+						Targets: []aiconfigurationv1alpha1.AIGatewayTarget{
+							{
+								Name: "gemini-2.5-flash",
+								Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{
+									Name: geminiProviderName,
+								},
+								Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+									Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeGemini,
+									Gemini: &aiconfigurationv1alpha1.AIGatewayTargetGeminiConfig{},
 								},
 							},
 						},
@@ -523,6 +601,7 @@ func representativeObjects(t *testing.T) []any {
 
 	return []any{
 		provider, model, semanticModel,
+		geminiProvider, geminiModel,
 		rateLimitPolicy, customPolicyPolicyObj, customPolicy,
 		consumerGroup, consumer, credential, authStrategy,
 		caCertificate, certificate, sni,

@@ -71,6 +71,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- `AIGatewayModelProvider`: a `gemini` provider with GCP workload identity
+  federation now works. On-prem, the operator no longer drops the auth JSON
+  and the AWS credentials from the rendered configuration. On Konnect, the
+  operator no longer rejects the configuration.
+  [#6801](https://github.com/Kong/kong-operator/pull/6801)
+
 ## [v2.4.0]
 
 > Release date: 2026-11-17
