@@ -70,8 +70,32 @@ func (spec *AIGatewayModelProviderAPISpec) marshalAIGWProviderPayload() ([]byte,
 	// re-attached resolved in ToAIGWProvider.
 	delete(cfg, "datastores")
 
+	liftWorkloadIdentityFederationAWS(cfg)
+
 	// The selected variant payload already carries the discriminator as its top-level "type"
 	// (selectedSDKOpsPayload copies it in), which is exactly aigw.Provider.Type.
 	data, _, err := spec.selectedSDKOpsPayload(payload)
 	return data, err
+}
+
+// liftWorkloadIdentityFederationAWS moves the federated AWS credentials from the nested
+// `aws: {access_key_id, ...}` (CRD and Konnect shape) to the flat `aws_access_key_id, ...` keys
+// that aigw.GCPWorkloadIdentityFederation reads. The converter drops unknown keys silently.
+// The union flattening in selectedSDKOpsPayload then lifts them next to `source`. The `type`
+// const is a Konnect SDK requirement and has no aigw equivalent.
+func liftWorkloadIdentityFederationAWS(cfg map[string]any) {
+	config, _ := cfg["config"].(map[string]any)
+	auth, _ := config["auth"].(map[string]any)
+	gcp, _ := auth["gcp"].(map[string]any)
+	wif, _ := gcp["workload_identity_federation"].(map[string]any)
+	awsIAM, _ := wif["aws_iam"].(map[string]any)
+	aws, ok := awsIAM["aws"].(map[string]any)
+	if !ok {
+		return
+	}
+	delete(awsIAM, "aws")
+	delete(aws, "type")
+	for k, v := range aws {
+		awsIAM["aws_"+k] = v
+	}
 }
