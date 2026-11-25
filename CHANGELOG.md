@@ -87,6 +87,10 @@
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
   [#6794](https://github.com/Kong/kong-operator/pull/6794)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
+  puts the per-request trace ID in the `Programmed` condition.
+  [#6797](https://github.com/Kong/kong-operator/pull/6797)
+  [#6817](https://github.com/Kong/kong-operator/pull/6817)
 
 ## [v2.4.0]
 
