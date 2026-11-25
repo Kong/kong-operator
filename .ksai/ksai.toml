@@ -1,0 +1,6 @@
+#:schema https://ksai.kongcloud.io/schemas/ksai/v1/ksai.toml.json
+version = 1
+
+[review]
+# Ignore all CI snapshots in KSAI reviews
+ignore = ['charts/kong-operator/ci/__snapshots__/**']
