@@ -723,14 +723,28 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 		assert.Equal(t, ha, hb)
 	})
 
-	t.Run("nested map keys inside plugin config and route headers are sorted recursively", func(t *testing.T) {
+	t.Run("nested map keys inside plugin config are sorted recursively", func(t *testing.T) {
+		// The nested values are structs with opposite field declaration
+		// order: encoding/json serializes structs in field order, so the
+		// hashes only match if canonicalization decodes the payload into
+		// maps and re-sorts every level. Plain nested maps would make the
+		// assertion pass even without canonicalization, because
+		// encoding/json already sorts map keys.
+		type nestedAB struct {
+			A int `json:"a"`
+			B int `json:"b"`
+		}
+		type nestedBA struct {
+			B int `json:"b"`
+			A int `json:"a"`
+		}
 		p1 := sdkkonnectops.UpsertPluginRequest{
 			ControlPlaneID: cpID,
 			PluginID:       id,
 			Plugin: sdkkonnectcomp.Plugin{
 				Name: "request-transformer",
 				Config: map[string]any{
-					"z": map[string]any{"b": 2, "a": 1},
+					"z": nestedAB{A: 1, B: 2},
 					"a": "first",
 				},
 			},
@@ -742,7 +756,7 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 				Name: "request-transformer",
 				Config: map[string]any{
 					"a": "first",
-					"z": map[string]any{"a": 1, "b": 2},
+					"z": nestedBA{B: 2, A: 1},
 				},
 			},
 		}
