@@ -126,6 +126,7 @@ spec:
                   name:
                     description: The name to identify of the certificate.
                     maxLength: 253
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
                 - certificate

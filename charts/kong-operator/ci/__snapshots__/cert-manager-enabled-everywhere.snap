@@ -40640,6 +40640,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   tls:
                     properties:
@@ -40681,6 +40682,8 @@ spec:
                             - type
                             type: object
                             x-kubernetes-validations:
+                            - message: an inline value must not be empty
+                              rule: '!has(self.value) || self.value.size() >= 1'
                             - message: value required when type=inline; secretRef required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                             - message: only one of value and secretRef can be set
@@ -40717,6 +40720,8 @@ spec:
                             - type
                             type: object
                             x-kubernetes-validations:
+                            - message: an inline value must not be empty
+                              rule: '!has(self.value) || self.value.size() >= 1'
                             - message: value required when type=inline; secretRef required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                             - message: only one of value and secretRef can be set
@@ -40988,6 +40993,7 @@ spec:
                     type: string
                   name:
                     maxLength: 253
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
                 - certificate
@@ -41276,6 +41282,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -41324,6 +41331,8 @@ spec:
                                   - type
                                   type: object
                                   x-kubernetes-validations:
+                                  - message: an inline value must not be empty
+                                    rule: '!has(self.value) || self.value.size() >= 1'
                                   - message: value required when type=inline; secretRef required when type=secretRef
                                     rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   - message: only one of value and secretRef can be set
@@ -41360,6 +41369,8 @@ spec:
                                   - type
                                   type: object
                                   x-kubernetes-validations:
+                                  - message: an inline value must not be empty
+                                    rule: '!has(self.value) || self.value.size() >= 1'
                                   - message: value required when type=inline; secretRef required when type=secretRef
                                     rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   - message: only one of value and secretRef can be set
@@ -41441,6 +41452,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -41838,6 +41850,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   ports:
                     items:
@@ -42092,6 +42105,8 @@ spec:
                                     - type
                                     type: object
                                     x-kubernetes-validations:
+                                    - message: an inline value must not be empty
+                                      rule: '!has(self.value) || self.value.size() >= 1'
                                     - message: value required when type=inline; secretRef required when type=secretRef
                                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                     - message: only one of value and secretRef can be set
@@ -42145,6 +42160,7 @@ spec:
                       name:
                         maxLength: 255
                         minLength: 1
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -42368,7 +42384,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
-                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _.:/+'-]*[\p{L}\p{N}]$
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   value:
                     properties:
@@ -42402,6 +42418,8 @@ spec:
                     - type
                     type: object
                     x-kubernetes-validations:
+                    - message: an inline value must not be empty
+                      rule: '!has(self.value) || self.value.size() >= 1'
                     - message: value required when type=inline; secretRef required when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                     - message: only one of value and secretRef can be set
@@ -42661,6 +42679,8 @@ spec:
                         - type
                         type: object
                         x-kubernetes-validations:
+                        - message: an inline value must not be empty
+                          rule: '!has(self.value) || self.value.size() >= 1'
                         - message: value required when type=inline; secretRef required when type=secretRef
                           rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                         - message: only one of value and secretRef can be set
@@ -42682,6 +42702,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
                 - config
@@ -42946,6 +42967,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -43038,6 +43060,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -43231,6 +43254,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -43298,6 +43322,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -43524,6 +43549,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -43551,6 +43577,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     type: object
                   transcode:
@@ -43776,6 +43803,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -44272,6 +44300,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -44733,6 +44762,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -45201,6 +45231,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -45319,6 +45350,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -45511,6 +45543,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -45578,6 +45611,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -45801,6 +45835,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -45932,6 +45967,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -46570,6 +46606,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   namespace:
                     properties:
@@ -69226,6 +69263,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
                 - name

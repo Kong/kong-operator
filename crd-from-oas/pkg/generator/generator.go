@@ -2582,6 +2582,9 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		} else {
 			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
 		}
+		for _, tag := range inlineSensitiveValueTags(prop, g.config.Validation) {
+			fmt.Fprintf(buf, "\t// %s\n", tag)
+		}
 	default:
 		tags := kubebuilderTagsWith(prop, fieldCursor, g.config.Validation)
 		if freeformObjectRef(g.parsed, prop) {
@@ -2979,9 +2982,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
 			if prop.Required && !prop.Nullable {
-				return []string{markerRequired()}
+				return append([]string{markerRequired()}, inlineSensitiveValueTags(prop, g.config.Validation)...)
 			}
-			return []string{markerOptional()}
+			return append([]string{markerOptional()}, inlineSensitiveValueTags(prop, g.config.Validation)...)
 		}
 		return kubebuilderTagsWith(prop, apiSpecCursor, g.config.Validation)
 	}

@@ -69,6 +69,8 @@ func kubebuilderTagsWith(prop *parser.Property, fieldCursor *config.FieldConfig,
 		}
 		if prop.Pattern != "" {
 			tags = append(tags, markerValidationPattern(prop.Pattern))
+		} else if prop.UnicodePattern != "" && validation.UnicodePatterns {
+			tags = append(tags, markerValidationPattern(prop.UnicodePattern))
 		}
 	}
 
@@ -173,6 +175,20 @@ func arrayConstraintTags(prop *parser.Property) []string {
 		tags = append(tags, itemsMarker(t))
 	}
 	return tags
+}
+
+// inlineSensitiveValueTags returns a rule holding a sensitive value's
+// minLength on its inline form: the shared inline-or-Secret type can't.
+func inlineSensitiveValueTags(prop *parser.Property, validation config.ValidationConfig) []string {
+	if !validation.InlineSensitiveValueLength || prop.MinLength == nil || *prop.MinLength <= 0 {
+		return nil
+	}
+	n := *prop.MinLength
+	message := fmt.Sprintf("an inline value must be at least %d characters long", n)
+	if n == 1 {
+		message = "an inline value must not be empty"
+	}
+	return []string{markerValidationXValidation(fmt.Sprintf("!has(self.value) || self.value.size() >= %d", n), message)}
 }
 
 // enumMarkerValues returns the value of an Enum marker, or "".

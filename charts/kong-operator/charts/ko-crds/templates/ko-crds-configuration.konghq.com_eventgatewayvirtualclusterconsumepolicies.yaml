@@ -114,6 +114,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -206,6 +207,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -399,6 +401,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -466,6 +469,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -692,6 +696,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -719,6 +724,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     type: object
                   transcode:
@@ -944,6 +950,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config

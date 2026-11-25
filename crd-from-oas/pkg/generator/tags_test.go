@@ -659,3 +659,33 @@ func TestNamedTypeConstraintMarkers(t *testing.T) {
 	on.writeNamedTypeConstraintMarkers(&buf, enum)
 	assert.Equal(t, "//\n// +kubebuilder:validation:Enum=key;value\n", buf.String())
 }
+
+func TestKubebuilderTags_UnicodePattern(t *testing.T) {
+	prop := &parser.Property{Name: "name", Type: "string", Required: true, MaxLength: new(int64(255)), UnicodePattern: `^[\p{L}\p{N}]+$`}
+
+	assert.Equal(t, []string{
+		"+required",
+		"+kubebuilder:validation:MinLength=1",
+		"+kubebuilder:validation:MaxLength=255",
+		"+kubebuilder:validation:Pattern=`^[\\p{L}\\p{N}]+$`",
+	}, kubebuilderTagsWith(prop, nil, config.ValidationConfig{UnicodePatterns: true}))
+	assert.NotContains(t, strings.Join(kubebuilderTagsWith(prop, nil, config.ValidationConfig{}), " "), "Pattern", "not opted in")
+
+	withPlain := *prop
+	withPlain.Pattern = "^[a-z]+$"
+	assert.Contains(t, kubebuilderTagsWith(&withPlain, nil, config.ValidationConfig{UnicodePatterns: true}),
+		"+kubebuilder:validation:Pattern=`^[a-z]+$`", "a plain pattern wins")
+	assert.NotContains(t, strings.Join(kubebuilderTagsWith(&withPlain, nil, config.ValidationConfig{UnicodePatterns: true}), " "), `\p{L}`)
+}
+
+func TestInlineSensitiveValueTags(t *testing.T) {
+	on := config.ValidationConfig{InlineSensitiveValueLength: true}
+	assert.Equal(t, []string{
+		`+kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"`,
+	}, inlineSensitiveValueTags(&parser.Property{Type: "string", MinLength: new(int64(1))}, on))
+	assert.Equal(t, []string{
+		`+kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 32",message="an inline value must be at least 32 characters long"`,
+	}, inlineSensitiveValueTags(&parser.Property{Type: "string", MinLength: new(int64(32))}, on))
+	assert.Empty(t, inlineSensitiveValueTags(&parser.Property{Type: "string"}, on), "no minLength")
+	assert.Empty(t, inlineSensitiveValueTags(&parser.Property{Type: "string", MinLength: new(int64(1))}, config.ValidationConfig{}), "not opted in")
+}

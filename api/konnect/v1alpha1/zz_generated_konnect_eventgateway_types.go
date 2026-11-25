@@ -106,6 +106,7 @@ type KonnectEventGatewayAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name GatewayName `json:"name,omitzero"`
 }
 

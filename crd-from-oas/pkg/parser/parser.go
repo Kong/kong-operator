@@ -46,8 +46,10 @@ type Property struct {
 	Minimum       *float64
 	Maximum       *float64
 	Pattern       string
-	Enum          []any
-	Default       any
+	// UnicodePattern is the x-unicode-pattern extension.
+	UnicodePattern string
+	Enum           []any
+	Default        any
 
 	// Reference info
 	RefName     string // If this is a $ref, the referenced schema name

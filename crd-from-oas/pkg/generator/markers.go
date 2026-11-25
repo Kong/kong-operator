@@ -19,6 +19,7 @@ const (
 	kbValidationMaxPropertiesFmt = "+kubebuilder:validation:MaxProperties=%d"
 	kbValidationMaxItemsFmt      = "+kubebuilder:validation:MaxItems=%d"
 	kbValidationMinItemsFmt      = "+kubebuilder:validation:MinItems=%d"
+	kbValidationXValidationFmt   = "+kubebuilder:validation:XValidation:rule=%q,message=%q"
 	kbValidationTypeObject       = "+kubebuilder:validation:Type=object"
 )
 
@@ -32,6 +33,9 @@ func markerValidationEnum(v string) string       { return fmt.Sprintf(kbValidati
 func markerValidationMaxProperties(v int) string { return fmt.Sprintf(kbValidationMaxPropertiesFmt, v) }
 func markerValidationMaxItems(v int) string      { return fmt.Sprintf(kbValidationMaxItemsFmt, v) }
 func markerValidationMinItems(v int) string      { return fmt.Sprintf(kbValidationMinItemsFmt, v) }
+func markerValidationXValidation(rule, message string) string {
+	return fmt.Sprintf(kbValidationXValidationFmt, rule, message)
+}
 
 // itemsMarker turns a validation marker into its items: form.
 func itemsMarker(marker string) string {

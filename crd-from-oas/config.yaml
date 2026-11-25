@@ -1285,6 +1285,8 @@ apiGroupVersions:
       - kong
     validation:
       arrayConstraints: true
+      unicodePatterns: true
+      inlineSensitiveValueLength: true
     # Don't generate groupversion_info.go for this API group — it is hand-written.
     # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
     generateGroupVersionInfo: false
@@ -1303,6 +1305,14 @@ apiGroupVersions:
             # A stored object keeping its reference can still be updated, e.g. its
             # finalizer removed.
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
+          spec:
+            apiSpec:
+              name:
+                _validations:
+                  # Konnect's name rule, missing from the request schemas of
+                  # the OAS. TODO: drop once they declare it, see
+                  # https://github.com/Kong/platform-api/issues/3703.
+                  - '+kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+'']*[\p{L}\p{N}]$`'
         dataSources:
           - path: spec.apiSpec.certificate
             type: Secret
@@ -1442,14 +1452,6 @@ apiGroupVersions:
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.spec.parentRef) || oldSelf.spec.parentRef.kind != 'OnPremEventGateway' || !has(oldSelf.status) || !has(oldSelf.status.createInputsHash) || !has(self.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef\",message=\"parentRef is immutable once the static key has been pushed: create a new EventGatewayStaticKey for the other gateway, or delete this one and create it again\",fieldPath=\".spec.parentRef\""
           spec:
             apiSpec:
-              name:
-                _validations:
-                  # Konnect's rule, which the OpenAPI spec doesn't declare
-                  # (checked against the API): letters (incl. non-ASCII) and
-                  # digits at both ends, spaces and _ . : / + ' - inside.
-                  # TODO: drop this once the OAS declares the pattern:
-                  # https://github.com/Kong/platform-api/issues/3703
-                  - '+kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _.:/+''-]*[\p{L}\p{N}]$`'
               value:
                 # The OpenAPI description says plain text values are encrypted
                 # and never returned: that holds in Konnect, not for the CR.
@@ -1492,6 +1494,12 @@ apiGroupVersions:
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
           spec:
             apiSpec:
+              name:
+                _validations:
+                  # Konnect's name rule, missing from the request schemas of
+                  # the OAS. TODO: drop once they declare it, see
+                  # https://github.com/Kong/platform-api/issues/3703.
+                  - '+kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+'']*[\p{L}\p{N}]$`'
               ports:
                 _validations:
                   # controller-gen can't bound an integer-or-string item, so
@@ -2107,6 +2115,9 @@ apiGroupVersions:
             fieldName: eventGatewayVirtualClusterRef
 
   konnect.konghq.com/v1alpha1:
+    # Only the KonnectEventGateway name has an x-unicode-pattern in this group.
+    validation:
+      unicodePatterns: true
     categories:
       - konnect
       - kong

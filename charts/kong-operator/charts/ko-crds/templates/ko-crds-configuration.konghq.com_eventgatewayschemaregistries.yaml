@@ -91,6 +91,9 @@ spec:
                                     - type
                                     type: object
                                     x-kubernetes-validations:
+                                    - message: an inline value must not be empty
+                                      rule: '!has(self.value) || self.value.size()
+                                        >= 1'
                                     - message: value required when type=inline; secretRef
                                         required when type=secretRef
                                       rule: 'self.type == ''inline'' ? has(self.value)
@@ -147,6 +150,7 @@ spec:
                       name:
                         maxLength: 255
                         minLength: 1
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config

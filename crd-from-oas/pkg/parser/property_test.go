@@ -842,3 +842,12 @@ func TestParseSchema_NamedTypeConstraints(t *testing.T) {
 		assert.Equal(t, int64(50), *s.MaxItems)
 	})
 }
+
+func TestParseProperty_UnicodePattern(t *testing.T) {
+	prop := ParseProperty("name", &openapi3.SchemaRef{Value: &openapi3.Schema{
+		Type:       &openapi3.Types{"string"},
+		Extensions: map[string]any{"x-unicode-pattern": `^[\p{L}\p{N}]+$`},
+	}}, 0, make(map[string]bool))
+	assert.Equal(t, `^[\p{L}\p{N}]+$`, prop.UnicodePattern)
+	assert.Empty(t, prop.Pattern)
+}

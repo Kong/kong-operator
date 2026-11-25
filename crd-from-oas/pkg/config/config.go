@@ -42,6 +42,12 @@ type ValidationConfig struct {
 	// ArrayConstraints emits minItems, item constraints, and the enum and
 	// item counts of named types.
 	ArrayConstraints bool `yaml:"arrayConstraints,omitempty"`
+	// UnicodePatterns emits x-unicode-pattern as the pattern of a string that
+	// has no plain one.
+	UnicodePatterns bool `yaml:"unicodePatterns,omitempty"`
+	// InlineSensitiveValueLength emits the minLength of a sensitive value as a
+	// rule on its inline form; a Secret's value can't be checked at admission.
+	InlineSensitiveValueLength bool `yaml:"inlineSensitiveValueLength,omitempty"`
 }
 
 // CommonTypesConfig holds configuration for common types that can be shared

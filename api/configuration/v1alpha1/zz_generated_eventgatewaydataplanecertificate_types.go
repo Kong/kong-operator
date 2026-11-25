@@ -86,6 +86,7 @@ type EventGatewayDataPlaneCertificateAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 

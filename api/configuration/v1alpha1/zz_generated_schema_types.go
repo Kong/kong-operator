@@ -439,6 +439,7 @@ type BackendClusterTLSClientIdentity struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Certificate SensitiveDataSource `json:"certificate,omitzero"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
@@ -449,6 +450,7 @@ type BackendClusterTLSClientIdentity struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Key SensitiveDataSource `json:"key,omitzero"`
 }
 
@@ -878,6 +880,7 @@ type EventGatewayACLsPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -1083,6 +1086,7 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -1874,6 +1878,7 @@ type EventGatewayDecryptPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -2087,6 +2092,7 @@ type EventGatewayEncryptPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -3173,6 +3179,7 @@ type EventGatewayModifyHeadersPolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -3382,6 +3389,7 @@ type EventGatewayParsedRecordDecryptFieldsPolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -3603,6 +3611,7 @@ type EventGatewayParsedRecordEncryptFieldsPolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -3959,6 +3968,7 @@ type EventGatewayParsedRecordMaskFieldsConsumePolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -4049,6 +4059,7 @@ type EventGatewayParsedRecordMaskFieldsProducePolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -4801,6 +4812,7 @@ type EventGatewayParsedRecordTranscodeConsumePolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -5217,6 +5229,7 @@ type EventGatewayParsedRecordTranscodeProducePolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -5838,6 +5851,7 @@ type EventGatewayProduceSchemaValidationPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -6489,6 +6503,7 @@ type EventGatewayRequestRuleValidatorPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -6883,6 +6898,7 @@ type EventGatewaySkipRecordPolicyCreate struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -6924,6 +6940,7 @@ type EventGatewayTLSListenerPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -7316,6 +7333,7 @@ type ForwardToVirtualClusterPolicy struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -7530,6 +7548,7 @@ type SchemaRegistryAuthenticationBasic struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Password SensitiveDataSource `json:"password,omitzero"`
 	// A literal value or a reference to an existing secret as a template string
 	// expression.
@@ -7646,6 +7665,7 @@ type SchemaRegistryConfluent struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 
@@ -7916,6 +7936,7 @@ type TLSCertificate struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Certificate SensitiveDataSource `json:"certificate,omitzero"`
 	// A sensitive value containing the secret or a reference to a secret as a
 	// template string expression.
@@ -7926,6 +7947,7 @@ type TLSCertificate struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Key SensitiveDataSource `json:"key,omitzero"`
 }
 
@@ -7937,6 +7959,7 @@ type TLSTrustBundleConfig struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	TrustedCa SensitiveDataSource `json:"trustedCa,omitzero"`
 }
 

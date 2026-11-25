@@ -93,6 +93,7 @@ spec:
                     type: string
                   name:
                     maxLength: 253
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                 required:
                 - certificate
