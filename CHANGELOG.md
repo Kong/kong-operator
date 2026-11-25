@@ -135,6 +135,11 @@
   operator verifies unchanged entities with a GET instead of sending one PUT
   per entity, while keeping the in-memory tracker as the fast path.
   [#6768](https://github.com/Kong/kong-operator/pull/6768)
+- Konnect: `KongVault` now uses the control plane config version tracker and
+  persists sync state in `status.sync`, skipping periodic PUT requests for
+  unchanged vaults and verifying them with a GET across restarts or leader
+  changes.
+  [#6765](https://github.com/Kong/kong-operator/issues/6765)
 
 ### Fixes
 

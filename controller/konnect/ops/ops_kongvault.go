@@ -58,7 +58,13 @@ func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 	return nil
 }
 
-func updateVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSDK, vault *configurationv1alpha1.KongVault) error {
+func updateVault(
+	ctx context.Context,
+	cl client.Client,
+	sdk sdkkonnectgo.VaultsSDK,
+	g *syncGuard,
+	vault *configurationv1alpha1.KongVault,
+) error {
 	cpID := vault.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: vault, Op: UpdateOp}
@@ -70,13 +76,23 @@ func updateVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 		return fmt.Errorf("failed to convert KongVault to Konnect vault input: %w", err)
 	}
 
-	_, err = sdk.UpsertVault(ctx, sdkkonnectops.UpsertVaultRequest{
+	req := sdkkonnectops.UpsertVaultRequest{
 		VaultID:        id,
 		ControlPlaneID: cpID,
 		Vault:          vaultInput,
-	})
+	}
+	err = upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Vault, error) {
+			resp, err := sdk.GetVault(ctx, sdkkonnectops.GetVaultRequest{VaultID: id, ControlPlaneID: cpID})
+			return resp.GetVault(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Vault, error) {
+			resp, err := sdk.UpsertVault(ctx, req)
+			return resp.GetVault(), err
+		},
+	)
 
-	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, vault); errWrapped != nil {
+	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, vault); errWrapped != nil {
 		return errWrapped
 	}
 
@@ -145,7 +161,7 @@ func adoptVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSD
 	case commonv1alpha1.AdoptModeOverride:
 		vaultCopy := vault.DeepCopy()
 		vaultCopy.SetKonnectID(konnectID)
-		if err = updateVault(ctx, cl, sdk, vaultCopy); err != nil {
+		if err = updateVault(ctx, cl, sdk, nil, vaultCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

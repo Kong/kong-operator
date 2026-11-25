@@ -16754,6 +16754,7 @@ KongVaultStatus represents the current status of the KongVault resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongVaultStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
@@ -17344,6 +17345,7 @@ _Appears in:_
 - [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
 - [KongTargetStatus](#configuration-konghq-com-v1alpha1-types-kongtargetstatus)
 - [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
+- [KongVaultStatus](#configuration-konghq-com-v1alpha1-types-kongvaultstatus)
 
 #### TLSCertificate
 
