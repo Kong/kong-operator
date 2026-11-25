@@ -40652,7 +40652,10 @@ spec:
                     type: object
                   bootstrapServers:
                     items:
+                      minLength: 1
+                      pattern: ^(([a-zA-Z0-9\.\-]+)|\[([a-fA-F0-9:]+)\]):\d+$
                       type: string
+                    minItems: 1
                     type: array
                   description:
                     maxLength: 512
@@ -40774,6 +40777,9 @@ spec:
                         type: string
                       tlsVersions:
                         items:
+                          enum:
+                          - tls12
+                          - tls13
                           type: string
                         type: array
                     required:
@@ -41403,6 +41409,7 @@ spec:
                               - key
                               type: object
                             maxItems: 1
+                            minItems: 1
                             type: array
                           clientAuthentication:
                             properties:
@@ -41432,6 +41439,7 @@ spec:
                                   required:
                                   - name
                                   type: object
+                                minItems: 1
                                 type: array
                             required:
                             - mode
@@ -41852,7 +41860,9 @@ spec:
                 properties:
                   addresses:
                     items:
+                      minLength: 1
                       type: string
+                    minItems: 1
                     type: array
                   description:
                     maxLength: 512
@@ -41875,7 +41885,12 @@ spec:
                       - type: integer
                       - type: string
                       x-kubernetes-int-or-string: true
+                    maxItems: 64
+                    minItems: 1
                     type: array
+                    x-kubernetes-validations:
+                    - message: an integer port must be between 1 and 65535
+                      rule: self.all(p, type(p) != int || (p >= 1 && p <= 65535))
                 required:
                 - addresses
                 - name
@@ -42938,10 +42953,15 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                           partOfRecord:
                             items:
+                              enum:
+                              - key
+                              - value
                               type: string
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -42991,6 +43011,8 @@ spec:
                                       required:
                                       - match
                                       type: object
+                                    maxItems: 50
+                                    minItems: 1
                                     type: array
                                   expression:
                                     type: string
@@ -43031,6 +43053,7 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                         required:
                         - decryptFields
@@ -43090,6 +43113,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       type: string
@@ -43222,6 +43247,7 @@ spec:
                               - strategy
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -43291,6 +43317,7 @@ spec:
                               required:
                               - op
                               type: object
+                            minItems: 1
                             type: array
                         type: object
                       description:
@@ -44236,6 +44263,7 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
                                       type: array
                                     type:
                                       enum:
@@ -44261,6 +44289,7 @@ spec:
                               - resourceNames
                               - resourceType
                               type: object
+                            minItems: 1
                             type: array
                         required:
                         - rules
@@ -44323,6 +44352,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44353,6 +44383,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44383,6 +44414,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44413,6 +44445,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44443,6 +44476,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44473,6 +44507,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44503,6 +44538,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44533,6 +44569,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44563,6 +44600,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44593,6 +44631,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44623,6 +44662,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44653,6 +44693,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44683,6 +44724,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -44708,6 +44750,7 @@ spec:
                               - type
                               type: object
                             maxItems: 100
+                            minItems: 1
                             type: array
                         required:
                         - requests
@@ -45169,7 +45212,11 @@ spec:
                             type: string
                           partOfRecord:
                             items:
+                              enum:
+                              - key
+                              - value
                               type: string
+                            minItems: 1
                             type: array
                         required:
                         - encryptionKey
@@ -45261,6 +45308,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       type: string
@@ -45278,6 +45327,7 @@ spec:
                               - paths
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                           failureMode:
                             enum:
@@ -45343,6 +45393,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       type: string
@@ -45475,6 +45527,7 @@ spec:
                               - strategy
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -45544,6 +45597,7 @@ spec:
                               required:
                               - op
                               type: object
+                            minItems: 1
                             type: array
                         type: object
                       description:
@@ -46418,6 +46472,7 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  minItems: 1
                                   type: array
                                 issuer:
                                   maxLength: 253
@@ -46478,6 +46533,7 @@ spec:
                                 - password
                                 - username
                                 type: object
+                              minItems: 1
                               type: array
                           required:
                           - mediation
@@ -46533,6 +46589,7 @@ spec:
                       required:
                       - type
                       type: object
+                    minItems: 1
                     type: array
                   description:
                     maxLength: 512
@@ -46573,6 +46630,7 @@ spec:
                                         required:
                                         - value
                                         type: object
+                                      minItems: 1
                                       type: array
                                   type: object
                                 glob:
@@ -46616,6 +46674,7 @@ spec:
                                         required:
                                         - backend
                                         type: object
+                                      minItems: 1
                                       type: array
                                   type: object
                                 glob:

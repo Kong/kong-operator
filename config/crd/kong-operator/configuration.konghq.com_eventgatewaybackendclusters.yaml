@@ -199,7 +199,10 @@ spec:
                     description: A list of cluster bootstrap servers in the format
                       address:port.
                     items:
+                      minLength: 1
+                      pattern: ^(([a-zA-Z0-9\.\-]+)|\[([a-fA-F0-9:]+)\]):\d+$
                       type: string
+                    minItems: 1
                     type: array
                   description:
                     description: A human-readable description of the backend cluster.
@@ -403,6 +406,9 @@ spec:
                       tlsVersions:
                         description: List of supported TLS versions.
                         items:
+                          enum:
+                          - tls12
+                          - tls13
                           type: string
                         type: array
                     required:

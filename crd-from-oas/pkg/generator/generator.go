@@ -58,6 +58,8 @@ type Config struct {
 	// Categories are kubebuilder resource categories applied to root CRD
 	// types via +kubebuilder:resource:categories=...
 	Categories []string
+	// Validation selects OAS validations emitted on top of the default ones.
+	Validation config.ValidationConfig
 	// SkipGetForUIDEntities is the set of entity names for which getForUID
 	// generation should be skipped (e.g. because a hand-written implementation
 	// already exists in an ops_<entity>_manual.go file).
@@ -2454,11 +2456,13 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 					g.writeDedicatedSensitiveTypesForSchema(&body, elemTypeName)
 				}
 				body.WriteString(comment)
+				g.writeNamedTypeConstraintMarkers(&body, schema)
 				fmt.Fprintf(&body, "type %s []%s\n\n", goName, elemTypeName)
 
 			default:
 				// Generate based on the schema's actual type
 				body.WriteString(comment)
+				g.writeNamedTypeConstraintMarkers(&body, schema)
 				goType := schemaToGoType(schema)
 				if goType == "apiextensionsv1.JSON" {
 					// Alias, not a named type: a defined type does not inherit
@@ -2566,6 +2570,9 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		if prop.Type == "array" && prop.MaxItems != nil {
 			fmt.Fprintf(buf, "\t// %s\n", markerValidationMaxItems(int(*prop.MaxItems)))
 		}
+		if prop.Type == "array" && prop.MinItems != nil && g.config.Validation.ArrayConstraints {
+			fmt.Fprintf(buf, "\t// %s\n", markerValidationMinItems(int(*prop.MinItems)))
+		}
 	case isSensitive:
 		// Sensitive leaf: emit only required/optional; SensitiveDataSource carries
 		// the shared validation for its inline value representation.
@@ -2575,7 +2582,7 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
 		}
 	default:
-		tags := KubebuilderTags(prop, fieldCursor)
+		tags := kubebuilderTagsWith(prop, fieldCursor, g.config.Validation)
 		if freeformObjectRef(g.parsed, prop) {
 			tags = append(tags, markerValidationTypeObject())
 		}
@@ -2964,6 +2971,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 			if prop.Type == "array" && prop.MaxItems != nil {
 				tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
 			}
+			if prop.Type == "array" && prop.MinItems != nil && g.config.Validation.ArrayConstraints {
+				tags = append(tags, markerValidationMinItems(int(*prop.MinItems)))
+			}
 			return applyValidationOverrides(tags, apiSpecCursor.Sub(jsonName(prop.Name)))
 		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
@@ -2972,7 +2982,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 			}
 			return []string{markerOptional()}
 		}
-		return KubebuilderTags(prop, apiSpecCursor)
+		return kubebuilderTagsWith(prop, apiSpecCursor, g.config.Validation)
 	}
 
 	// In the CRD APISpec, property-level oneOf types are rendered as a pointer
@@ -4105,7 +4115,7 @@ func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix stri
 	typeName := generatedUnionTypeName(prop, typeNamePrefix)
 	variants := g.buildUnionVariants(prop, typeName)
 	g.applyFlattenedVariantRefTypes(typeName, variants)
-	return emitDiscriminatedUnionCode(typeName, prop.Name, unionDiscriminatorJSONName(prop), variants)
+	return emitDiscriminatedUnionCode(typeName, prop.Name, unionDiscriminatorJSONName(prop), variants, g.config.Validation)
 }
 
 // applyFlattenedVariantRefTypes swaps a flattened variant's OAS-derived type
@@ -4585,7 +4595,7 @@ func emitUnionTests(pkgName string, unionSpecs []unionFieldSpec, wrapperSpecs []
 //   - Custom MarshalJSON/UnmarshalJSON that produce/consume a nested JSON object
 //     {"<discriminator>":"<disc>","<disc>":{...variant fields...}} matching the CRD schema and
 //     K8s/etcd wire format.
-func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string, variants []unionVariant) string {
+func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string, variants []unionVariant, validation config.ValidationConfig) string {
 	discriminatorFieldName := fixInitialisms(goFieldName(discriminatorJSONName))
 
 	discValues := make([]string, 0, len(variants))
@@ -4636,7 +4646,7 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 			inner.Required = false
 			buf.WriteString(formatComment(inner.Description))
 			buf.WriteString("\n\t//\n")
-			for _, tag := range KubebuilderTags(&inner, nil) {
+			for _, tag := range kubebuilderTagsWith(&inner, nil, validation) {
 				fmt.Fprintf(&buf, "\t// %s\n", tag)
 			}
 			ptr := "*"
@@ -4918,7 +4928,7 @@ func anonymousUnionVariantTypeName(unionTypeName, fieldName string) string {
 // the variant list from the schema's DiscriminatorMapping.
 func (g *Generator) emitDiscriminatedUnionType(goName string, schema *parser.Schema) string {
 	variants := g.buildUnionVariants(buildRootUnionProperty(schema), goName)
-	return emitDiscriminatedUnionCode(goName, goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)), variants)
+	return emitDiscriminatedUnionCode(goName, goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)), variants, g.config.Validation)
 }
 
 // emitAnyOfUnionType emits Go source for a ROOT-LEVEL anyOf schema without a

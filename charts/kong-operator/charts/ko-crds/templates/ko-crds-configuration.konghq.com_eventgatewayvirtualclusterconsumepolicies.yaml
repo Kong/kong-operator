@@ -81,10 +81,15 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                           partOfRecord:
                             items:
+                              enum:
+                              - key
+                              - value
                               type: string
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -134,6 +139,8 @@ spec:
                                       required:
                                       - match
                                       type: object
+                                    maxItems: 50
+                                    minItems: 1
                                     type: array
                                   expression:
                                     type: string
@@ -174,6 +181,7 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                         required:
                         - decryptFields
@@ -233,6 +241,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       type: string
@@ -365,6 +375,7 @@ spec:
                               - strategy
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -434,6 +445,7 @@ spec:
                               required:
                               - op
                               type: object
+                            minItems: 1
                             type: array
                         type: object
                       description:

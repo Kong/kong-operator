@@ -135,7 +135,10 @@ spec:
                     type: object
                   bootstrapServers:
                     items:
+                      minLength: 1
+                      pattern: ^(([a-zA-Z0-9\.\-]+)|\[([a-fA-F0-9:]+)\]):\d+$
                       type: string
+                    minItems: 1
                     type: array
                   description:
                     maxLength: 512
@@ -259,6 +262,9 @@ spec:
                         type: string
                       tlsVersions:
                         items:
+                          enum:
+                          - tls12
+                          - tls13
                           type: string
                         type: array
                     required:

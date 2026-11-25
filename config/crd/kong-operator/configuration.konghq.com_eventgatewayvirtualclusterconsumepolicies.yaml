@@ -113,6 +113,7 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                           partOfRecord:
                             description: Describes the parts of a record to decrypt.
@@ -120,7 +121,11 @@ spec:
                               description: |-
                                 DecryptionRecordPart * key - decrypt the record key
                                 * value - decrypt the record value
+                              enum:
+                              - key
+                              - value
                               type: string
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -200,6 +205,8 @@ spec:
                                       required:
                                       - match
                                       type: object
+                                    maxItems: 50
+                                    minItems: 1
                                     type: array
                                   expression:
                                     description: Expression configuration.
@@ -272,6 +279,7 @@ spec:
                               required:
                               - type
                               type: object
+                            minItems: 1
                             type: array
                         required:
                         - decryptFields
@@ -387,6 +395,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       description: Expression configuration.
@@ -564,6 +574,7 @@ spec:
                               - strategy
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -663,6 +674,7 @@ spec:
                               required:
                               - op
                               type: object
+                            minItems: 1
                             type: array
                         type: object
                       description:

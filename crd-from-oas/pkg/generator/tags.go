@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -38,6 +39,11 @@ func jsonTagForProperty(prop *parser.Property) string {
 // (i.e. the parent-level cursor); the function advances it by the property's
 // JSON tag to locate any custom validations for that specific field.
 func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []string {
+	return kubebuilderTagsWith(prop, fieldCursor, config.ValidationConfig{})
+}
+
+// kubebuilderTagsWith is KubebuilderTags with the opted-in validations.
+func kubebuilderTagsWith(prop *parser.Property, fieldCursor *config.FieldConfig, validation config.ValidationConfig) []string {
 	var tags []string
 
 	// Required validation
@@ -111,6 +117,9 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 		if prop.MaxItems != nil {
 			tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
 		}
+		if validation.ArrayConstraints {
+			tags = append(tags, arrayConstraintTags(prop)...)
+		}
 		// else {
 		// TODO: Don't change just yet.
 		// tags = append(tags, markerValidationMaxItems(defaultMaxItems))
@@ -118,6 +127,62 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 	}
 
 	return applyValidationOverrides(tags, fieldCursor.Sub(jsonTagForProperty(prop)))
+}
+
+// arrayConstraintTags returns minItems and, for inline scalar items, their
+// constraints. Named item types carry theirs on the type declaration.
+func arrayConstraintTags(prop *parser.Property) []string {
+	var tags []string
+	if prop.MinItems != nil {
+		tags = append(tags, markerValidationMinItems(int(*prop.MinItems)))
+	}
+	items := prop.Items
+	if items == nil {
+		return tags
+	}
+	// Named item types get only their enum, not their pattern or length.
+	// Exclusive bounds aren't parsed.
+	if items.RefName != "" {
+		return tags
+	}
+	var itemTags []string
+	switch items.Type {
+	case "string":
+		if items.MinLength != nil {
+			itemTags = append(itemTags, markerValidationMinLength(int(*items.MinLength)))
+		}
+		if items.MaxLength != nil {
+			itemTags = append(itemTags, markerValidationMaxLength(int(*items.MaxLength)))
+		}
+		if items.Pattern != "" {
+			itemTags = append(itemTags, markerValidationPattern(items.Pattern))
+		}
+		if values := enumMarkerValues(items.Enum); values != "" {
+			itemTags = append(itemTags, markerValidationEnum(values))
+		}
+	case "integer", "number":
+		if items.Minimum != nil {
+			itemTags = append(itemTags, markerValidationMinimum(*items.Minimum))
+		}
+		if items.Maximum != nil {
+			itemTags = append(itemTags, markerValidationMaximum(*items.Maximum))
+		}
+	}
+	for _, t := range itemTags {
+		tags = append(tags, itemsMarker(t))
+	}
+	return tags
+}
+
+// enumMarkerValues returns the value of an Enum marker, or "".
+func enumMarkerValues(enum []any) string {
+	var values []string
+	for _, e := range enum {
+		if s, ok := e.(string); ok {
+			values = append(values, quoteEnumMarkerValue(s))
+		}
+	}
+	return strings.Join(values, ";")
 }
 
 // applyValidationOverrides replaces generated markers with field configuration.
@@ -197,4 +262,33 @@ func propertyToGoBaseType(prop *parser.Property) string {
 	default:
 		return "string"
 	}
+}
+
+// writeNamedTypeConstraintMarkers writes the enum or item counts of a named
+// type on its declaration, which also reaches arrays of it.
+func (g *Generator) writeNamedTypeConstraintMarkers(body *strings.Builder, schema *parser.Schema) {
+	for _, m := range g.namedTypeConstraintMarkers(schema) {
+		fmt.Fprintf(body, "//\n// %s\n", m)
+	}
+}
+
+func (g *Generator) namedTypeConstraintMarkers(schema *parser.Schema) []string {
+	if !g.config.Validation.ArrayConstraints {
+		return nil
+	}
+	var markers []string
+	switch schema.Type {
+	case "string":
+		if values := enumMarkerValues(schema.Enum); values != "" {
+			markers = append(markers, markerValidationEnum(values))
+		}
+	case "array":
+		if schema.MinItems != nil {
+			markers = append(markers, markerValidationMinItems(int(*schema.MinItems)))
+		}
+		if schema.MaxItems != nil {
+			markers = append(markers, markerValidationMaxItems(int(*schema.MaxItems)))
+		}
+	}
+	return markers
 }

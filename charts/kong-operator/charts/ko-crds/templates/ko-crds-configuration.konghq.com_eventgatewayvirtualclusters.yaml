@@ -158,6 +158,7 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  minItems: 1
                                   type: array
                                 issuer:
                                   maxLength: 253
@@ -218,6 +219,7 @@ spec:
                                 - password
                                 - username
                                 type: object
+                              minItems: 1
                               type: array
                           required:
                           - mediation
@@ -273,6 +275,7 @@ spec:
                       required:
                       - type
                       type: object
+                    minItems: 1
                     type: array
                   description:
                     maxLength: 512
@@ -313,6 +316,7 @@ spec:
                                         required:
                                         - value
                                         type: object
+                                      minItems: 1
                                       type: array
                                   type: object
                                 glob:
@@ -356,6 +360,7 @@ spec:
                                         required:
                                         - backend
                                         type: object
+                                      minItems: 1
                                       type: array
                                   type: object
                                 glob:

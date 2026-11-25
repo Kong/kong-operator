@@ -83,6 +83,8 @@ type EventGatewayListenerAPISpec struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:MinLength=1
 	Addresses []string `json:"addresses,omitempty"`
 
 	// A human-readable description of the listener.
@@ -117,6 +119,9 @@ type EventGatewayListenerAPISpec struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:XValidation:rule="self.all(p, type(p) != int || (p >= 1 && p <= 65535))",message="an integer port must be between 1 and 65535"
 	Ports []EventGatewayListenerPort `json:"ports,omitempty"`
 }
 
