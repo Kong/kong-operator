@@ -291,7 +291,7 @@ func TestUpdateKongVaultSyncGuard(t *testing.T) {
 	sdk.VaultSDK = vaultsSDK
 	sdk.DPNodesSDK = version.sdk
 
-	cs := programmedConfigStore("tls-cert-keys", "kong", configStoreID)
+	cs := programmedConfigStore("vault-sync-config-store", "vault-ns", configStoreID)
 	cl := fake.NewClientBuilder().
 		WithScheme(configStoreRefScheme(t)).
 		WithObjects(cs).
