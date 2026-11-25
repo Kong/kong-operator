@@ -160,7 +160,7 @@
   a value, such as `paths` of type `expression` without an `expression`. A
   value that names a sibling key, such as a SASL username `password` or a
   topic alias `topic`, no longer breaks the conversion of its entity.
-  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
+  [#6830](https://github.com/Kong/kong-operator/pull/6830)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that
