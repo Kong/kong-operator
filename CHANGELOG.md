@@ -86,6 +86,7 @@
   key deleted and created again no longer gets the fingerprint of the value
   of the one it replaces, which stopped the push of its gateway for good.
   [#6764](https://github.com/Kong/kong-operator/pull/6764)
+  [#6794](https://github.com/Kong/kong-operator/pull/6794)
 
 ## [v2.4.0]
 
