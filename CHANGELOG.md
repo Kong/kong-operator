@@ -142,6 +142,10 @@
   still trusts any certificate they register: revoking the data planes of a
   namespace takes deleting that grant too.
   [#6762](https://github.com/Kong/kong-operator/pull/6762)
+- An explicit `maxRequestBodySize: 0` (unlimited) on `AIGatewayAgent`,
+  `AIGatewayMCPServer` and `AIGatewayModel` is now sent to Konnect and on-prem
+  AI Gateways. Before, the operator dropped it, and the 8 MiB default applied.
+  [#6788](https://github.com/Kong/kong-operator/pull/6788)
 
 ## [v2.4.0]
 

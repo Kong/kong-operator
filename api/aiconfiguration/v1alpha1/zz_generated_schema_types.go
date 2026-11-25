@@ -3671,7 +3671,7 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -4074,7 +4074,7 @@ type AIGatewayMCPServerListenerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -5371,7 +5371,7 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -5869,7 +5869,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -6025,7 +6025,7 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -6349,7 +6349,7 @@ type AIGatewayModelAPIConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -7965,7 +7965,7 @@ type AIGatewayModelModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	//
 	//
 	// +optional
