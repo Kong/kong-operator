@@ -484,8 +484,6 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
-                    required:
-                    - url
                     type: object
                   displayName:
                     maxLength: 256
@@ -714,9 +712,6 @@ spec:
                     properties:
                       config:
                         properties:
-                          anonymous:
-                            maxLength: 253
-                            type: string
                           hideCredentials:
                             enum:
                             - Enabled
@@ -759,6 +754,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -1576,6 +1572,7 @@ spec:
                             - Disabled
                             type: string
                           leeway:
+                            minimum: 0
                             type: number
                           loginAction:
                             enum:
@@ -1661,6 +1658,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -2197,6 +2195,7 @@ spec:
                             - Disabled
                             type: string
                           timeout:
+                            minimum: 0
                             type: number
                           tlsClientAuthCertID:
                             maxLength: 253
@@ -6390,7 +6389,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -7093,8 +7091,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                        required:
-                        - url
                         type: object
                       datastores:
                         items:
@@ -9543,7 +9539,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -10508,7 +10503,6 @@ spec:
                         required:
                         - route
                         - toolsCacheTtlSeconds
-                        - url
                         type: object
                       datastores:
                         items:
@@ -66281,6 +66275,13 @@ spec:
                     type: object
                   theme:
                     properties:
+                      borderRadius:
+                        enum:
+                        - soft
+                        - sharp
+                        - round
+                        maxLength: 253
+                        type: string
                       colors:
                         properties:
                           primary:
@@ -66652,8 +66653,41 @@ spec:
                             minLength: 1
                             type: string
                           clientSecret:
-                            maxLength: 253
-                            type: string
+                            properties:
+                              secretRef:
+                                properties:
+                                  key:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           issuerURL:
                             maxLength: 253
                             minLength: 1
@@ -66664,6 +66698,7 @@ spec:
                             type: array
                         required:
                         - clientID
+                        - clientSecret
                         - issuerURL
                         type: object
                       saml:

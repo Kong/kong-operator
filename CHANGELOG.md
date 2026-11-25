@@ -73,6 +73,26 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- `PortalIdentityProviderRequest` `spec.apiSpec.config.oidc.clientSecret` is
+  now required and is an object, not a string. Change
+  `clientSecret: <secret>` to `clientSecret: {type: inline, value: <secret>}`,
+  or use `type: secretRef` with `secretRef` to read it from a Kubernetes
+  Secret. Konnect also requires `scopes`, when set, to include `openid`.
+  The Go type `PortalOIDCIdentityProviderConfig` is renamed to
+  `CreateOIDCIdentityProviderConfig`.
+  [#6787](https://github.com/Kong/kong-operator/pull/6787)
+- The `AIGatewayAuthStrategy` CRD now matches the validation that Konnect
+  already applies: key-auth entries no longer accept the read-only
+  `spec.apiSpec.key-auth.config.anonymous`, `principals.directory` must match
+  `^[a-zA-Z0-9_-]+$`, and openid-connect `leeway` and `timeout` must not be
+  negative. Remove `anonymous` from manifests before upgrading. The Go types
+  `AIGWKeyAuthGeneratedConfig*` and `AIGWOpenIDConnectGeneratedConfig*` are
+  renamed to `AIGatewayAuthStrategyKeyAuthConfig*` and
+  `AIGatewayAuthStrategyOpenIDConnectConfig*`.
+  [#6787](https://github.com/Kong/kong-operator/pull/6787)
+
 ### Added
 
 - Added the `condition` field to `KongPlugin` and `KongClusterPlugin`. It sets the
@@ -97,6 +117,12 @@
 
 ### Changed
 
+- The operator now uses the internal Konnect SDK (`sdk-konnect-go-internal`),
+  so later releases can support Konnect APIs before they are public.
+  `AIGatewayAgent` and `AIGatewayMCPServer` no longer require
+  `spec.apiSpec.config.url`, and `PortalCustomization` gains
+  `spec.apiSpec.theme.borderRadius`.
+  [#6787](https://github.com/Kong/kong-operator/pull/6787)
 - Konnect: Kong Gateway entities are no longer PUT to Konnect on every sync
   period. The operator sends a PUT only when the entity's desired state changes
   in Kubernetes, including referenced objects such as KongPlugins and Secrets.

@@ -3,6 +3,7 @@ package konnect
 import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 // sensitiveDataSecretRefs returns the sensitive-data Secret references
@@ -20,6 +21,15 @@ func sensitiveDataSecretRefs(ent any) ([]configurationv1alpha1.SensitiveDataSecr
 		return r.GetSensitiveDataSecretRefs(), true
 	case interface {
 		GetSensitiveDataSecretRefs() []aiconfigurationv1alpha1.SensitiveDataSecretRef
+	}:
+		refs := r.GetSensitiveDataSecretRefs()
+		out := make([]configurationv1alpha1.SensitiveDataSecretRef, len(refs))
+		for i, x := range refs {
+			out[i] = configurationv1alpha1.SensitiveDataSecretRef(x)
+		}
+		return out, true
+	case interface {
+		GetSensitiveDataSecretRefs() []konnectv1alpha1.SensitiveDataSecretRef
 	}:
 		refs := r.GetSensitiveDataSecretRefs()
 		out := make([]configurationv1alpha1.SensitiveDataSecretRef, len(refs))

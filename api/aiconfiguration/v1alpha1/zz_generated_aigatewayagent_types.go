@@ -207,7 +207,7 @@ type AIGatewayAgentConfig struct {
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`

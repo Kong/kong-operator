@@ -25,7 +25,7 @@ func testPortalIdentityProviderRequestOIDC() *konnectv1alpha1.PortalIdentityProv
 				Type: "oidc",
 				Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
 					Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
-					OIDC: &konnectv1alpha1.PortalOIDCIdentityProviderConfig{
+					OIDC: &konnectv1alpha1.CreateOIDCIdentityProviderConfig{
 						IssuerURL: "https://idp.example.com",
 						ClientID:  "client-1",
 					},
@@ -50,7 +50,7 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 						ID:   new("idp-other"),
 						Type: sdkkonnectcomp.IdentityProviderTypeOidc.ToPointer(),
 						Config: &sdkkonnectcomp.PortalIdentityProviderConfig{
-							PortalOIDCIdentityProviderConfigOutput: &sdkkonnectcomp.PortalOIDCIdentityProviderConfigOutput{
+							PortalOIDCIdentityProviderConfig: &sdkkonnectcomp.PortalOIDCIdentityProviderConfig{
 								IssuerURL: "https://other.example.com",
 								ClientID:  "client-2",
 							},
@@ -60,7 +60,7 @@ func TestGetPortalIdentityProviderRequestForUID(t *testing.T) {
 						ID:   new("idp-1"),
 						Type: sdkkonnectcomp.IdentityProviderTypeOidc.ToPointer(),
 						Config: &sdkkonnectcomp.PortalIdentityProviderConfig{
-							PortalOIDCIdentityProviderConfigOutput: &sdkkonnectcomp.PortalOIDCIdentityProviderConfigOutput{
+							PortalOIDCIdentityProviderConfig: &sdkkonnectcomp.PortalOIDCIdentityProviderConfig{
 								IssuerURL: "https://idp.example.com",
 								ClientID:  "client-1",
 							},
