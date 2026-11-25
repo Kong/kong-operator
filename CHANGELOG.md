@@ -153,7 +153,7 @@
   a one-character name is refused). An inline sensitive value
   (`type: inline`), such as a static key, a trust bundle CA, a schema registry
   password or a TLS certificate or key, must not be empty.
-  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
+  [#6826](https://github.com/Kong/kong-operator/pull/6826)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that
