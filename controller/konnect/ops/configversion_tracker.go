@@ -4,10 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"strings"
 	"sync"
 	"time"
 
@@ -24,16 +21,6 @@ const (
 	// versionReadTimeout bounds the config version read performed around a write.
 	// It is deliberately independent from the write request's timeout.
 	versionReadTimeout = 2 * time.Second
-
-	// SyncHashVersion is the version of the payload and representation hash
-	// scheme persisted in a status.SyncStatus.
-	//
-	// Bump it whenever the canonicalization or hashing changes. Entities whose
-	// persisted hashes carry a different version are treated as unverified and
-	// sent to Konnect once more.
-	SyncHashVersion = "v1"
-
-	hashPrefix = "sha256:"
 )
 
 // ConfigVersionTracker avoids enforcing unchanged Kong Gateway entities in Konnect on every sync period.
@@ -89,25 +76,6 @@ type controlPlaneConfigVersion struct {
 	changedAt      time.Time
 	ownWrite       bool
 	writesInFlight int
-}
-
-type hash [sha256.Size]byte
-
-func (h hash) String() string {
-	return hashPrefix + hex.EncodeToString(h[:])
-}
-
-func parseHash(s string) (hash, bool) {
-	if !strings.HasPrefix(s, hashPrefix) {
-		return hash{}, false
-	}
-	b, err := hex.DecodeString(strings.TrimPrefix(s, hashPrefix))
-	if err != nil || len(b) != sha256.Size {
-		return hash{}, false
-	}
-	var h hash
-	copy(h[:], b)
-	return h, true
 }
 
 type entitySyncRecord struct {
@@ -584,70 +552,4 @@ func upsertUnlessInSync[E any](
 	g.pending = &rec
 	g.outcome = syncOutcomeSent
 	return nil
-}
-
-func hashJSON(v any) (hash, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return hash{}, err
-	}
-	return sha256.Sum256(b), nil
-}
-
-// entityPayloadHash hashes the desired Konnect request together with the control
-// plane and entity identifiers so changes to either invalidate the cached hash.
-func entityPayloadHash(controlPlaneID, konnectID string, payload any) (hash, error) {
-	return hashJSON(struct {
-		ControlPlaneID string `json:"control_plane_id"`
-		ID             string `json:"id"`
-		Payload        any    `json:"payload"`
-	}{controlPlaneID, konnectID, payload})
-}
-
-// representationHash hashes the Konnect representation of an entity, ignoring the fields that Konnect
-// changes without the entity changing.
-func representationHash(v any) (hash, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return hash{}, err
-	}
-	var m any
-	if err := json.Unmarshal(b, &m); err != nil {
-		return hash{}, err
-	}
-	return hashJSON(canonicalizeRepresentation(m))
-}
-
-// canonicalizeRepresentation makes a Konnect representation stable across
-// equivalent responses: object keys are sorted by encoding/json, and fields
-// Konnect changes without the entity changing are removed recursively.
-func canonicalizeRepresentation(v any) any {
-	switch value := v.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(value))
-		for k, child := range value {
-			if isVolatileRepresentationField(k) {
-				continue
-			}
-			out[k] = canonicalizeRepresentation(child)
-		}
-		return out
-	case []any:
-		out := make([]any, len(value))
-		for i, child := range value {
-			out[i] = canonicalizeRepresentation(child)
-		}
-		return out
-	default:
-		return value
-	}
-}
-
-func isVolatileRepresentationField(key string) bool {
-	switch key {
-	case "created_at", "updated_at":
-		return true
-	default:
-		return false
-	}
 }
