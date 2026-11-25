@@ -2548,9 +2548,10 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	isSensitive := g.isSchemaFieldSensitiveLeaf(typeName, jsonFieldName)
 	// Ref-ified shared schema-type field: emitted as a slice of the generated ref
 	// struct, which carries its own item-level validation. Mirror generateCRDType:
-	// suppress OAS-derived item string markers, keep only required/optional and the
+	// suppress OAS-derived item string markers, keep required/optional, the
 	// array-level MaxItems bound (unbounded slices of CEL-validated structs can blow
-	// the per-CRD cost budget), and swap the element type for the ref struct.
+	// the per-CRD cost budget) and, with arrayConstraints on, the MinItems bound,
+	// and swap the element type for the ref struct.
 	refTypeName := g.schemaTypeRefFields()[typeName][jsonFieldName]
 
 	description := prop.Description

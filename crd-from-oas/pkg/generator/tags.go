@@ -117,13 +117,13 @@ func kubebuilderTagsWith(prop *parser.Property, fieldCursor *config.FieldConfig,
 		if prop.MaxItems != nil {
 			tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
 		}
-		if validation.ArrayConstraints {
-			tags = append(tags, arrayConstraintTags(prop)...)
-		}
 		// else {
 		// TODO: Don't change just yet.
 		// tags = append(tags, markerValidationMaxItems(defaultMaxItems))
 		// }
+		if validation.ArrayConstraints {
+			tags = append(tags, arrayConstraintTags(prop)...)
+		}
 	}
 
 	return applyValidationOverrides(tags, fieldCursor.Sub(jsonTagForProperty(prop)))
@@ -140,8 +140,9 @@ func arrayConstraintTags(prop *parser.Property) []string {
 	if items == nil {
 		return tags
 	}
-	// Named item types get only their enum, not their pattern or length.
-	// Exclusive bounds aren't parsed.
+	// Named item types get nothing here: their enum is on the type
+	// declaration, and their pattern and length are never emitted. Exclusive
+	// bounds aren't parsed.
 	if items.RefName != "" {
 		return tags
 	}
