@@ -1,0 +1,9 @@
+# The data plane keg_dp_name of the namespace dp_namespace is Ready.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+  namespace: ($dp_namespace)
+status:
+  (conditions[?type == 'Ready']):
+    - status: "True"

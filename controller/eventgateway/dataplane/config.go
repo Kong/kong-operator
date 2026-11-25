@@ -169,11 +169,7 @@ var config = shareddataplane.Config[
 		BuildContainer:        buildContainer,
 		Customize:             customizeDeployment,
 		ControlPlaneGone:      releaseDeploymentFromGWAdmin,
-		// The owner of the gateway revoked the trust of a data plane of
-		// another namespace: its certificates are removed, against Konnect
-		// as against an OnPremEventGateway, so that it no longer connects.
-		ControlPlaneNotPermitted: revokeCertificates,
-		IgnoredSettings:          ignoredKEGSettings,
+		IgnoredSettings:       ignoredKEGSettings,
 
 		TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 	},
@@ -668,11 +664,23 @@ func (r *Reconciler) cleanupStaleCertificates(
 // certificate, against Konnect as against an OnPremEventGateway, which only
 // leaves it out of its configuration. Once a KongReferenceGrant lets it in
 // again, its certificate is created again.
-func revokeCertificates(ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) error {
+// Of an OnPremEventGateway, it also deletes the client certificate Secrets the
+// operator created (see deleteOnPremCertificateSecrets). That only tidies up:
+// the owner of the data plane can read them, and keep a copy of a key, before
+// the revocation. A KongReferenceGrant letting the
+// EventGatewayDataPlaneCertificates of its namespace reference the gateway
+// still trusts any certificate they register, such a copy too: revoking the
+// data planes of a namespace takes deleting that grant as well.
+func (r *Reconciler) revokeCertificates(ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) error {
 	if err := shareddataplane.CleanupStaleKonnectCertificates(ctx, cl, logr.Discard(), egdp,
 		&configurationv1alpha1.EventGatewayDataPlaneCertificateList{}, "EventGatewayDataPlaneCertificate", "",
 	); err != nil {
 		return err
+	}
+	if egdp.Spec.ControlPlaneRef.OnPremNamespacedRef != nil {
+		if err := r.deleteOnPremCertificateSecrets(ctx, cl, egdp); err != nil {
+			return err
+		}
 	}
 	return releaseDeploymentFromGWAdmin(ctx, cl, egdp)
 }
