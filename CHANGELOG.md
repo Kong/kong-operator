@@ -139,7 +139,7 @@
   persists sync state in `status.sync`, skipping periodic PUT requests for
   unchanged vaults and verifying them with a GET across restarts or leader
   changes.
-  [#6765](https://github.com/Kong/kong-operator/issues/6765)
+  [#6828](https://github.com/Kong/kong-operator/pull/6828)
 
 ### Fixes
 
