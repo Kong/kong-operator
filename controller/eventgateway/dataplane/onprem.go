@@ -360,29 +360,6 @@ func (c onPremCertificate) renewalTime() time.Time {
 	return pki.RenewalTime(c.issuedAt, c.cert.NotAfter)
 }
 
-// onPremCertificateLabels returns the labels of the client certificate
-// Secrets of a data plane of an OnPremEventGateway.
-func (r *Reconciler) onPremCertificateLabels(egdp *eventgatewayv1alpha1.KegDataPlane) client.MatchingLabels {
-	labels := k8sresources.GetManagedLabelForOwner(egdp)
-	labels[consts.SecretProvisioningLabelKey] = consts.SecretProvisioningAutomaticLabelValue
-	labels[consts.SecretKEGDataPlaneCertificateLabel] = "true"
-	if r.SecretLabelSelector != "" {
-		labels[r.SecretLabelSelector] = "true"
-	}
-	return labels
-}
-
-// listOnPremCertificates lists the client certificate Secrets of a data
-// plane of an OnPremEventGateway: the current one, and those it replaced,
-// kept until the Deployment rolled out onto it.
-func (r *Reconciler) listOnPremCertificates(ctx context.Context, cl client.Reader, egdp *eventgatewayv1alpha1.KegDataPlane) ([]corev1.Secret, error) {
-	owned, err := k8sutils.ListSecretsForOwner(ctx, cl, egdp.GetUID(), client.InNamespace(egdp.Namespace), r.onPremCertificateLabels(egdp))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list the mTLS certificate Secrets of %s/%s: %w", egdp.Namespace, egdp.Name, err)
-	}
-	return owned, nil
-}
-
 // issuedOnPremCertificates returns the certificates of the Secrets that ca
 // issued for the subject, but those being deleted.
 func issuedOnPremCertificates(owned []corev1.Secret, subject string, ca *x509.Certificate) []onPremCertificate {
@@ -594,7 +571,7 @@ func (r *Reconciler) currentOnPremCertificateOf(
 	ca *x509.Certificate,
 	now time.Time,
 ) ([]corev1.Secret, onPremCertificate, bool, error) {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
 	if err != nil {
 		return nil, onPremCertificate{}, false, err
 	}
@@ -699,7 +676,7 @@ func (r *Reconciler) createOnPremCertificate(
 		return nil, errors.New("the certificate issued can't be parsed")
 	}
 	secret := k8sresources.GenerateNewTLSSecret(egdp, func(s *corev1.Secret) {
-		maps.Copy(s.Labels, r.onPremCertificateLabels(egdp))
+		maps.Copy(s.Labels, r.certificateSecretLabels(egdp))
 		s.Annotations = map[string]string{
 			onPremCertificateIssuedAtAnnotation: now.UTC().Format(time.RFC3339Nano),
 			consts.CertExpiresAtAnnotation:      certs[0].NotAfter.UTC().Format(time.RFC3339),
@@ -945,44 +922,6 @@ func (r *Reconciler) forgetDeletedDataPlanes(ctx context.Context, cl client.Clie
 	return nil
 }
 
-// deleteOnPremCertificateSecrets deletes the client certificate Secrets of a
-// data plane of an OnPremEventGateway the operator created: the Automatic ones
-// it issued, and its copies of the Manual ones. A Manual Secret of the user
-// stays. The Deployment, no longer reconciled while the data plane is revoked,
-// still mounts them: its running pods keep their certificate, which gw-admin no
-// longer trusts, and a pod started meanwhile waits for its Secret. Once a
-// KongReferenceGrant lets the data plane in again, a certificate is issued or
-// copied again, and the Deployment rolls out onto it.
-func (r *Reconciler) deleteOnPremCertificateSecrets(
-	ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane,
-) error {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
-	if err != nil {
-		return err
-	}
-	for i := range owned {
-		if err := cl.Delete(ctx, &owned[i]); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to delete the mTLS certificate Secret %s/%s of the revoked data plane %s/%s: %w",
-				owned[i].Namespace, owned[i].Name, egdp.Namespace, egdp.Name, err)
-		}
-	}
-	var copies corev1.SecretList
-	if err := cl.List(ctx, &copies, client.InNamespace(egdp.Namespace), client.MatchingLabels{secretCopyLabel: secretCopyManualCertificate}); err != nil {
-		return fmt.Errorf("failed to list the copies of the Manual client certificates of %s/%s: %w", egdp.Namespace, egdp.Name, err)
-	}
-	for i := range copies.Items {
-		copied := &copies.Items[i]
-		if !metav1.IsControlledBy(copied, egdp) {
-			continue
-		}
-		if err := cl.Delete(ctx, copied); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to delete the copy %s/%s of a Manual client certificate of the revoked data plane %s/%s: %w",
-				copied.Namespace, copied.Name, egdp.Namespace, egdp.Name, err)
-		}
-	}
-	return nil
-}
-
 // cleanupStaleOnPremCertificates deletes the client certificate Secrets of a
 // data plane of an OnPremEventGateway but the current one, once no
 // EventGatewayDataPlaneCertificate of the data plane references them
@@ -996,7 +935,7 @@ func (r *Reconciler) cleanupStaleOnPremCertificates(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	certChecksum string,
 ) error {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
 	if err != nil {
 		return err
 	}

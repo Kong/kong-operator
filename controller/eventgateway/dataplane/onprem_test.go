@@ -269,7 +269,7 @@ func resolveOnPremDependencies(t *testing.T, cl client.Client, gateway *eventgat
 // of the data plane.
 func certificateSecretNames(t *testing.T, cl client.Client, r *Reconciler, egdp *eventgatewayv1alpha1.KegDataPlane) []string {
 	t.Helper()
-	owned, err := r.listOnPremCertificates(t.Context(), cl, egdp)
+	owned, err := r.listCertificateSecrets(t.Context(), cl, egdp)
 	require.NoError(t, err)
 	names := make([]string, 0, len(owned))
 	for _, s := range owned {
@@ -602,7 +602,7 @@ func TestCreateOnPremCertificate(t *testing.T) {
 
 	require.Equal(t, corev1.SecretTypeTLS, secret.Type)
 	require.True(t, metav1.IsControlledBy(secret, egdp))
-	for k, v := range r.onPremCertificateLabels(egdp) {
+	for k, v := range r.certificateSecretLabels(egdp) {
 		require.Equal(t, v, secret.Labels[k], k)
 	}
 	require.Equal(t, []string{secret.Name}, certificateSecretNames(t, cl, r, egdp), "listed as a client certificate of the data plane")

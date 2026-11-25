@@ -664,23 +664,47 @@ func (r *Reconciler) cleanupStaleCertificates(
 // certificate, against Konnect as against an OnPremEventGateway, which only
 // leaves it out of its configuration. Once a KongReferenceGrant lets it in
 // again, its certificate is created again.
-// Of an OnPremEventGateway, it also deletes the client certificate Secrets the
-// operator created (see deleteOnPremCertificateSecrets). That only tidies up:
-// the owner of the data plane can read them, and keep a copy of a key, before
-// the revocation. A KongReferenceGrant letting the
+// It also deletes the client certificate Secrets the operator created (see
+// deleteCertificateSecrets), of Konnect as of an OnPremEventGateway. That
+// only tidies up: the owner of the data plane can read them, and keep a copy
+// of a key, before the revocation. A KongReferenceGrant letting the
 // EventGatewayDataPlaneCertificates of its namespace reference the gateway
 // still trusts any certificate they register, such a copy too: revoking the
 // data planes of a namespace takes deleting that grant as well.
+// The Secrets are deleted only once no certificate of the data plane is left:
+// the Konnect reconciler finds the entity of a certificate whose Konnect ID
+// was never persisted by the certificate read from its Secret, and, without
+// it, would drop its finalizer with the entity still trusted. The deletion of
+// the last certificate triggers the reconcile that deletes them.
 func (r *Reconciler) revokeCertificates(ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) error {
 	if err := shareddataplane.CleanupStaleKonnectCertificates(ctx, cl, logr.Discard(), egdp,
 		&configurationv1alpha1.EventGatewayDataPlaneCertificateList{}, "EventGatewayDataPlaneCertificate", "",
 	); err != nil {
 		return err
 	}
-	if egdp.Spec.ControlPlaneRef.OnPremNamespacedRef != nil {
-		if err := r.deleteOnPremCertificateSecrets(ctx, cl, egdp); err != nil {
+	left, err := certificatesLeft(ctx, cl, egdp)
+	if err != nil {
+		return err
+	}
+	if !left {
+		if err := r.deleteCertificateSecrets(ctx, cl, egdp); err != nil {
 			return err
 		}
 	}
 	return releaseDeploymentFromGWAdmin(ctx, cl, egdp)
+}
+
+// certificatesLeft tells whether an EventGatewayDataPlaneCertificate of the
+// data plane still exists, e.g. one being deleted, held by its finalizer.
+func certificatesLeft(ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) (bool, error) {
+	var certs configurationv1alpha1.EventGatewayDataPlaneCertificateList
+	if err := cl.List(ctx, &certs, client.InNamespace(egdp.Namespace)); err != nil {
+		return false, fmt.Errorf("failed to list the EventGatewayDataPlaneCertificates of %s/%s: %w", egdp.Namespace, egdp.Name, err)
+	}
+	for i := range certs.Items {
+		if metav1.IsControlledBy(&certs.Items[i], egdp) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
