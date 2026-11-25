@@ -91,6 +91,11 @@
   puts the per-request trace ID in the `Programmed` condition.
   [#6797](https://github.com/Kong/kong-operator/pull/6797)
   [#6817](https://github.com/Kong/kong-operator/pull/6817)
+- Konnect entities: when an entity is not found in Konnect and cannot be
+  created again because its parent no longer exists in Konnect, the operator
+  sets the `Programmed` condition to `False` with the `ParentNotFound` reason.
+  [#6798](https://github.com/Kong/kong-operator/pull/6798)
+  [#6818](https://github.com/Kong/kong-operator/pull/6818)
 
 ## [v2.4.0]
 
