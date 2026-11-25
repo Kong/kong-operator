@@ -146,7 +146,7 @@
   entries, and an integer port must be between 1 and 65535. A stored object
   holding a refused value can't change the list holding it until the value is
   fixed.
-  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
+  [#6823](https://github.com/Kong/kong-operator/pull/6823)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that
