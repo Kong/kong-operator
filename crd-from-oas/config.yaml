@@ -1287,6 +1287,8 @@ apiGroupVersions:
       arrayConstraints: true
       unicodePatterns: true
       inlineSensitiveValueLength: true
+      unionMemberRules: true
+    sdkUnionDiscriminators: [type, op, schemaType, outputFormat]
     # Don't generate groupversion_info.go for this API group — it is hand-written.
     # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
     generateGroupVersionInfo: false

@@ -60,6 +60,9 @@ type Config struct {
 	Categories []string
 	// Validation selects OAS validations emitted on top of the default ones.
 	Validation config.ValidationConfig
+	// SDKUnionDiscriminators, when set, are the only union discriminators of
+	// the conversion to SDK requests (see config.APIGroupVersionConfig).
+	SDKUnionDiscriminators []string
 	// SkipGetForUIDEntities is the set of entity names for which getForUID
 	// generation should be skipped (e.g. because a hand-written implementation
 	// already exists in an ops_<entity>_manual.go file).
@@ -3920,10 +3923,14 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string,
 
 // unionVariant holds the generated names for one union variant.
 type unionVariant struct {
-	discValue  string           // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const.
-	fieldName  string           // Go field name used by the wrapper.
-	goTypeName string           // Go type name used by the wrapper field.
-	source     *parser.Property // Original property schema, used for anonymous inline members.
+	discValue string // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const.
+	refName   string // OAS schema of the member, when it is a $ref.
+	// requiresMember tells the member must be set when its type is: its
+	// schema has required fields, or the arm is flattened onto a value.
+	requiresMember bool
+	fieldName      string           // Go field name used by the wrapper.
+	goTypeName     string           // Go type name used by the wrapper field.
+	source         *parser.Property // Original property schema, used for anonymous inline members.
 	// flattened is true when this anonymous variant's single nested property is
 	// used directly as the wrapper field's type instead of a synthetic
 	// single-field wrapper struct (avoids e.g. route.model.pathAliases.pathAliases).
@@ -4048,9 +4055,11 @@ func (g *Generator) buildUnionVariants(prop *parser.Property, unionTypeName stri
 		for i, v := range values {
 			refName := prop.DiscriminatorMapping[v]
 			variants = append(variants, unionVariant{
-				discValue:  v,
-				fieldName:  fixInitialisms(goFieldName(fieldNames[i])),
-				goTypeName: fixInitialisms(refName),
+				discValue:      v,
+				refName:        refName,
+				fieldName:      fixInitialisms(goFieldName(fieldNames[i])),
+				goTypeName:     fixInitialisms(refName),
+				requiresMember: g.unionMemberHasRequiredFields(refName, nil, prop.Discriminator),
 			})
 		}
 		return variants
@@ -4103,12 +4112,14 @@ func (g *Generator) buildUnionVariants(prop *parser.Property, unionTypeName stri
 
 		variants = append(variants, unionVariant{
 			discValue:        discValues[i],
+			refName:          v.RefName,
 			fieldName:        fieldName,
 			goTypeName:       goTypeName,
 			source:           v,
 			flattened:        flattened,
 			flattenedNilable: flattenedNilable,
 			flattenedInner:   flattenedInner,
+			requiresMember:   flattened || g.unionMemberHasRequiredFields(v.RefName, v, prop.Discriminator),
 		})
 	}
 	return variants
@@ -4121,6 +4132,7 @@ func (g *Generator) generateUnionType(prop *parser.Property, typeNamePrefix stri
 	typeName := generatedUnionTypeName(prop, typeNamePrefix)
 	variants := g.buildUnionVariants(prop, typeName)
 	g.applyFlattenedVariantRefTypes(typeName, variants)
+	g.checkSDKUnionDiscriminator(typeName, unionDiscriminatorJSONName(prop))
 	return emitDiscriminatedUnionCode(typeName, prop.Name, unionDiscriminatorJSONName(prop), variants, g.config.Validation)
 }
 
@@ -4617,15 +4629,22 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "// %s represents a union type for %s.\n", typeName, propName)
 	fmt.Fprintf(&buf, "// Only one of the fields should be set based on the %s.\n", discriminatorFieldName)
 	buf.WriteString("//\n")
-	if shouldEmitTypeMatchCEL(typeName) {
+	if typeMatchCEL := shouldEmitTypeMatchCEL(typeName); typeMatchCEL || validation.UnionMemberRules {
 		for _, v := range variants {
 			camelDiscValue := jsonName(v.discValue)
 			rule := fmt.Sprintf("self.%s == '%s' ? has(self.%s) : !has(self.%s)", discriminatorJSONName, camelDiscValue, camelDiscValue, camelDiscValue)
+			message := fmt.Sprintf("%s must be set only when %s is %s", camelDiscValue, discriminatorJSONName, camelDiscValue)
+			switch {
+			case !typeMatchCEL && !v.requiresMember:
+				// A member without required fields may be left out.
+				rule = fmt.Sprintf("!has(self.%s) || self.%s == '%s'", camelDiscValue, discriminatorJSONName, camelDiscValue)
+			case !typeMatchCEL:
+				message = fmt.Sprintf("%s must be set when %s is %s, and only then", camelDiscValue, discriminatorJSONName, camelDiscValue)
+			}
 			if legacyOptional {
 				rule = fmt.Sprintf("!has(self.%s) || (%s)", discriminatorJSONName, rule)
 			}
-			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=%q,message=\"%s must be set only when %s is %s\"\n",
-				rule, camelDiscValue, discriminatorJSONName, camelDiscValue)
+			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=%q,message=%q\n", rule, message)
 		}
 	}
 	fmt.Fprintf(&buf, "type %s struct {\n", typeName)
@@ -4782,6 +4801,83 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	return buf.String()
 }
 
+// unionMemberHasRequiredFields tells the schema of a union member, named by
+// refName or inline in source, is a plain value (the member is the value
+// itself) or has a required field other than the discriminator.
+func (g *Generator) unionMemberHasRequiredFields(refName string, source *parser.Property, discriminator string) bool {
+	if discriminator == "" {
+		discriminator = "type"
+	}
+	var props []*parser.Property
+	var required []string
+	var schemaType string
+	if refName != "" && g.parsed != nil {
+		if schema, ok := g.parsed.Schemas[refName]; ok {
+			props, required, schemaType = schema.Properties, schema.Required, schema.Type
+		}
+	} else if source != nil {
+		props, schemaType = source.Properties, source.Type
+	}
+	switch schemaType {
+	case "array", "string", "integer", "number", "boolean":
+		return true
+	}
+	for _, name := range required {
+		if name != discriminator {
+			return true
+		}
+	}
+	for _, p := range props {
+		if p.Required && p.Name != discriminator {
+			return true
+		}
+	}
+	return false
+}
+
+// sdkUnionDiscriminatorKeys returns the discriminators along with their
+// snake_case forms: the flattening runs both before and after the keys are
+// renamed to the SDK's.
+func sdkUnionDiscriminatorKeys(discriminators []string) []string {
+	keys := make([]string, 0, 2*len(discriminators))
+	for _, d := range discriminators {
+		keys = append(keys, d)
+		if s := camelToSnakeCase(d); s != d {
+			keys = append(keys, s)
+		}
+	}
+	return keys
+}
+
+// camelToSnakeCase is the camelToSnakeCase of the generated code, which
+// renames keys to the SDK's: a test of the generated code pins them.
+func camelToSnakeCase(s string) string {
+	var buf []byte
+	for i := range len(s) {
+		c := s[i]
+		if c >= 'A' && c <= 'Z' {
+			if i > 0 && (s[i-1] >= 'a' && s[i-1] <= 'z' ||
+				(i+1 < len(s) && s[i+1] >= 'a' && s[i+1] <= 'z')) {
+				buf = append(buf, '_')
+			}
+			buf = append(buf, c+('a'-'A'))
+		} else {
+			buf = append(buf, c)
+		}
+	}
+	return string(buf)
+}
+
+// checkSDKUnionDiscriminator panics when the group lists its union
+// discriminators and the union typeName uses another one: its conversion to
+// SDK requests would never flatten it.
+func (g *Generator) checkSDKUnionDiscriminator(typeName, discriminator string) {
+	if len(g.config.SDKUnionDiscriminators) == 0 || slices.Contains(g.config.SDKUnionDiscriminators, discriminator) {
+		return
+	}
+	panic(fmt.Sprintf("union %s uses the discriminator %q, which sdkUnionDiscriminators of its API group doesn't list", typeName, discriminator))
+}
+
 func shouldEmitTypeMatchCEL(typeName string) bool {
 	switch typeName {
 	case "EncryptionKey", "EventGatewayEncryptConfigEncryptionKey",
@@ -4934,6 +5030,7 @@ func anonymousUnionVariantTypeName(unionTypeName, fieldName string) string {
 // the variant list from the schema's DiscriminatorMapping.
 func (g *Generator) emitDiscriminatedUnionType(goName string, schema *parser.Schema) string {
 	variants := g.buildUnionVariants(buildRootUnionProperty(schema), goName)
+	g.checkSDKUnionDiscriminator(goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)))
 	return emitDiscriminatedUnionCode(goName, goName, unionDiscriminatorJSONName(buildRootUnionProperty(schema)), variants, g.config.Validation)
 }
 
@@ -5101,6 +5198,8 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		SensitiveDataSourceTypeValidations      []string
 		SensitiveDataSourceSecretRefValidations []string
 
+		SDKUnionDiscriminators []string
+
 		HasConfigMapRefEntities                    bool
 		ConfigMapDataSourceValueMaxLength          int
 		ConfigMapDataSourceTypeValidations         []string
@@ -5116,6 +5215,8 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		SensitiveDataSourceValueMaxLength:       sensitiveDataSourceValueMaxLength,
 		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
 		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),
+
+		SDKUnionDiscriminators: sdkUnionDiscriminatorKeys(g.config.SDKUnionDiscriminators),
 
 		HasConfigMapRefEntities:                    g.hasAnyConfigMapRefs(),
 		ConfigMapDataSourceValueMaxLength:          configMapDataSourceValueMaxLength,

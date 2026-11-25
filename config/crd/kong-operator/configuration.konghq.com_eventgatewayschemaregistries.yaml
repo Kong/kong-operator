@@ -170,6 +170,10 @@ spec:
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: basic must be set when type is basic, and only
+                                then
+                              rule: 'self.type == ''basic'' ? has(self.basic) : !has(self.basic)'
                           endpoint:
                             description: The endpoint of the Confluent schema registry.
                             maxLength: 253
@@ -235,6 +239,10 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: confluent must be set when type is confluent, and only
+                    then
+                  rule: 'self.type == ''confluent'' ? has(self.confluent) : !has(self.confluent)'
               gatewayRef:
                 description: |-
                   GatewayRef is the reference to the parent Gateway object.

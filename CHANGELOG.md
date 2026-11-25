@@ -154,6 +154,13 @@
   (`type: inline`), such as a static key, a trust bundle CA, a schema registry
   password or a TLS certificate or key, must not be empty.
   [#6826](https://github.com/Kong/kong-operator/pull/6826)
+- Event Gateway CRDs: a union refuses a member other than the one its `type`
+  names, such as an `encrypt` block in a `modifyHeaders` policy, which was
+  ignored, and refuses a missing member that has required fields or is itself
+  a value, such as `paths` of type `expression` without an `expression`. A
+  value that names a sibling key, such as a SASL username `password` or a
+  topic alias `topic`, no longer breaks the conversion of its entity.
+  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that

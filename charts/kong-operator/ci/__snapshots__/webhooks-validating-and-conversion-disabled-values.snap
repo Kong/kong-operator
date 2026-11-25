@@ -40575,6 +40575,11 @@ spec:
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: assumeRole must be set when type is assumeRole, and only then
+                              rule: 'self.type == ''assumeRole'' ? has(self.assumeRole) : !has(self.assumeRole)'
+                            - message: defaultProviderChain must be set only when type is defaultProviderChain
+                              rule: '!has(self.defaultProviderChain) || self.type == ''defaultProviderChain'''
                         required:
                         - saslAwsIam
                         type: object
@@ -40625,6 +40630,15 @@ spec:
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: anonymous must be set only when type is anonymous
+                      rule: '!has(self.anonymous) || self.type == ''anonymous'''
+                    - message: saslAwsIam must be set when type is saslAwsIam, and only then
+                      rule: 'self.type == ''saslAwsIam'' ? has(self.saslAwsIam) : !has(self.saslAwsIam)'
+                    - message: saslPlain must be set when type is saslPlain, and only then
+                      rule: 'self.type == ''saslPlain'' ? has(self.saslPlain) : !has(self.saslPlain)'
+                    - message: saslScram must be set when type is saslScram, and only then
+                      rule: 'self.type == ''saslScram'' ? has(self.saslScram) : !has(self.saslScram)'
                   bootstrapServers:
                     items:
                       minLength: 1
@@ -41281,6 +41295,11 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: portMapping must be set when type is portMapping, and only then
+                          rule: 'self.type == ''portMapping'' ? has(self.portMapping) : !has(self.portMapping)'
+                        - message: sni must be set only when type is sni
+                          rule: '!has(self.sni) || self.type == ''sni'''
                       description:
                         maxLength: 512
                         type: string
@@ -41483,6 +41502,11 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: forwardToVirtualCluster must be set when type is forwardToVirtualCluster, and only then
+                  rule: 'self.type == ''forwardToVirtualCluster'' ? has(self.forwardToVirtualCluster) : !has(self.forwardToVirtualCluster)'
+                - message: tlsServer must be set when type is tlsServer, and only then
+                  rule: 'self.type == ''tlsServer'' ? has(self.tlsServer) : !has(self.tlsServer)'
               eventGatewayListenerRef:
                 properties:
                   konnectID:
@@ -42144,6 +42168,9 @@ spec:
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: basic must be set when type is basic, and only then
+                              rule: 'self.type == ''basic'' ? has(self.basic) : !has(self.basic)'
                           endpoint:
                             maxLength: 253
                             minLength: 1
@@ -42191,6 +42218,9 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: confluent must be set when type is confluent, and only then
+                  rule: 'self.type == ''confluent'' ? has(self.confluent) : !has(self.confluent)'
               gatewayRef:
                 properties:
                   konnectID:
@@ -42951,6 +42981,11 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: aws must be set only when type is aws
+                                rule: '!has(self.aws) || self.type == ''aws'''
+                              - message: static must be set only when type is static
+                                rule: '!has(self.static) || self.type == ''static'''
                             minItems: 1
                             type: array
                           partOfRecord:
@@ -43024,6 +43059,11 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: array must be set when type is array, and only then
+                                  rule: 'self.type == ''array'' ? has(self.array) : !has(self.array)'
+                                - message: expression must be set when type is expression, and only then
+                                  rule: 'self.type == ''expression'' ? has(self.expression) : !has(self.expression)'
                             required:
                             - paths
                             type: object
@@ -43052,6 +43092,11 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: aws must be set only when type is aws
+                                rule: '!has(self.aws) || self.type == ''aws'''
+                              - message: static must be set only when type is static
+                                rule: '!has(self.static) || self.type == ''static'''
                             minItems: 1
                             type: array
                         required:
@@ -43127,6 +43172,11 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: array must be set when type is array, and only then
+                                    rule: 'self.type == ''array'' ? has(self.array) : !has(self.array)'
+                                  - message: expression must be set when type is expression, and only then
+                                    rule: 'self.type == ''expression'' ? has(self.expression) : !has(self.expression)'
                                 strategy:
                                   properties:
                                     email:
@@ -43169,6 +43219,13 @@ spec:
                                           required:
                                           - type
                                           type: object
+                                          x-kubernetes-validations:
+                                          - message: keepAll must be set only when type is keepAll
+                                            rule: '!has(self.keepAll) || self.type == ''keepAll'''
+                                          - message: keepChars must be set when type is keepChars, and only then
+                                            rule: 'self.type == ''keepChars'' ? has(self.keepChars) : !has(self.keepChars)'
+                                          - message: replace must be set when type is replace, and only then
+                                            rule: 'self.type == ''replace'' ? has(self.replace) : !has(self.replace)'
                                         localPart:
                                           properties:
                                             keepChars:
@@ -43204,6 +43261,11 @@ spec:
                                           required:
                                           - type
                                           type: object
+                                          x-kubernetes-validations:
+                                          - message: keepChars must be set when type is keepChars, and only then
+                                            rule: 'self.type == ''keepChars'' ? has(self.keepChars) : !has(self.keepChars)'
+                                          - message: replace must be set when type is replace, and only then
+                                            rule: 'self.type == ''replace'' ? has(self.replace) : !has(self.replace)'
                                       required:
                                       - domain
                                       - localPart
@@ -43242,6 +43304,13 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: email must be set when type is email, and only then
+                                    rule: 'self.type == ''email'' ? has(self.email) : !has(self.email)'
+                                  - message: keepChars must be set when type is keepChars, and only then
+                                    rule: 'self.type == ''keepChars'' ? has(self.keepChars) : !has(self.keepChars)'
+                                  - message: replace must be set when type is replace, and only then
+                                    rule: 'self.type == ''replace'' ? has(self.replace) : !has(self.replace)'
                               required:
                               - paths
                               - strategy
@@ -43318,6 +43387,11 @@ spec:
                               required:
                               - op
                               type: object
+                              x-kubernetes-validations:
+                              - message: remove must be set when op is remove, and only then
+                                rule: 'self.op == ''remove'' ? has(self.remove) : !has(self.remove)'
+                              - message: set must be set when op is set, and only then
+                                rule: 'self.op == ''set'' ? has(self.set) : !has(self.set)'
                             minItems: 1
                             type: array
                         type: object
@@ -43453,6 +43527,11 @@ spec:
                                 required:
                                 - schemaType
                                 type: object
+                                x-kubernetes-validations:
+                                - message: avro must be set when schemaType is avro, and only then
+                                  rule: 'self.schemaType == ''avro'' ? has(self.avro) : !has(self.avro)'
+                                - message: json must be set when schemaType is json, and only then
+                                  rule: 'self.schemaType == ''json'' ? has(self.json) : !has(self.json)'
                               keyValidationAction:
                                 enum:
                                 - mark
@@ -43498,6 +43577,11 @@ spec:
                                 required:
                                 - schemaType
                                 type: object
+                                x-kubernetes-validations:
+                                - message: avro must be set when schemaType is avro, and only then
+                                  rule: 'self.schemaType == ''avro'' ? has(self.avro) : !has(self.avro)'
+                                - message: json must be set when schemaType is json, and only then
+                                  rule: 'self.schemaType == ''json'' ? has(self.json) : !has(self.json)'
                               valueValidationAction:
                                 enum:
                                 - mark
@@ -43548,6 +43632,13 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: confluentSchemaRegistry must be set only when type is confluentSchemaRegistry
+                          rule: '!has(self.confluentSchemaRegistry) || self.type == ''confluentSchemaRegistry'''
+                        - message: inlineSchema must be set only when type is inlineSchema
+                          rule: '!has(self.inlineSchema) || self.type == ''inlineSchema'''
+                        - message: json must be set only when type is json
+                          rule: '!has(self.json) || self.type == ''json'''
                       description:
                         maxLength: 512
                         type: string
@@ -43657,6 +43748,13 @@ spec:
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: confluentFormat must be set only when type is confluentFormat
+                                          rule: '!has(self.confluentFormat) || self.type == ''confluentFormat'''
+                                        - message: none must be set only when type is none
+                                          rule: '!has(self.none) || self.type == ''none'''
+                                        - message: recordHeader must be set only when type is recordHeader
+                                          rule: '!has(self.recordHeader) || self.type == ''recordHeader'''
                                       schemaRegistry:
                                         properties:
                                           kind:
@@ -43695,6 +43793,11 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: inline must be set when type is inline, and only then
+                                  rule: 'self.type == ''inline'' ? has(self.inline) : !has(self.inline)'
+                                - message: reference must be set when type is reference, and only then
+                                  rule: 'self.type == ''reference'' ? has(self.reference) : !has(self.reference)'
                             required:
                             - failureMode
                             - schemaSource
@@ -43752,6 +43855,13 @@ spec:
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: confluentFormat must be set only when type is confluentFormat
+                                          rule: '!has(self.confluentFormat) || self.type == ''confluentFormat'''
+                                        - message: none must be set only when type is none
+                                          rule: '!has(self.none) || self.type == ''none'''
+                                        - message: recordHeader must be set only when type is recordHeader
+                                          rule: '!has(self.recordHeader) || self.type == ''recordHeader'''
                                       schemaRegistry:
                                         properties:
                                           kind:
@@ -43790,6 +43900,11 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: inline must be set when type is inline, and only then
+                                  rule: 'self.type == ''inline'' ? has(self.inline) : !has(self.inline)'
+                                - message: reference must be set when type is reference, and only then
+                                  rule: 'self.type == ''reference'' ? has(self.reference) : !has(self.reference)'
                             required:
                             - failureMode
                             type: object
@@ -43802,6 +43917,11 @@ spec:
                         required:
                         - outputFormat
                         type: object
+                        x-kubernetes-validations:
+                        - message: avro must be set when outputFormat is avro, and only then
+                          rule: 'self.outputFormat == ''avro'' ? has(self.avro) : !has(self.avro)'
+                        - message: json must be set when outputFormat is json, and only then
+                          rule: 'self.outputFormat == ''json'' ? has(self.json) : !has(self.json)'
                       description:
                         maxLength: 512
                         type: string
@@ -43839,6 +43959,21 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: decrypt must be set when type is decrypt, and only then
+                  rule: 'self.type == ''decrypt'' ? has(self.decrypt) : !has(self.decrypt)'
+                - message: decryptFields must be set when type is decryptFields, and only then
+                  rule: 'self.type == ''decryptFields'' ? has(self.decryptFields) : !has(self.decryptFields)'
+                - message: maskFields must be set when type is maskFields, and only then
+                  rule: 'self.type == ''maskFields'' ? has(self.maskFields) : !has(self.maskFields)'
+                - message: modifyHeaders must be set when type is modifyHeaders, and only then
+                  rule: 'self.type == ''modifyHeaders'' ? has(self.modifyHeaders) : !has(self.modifyHeaders)'
+                - message: schemaValidation must be set when type is schemaValidation, and only then
+                  rule: 'self.type == ''schemaValidation'' ? has(self.schemaValidation) : !has(self.schemaValidation)'
+                - message: skipRecord must be set only when type is skipRecord
+                  rule: '!has(self.skipRecord) || self.type == ''skipRecord'''
+                - message: transcode must be set when type is transcode, and only then
+                  rule: 'self.type == ''transcode'' ? has(self.transcode) : !has(self.transcode)'
               eventGatewayVirtualClusterRef:
                 properties:
                   konnectID:
@@ -44279,6 +44414,11 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: stat must be set when type is stat, and only then
+                                    rule: 'self.type == ''stat'' ? has(self.stat) : !has(self.stat)'
+                                  - message: dynam must be set when type is dynam, and only then
+                                    rule: 'self.type == ''dynam'' ? has(self.dynam) : !has(self.dynam)'
                                 resourceType:
                                   enum:
                                   - topic
@@ -44755,6 +44895,33 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: alterClientQuotas must be set when type is alterClientQuotas, and only then
+                                rule: 'self.type == ''alterClientQuotas'' ? has(self.alterClientQuotas) : !has(self.alterClientQuotas)'
+                              - message: alterConfigs must be set when type is alterConfigs, and only then
+                                rule: 'self.type == ''alterConfigs'' ? has(self.alterConfigs) : !has(self.alterConfigs)'
+                              - message: alterUserScramCredentials must be set when type is alterUserScramCredentials, and only then
+                                rule: 'self.type == ''alterUserScramCredentials'' ? has(self.alterUserScramCredentials) : !has(self.alterUserScramCredentials)'
+                              - message: consumerGroupHeartbeat must be set when type is consumerGroupHeartbeat, and only then
+                                rule: 'self.type == ''consumerGroupHeartbeat'' ? has(self.consumerGroupHeartbeat) : !has(self.consumerGroupHeartbeat)'
+                              - message: createPartitions must be set when type is createPartitions, and only then
+                                rule: 'self.type == ''createPartitions'' ? has(self.createPartitions) : !has(self.createPartitions)'
+                              - message: createTopics must be set when type is createTopics, and only then
+                                rule: 'self.type == ''createTopics'' ? has(self.createTopics) : !has(self.createTopics)'
+                              - message: fetch must be set when type is fetch, and only then
+                                rule: 'self.type == ''fetch'' ? has(self.fetch) : !has(self.fetch)'
+                              - message: incrementalAlterConfigs must be set when type is incrementalAlterConfigs, and only then
+                                rule: 'self.type == ''incrementalAlterConfigs'' ? has(self.incrementalAlterConfigs) : !has(self.incrementalAlterConfigs)'
+                              - message: joinGroup must be set when type is joinGroup, and only then
+                                rule: 'self.type == ''joinGroup'' ? has(self.joinGroup) : !has(self.joinGroup)'
+                              - message: offsetCommit must be set when type is offsetCommit, and only then
+                                rule: 'self.type == ''offsetCommit'' ? has(self.offsetCommit) : !has(self.offsetCommit)'
+                              - message: offsetFetch must be set when type is offsetFetch, and only then
+                                rule: 'self.type == ''offsetFetch'' ? has(self.offsetFetch) : !has(self.offsetFetch)'
+                              - message: produce must be set when type is produce, and only then
+                                rule: 'self.type == ''produce'' ? has(self.produce) : !has(self.produce)'
+                              - message: txnOffsetCommit must be set when type is txnOffsetCommit, and only then
+                                rule: 'self.type == ''txnOffsetCommit'' ? has(self.txnOffsetCommit) : !has(self.txnOffsetCommit)'
                             maxItems: 100
                             minItems: 1
                             type: array
@@ -44793,6 +44960,11 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: acls must be set when type is acls, and only then
+                  rule: 'self.type == ''acls'' ? has(self.acls) : !has(self.acls)'
+                - message: requestRuleValidator must be set when type is requestRuleValidator, and only then
+                  rule: 'self.type == ''requestRuleValidator'' ? has(self.requestRuleValidator) : !has(self.requestRuleValidator)'
               eventGatewayVirtualClusterRef:
                 properties:
                   konnectID:
@@ -45304,6 +45476,11 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: aws must be set when type is aws, and only then
+                                    rule: 'self.type == ''aws'' ? has(self.aws) : !has(self.aws)'
+                                  - message: static must be set when type is static, and only then
+                                    rule: 'self.type == ''static'' ? has(self.static) : !has(self.static)'
                                 paths:
                                   properties:
                                     array:
@@ -45330,6 +45507,11 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: array must be set when type is array, and only then
+                                    rule: 'self.type == ''array'' ? has(self.array) : !has(self.array)'
+                                  - message: expression must be set when type is expression, and only then
+                                    rule: 'self.type == ''expression'' ? has(self.expression) : !has(self.expression)'
                               required:
                               - encryptionKey
                               - paths
@@ -45416,6 +45598,11 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: array must be set when type is array, and only then
+                                    rule: 'self.type == ''array'' ? has(self.array) : !has(self.array)'
+                                  - message: expression must be set when type is expression, and only then
+                                    rule: 'self.type == ''expression'' ? has(self.expression) : !has(self.expression)'
                                 strategy:
                                   properties:
                                     email:
@@ -45458,6 +45645,13 @@ spec:
                                           required:
                                           - type
                                           type: object
+                                          x-kubernetes-validations:
+                                          - message: keepAll must be set only when type is keepAll
+                                            rule: '!has(self.keepAll) || self.type == ''keepAll'''
+                                          - message: keepChars must be set when type is keepChars, and only then
+                                            rule: 'self.type == ''keepChars'' ? has(self.keepChars) : !has(self.keepChars)'
+                                          - message: replace must be set when type is replace, and only then
+                                            rule: 'self.type == ''replace'' ? has(self.replace) : !has(self.replace)'
                                         localPart:
                                           properties:
                                             keepChars:
@@ -45493,6 +45687,11 @@ spec:
                                           required:
                                           - type
                                           type: object
+                                          x-kubernetes-validations:
+                                          - message: keepChars must be set when type is keepChars, and only then
+                                            rule: 'self.type == ''keepChars'' ? has(self.keepChars) : !has(self.keepChars)'
+                                          - message: replace must be set when type is replace, and only then
+                                            rule: 'self.type == ''replace'' ? has(self.replace) : !has(self.replace)'
                                       required:
                                       - domain
                                       - localPart
@@ -45531,6 +45730,13 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: email must be set when type is email, and only then
+                                    rule: 'self.type == ''email'' ? has(self.email) : !has(self.email)'
+                                  - message: keepChars must be set when type is keepChars, and only then
+                                    rule: 'self.type == ''keepChars'' ? has(self.keepChars) : !has(self.keepChars)'
+                                  - message: replace must be set when type is replace, and only then
+                                    rule: 'self.type == ''replace'' ? has(self.replace) : !has(self.replace)'
                               required:
                               - paths
                               - strategy
@@ -45607,6 +45813,11 @@ spec:
                               required:
                               - op
                               type: object
+                              x-kubernetes-validations:
+                              - message: remove must be set when op is remove, and only then
+                                rule: 'self.op == ''remove'' ? has(self.remove) : !has(self.remove)'
+                              - message: set must be set when op is set, and only then
+                                rule: 'self.op == ''set'' ? has(self.set) : !has(self.set)'
                             minItems: 1
                             type: array
                         type: object
@@ -45740,6 +45951,11 @@ spec:
                                 required:
                                 - schemaType
                                 type: object
+                                x-kubernetes-validations:
+                                - message: avro must be set when schemaType is avro, and only then
+                                  rule: 'self.schemaType == ''avro'' ? has(self.avro) : !has(self.avro)'
+                                - message: json must be set when schemaType is json, and only then
+                                  rule: 'self.schemaType == ''json'' ? has(self.json) : !has(self.json)'
                               keyValidationAction:
                                 enum:
                                 - reject
@@ -45785,6 +46001,11 @@ spec:
                                 required:
                                 - schemaType
                                 type: object
+                                x-kubernetes-validations:
+                                - message: avro must be set when schemaType is avro, and only then
+                                  rule: 'self.schemaType == ''avro'' ? has(self.avro) : !has(self.avro)'
+                                - message: json must be set when schemaType is json, and only then
+                                  rule: 'self.schemaType == ''json'' ? has(self.json) : !has(self.json)'
                               valueValidationAction:
                                 enum:
                                 - reject
@@ -45834,6 +46055,13 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: confluentSchemaRegistry must be set only when type is confluentSchemaRegistry
+                          rule: '!has(self.confluentSchemaRegistry) || self.type == ''confluentSchemaRegistry'''
+                        - message: inlineSchema must be set only when type is inlineSchema
+                          rule: '!has(self.inlineSchema) || self.type == ''inlineSchema'''
+                        - message: json must be set only when type is json
+                          rule: '!has(self.json) || self.type == ''json'''
                       description:
                         maxLength: 512
                         type: string
@@ -45916,6 +46144,13 @@ spec:
                                         required:
                                         - type
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: confluentFormat must be set only when type is confluentFormat
+                                          rule: '!has(self.confluentFormat) || self.type == ''confluentFormat'''
+                                        - message: none must be set only when type is none
+                                          rule: '!has(self.none) || self.type == ''none'''
+                                        - message: recordHeader must be set only when type is recordHeader
+                                          rule: '!has(self.recordHeader) || self.type == ''recordHeader'''
                                       schemaRegistry:
                                         properties:
                                           kind:
@@ -45954,6 +46189,11 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: inline must be set when type is inline, and only then
+                                  rule: 'self.type == ''inline'' ? has(self.inline) : !has(self.inline)'
+                                - message: reference must be set when type is reference, and only then
+                                  rule: 'self.type == ''reference'' ? has(self.reference) : !has(self.reference)'
                             required:
                             - failureMode
                             - schemaSource
@@ -45966,6 +46206,9 @@ spec:
                         required:
                         - outputFormat
                         type: object
+                        x-kubernetes-validations:
+                        - message: avro must be set when outputFormat is avro, and only then
+                          rule: 'self.outputFormat == ''avro'' ? has(self.avro) : !has(self.avro)'
                       description:
                         maxLength: 512
                         type: string
@@ -46002,6 +46245,19 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: encrypt must be set when type is encrypt, and only then
+                  rule: 'self.type == ''encrypt'' ? has(self.encrypt) : !has(self.encrypt)'
+                - message: encryptFields must be set when type is encryptFields, and only then
+                  rule: 'self.type == ''encryptFields'' ? has(self.encryptFields) : !has(self.encryptFields)'
+                - message: maskFields must be set when type is maskFields, and only then
+                  rule: 'self.type == ''maskFields'' ? has(self.maskFields) : !has(self.maskFields)'
+                - message: modifyHeaders must be set when type is modifyHeaders, and only then
+                  rule: 'self.type == ''modifyHeaders'' ? has(self.modifyHeaders) : !has(self.modifyHeaders)'
+                - message: schemaValidation must be set when type is schemaValidation, and only then
+                  rule: 'self.type == ''schemaValidation'' ? has(self.schemaValidation) : !has(self.schemaValidation)'
+                - message: transcode must be set when type is transcode, and only then
+                  rule: 'self.type == ''transcode'' ? has(self.transcode) : !has(self.transcode)'
               eventGatewayVirtualClusterRef:
                 properties:
                   konnectID:
@@ -46602,6 +46858,17 @@ spec:
                       required:
                       - type
                       type: object
+                      x-kubernetes-validations:
+                      - message: anonymous must be set only when type is anonymous
+                        rule: '!has(self.anonymous) || self.type == ''anonymous'''
+                      - message: clientCertificate must be set only when type is clientCertificate
+                        rule: '!has(self.clientCertificate) || self.type == ''clientCertificate'''
+                      - message: oauthBearer must be set when type is oauthBearer, and only then
+                        rule: 'self.type == ''oauthBearer'' ? has(self.oauthBearer) : !has(self.oauthBearer)'
+                      - message: saslPlain must be set when type is saslPlain, and only then
+                        rule: 'self.type == ''saslPlain'' ? has(self.saslPlain) : !has(self.saslPlain)'
+                      - message: saslScram must be set when type is saslScram, and only then
+                        rule: 'self.type == ''saslScram'' ? has(self.saslScram) : !has(self.saslScram)'
                     minItems: 1
                     type: array
                   description:
@@ -46666,6 +46933,11 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: exactList must be set only when type is exactList
+                                rule: '!has(self.exactList) || self.type == ''exactList'''
+                              - message: glob must be set when type is glob, and only then
+                                rule: 'self.type == ''glob'' ? has(self.glob) : !has(self.glob)'
                             type: array
                           topics:
                             items:
@@ -46716,6 +46988,11 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: exactList must be set only when type is exactList
+                                rule: '!has(self.exactList) || self.type == ''exactList'''
+                              - message: glob must be set when type is glob, and only then
+                                rule: 'self.type == ''glob'' ? has(self.glob) : !has(self.glob)'
                             type: array
                         type: object
                       mode:

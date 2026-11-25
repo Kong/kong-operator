@@ -34,6 +34,12 @@ type APIGroupVersionConfig struct {
 	// Validation opts into OAS validations not emitted by default.
 	Validation ValidationConfig `yaml:"validation,omitempty"`
 
+	// SDKUnionDiscriminators, when set, are the only keys the conversion to
+	// SDK requests reads as union discriminators. Otherwise any string value
+	// naming a sibling key is, so data such as {username: password} breaks the
+	// conversion. Generation fails if a union of the group uses another one.
+	SDKUnionDiscriminators []string `yaml:"sdkUnionDiscriminators,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
 }
 
@@ -48,6 +54,10 @@ type ValidationConfig struct {
 	// InlineSensitiveValueLength emits the minLength of a sensitive value as a
 	// rule on its inline form; a Secret's value can't be checked at admission.
 	InlineSensitiveValueLength bool `yaml:"inlineSensitiveValueLength,omitempty"`
+	// UnionMemberRules ties the type of a discriminated union to its member:
+	// a member of another type is refused, and so is a missing member whose
+	// schema has required fields.
+	UnionMemberRules bool `yaml:"unionMemberRules,omitempty"`
 }
 
 // CommonTypesConfig holds configuration for common types that can be shared

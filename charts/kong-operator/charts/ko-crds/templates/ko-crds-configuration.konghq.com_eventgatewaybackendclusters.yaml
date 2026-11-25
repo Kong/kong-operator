@@ -83,6 +83,15 @@ spec:
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: assumeRole must be set when type is assumeRole,
+                                and only then
+                              rule: 'self.type == ''assumeRole'' ? has(self.assumeRole)
+                                : !has(self.assumeRole)'
+                            - message: defaultProviderChain must be set only when
+                                type is defaultProviderChain
+                              rule: '!has(self.defaultProviderChain) || self.type
+                                == ''defaultProviderChain'''
                         required:
                         - saslAwsIam
                         type: object
@@ -133,6 +142,19 @@ spec:
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: anonymous must be set only when type is anonymous
+                      rule: '!has(self.anonymous) || self.type == ''anonymous'''
+                    - message: saslAwsIam must be set when type is saslAwsIam, and
+                        only then
+                      rule: 'self.type == ''saslAwsIam'' ? has(self.saslAwsIam) :
+                        !has(self.saslAwsIam)'
+                    - message: saslPlain must be set when type is saslPlain, and only
+                        then
+                      rule: 'self.type == ''saslPlain'' ? has(self.saslPlain) : !has(self.saslPlain)'
+                    - message: saslScram must be set when type is saslScram, and only
+                        then
+                      rule: 'self.type == ''saslScram'' ? has(self.saslScram) : !has(self.saslScram)'
                   bootstrapServers:
                     items:
                       minLength: 1

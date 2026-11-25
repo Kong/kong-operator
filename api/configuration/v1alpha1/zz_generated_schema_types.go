@@ -27,6 +27,9 @@ type BackendClusterAuthenticationSaslAwsIam struct {
 
 // BackendClusterAuthenticationSaslAwsIamSaslAwsIam represents a union type for sasl_aws_iam.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'assumeRole' ? has(self.assumeRole) : !has(self.assumeRole)",message="assumeRole must be set when type is assumeRole, and only then"
+// +kubebuilder:validation:XValidation:rule="!has(self.defaultProviderChain) || self.type == 'defaultProviderChain'",message="defaultProviderChain must be set only when type is defaultProviderChain"
 type BackendClusterAuthenticationSaslAwsIamSaslAwsIam struct {
 	// Type designates the type of configuration.
 	//
@@ -243,6 +246,11 @@ type BackendClusterAuthenticationSaslScram struct {
 
 // BackendClusterAuthenticationScheme represents a union type for BackendClusterAuthenticationScheme.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.anonymous) || self.type == 'anonymous'",message="anonymous must be set only when type is anonymous"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslAwsIam' ? has(self.saslAwsIam) : !has(self.saslAwsIam)",message="saslAwsIam must be set when type is saslAwsIam, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslPlain' ? has(self.saslPlain) : !has(self.saslPlain)",message="saslPlain must be set when type is saslPlain, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslScram' ? has(self.saslScram) : !has(self.saslScram)",message="saslScram must be set when type is saslScram, and only then"
 type BackendClusterAuthenticationScheme struct {
 	// Type designates the type of configuration.
 	//
@@ -714,6 +722,9 @@ type EventGatewayACLRule struct {
 
 // EventGatewayACLRuleResourceNames represents a union type for resource_names.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'stat' ? has(self.stat) : !has(self.stat)",message="stat must be set when type is stat, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'dynam' ? has(self.dynam) : !has(self.dynam)",message="dynam must be set when type is dynam, and only then"
 type EventGatewayACLRuleResourceNames struct {
 	// Type designates the type of configuration.
 	//
@@ -1110,6 +1121,10 @@ func (s *EventGatewayConsumeSchemaValidationPolicy) UnmarshalJSON(data []byte) e
 
 // EventGatewayConsumeSchemaValidationPolicyConfig represents a union type for EventGatewayConsumeSchemaValidationPolicyConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.confluentSchemaRegistry) || self.type == 'confluentSchemaRegistry'",message="confluentSchemaRegistry must be set only when type is confluentSchemaRegistry"
+// +kubebuilder:validation:XValidation:rule="!has(self.inlineSchema) || self.type == 'inlineSchema'",message="inlineSchema must be set only when type is inlineSchema"
+// +kubebuilder:validation:XValidation:rule="!has(self.json) || self.type == 'json'",message="json must be set only when type is json"
 type EventGatewayConsumeSchemaValidationPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -1317,6 +1332,9 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 
 // EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey represents a union type for key.
 // Only one of the fields should be set based on the SchemaType.
+//
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when schemaType is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'json' ? has(self.json) : !has(self.json)",message="json must be set when schemaType is json, and only then"
 type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey struct {
 	// SchemaType designates the type of configuration.
 	//
@@ -1418,6 +1436,9 @@ func (u *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey) Unmarsh
 
 // EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue represents a union type for value.
 // Only one of the fields should be set based on the SchemaType.
+//
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when schemaType is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'json' ? has(self.json) : !has(self.json)",message="json must be set when schemaType is json, and only then"
 type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue struct {
 	// SchemaType designates the type of configuration.
 	//
@@ -2251,6 +2272,9 @@ type EventGatewayJoinGroupRule struct {
 
 // EventGatewayKeySource represents a union type for EventGatewayKeySource.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.aws) || self.type == 'aws'",message="aws must be set only when type is aws"
+// +kubebuilder:validation:XValidation:rule="!has(self.static) || self.type == 'static'",message="static must be set only when type is static"
 type EventGatewayKeySource struct {
 	// Type designates the type of configuration.
 	//
@@ -2368,6 +2392,10 @@ type EventGatewayMaskEmailDomainKeepAll struct {
 
 // EventGatewayMaskEmailDomainStrategy represents a union type for EventGatewayMaskEmailDomainStrategy.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.keepAll) || self.type == 'keepAll'",message="keepAll must be set only when type is keepAll"
+// +kubebuilder:validation:XValidation:rule="self.type == 'keepChars' ? has(self.keepChars) : !has(self.keepChars)",message="keepChars must be set when type is keepChars, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'replace' ? has(self.replace) : !has(self.replace)",message="replace must be set when type is replace, and only then"
 type EventGatewayMaskEmailDomainStrategy struct {
 	// Type designates the type of configuration.
 	//
@@ -2492,6 +2520,9 @@ func (u *EventGatewayMaskEmailDomainStrategy) UnmarshalJSON(data []byte) error {
 
 // EventGatewayMaskEmailLocalPartStrategy represents a union type for EventGatewayMaskEmailLocalPartStrategy.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'keepChars' ? has(self.keepChars) : !has(self.keepChars)",message="keepChars must be set when type is keepChars, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'replace' ? has(self.replace) : !has(self.replace)",message="replace must be set when type is replace, and only then"
 type EventGatewayMaskEmailLocalPartStrategy struct {
 	// Type designates the type of configuration.
 	//
@@ -2593,6 +2624,10 @@ func (u *EventGatewayMaskEmailLocalPartStrategy) UnmarshalJSON(data []byte) erro
 
 // EventGatewayMaskStrategy represents a union type for EventGatewayMaskStrategy.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'email' ? has(self.email) : !has(self.email)",message="email must be set when type is email, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'keepChars' ? has(self.keepChars) : !has(self.keepChars)",message="keepChars must be set when type is keepChars, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'replace' ? has(self.replace) : !has(self.replace)",message="replace must be set when type is replace, and only then"
 type EventGatewayMaskStrategy struct {
 	// Type designates the type of configuration.
 	//
@@ -2730,6 +2765,10 @@ type EventGatewayMaskStrategyEmail struct {
 
 // EventGatewayMaskStrategyEmailDomain represents a union type for domain.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.keepAll) || self.type == 'keepAll'",message="keepAll must be set only when type is keepAll"
+// +kubebuilder:validation:XValidation:rule="self.type == 'keepChars' ? has(self.keepChars) : !has(self.keepChars)",message="keepChars must be set when type is keepChars, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'replace' ? has(self.replace) : !has(self.replace)",message="replace must be set when type is replace, and only then"
 type EventGatewayMaskStrategyEmailDomain struct {
 	// Type designates the type of configuration.
 	//
@@ -2854,6 +2893,9 @@ func (u *EventGatewayMaskStrategyEmailDomain) UnmarshalJSON(data []byte) error {
 
 // EventGatewayMaskStrategyEmailLocalPart represents a union type for local_part.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'keepChars' ? has(self.keepChars) : !has(self.keepChars)",message="keepChars must be set when type is keepChars, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'replace' ? has(self.replace) : !has(self.replace)",message="replace must be set when type is replace, and only then"
 type EventGatewayMaskStrategyEmailLocalPart struct {
 	// Type designates the type of configuration.
 	//
@@ -3013,6 +3055,9 @@ type EventGatewayMaskStrategyReplace struct {
 
 // EventGatewayModifyHeaderAction represents a union type for EventGatewayModifyHeaderAction.
 // Only one of the fields should be set based on the Op.
+//
+// +kubebuilder:validation:XValidation:rule="self.op == 'remove' ? has(self.remove) : !has(self.remove)",message="remove must be set when op is remove, and only then"
+// +kubebuilder:validation:XValidation:rule="self.op == 'set' ? has(self.set) : !has(self.set)",message="set must be set when op is set, and only then"
 type EventGatewayModifyHeaderAction struct {
 	// Op designates the type of configuration.
 	//
@@ -3405,6 +3450,9 @@ type EventGatewayParsedRecordDecryptionSelector struct {
 
 // EventGatewayParsedRecordDecryptionSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'array' ? has(self.array) : !has(self.array)",message="array must be set when type is array, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'expression' ? has(self.expression) : !has(self.expression)",message="expression must be set when type is expression, and only then"
 type EventGatewayParsedRecordDecryptionSelectorPaths struct {
 	// Type designates the type of configuration.
 	//
@@ -3632,6 +3680,9 @@ type EventGatewayParsedRecordEncryptionSelector struct {
 
 // EventGatewayParsedRecordEncryptionSelectorEncryptionKey represents a union type for encryption_key.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'aws' ? has(self.aws) : !has(self.aws)",message="aws must be set when type is aws, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'static' ? has(self.static) : !has(self.static)",message="static must be set when type is static, and only then"
 type EventGatewayParsedRecordEncryptionSelectorEncryptionKey struct {
 	// Type designates the type of configuration.
 	//
@@ -3733,6 +3784,9 @@ func (u *EventGatewayParsedRecordEncryptionSelectorEncryptionKey) UnmarshalJSON(
 
 // EventGatewayParsedRecordEncryptionSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'array' ? has(self.array) : !has(self.array)",message="array must be set when type is array, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'expression' ? has(self.expression) : !has(self.expression)",message="expression must be set when type is expression, and only then"
 type EventGatewayParsedRecordEncryptionSelectorPaths struct {
 	// Type designates the type of configuration.
 	//
@@ -4079,6 +4133,9 @@ type EventGatewayParsedRecordMaskSelector struct {
 
 // EventGatewayParsedRecordMaskSelectorPaths represents a union type for paths.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'array' ? has(self.array) : !has(self.array)",message="array must be set when type is array, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'expression' ? has(self.expression) : !has(self.expression)",message="expression must be set when type is expression, and only then"
 type EventGatewayParsedRecordMaskSelectorPaths struct {
 	// Type designates the type of configuration.
 	//
@@ -4180,6 +4237,10 @@ func (u *EventGatewayParsedRecordMaskSelectorPaths) UnmarshalJSON(data []byte) e
 
 // EventGatewayParsedRecordMaskSelectorStrategy represents a union type for strategy.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'email' ? has(self.email) : !has(self.email)",message="email must be set when type is email, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'keepChars' ? has(self.keepChars) : !has(self.keepChars)",message="keepChars must be set when type is keepChars, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'replace' ? has(self.replace) : !has(self.replace)",message="replace must be set when type is replace, and only then"
 type EventGatewayParsedRecordMaskSelectorStrategy struct {
 	// Type designates the type of configuration.
 	//
@@ -4326,6 +4387,9 @@ func (s *EventGatewayParsedRecordMaskSelector) UnmarshalJSON(data []byte) error 
 
 // EventGatewayParsedRecordTranscodeConsumeConfig represents a union type for EventGatewayParsedRecordTranscodeConsumeConfig.
 // Only one of the fields should be set based on the OutputFormat.
+//
+// +kubebuilder:validation:XValidation:rule="self.outputFormat == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when outputFormat is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.outputFormat == 'json' ? has(self.json) : !has(self.json)",message="json must be set when outputFormat is json, and only then"
 type EventGatewayParsedRecordTranscodeConsumeConfig struct {
 	// OutputFormat designates the type of configuration.
 	//
@@ -4479,6 +4543,9 @@ type EventGatewayParsedRecordTranscodeConsumeConfigAvro struct {
 
 // EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource represents a union type for schema_source.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.inline) : !has(self.inline)",message="inline must be set when type is inline, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'reference' ? has(self.reference) : !has(self.reference)",message="reference must be set when type is reference, and only then"
 type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource struct {
 	// Type designates the type of configuration.
 	//
@@ -4648,6 +4715,9 @@ type EventGatewayParsedRecordTranscodeConsumeConfigJSON struct {
 
 // EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource represents a union type for schema_source.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.inline) : !has(self.inline)",message="inline must be set when type is inline, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'reference' ? has(self.reference) : !has(self.reference)",message="reference must be set when type is reference, and only then"
 type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource struct {
 	// Type designates the type of configuration.
 	//
@@ -4818,6 +4888,9 @@ type EventGatewayParsedRecordTranscodeConsumePolicyCreate struct {
 
 // EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig represents a union type for config.
 // Only one of the fields should be set based on the OutputFormat.
+//
+// +kubebuilder:validation:XValidation:rule="self.outputFormat == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when outputFormat is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.outputFormat == 'json' ? has(self.json) : !has(self.json)",message="json must be set when outputFormat is json, and only then"
 type EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig struct {
 	// OutputFormat designates the type of configuration.
 	//
@@ -4937,6 +5010,8 @@ func (s *EventGatewayParsedRecordTranscodeConsumePolicyCreate) UnmarshalJSON(dat
 
 // EventGatewayParsedRecordTranscodeProduceConfig represents a union type for EventGatewayParsedRecordTranscodeProduceConfig.
 // Only one of the fields should be set based on the OutputFormat.
+//
+// +kubebuilder:validation:XValidation:rule="self.outputFormat == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when outputFormat is avro, and only then"
 type EventGatewayParsedRecordTranscodeProduceConfig struct {
 	// OutputFormat designates the type of configuration.
 	//
@@ -5065,6 +5140,9 @@ type EventGatewayParsedRecordTranscodeProduceConfigAvro struct {
 
 // EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource represents a union type for schema_source.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.inline) : !has(self.inline)",message="inline must be set when type is inline, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'reference' ? has(self.reference) : !has(self.reference)",message="reference must be set when type is reference, and only then"
 type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource struct {
 	// Type designates the type of configuration.
 	//
@@ -5235,6 +5313,8 @@ type EventGatewayParsedRecordTranscodeProducePolicyCreate struct {
 
 // EventGatewayParsedRecordTranscodeProducePolicyCreateConfig represents a union type for config.
 // Only one of the fields should be set based on the OutputFormat.
+//
+// +kubebuilder:validation:XValidation:rule="self.outputFormat == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when outputFormat is avro, and only then"
 type EventGatewayParsedRecordTranscodeProducePolicyCreateConfig struct {
 	// OutputFormat designates the type of configuration.
 	//
@@ -5331,6 +5411,10 @@ func (s *EventGatewayParsedRecordTranscodeProducePolicyCreate) UnmarshalJSON(dat
 
 // EventGatewayParsedRecordTranscodeSchemaRefDestination represents a union type for EventGatewayParsedRecordTranscodeSchemaRefDestination.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.confluentFormat) || self.type == 'confluentFormat'",message="confluentFormat must be set only when type is confluentFormat"
+// +kubebuilder:validation:XValidation:rule="!has(self.none) || self.type == 'none'",message="none must be set only when type is none"
+// +kubebuilder:validation:XValidation:rule="!has(self.recordHeader) || self.type == 'recordHeader'",message="recordHeader must be set only when type is recordHeader"
 type EventGatewayParsedRecordTranscodeSchemaRefDestination struct {
 	// Type designates the type of configuration.
 	//
@@ -5477,6 +5561,9 @@ type EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader struct {
 
 // EventGatewayParsedRecordTranscodeSchemaSource represents a union type for EventGatewayParsedRecordTranscodeSchemaSource.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.inline) : !has(self.inline)",message="inline must be set when type is inline, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'reference' ? has(self.reference) : !has(self.reference)",message="reference must be set when type is reference, and only then"
 type EventGatewayParsedRecordTranscodeSchemaSource struct {
 	// Type designates the type of configuration.
 	//
@@ -5621,6 +5708,10 @@ type EventGatewayParsedRecordTranscodeSchemaSourceReference struct {
 
 // EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination represents a union type for schema_ref_destination.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.confluentFormat) || self.type == 'confluentFormat'",message="confluentFormat must be set only when type is confluentFormat"
+// +kubebuilder:validation:XValidation:rule="!has(self.none) || self.type == 'none'",message="none must be set only when type is none"
+// +kubebuilder:validation:XValidation:rule="!has(self.recordHeader) || self.type == 'recordHeader'",message="recordHeader must be set only when type is recordHeader"
 type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination struct {
 	// Type designates the type of configuration.
 	//
@@ -5875,6 +5966,10 @@ func (s *EventGatewayProduceSchemaValidationPolicy) UnmarshalJSON(data []byte) e
 
 // EventGatewayProduceSchemaValidationPolicyConfig represents a union type for EventGatewayProduceSchemaValidationPolicyConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.confluentSchemaRegistry) || self.type == 'confluentSchemaRegistry'",message="confluentSchemaRegistry must be set only when type is confluentSchemaRegistry"
+// +kubebuilder:validation:XValidation:rule="!has(self.inlineSchema) || self.type == 'inlineSchema'",message="inlineSchema must be set only when type is inlineSchema"
+// +kubebuilder:validation:XValidation:rule="!has(self.json) || self.type == 'json'",message="json must be set only when type is json"
 type EventGatewayProduceSchemaValidationPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -6076,6 +6171,9 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 
 // EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey represents a union type for key.
 // Only one of the fields should be set based on the SchemaType.
+//
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when schemaType is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'json' ? has(self.json) : !has(self.json)",message="json must be set when schemaType is json, and only then"
 type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey struct {
 	// SchemaType designates the type of configuration.
 	//
@@ -6177,6 +6275,9 @@ func (u *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey) Unmarsh
 
 // EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue represents a union type for value.
 // Only one of the fields should be set based on the SchemaType.
+//
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when schemaType is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'json' ? has(self.json) : !has(self.json)",message="json must be set when schemaType is json, and only then"
 type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue struct {
 	// SchemaType designates the type of configuration.
 	//
@@ -6509,6 +6610,20 @@ type EventGatewayRequestRuleValidatorPolicy struct {
 
 // EventGatewayRequestRules represents a union type for EventGatewayRequestRules.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'alterClientQuotas' ? has(self.alterClientQuotas) : !has(self.alterClientQuotas)",message="alterClientQuotas must be set when type is alterClientQuotas, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'alterConfigs' ? has(self.alterConfigs) : !has(self.alterConfigs)",message="alterConfigs must be set when type is alterConfigs, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'alterUserScramCredentials' ? has(self.alterUserScramCredentials) : !has(self.alterUserScramCredentials)",message="alterUserScramCredentials must be set when type is alterUserScramCredentials, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'consumerGroupHeartbeat' ? has(self.consumerGroupHeartbeat) : !has(self.consumerGroupHeartbeat)",message="consumerGroupHeartbeat must be set when type is consumerGroupHeartbeat, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'createPartitions' ? has(self.createPartitions) : !has(self.createPartitions)",message="createPartitions must be set when type is createPartitions, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'createTopics' ? has(self.createTopics) : !has(self.createTopics)",message="createTopics must be set when type is createTopics, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'fetch' ? has(self.fetch) : !has(self.fetch)",message="fetch must be set when type is fetch, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'incrementalAlterConfigs' ? has(self.incrementalAlterConfigs) : !has(self.incrementalAlterConfigs)",message="incrementalAlterConfigs must be set when type is incrementalAlterConfigs, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'joinGroup' ? has(self.joinGroup) : !has(self.joinGroup)",message="joinGroup must be set when type is joinGroup, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'offsetCommit' ? has(self.offsetCommit) : !has(self.offsetCommit)",message="offsetCommit must be set when type is offsetCommit, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'offsetFetch' ? has(self.offsetFetch) : !has(self.offsetFetch)",message="offsetFetch must be set when type is offsetFetch, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'produce' ? has(self.produce) : !has(self.produce)",message="produce must be set when type is produce, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'txnOffsetCommit' ? has(self.txnOffsetCommit) : !has(self.txnOffsetCommit)",message="txnOffsetCommit must be set when type is txnOffsetCommit, and only then"
 type EventGatewayRequestRules struct {
 	// Type designates the type of configuration.
 	//
@@ -7339,6 +7454,9 @@ type ForwardToVirtualClusterPolicy struct {
 
 // ForwardToVirtualClusterPolicyConfig represents a union type for config.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'portMapping' ? has(self.portMapping) : !has(self.portMapping)",message="portMapping must be set when type is portMapping, and only then"
+// +kubebuilder:validation:XValidation:rule="!has(self.sni) || self.type == 'sni'",message="sni must be set only when type is sni"
 type ForwardToVirtualClusterPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
@@ -7564,6 +7682,8 @@ type SchemaRegistryAuthenticationBasic struct {
 
 // SchemaRegistryAuthenticationScheme represents a union type for SchemaRegistryAuthenticationScheme.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'basic' ? has(self.basic) : !has(self.basic)",message="basic must be set when type is basic, and only then"
 type SchemaRegistryAuthenticationScheme struct {
 	// Type designates the type of configuration.
 	//
@@ -7706,6 +7826,8 @@ type SchemaRegistryConfluentConfig struct {
 
 // SchemaRegistryConfluentConfigAuthentication represents a union type for authentication.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'basic' ? has(self.basic) : !has(self.basic)",message="basic must be set when type is basic, and only then"
 type SchemaRegistryConfluentConfigAuthentication struct {
 	// Type designates the type of configuration.
 	//
@@ -7802,6 +7924,9 @@ func (s *SchemaRegistryConfluentConfig) UnmarshalJSON(data []byte) error {
 
 // SchemaValidationInlineSchemaConfig represents a union type for SchemaValidationInlineSchemaConfig.
 // Only one of the fields should be set based on the SchemaType.
+//
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'avro' ? has(self.avro) : !has(self.avro)",message="avro must be set when schemaType is avro, and only then"
+// +kubebuilder:validation:XValidation:rule="self.schemaType == 'json' ? has(self.json) : !has(self.json)",message="json must be set when schemaType is json, and only then"
 type SchemaValidationInlineSchemaConfig struct {
 	// SchemaType designates the type of configuration.
 	//
@@ -8195,6 +8320,12 @@ type VirtualClusterAuthenticationSaslScram struct {
 
 // VirtualClusterAuthenticationScheme represents a union type for VirtualClusterAuthenticationScheme.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.anonymous) || self.type == 'anonymous'",message="anonymous must be set only when type is anonymous"
+// +kubebuilder:validation:XValidation:rule="!has(self.clientCertificate) || self.type == 'clientCertificate'",message="clientCertificate must be set only when type is clientCertificate"
+// +kubebuilder:validation:XValidation:rule="self.type == 'oauthBearer' ? has(self.oauthBearer) : !has(self.oauthBearer)",message="oauthBearer must be set when type is oauthBearer, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslPlain' ? has(self.saslPlain) : !has(self.saslPlain)",message="saslPlain must be set when type is saslPlain, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslScram' ? has(self.saslScram) : !has(self.saslScram)",message="saslScram must be set when type is saslScram, and only then"
 type VirtualClusterAuthenticationScheme struct {
 	// Type designates the type of configuration.
 	//
@@ -8450,6 +8581,9 @@ type VirtualClusterNamespaceAdditionalProperties struct {
 
 // VirtualClusterNamespaceIDSelector represents a union type for VirtualClusterNamespaceIDSelector.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.exactList) || self.type == 'exactList'",message="exactList must be set only when type is exactList"
+// +kubebuilder:validation:XValidation:rule="self.type == 'glob' ? has(self.glob) : !has(self.glob)",message="glob must be set when type is glob, and only then"
 type VirtualClusterNamespaceIDSelector struct {
 	// Type designates the type of configuration.
 	//
@@ -8581,6 +8715,9 @@ type VirtualClusterNamespaceIDSelectorGlob struct {
 
 // VirtualClusterNamespaceTopicSelector represents a union type for VirtualClusterNamespaceTopicSelector.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.exactList) || self.type == 'exactList'",message="exactList must be set only when type is exactList"
+// +kubebuilder:validation:XValidation:rule="self.type == 'glob' ? has(self.glob) : !has(self.glob)",message="glob must be set when type is glob, and only then"
 type VirtualClusterNamespaceTopicSelector struct {
 	// Type designates the type of configuration.
 	//

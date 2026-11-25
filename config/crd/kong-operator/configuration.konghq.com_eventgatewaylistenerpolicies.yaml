@@ -205,6 +205,13 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: portMapping must be set when type is portMapping,
+                            and only then
+                          rule: 'self.type == ''portMapping'' ? has(self.portMapping)
+                            : !has(self.portMapping)'
+                        - message: sni must be set only when type is sni
+                          rule: '!has(self.sni) || self.type == ''sni'''
                       description:
                         description: A human-readable description of the policy.
                         maxLength: 512
@@ -532,6 +539,14 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: forwardToVirtualCluster must be set when type is forwardToVirtualCluster,
+                    and only then
+                  rule: 'self.type == ''forwardToVirtualCluster'' ? has(self.forwardToVirtualCluster)
+                    : !has(self.forwardToVirtualCluster)'
+                - message: tlsServer must be set when type is tlsServer, and only
+                    then
+                  rule: 'self.type == ''tlsServer'' ? has(self.tlsServer) : !has(self.tlsServer)'
               eventGatewayListenerRef:
                 description: EventGatewayListenerRef is the reference to the parent
                   EventGatewayListener object.
