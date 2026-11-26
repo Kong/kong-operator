@@ -2,5 +2,14 @@
 version = 1
 
 [review]
-# Ignore all CI snapshots in KSAI reviews
-ignore = ['charts/kong-operator/ci/__snapshots__/**']
+# Ignore some large generated files in KSAI reviews.
+ignore = [
+    # Ignore all generated CRD OAS spec.
+    'config/crd/kong-operator/**',
+    # Ignore KO CRD templates in charts.
+    'charts/kong-operator/charts/ko-crds/templates/** ',
+    # Ignore CI snapshots in charts.
+    'charts/kong-operator/ci/__snapshots__/**',
+    # Ignore generated chainsaw test cases for cross namespace reference in event gateways.
+    'test/e2e/chainsaw/eventgateway-cross-namespace/**/chainsaw-test.yaml'
+    ]
