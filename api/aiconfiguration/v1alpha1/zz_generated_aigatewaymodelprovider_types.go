@@ -97,7 +97,7 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;baseten;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;baseten;bedrock;cerebras;cohere;dashscope;databricks;deepseek;fireworks;gemini;huggingface;kimi;llama2;meta;mistral;ollama;openai;sagemaker;togetherai;typesafe;vercel;vllm;xai
 	Type AIGatewayModelProviderConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -136,6 +136,10 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +optional
 	Deepseek *AIGatewayModelProviderDeepseek `json:"deepseek,omitempty"`
+	// Fireworks configuration.
+	//
+	// +optional
+	Fireworks *AIGatewayModelProviderFireworks `json:"fireworks,omitempty"`
 	// Gemini configuration.
 	//
 	// +optional
@@ -152,6 +156,10 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +optional
 	Llama2 *AIGatewayModelProviderLlama2 `json:"llama2,omitempty"`
+	// Meta configuration.
+	//
+	// +optional
+	Meta *AIGatewayModelProviderMeta `json:"meta,omitempty"`
 	// Mistral configuration.
 	//
 	// +optional
@@ -168,6 +176,10 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +optional
 	Sagemaker *AIGatewayModelProviderSagemaker `json:"sagemaker,omitempty"`
+	// Togetherai configuration.
+	//
+	// +optional
+	Togetherai *AIGatewayModelProviderTogetherai `json:"togetherai,omitempty"`
 	// Typesafe configuration.
 	//
 	// +optional
@@ -200,14 +212,17 @@ const (
 	AIGatewayModelProviderConfigTypeDashscope   AIGatewayModelProviderConfigType = "dashscope"
 	AIGatewayModelProviderConfigTypeDatabricks  AIGatewayModelProviderConfigType = "databricks"
 	AIGatewayModelProviderConfigTypeDeepseek    AIGatewayModelProviderConfigType = "deepseek"
+	AIGatewayModelProviderConfigTypeFireworks   AIGatewayModelProviderConfigType = "fireworks"
 	AIGatewayModelProviderConfigTypeGemini      AIGatewayModelProviderConfigType = "gemini"
 	AIGatewayModelProviderConfigTypeHuggingface AIGatewayModelProviderConfigType = "huggingface"
 	AIGatewayModelProviderConfigTypeKimi        AIGatewayModelProviderConfigType = "kimi"
 	AIGatewayModelProviderConfigTypeLlama2      AIGatewayModelProviderConfigType = "llama2"
+	AIGatewayModelProviderConfigTypeMeta        AIGatewayModelProviderConfigType = "meta"
 	AIGatewayModelProviderConfigTypeMistral     AIGatewayModelProviderConfigType = "mistral"
 	AIGatewayModelProviderConfigTypeOllama      AIGatewayModelProviderConfigType = "ollama"
 	AIGatewayModelProviderConfigTypeOpenai      AIGatewayModelProviderConfigType = "openai"
 	AIGatewayModelProviderConfigTypeSagemaker   AIGatewayModelProviderConfigType = "sagemaker"
+	AIGatewayModelProviderConfigTypeTogetherai  AIGatewayModelProviderConfigType = "togetherai"
 	AIGatewayModelProviderConfigTypeTypesafe    AIGatewayModelProviderConfigType = "typesafe"
 	AIGatewayModelProviderConfigTypeVercel      AIGatewayModelProviderConfigType = "vercel"
 	AIGatewayModelProviderConfigTypeVllm        AIGatewayModelProviderConfigType = "vllm"
@@ -290,6 +305,14 @@ func (u AIGatewayModelProviderConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["deepseek"] = raw
 		}
+	case AIGatewayModelProviderConfigTypeFireworks:
+		if u.Fireworks != nil {
+			raw, err := json.Marshal(u.Fireworks)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig fireworks: %w", err)
+			}
+			m["fireworks"] = raw
+		}
 	case AIGatewayModelProviderConfigTypeGemini:
 		if u.Gemini != nil {
 			raw, err := json.Marshal(u.Gemini)
@@ -322,6 +345,14 @@ func (u AIGatewayModelProviderConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["llama2"] = raw
 		}
+	case AIGatewayModelProviderConfigTypeMeta:
+		if u.Meta != nil {
+			raw, err := json.Marshal(u.Meta)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig meta: %w", err)
+			}
+			m["meta"] = raw
+		}
 	case AIGatewayModelProviderConfigTypeMistral:
 		if u.Mistral != nil {
 			raw, err := json.Marshal(u.Mistral)
@@ -353,6 +384,14 @@ func (u AIGatewayModelProviderConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig sagemaker: %w", err)
 			}
 			m["sagemaker"] = raw
+		}
+	case AIGatewayModelProviderConfigTypeTogetherai:
+		if u.Togetherai != nil {
+			raw, err := json.Marshal(u.Togetherai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig togetherai: %w", err)
+			}
+			m["togetherai"] = raw
 		}
 	case AIGatewayModelProviderConfigTypeTypesafe:
 		if u.Typesafe != nil {
@@ -504,6 +543,16 @@ func (u *AIGatewayModelProviderConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig deepseek: %w", err)
 		}
 		u.Deepseek = &val
+	case "fireworks":
+		payload, ok := raw["fireworks"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderFireworks
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig fireworks: %w", err)
+		}
+		u.Fireworks = &val
 	case "gemini":
 		payload, ok := raw["gemini"]
 		if !ok || len(payload) == 0 {
@@ -544,6 +593,16 @@ func (u *AIGatewayModelProviderConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig llama2: %w", err)
 		}
 		u.Llama2 = &val
+	case "meta":
+		payload, ok := raw["meta"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderMeta
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig meta: %w", err)
+		}
+		u.Meta = &val
 	case "mistral":
 		payload, ok := raw["mistral"]
 		if !ok || len(payload) == 0 {
@@ -584,6 +643,16 @@ func (u *AIGatewayModelProviderConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig sagemaker: %w", err)
 		}
 		u.Sagemaker = &val
+	case "togetherai":
+		payload, ok := raw["togetherai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderTogetherai
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig togetherai: %w", err)
+		}
+		u.Togetherai = &val
 	case "typesafe":
 		payload, ok := raw["typesafe"]
 		if !ok || len(payload) == 0 {
@@ -654,7 +723,7 @@ func (s *AIGatewayModelProviderAPISpec) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelProviderAPISpec: %w", err)
 	}
-	if aux.AIGatewayModelProviderConfig != nil && aux.AIGatewayModelProviderConfig.Type == "" && aux.AIGatewayModelProviderConfig.Anthropic == nil && aux.AIGatewayModelProviderConfig.Azure == nil && aux.AIGatewayModelProviderConfig.Baseten == nil && aux.AIGatewayModelProviderConfig.Bedrock == nil && aux.AIGatewayModelProviderConfig.Cerebras == nil && aux.AIGatewayModelProviderConfig.Cohere == nil && aux.AIGatewayModelProviderConfig.Dashscope == nil && aux.AIGatewayModelProviderConfig.Databricks == nil && aux.AIGatewayModelProviderConfig.Deepseek == nil && aux.AIGatewayModelProviderConfig.Gemini == nil && aux.AIGatewayModelProviderConfig.Huggingface == nil && aux.AIGatewayModelProviderConfig.Kimi == nil && aux.AIGatewayModelProviderConfig.Llama2 == nil && aux.AIGatewayModelProviderConfig.Mistral == nil && aux.AIGatewayModelProviderConfig.Ollama == nil && aux.AIGatewayModelProviderConfig.Openai == nil && aux.AIGatewayModelProviderConfig.Sagemaker == nil && aux.AIGatewayModelProviderConfig.Typesafe == nil && aux.AIGatewayModelProviderConfig.Vercel == nil && aux.AIGatewayModelProviderConfig.Vllm == nil && aux.AIGatewayModelProviderConfig.Xai == nil {
+	if aux.AIGatewayModelProviderConfig != nil && aux.AIGatewayModelProviderConfig.Type == "" && aux.AIGatewayModelProviderConfig.Anthropic == nil && aux.AIGatewayModelProviderConfig.Azure == nil && aux.AIGatewayModelProviderConfig.Baseten == nil && aux.AIGatewayModelProviderConfig.Bedrock == nil && aux.AIGatewayModelProviderConfig.Cerebras == nil && aux.AIGatewayModelProviderConfig.Cohere == nil && aux.AIGatewayModelProviderConfig.Dashscope == nil && aux.AIGatewayModelProviderConfig.Databricks == nil && aux.AIGatewayModelProviderConfig.Deepseek == nil && aux.AIGatewayModelProviderConfig.Fireworks == nil && aux.AIGatewayModelProviderConfig.Gemini == nil && aux.AIGatewayModelProviderConfig.Huggingface == nil && aux.AIGatewayModelProviderConfig.Kimi == nil && aux.AIGatewayModelProviderConfig.Llama2 == nil && aux.AIGatewayModelProviderConfig.Meta == nil && aux.AIGatewayModelProviderConfig.Mistral == nil && aux.AIGatewayModelProviderConfig.Ollama == nil && aux.AIGatewayModelProviderConfig.Openai == nil && aux.AIGatewayModelProviderConfig.Sagemaker == nil && aux.AIGatewayModelProviderConfig.Togetherai == nil && aux.AIGatewayModelProviderConfig.Typesafe == nil && aux.AIGatewayModelProviderConfig.Vercel == nil && aux.AIGatewayModelProviderConfig.Vllm == nil && aux.AIGatewayModelProviderConfig.Xai == nil {
 		aux.AIGatewayModelProviderConfig = nil
 	}
 	*s = AIGatewayModelProviderAPISpec(aux)

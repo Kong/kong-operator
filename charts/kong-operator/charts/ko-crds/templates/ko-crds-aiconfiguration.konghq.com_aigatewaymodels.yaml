@@ -205,6 +205,7 @@ spec:
                               algorithm:
                                 enum:
                                 - consistent-hashing
+                                - intelligent
                                 - least-connections
                                 - lowest-latency
                                 - lowest-usage
@@ -250,6 +251,121 @@ spec:
                                     maximum: 2147483646
                                     minimum: 1
                                     type: integer
+                                type: object
+                              intelligent:
+                                properties:
+                                  classifier:
+                                    properties:
+                                      custom:
+                                        properties:
+                                          auth:
+                                            properties:
+                                              basic:
+                                                properties:
+                                                  headers:
+                                                    items:
+                                                      properties:
+                                                        name:
+                                                          maxLength: 253
+                                                          minLength: 1
+                                                          type: string
+                                                        value:
+                                                          maxLength: 253
+                                                          type: string
+                                                      required:
+                                                      - name
+                                                      type: object
+                                                    maxItems: 1
+                                                    type: array
+                                                type: object
+                                              type:
+                                                enum:
+                                                - basic
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          contextWindow:
+                                            maximum: 1048576
+                                            minimum: 4096
+                                            type: integer
+                                          format:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          timeout:
+                                            maximum: 60000
+                                            minimum: 100
+                                            type: integer
+                                          url:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^https?://[^?#@]*$
+                                            type: string
+                                        required:
+                                        - contextWindow
+                                        - name
+                                        - url
+                                        type: object
+                                      type:
+                                        enum:
+                                        - custom
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                  connectTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  costQualityTradeoff:
+                                    enum:
+                                    - balanced
+                                    - cost
+                                    - quality
+                                    maxLength: 253
+                                    type: string
+                                  failTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  failoverCriteria:
+                                    items:
+                                      type: string
+                                    type: array
+                                  maxFails:
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  readTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  retries:
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  slots:
+                                    maximum: 65536
+                                    minimum: 10
+                                    type: integer
+                                  version:
+                                    enum:
+                                    - v1
+                                    maxLength: 253
+                                    type: string
+                                  writeTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - classifier
                                 type: object
                               least-connections:
                                 properties:
@@ -1010,7 +1126,6 @@ spec:
                                 type: string
                             type: object
                           maxRequestBodySize:
-                            maximum: 2147483646
                             minimum: 0
                             type: integer
                           proxy:
@@ -1408,6 +1523,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -1572,6 +1690,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -1721,6 +1842,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -1890,6 +2014,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2045,6 +2172,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2209,6 +2339,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2368,6 +2501,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2517,6 +2653,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2672,6 +2811,161 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                fireworks:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2840,6 +3134,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -2989,6 +3286,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -3153,6 +3453,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -3310,6 +3613,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       minLength: 1
@@ -3317,6 +3623,158 @@ spec:
                                   required:
                                   - format
                                   - upstreamURL
+                                  type: object
+                                meta:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
                                   type: object
                                 mistral:
                                   properties:
@@ -3470,6 +3928,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -3621,6 +4082,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -3770,6 +4234,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -3946,6 +4413,161 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                togetherai:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -3961,14 +4583,17 @@ spec:
                                   - dashscope
                                   - databricks
                                   - deepseek
+                                  - fireworks
                                   - gemini
                                   - huggingface
                                   - kimi
                                   - llama2
+                                  - meta
                                   - mistral
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - togetherai
                                   - typesafe
                                   - vercel
                                   - vllm
@@ -4132,6 +4757,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -4281,6 +4909,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       minLength: 1
@@ -4433,6 +5064,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -4592,6 +5226,7 @@ spec:
                               algorithm:
                                 enum:
                                 - consistent-hashing
+                                - intelligent
                                 - least-connections
                                 - lowest-latency
                                 - lowest-usage
@@ -4637,6 +5272,121 @@ spec:
                                     maximum: 2147483646
                                     minimum: 1
                                     type: integer
+                                type: object
+                              intelligent:
+                                properties:
+                                  classifier:
+                                    properties:
+                                      custom:
+                                        properties:
+                                          auth:
+                                            properties:
+                                              basic:
+                                                properties:
+                                                  headers:
+                                                    items:
+                                                      properties:
+                                                        name:
+                                                          maxLength: 253
+                                                          minLength: 1
+                                                          type: string
+                                                        value:
+                                                          maxLength: 253
+                                                          type: string
+                                                      required:
+                                                      - name
+                                                      type: object
+                                                    maxItems: 1
+                                                    type: array
+                                                type: object
+                                              type:
+                                                enum:
+                                                - basic
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          contextWindow:
+                                            maximum: 1048576
+                                            minimum: 4096
+                                            type: integer
+                                          format:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          timeout:
+                                            maximum: 60000
+                                            minimum: 100
+                                            type: integer
+                                          url:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^https?://[^?#@]*$
+                                            type: string
+                                        required:
+                                        - contextWindow
+                                        - name
+                                        - url
+                                        type: object
+                                      type:
+                                        enum:
+                                        - custom
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                  connectTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  costQualityTradeoff:
+                                    enum:
+                                    - balanced
+                                    - cost
+                                    - quality
+                                    maxLength: 253
+                                    type: string
+                                  failTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  failoverCriteria:
+                                    items:
+                                      type: string
+                                    type: array
+                                  maxFails:
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  readTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                  retries:
+                                    maximum: 32767
+                                    minimum: 0
+                                    type: integer
+                                  slots:
+                                    maximum: 65536
+                                    minimum: 10
+                                    type: integer
+                                  version:
+                                    enum:
+                                    - v1
+                                    maxLength: 253
+                                    type: string
+                                  writeTimeout:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - classifier
                                 type: object
                               least-connections:
                                 properties:
@@ -5397,7 +6147,6 @@ spec:
                                 type: string
                             type: object
                           maxRequestBodySize:
-                            maximum: 2147483646
                             minimum: 0
                             type: integer
                           model:
@@ -5803,6 +6552,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -5967,6 +6719,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -6116,6 +6871,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -6285,6 +7043,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -6440,6 +7201,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -6604,6 +7368,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -6763,6 +7530,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -6912,6 +7682,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -7067,6 +7840,161 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                fireworks:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -7235,6 +8163,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -7384,6 +8315,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -7548,6 +8482,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -7705,6 +8642,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       minLength: 1
@@ -7712,6 +8652,158 @@ spec:
                                   required:
                                   - format
                                   - upstreamURL
+                                  type: object
+                                meta:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
                                   type: object
                                 mistral:
                                   properties:
@@ -7865,6 +8957,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -8016,6 +9111,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -8165,6 +9263,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -8341,6 +9442,161 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
+                                togetherai:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -8356,14 +9612,17 @@ spec:
                                   - dashscope
                                   - databricks
                                   - deepseek
+                                  - fireworks
                                   - gemini
                                   - huggingface
                                   - kimi
                                   - llama2
+                                  - meta
                                   - mistral
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - togetherai
                                   - typesafe
                                   - vercel
                                   - vllm
@@ -8527,6 +9786,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string
@@ -8676,6 +9938,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       minLength: 1
@@ -8828,6 +10093,9 @@ spec:
                                       maximum: 1
                                       minimum: 0
                                       type: number
+                                    upstreamBaseURL:
+                                      maxLength: 253
+                                      type: string
                                     upstreamURL:
                                       maxLength: 253
                                       type: string

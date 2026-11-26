@@ -144,6 +144,16 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "conversion-listener.config.targets.[].failover",
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"targets",
+			"[]",
+			"failover",
+		},
+	},
+	{
 		Label: "conversion-listener.enabled",
 		Path: []string{
 			"conversion-listener",
@@ -685,6 +695,16 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "passthrough-listener.config.targets.[].failover",
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"targets",
+			"[]",
+			"failover",
+		},
+	},
+	{
 		Label: "passthrough-listener.enabled",
 		Path: []string{
 			"passthrough-listener",
@@ -859,6 +879,16 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"session",
 			"redis",
 			"ssl_verify",
+		},
+	},
+	{
+		Label: "upstream-server.config.targets.[].failover",
+		Path: []string{
+			"upstream-server",
+			"config",
+			"targets",
+			"[]",
+			"failover",
 		},
 	},
 	{

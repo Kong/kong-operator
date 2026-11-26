@@ -3,6 +3,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -157,6 +159,12 @@ type AIGatewayAgentStatus struct {
 // AIGatewayAgentConfig Configuration for the agent.
 // The structure varies depending on the agent type.
 type AIGatewayAgentConfig struct {
+	// Load balancing configuration for `targets`. Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Balancer *AIGatewayAgentConfigBalancer `json:"balancer,omitempty"`
 	// The CA certificates used to verify the TLS certificate of the
 	// upstream agent endpoint.
 	// Each entry references an AIGatewayCACertificate in the cluster.
@@ -187,6 +195,24 @@ type AIGatewayAgentConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
+	// The path prefix of requests sent to the `targets`.
+	// Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^/`
+	Path string `json:"path,omitzero"`
+	// The protocol used to reach the `targets`.
+	// Only valid with `targets`.
+	// If unset, the gateway uses `https`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Protocol AIGatewayUpstreamProtocol `json:"protocol,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -196,6 +222,13 @@ type AIGatewayAgentConfig struct {
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// List of targets the upstream load balances requests across.
+	// Replaces `url`: set exactly one of `url` or `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Targets []AIGatewayUpstreamTarget `json:"targets,omitempty"`
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
 	//
@@ -227,4 +260,169 @@ type AIGatewayAgentConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
+}
+
+// AIGatewayAgentConfigBalancer represents a union type for balancer.
+// Only one of the fields should be set based on the Algorithm.
+type AIGatewayAgentConfigBalancer struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;round-robin
+	Algorithm AIGatewayAgentConfigBalancerType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayUpstreamBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayUpstreamBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayUpstreamBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayUpstreamBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+}
+
+// AIGatewayAgentConfigBalancerType represents the type of balancer.
+type AIGatewayAgentConfigBalancerType string
+
+// AIGatewayAgentConfigBalancerType values.
+const (
+	AIGatewayAgentConfigBalancerTypeConsistentHashing AIGatewayAgentConfigBalancerType = "consistent-hashing"
+	AIGatewayAgentConfigBalancerTypeLeastConnections  AIGatewayAgentConfigBalancerType = "least-connections"
+	AIGatewayAgentConfigBalancerTypeLowestLatency     AIGatewayAgentConfigBalancerType = "lowest-latency"
+	AIGatewayAgentConfigBalancerTypeRoundRobin        AIGatewayAgentConfigBalancerType = "round-robin"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayAgentConfigBalancer) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Algorithm {
+	case AIGatewayAgentConfigBalancerTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentConfigBalancer consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayAgentConfigBalancerTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentConfigBalancer least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayAgentConfigBalancerTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentConfigBalancer lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayAgentConfigBalancerTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentConfigBalancer round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayAgentConfigBalancer algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayAgentConfigBalancer) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentConfigBalancer: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayAgentConfigBalancerType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentConfigBalancer consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentConfigBalancer least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentConfigBalancer lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentConfigBalancer round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayAgentConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentConfig: nil receiver")
+	}
+	type alias AIGatewayAgentConfig
+	aux := alias{}
+	aux.Balancer = &AIGatewayAgentConfigBalancer{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentConfig: %w", err)
+	}
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.RoundRobin == nil {
+		aux.Balancer = nil
+	}
+	*s = AIGatewayAgentConfig(aux)
+	return nil
 }
