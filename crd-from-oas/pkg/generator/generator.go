@@ -2773,6 +2773,40 @@ func (g *Generator) writeNestedInlineTypes(buf *strings.Builder, props []*parser
 	}
 }
 
+// nestedInlineTypesHaveUnion reports whether writeNestedInlineTypes emits a
+// union type for props. It walks the same inline types with the same skip
+// rules, because an import that the file does not use also fails to compile.
+func (g *Generator) nestedInlineTypesHaveUnion(props []*parser.Property, entityName, parentTypeName string) bool {
+	inlineTypeHasUnion := func(nested []*parser.Property, typeName string) bool {
+		for _, p := range nested {
+			if !g.shouldSkipSchemaProperty(typeName, p) && len(p.OneOf) > 0 {
+				return true
+			}
+		}
+		return g.nestedInlineTypesHaveUnion(nested, entityName, typeName)
+	}
+
+	for _, prop := range props {
+		if g.shouldSkipSchemaProperty(parentTypeName, prop) {
+			continue
+		}
+		if prop.Type == "array" && prop.Items != nil && isInlineObjectWithProperties(prop.Items) {
+			if inlineTypeHasUnion(prop.Items.Properties, g.inlineTypeName(entityName, parentTypeName, prop.Name)) {
+				return true
+			}
+			continue
+		}
+		if prop.Items != nil && g.nestedInlineTypesHaveUnion([]*parser.Property{prop.Items}, entityName, parentTypeName) {
+			return true
+		}
+		if isInlineObjectWithProperties(prop) &&
+			inlineTypeHasUnion(prop.Properties, g.inlineTypeName(entityName, parentTypeName, prop.Name)) {
+			return true
+		}
+	}
+	return false
+}
+
 // isInlineObjectWithProperties returns true for object-typed properties whose
 // shape is declared inline (sub-properties present) rather than via a $ref or
 // a oneOf union. These need a generated Go struct definition because goType
@@ -3095,6 +3129,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 				break
 			}
 		}
+	}
+	if !hasUnionTypes {
+		// writeNestedInlineTypes also emits unions found inside inline objects
+		// (e.g. AIGatewayAgent config.balancer) into this file.
+		hasUnionTypes = g.nestedInlineTypesHaveUnion(schema.Properties, entityName, entityName+"APISpec")
 	}
 
 	// When ParentRef is configured, suppress the OpenAPI-derived spec ref field
