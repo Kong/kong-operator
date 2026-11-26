@@ -1,0 +1,15 @@
+#:schema https://ksai.kongcloud.io/schemas/ksai/v1/ksai.toml.json
+version = 1
+
+[review]
+# Ignore some large generated files in KSAI reviews.
+ignore = [
+    # Ignore all generated CRD OAS spec.
+    'config/crd/kong-operator/**',
+    # Ignore KO CRD templates in charts.
+    'charts/kong-operator/charts/ko-crds/templates/** ',
+    # Ignore CI snapshots in charts.
+    'charts/kong-operator/ci/__snapshots__/**',
+    # Ignore generated chainsaw test cases for cross namespace reference in event gateways.
+    'test/e2e/chainsaw/eventgateway-cross-namespace/**/chainsaw-test.yaml'
+    ]
