@@ -92,6 +92,21 @@
   operator no longer rejects the configuration.
   [#6801](https://github.com/Kong/kong-operator/pull/6801)
   [#6804](https://github.com/Kong/kong-operator/pull/6804)
+- `OnPremEventGateway`: a status the operator computed for an entity is no
+  longer written to another entity of the same name created since. A static
+  key deleted and created again no longer gets the fingerprint of the value
+  of the one it replaces, which stopped the push of its gateway for good.
+  [#6764](https://github.com/Kong/kong-operator/pull/6764)
+  [#6794](https://github.com/Kong/kong-operator/pull/6794)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
+  puts the per-request trace ID in the `Programmed` condition.
+  [#6797](https://github.com/Kong/kong-operator/pull/6797)
+  [#6817](https://github.com/Kong/kong-operator/pull/6817)
+- Konnect entities: when an entity is not found in Konnect and cannot be
+  created again because its parent no longer exists in Konnect, the operator
+  sets the `Programmed` condition to `False` with the `ParentNotFound` reason.
+  [#6798](https://github.com/Kong/kong-operator/pull/6798)
+  [#6818](https://github.com/Kong/kong-operator/pull/6818)
 
 ## [v2.4.0]
 
