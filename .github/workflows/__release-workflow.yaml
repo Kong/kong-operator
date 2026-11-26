@@ -261,9 +261,19 @@ jobs:
   # Submits each architecture to Red Hat. A submission pairs the tag with the digest and
   # cannot be undone, so it runs only for a tagged release.
   submit-certified-images:
-    # A submission cannot be undone, so it runs last: after both builds and after the
-    # certified image is signed and has provenance.
-    needs: [semver, build-push-images, build-push-ubi, sign-ubi-image, image-provenance-ubi]
+    # A submission pairs the tag with a digest, so it waits for every gate that can cause a
+    # rebuild: a re-cut release would give the same version a second digest.
+    needs:
+      - semver
+      - build-push-images
+      - build-push-ubi
+      - sign-image
+      - image-provenance
+      - sign-ubi-image
+      - image-provenance-ubi
+      - attest-security-artifacts
+      - test-integration-current-kubernetes
+      - test-e2e-current-kubernetes
     if: ${{ inputs.tag != '' && needs.build-push-ubi.outputs.full_tag != '' }}
     runs-on: ubuntu-latest
     permissions:
