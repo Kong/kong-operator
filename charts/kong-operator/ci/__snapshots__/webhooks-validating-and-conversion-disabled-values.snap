@@ -43371,11 +43371,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -43645,11 +43648,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44078,11 +44084,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44302,11 +44311,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44496,11 +44508,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44684,11 +44699,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44875,11 +44893,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45067,11 +45088,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45277,11 +45301,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45871,11 +45898,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -46087,11 +46117,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -46555,11 +46588,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47183,11 +47219,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47476,11 +47515,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47674,11 +47716,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47881,11 +47926,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -48644,11 +48692,14 @@ spec:
                   hashVersion:
                     maxLength: 16
                     type: string
+                  keyID:
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
-                    pattern: ^sha256:[0-9a-f]{64}$
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object

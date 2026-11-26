@@ -46,6 +46,7 @@ type ConfigVersionTracker struct {
 	rebaselineWG  sync.WaitGroup
 	controlPlanes map[string]*controlPlaneConfigVersion
 	entities      map[types.UID]entitySyncRecord
+	hashKeys      syncHashKeySet
 }
 
 // NewConfigVersionTracker returns a ConfigVersionTracker that checks the config version of a control plane
@@ -83,6 +84,9 @@ type entitySyncRecord struct {
 	reprHash    hash
 	hasReprHash bool
 	checkedAt   time.Time
+	// keyID identifies the key the hashes were computed with. It is empty for
+	// unkeyed SHA-256 hashes.
+	keyID string
 }
 
 // BeforeWrite must be called before the operator sends a write request to the given control plane.
@@ -385,7 +389,20 @@ type syncGuard struct {
 	// persisted is the sync state loaded from the entity status, when present.
 	// Its hashes are unverified until a GET confirms them.
 	persisted *configurationv1alpha1.SyncStatus
-	// pending is the record produced by a real PUT. It is persisted in status by
+	// hasher computes the hashes of the update. It is keyed for secret-bearing
+	// entities when sync hash keys are configured.
+	hasher syncHasher
+	// previousHasher, when set, verifies hashes persisted with the key that was
+	// current before a key rotation.
+	previousHasher *syncHasher
+	// secretBearing is true when the entity payload or representation can carry
+	// secret material, so only keyed hashes may be persisted in status.
+	secretBearing bool
+	// persistable is false when the hashes of the update must not be persisted
+	// in status: a secret-bearing entity without a configured sync hash key.
+	persistable bool
+	// pending is the record produced by a real PUT, or by a GET verification
+	// of hashes persisted with the previous key. It is persisted in status by
 	// the reconcile and committed to memory only after the status patch succeeds.
 	pending *entitySyncRecord
 
@@ -409,7 +426,36 @@ func (t *ConfigVersionTracker) guard(
 		controlPlaneID: controlPlaneID,
 		periodic:       periodic,
 		persisted:      persisted,
+		persistable:    true,
 	}
+}
+
+// withSecretBearingPayload marks the guarded entity as secret-bearing: its
+// payload or Konnect representation can carry secret material.
+//
+// Its hashes are keyed HMAC-SHA256 digests computed with the tracker's current
+// sync hash key. Without a key, the hashes are unkeyed and tracked in memory
+// only: they are never persisted in status, where they could be used to brute
+// force a low-entropy secret offline.
+func (g *syncGuard) withSecretBearingPayload() *syncGuard {
+	if g == nil {
+		return nil
+	}
+	g.secretBearing = true
+	keys := g.tracker.syncHashKeys()
+	if keys.current == nil {
+		g.hasher = syncHasher{}
+		g.previousHasher = nil
+		g.persistable = false
+		return g
+	}
+	g.hasher = syncHasher{key: keys.current}
+	g.previousHasher = nil
+	if keys.previous != nil {
+		g.previousHasher = &syncHasher{key: keys.previous}
+	}
+	g.persistable = true
+	return g
 }
 
 // notSent reports whether the guarded update did not send the entity to Konnect.
@@ -429,46 +475,92 @@ func (g *syncGuard) invalidate() {
 	}
 }
 
+// knownRecord returns what is known about the guarded entity and the hasher
+// its hashes were computed with: the in-memory record when present, otherwise
+// the record persisted in status.
+func (g *syncGuard) knownRecord() (entitySyncRecord, syncHasher, bool) {
+	if rec, ok := g.tracker.record(g.uid); ok {
+		// Hashes computed with another key cannot be compared with the
+		// current ones.
+		if rec.keyID != g.hasher.keyID() {
+			return entitySyncRecord{}, syncHasher{}, false
+		}
+		return rec, g.hasher, true
+	}
+	return g.recordFromStatus()
+}
+
 // recordFromStatus returns the persisted sync state as an in-memory record with
 // a zero checkedAt, so the first reconcile after a restart verifies the entity
-// with a GET instead of trusting it.
+// with a GET instead of trusting it. It also returns the hasher that computed
+// the persisted hashes.
 //
 // Missing hashes and hashes from another scheme are unverified: they produce no
-// record, so the entity is sent to Konnect and recorded again.
-func (g *syncGuard) recordFromStatus() (entitySyncRecord, bool) {
-	if g == nil || g.persisted == nil || g.persisted.HashVersion != SyncHashVersion {
-		return entitySyncRecord{}, false
+// record, so the entity is sent to Konnect and recorded again. This includes
+// unkeyed hashes of a secret-bearing entity, and keyed hashes computed with a
+// key that is neither the current nor the previous one.
+func (g *syncGuard) recordFromStatus() (entitySyncRecord, syncHasher, bool) {
+	if g == nil || g.persisted == nil || g.persisted.HashVersion != SyncHashVersion || !g.persistable {
+		return entitySyncRecord{}, syncHasher{}, false
 	}
-	payloadHash, payloadOK := parseHash(g.persisted.PayloadHash)
-	reprHash, reprOK := parseHash(g.persisted.RepresentationHash)
-	if !payloadOK || !reprOK {
-		return entitySyncRecord{}, false
+	payloadHash, payloadKeyed, payloadOK := parseHash(g.persisted.PayloadHash)
+	reprHash, reprKeyed, reprOK := parseHash(g.persisted.RepresentationHash)
+	if !payloadOK || !reprOK || payloadKeyed != reprKeyed || payloadKeyed != g.secretBearing {
+		return entitySyncRecord{}, syncHasher{}, false
 	}
+
+	var hasher syncHasher
+	switch keyID := g.persisted.KeyID; {
+	case !payloadKeyed:
+		if keyID != "" {
+			return entitySyncRecord{}, syncHasher{}, false
+		}
+		hasher = syncHasher{}
+	case keyID != "" && keyID == g.hasher.keyID():
+		hasher = g.hasher
+	case keyID != "" && g.previousHasher != nil && keyID == g.previousHasher.keyID():
+		hasher = *g.previousHasher
+	default:
+		return entitySyncRecord{}, syncHasher{}, false
+	}
+
 	return entitySyncRecord{
 		payloadHash: payloadHash,
 		reprHash:    reprHash,
 		hasReprHash: true,
-	}, true
+		keyID:       hasher.keyID(),
+	}, hasher, true
 }
 
-// pendingStatus returns the status representation of the record produced by a
-// real PUT, or nil when the update did not send the entity to Konnect.
+// pendingStatusWrite reports whether the update produced a record that must
+// replace status.sync with pendingStatus. It is true after a real PUT, and
+// after a GET verification of hashes persisted with the previous key.
+func (g *syncGuard) pendingStatusWrite() bool {
+	return g != nil && g.pending != nil
+}
+
+// pendingStatus returns the status representation of the pending record. It
+// returns nil when there is no pending record, or when the record must not be
+// persisted: status.sync is then cleared so it never holds hashes that do not
+// describe the last write.
 func (g *syncGuard) pendingStatus() *configurationv1alpha1.SyncStatus {
-	if g == nil || g.pending == nil {
+	if g == nil || g.pending == nil || !g.persistable {
 		return nil
 	}
+	keyed := g.pending.keyID != ""
 	status := &configurationv1alpha1.SyncStatus{
-		PayloadHash: g.pending.payloadHash.String(),
+		PayloadHash: g.pending.payloadHash.format(keyed),
 		HashVersion: SyncHashVersion,
+		KeyID:       g.pending.keyID,
 	}
 	if g.pending.hasReprHash {
-		status.RepresentationHash = g.pending.reprHash.String()
+		status.RepresentationHash = g.pending.reprHash.format(keyed)
 	}
 	return status
 }
 
-// pendingRecord returns the in-memory record produced by a real PUT. It must be
-// committed only after the status carrying the same record is persisted.
+// pendingRecord returns the pending in-memory record. It must be committed
+// only after the status carrying the same record is persisted.
 func (g *syncGuard) pendingRecord() (entitySyncRecord, bool) {
 	if g == nil || g.pending == nil {
 		return entitySyncRecord{}, false
@@ -493,7 +585,7 @@ func upsertUnlessInSync[E any](
 	}
 
 	t := g.tracker
-	payloadHash, err := entityPayloadHash(g.controlPlaneID, konnectID, payload)
+	payloadHash, err := entityPayloadHash(g.hasher, g.controlPlaneID, konnectID, payload)
 	if err != nil {
 		t.Forget(g.uid)
 		_, err := upsert(ctx)
@@ -504,13 +596,19 @@ func upsertUnlessInSync[E any](
 	// the first write, so that the write is attributed to the operator.
 	changedAt, versionOK := t.lastExternalChange(ctx, g.sdk, g.controlPlaneID)
 
-	rec, ok := t.record(g.uid)
-	if !ok {
-		rec, ok = g.recordFromStatus()
+	rec, verifyHasher, ok := g.knownRecord()
+	// Hashes persisted with the previous key are compared with hashes computed
+	// with the same key, then rewritten with the current key.
+	migrating := ok && verifyHasher.keyID() != g.hasher.keyID()
+	comparedPayloadHash := payloadHash
+	if migrating {
+		if comparedPayloadHash, err = entityPayloadHash(verifyHasher, g.controlPlaneID, konnectID, payload); err != nil {
+			ok = false
+		}
 	}
-	if g.periodic && versionOK && ok && rec.payloadHash == payloadHash {
+	if g.periodic && versionOK && ok && rec.payloadHash == comparedPayloadHash {
 		logger := ctrllog.FromContext(ctx)
-		if !t.driftCheckDue(g.uid, rec) && changedAt.Before(rec.checkedAt) {
+		if !migrating && !t.driftCheckDue(g.uid, rec) && changedAt.Before(rec.checkedAt) {
 			log.Debug(logger, "entity unchanged and no external change in Konnect, skipping update")
 			g.outcome = syncOutcomeSkipped
 			return nil
@@ -520,17 +618,31 @@ func upsertUnlessInSync[E any](
 
 		ent, err := get(ctx)
 		if err == nil && ent != nil {
-			reprHash, err := representationHash(ent)
+			reprHash, err := representationHash(verifyHasher, ent)
 			if err == nil && reprHash == rec.reprHash {
-				log.Debug(logger, "entity unchanged in Konnect, skipping update")
-				t.store(g.uid, entitySyncRecord{
+				verified := entitySyncRecord{
 					payloadHash: payloadHash,
 					reprHash:    reprHash,
 					hasReprHash: true,
 					checkedAt:   checkedAt,
-				})
-				g.outcome = syncOutcomeVerified
-				return nil
+					keyID:       g.hasher.keyID(),
+				}
+				if migrating {
+					// The entity is verified with the previous key. Rewrite its
+					// hashes with the current key without sending it: this is an
+					// explicit verification update persisted in status.
+					if verified.reprHash, err = representationHash(g.hasher, ent); err == nil {
+						log.Debug(logger, "entity unchanged in Konnect, rewriting its sync hashes with the current key")
+						g.pending = &verified
+						g.outcome = syncOutcomeVerified
+						return nil
+					}
+				} else {
+					log.Debug(logger, "entity unchanged in Konnect, skipping update")
+					t.store(g.uid, verified)
+					g.outcome = syncOutcomeVerified
+					return nil
+				}
 			}
 		}
 		log.Debug(logger, "entity changed in Konnect or failed to get it, updating it")
@@ -542,8 +654,8 @@ func upsertUnlessInSync[E any](
 		t.Forget(g.uid)
 		return err
 	}
-	rec = entitySyncRecord{payloadHash: payloadHash, checkedAt: sentAt}
-	if reprHash, err := representationHash(ent); err == nil {
+	rec = entitySyncRecord{payloadHash: payloadHash, checkedAt: sentAt, keyID: g.hasher.keyID()}
+	if reprHash, err := representationHash(g.hasher, ent); err == nil {
 		rec.reprHash = reprHash
 		rec.hasReprHash = true
 	}

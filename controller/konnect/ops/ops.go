@@ -672,6 +672,9 @@ func Update[
 		g = tracker.guard(
 			sdk.GetDPNodesSDK(), e.GetUID(), cpEnt.GetControlPlaneID(), isProgrammedForCurrentGeneration(e), persisted,
 		)
+		if isSecretBearingSyncEntity(e) {
+			g = g.withSecretBearingPayload()
+		}
 	}
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
@@ -765,25 +768,27 @@ func Update[
 		err = UpdateGeneratedOps(ctx, sdk, cl, e)
 	}
 
-	// Persist the sync state produced by a real PUT together with the rest of the
-	// status. The caller commits the in-memory record only after the status patch
-	// that carries it succeeds.
+	// Persist the sync state produced by a real PUT, or by a verification of
+	// hashes persisted with the previous sync hash key, together with the rest of
+	// the status. The caller commits the in-memory record only after the status
+	// patch that carries it succeeds.
 	var syncResult *SyncResult
-	if err == nil && g != nil {
-		if status := g.pendingStatus(); status != nil {
-			if stater, ok := any(e).(syncStatusStater); ok {
-				stater.SetSyncStatus(status)
-				if record, ok := g.pendingRecord(); ok {
-					syncResult = &SyncResult{tracker: tracker, uid: e.GetUID(), record: record, ok: true}
-				}
-			}
+	if err == nil && g.pendingStatusWrite() {
+		if stater, ok := any(e).(syncStatusStater); ok {
+			// A nil status clears hashes that must not be persisted, for
+			// example of a secret-bearing entity without a sync hash key.
+			stater.SetSyncStatus(g.pendingStatus())
+		}
+		if record, ok := g.pendingRecord(); ok {
+			syncResult = &SyncResult{tracker: tracker, uid: e.GetUID(), record: record, ok: true}
 		}
 	}
 
-	// Leave the status untouched so that its Programmed condition keeps the time
-	// of the last update sent to Konnect.
+	// Leave the Programmed condition untouched so that it keeps the time of the
+	// last update sent to Konnect. A verification that rewrote the sync hashes
+	// still returns its record to be committed after the status patch.
 	if err == nil && g.notSent() {
-		return ctrl.Result{RequeueAfter: syncPeriod}, nil, nil
+		return ctrl.Result{RequeueAfter: syncPeriod}, syncResult, nil
 	}
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)

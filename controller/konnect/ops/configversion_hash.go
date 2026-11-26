@@ -2,6 +2,7 @@ package ops
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -20,26 +21,80 @@ const (
 	// See docs/internal/konnect-sync-hashing.md for the hashing and migration contract.
 	SyncHashVersion = "v1"
 
-	hashPrefix = "sha256:"
+	hashPrefix     = "sha256:"
+	hmacHashPrefix = "hmac-sha256:"
 )
 
 type hash [sha256.Size]byte
 
+// String returns the unkeyed SHA-256 encoding of the hash.
 func (h hash) String() string {
 	return hashPrefix + hex.EncodeToString(h[:])
 }
 
-func parseHash(s string) (hash, bool) {
-	if !strings.HasPrefix(s, hashPrefix) {
-		return hash{}, false
+// format returns the status encoding of a hash computed by a hasher: keyed
+// digests use the hmac-sha256 prefix so they are never mistaken for, or
+// compared with, unkeyed SHA-256 digests.
+func (h hash) format(keyed bool) string {
+	if keyed {
+		return hmacHashPrefix + hex.EncodeToString(h[:])
 	}
-	b, err := hex.DecodeString(strings.TrimPrefix(s, hashPrefix))
+	return h.String()
+}
+
+// parseHash parses a hash encoded by hash.format. keyed reports whether it is
+// a keyed HMAC-SHA256 digest.
+func parseHash(s string) (h hash, keyed bool, ok bool) {
+	var encoded string
+	switch {
+	case strings.HasPrefix(s, hmacHashPrefix):
+		keyed, encoded = true, strings.TrimPrefix(s, hmacHashPrefix)
+	case strings.HasPrefix(s, hashPrefix):
+		encoded = strings.TrimPrefix(s, hashPrefix)
+	default:
+		return hash{}, false, false
+	}
+	b, err := hex.DecodeString(encoded)
 	if err != nil || len(b) != sha256.Size {
-		return hash{}, false
+		return hash{}, false, false
 	}
-	var h hash
 	copy(h[:], b)
-	return h, true
+	return h, keyed, true
+}
+
+// syncHasher computes the digest of canonical JSON.
+//
+// The zero value computes an unkeyed SHA-256 digest. A hasher built from a
+// SyncHashKey computes a keyed HMAC-SHA256 digest, which is used for entities
+// whose payload or Konnect representation carries secret material, so a hash
+// readable in status cannot be used to brute force a low-entropy secret
+// offline.
+type syncHasher struct {
+	key *SyncHashKey
+}
+
+// keyed reports whether the hasher computes keyed HMAC-SHA256 digests.
+func (h syncHasher) keyed() bool {
+	return h.key != nil
+}
+
+// keyID returns the ID of the hasher's key, or an empty string for an unkeyed hasher.
+func (h syncHasher) keyID() string {
+	if h.key == nil {
+		return ""
+	}
+	return h.key.id
+}
+
+func (h syncHasher) sum(b []byte) hash {
+	if h.key == nil {
+		return sha256.Sum256(b)
+	}
+	mac := hmac.New(sha256.New, h.key.secret)
+	mac.Write(b)
+	var out hash
+	copy(out[:], mac.Sum(nil))
+	return out
 }
 
 type canonicalizeMode int
@@ -52,22 +107,22 @@ const (
 // entityPayloadHash hashes the canonical JSON of the desired Konnect request
 // together with the control plane and entity identifiers so changes to either
 // invalidate the cached hash.
-func entityPayloadHash(controlPlaneID, konnectID string, payload any) (hash, error) {
+func entityPayloadHash(h syncHasher, controlPlaneID, konnectID string, payload any) (hash, error) {
 	b, err := canonicalPayloadJSON(controlPlaneID, konnectID, payload)
 	if err != nil {
 		return hash{}, err
 	}
-	return sha256.Sum256(b), nil
+	return h.sum(b), nil
 }
 
 // representationHash hashes the canonical JSON of the Konnect representation of
 // an entity, ignoring volatile server-managed fields and non-guaranteed set order.
-func representationHash(v any) (hash, error) {
+func representationHash(h syncHasher, v any) (hash, error) {
 	b, err := canonicalRepresentationJSON(v)
 	if err != nil {
 		return hash{}, err
 	}
-	return sha256.Sum256(b), nil
+	return h.sum(b), nil
 }
 
 // canonicalPayloadJSON encodes the desired Konnect request envelope into

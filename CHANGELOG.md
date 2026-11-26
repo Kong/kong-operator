@@ -135,6 +135,13 @@
   operator verifies unchanged entities with a GET instead of sending one PUT
   per entity, while keeping the in-memory tracker as the fast path.
   [#6768](https://github.com/Kong/kong-operator/pull/6768)
+- Konnect: the sync state persisted in the status of `KongPluginBinding`s and
+  `KongCertificate`s, whose payload can carry data read from `Secret`s, uses
+  keyed HMAC-SHA256 hashes, so the status cannot be used to guess that data.
+  The key is stored in an operator-managed `Secret` named by
+  `--konnect-sync-hash-key-secret`, created on first start, and can be rotated
+  without a PUT of every entity by moving it to the `previousKey` data key.
+  [#6833](https://github.com/Kong/kong-operator/pull/6833)
 
 ### Fixes
 

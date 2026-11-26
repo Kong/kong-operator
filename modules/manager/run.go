@@ -143,7 +143,15 @@ type Config struct {
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
-	KonnectRequestTimeout                   time.Duration
+	// KonnectSyncHashKeySecretName is the name of the Secret, in
+	// ControllerNamespace, holding the key used to compute keyed HMAC-SHA256
+	// sync hashes of secret-bearing Konnect entities.
+	KonnectSyncHashKeySecretName string
+	// KonnectSyncHashKeys are the keys read from the KonnectSyncHashKeySecretName
+	// Secret at startup. They are not configured by a flag. When nil, the sync
+	// state of secret-bearing Konnect entities is tracked in memory only.
+	KonnectSyncHashKeys   *ops.SyncHashKeys
+	KonnectRequestTimeout time.Duration
 	// KonnectListPageSize is the page size requested when listing Konnect
 	// entities page by page, e.g. to find an entity by its Kubernetes UID.
 	// 0 means consts.DefaultKonnectListPageSize.
@@ -246,6 +254,7 @@ func DefaultConfig() Config {
 		ValidatingWebhookEnabled:            true,
 		ValidatingWebhookCertDir:            validationconsts.DefaultAdmissionWebhookCertDir,
 		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
+		KonnectSyncHashKeySecretName:        consts.DefaultKonnectSyncHashKeySecretName,
 		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
 		KonnectServerURLDomains:             konnectserver.DefaultDomains,
@@ -443,6 +452,10 @@ func Run(
 	}
 	k8sresources.SetUserIDAssignedByPlatform(userIDAssignedByPlatform)
 
+	if cfg.KonnectControllersEnabled {
+		cfg.KonnectSyncHashKeys = loadKonnectSyncHashKeys(ctx, setupLog, mgr, cfg)
+	}
+
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {
 		setupLog.Error(err, "failed setting up controllers")
@@ -597,6 +610,38 @@ func warnIfLegacyDevelopmentModeEnabled(log logr.Logger) {
 			))
 		}
 	}
+}
+
+// loadKonnectSyncHashKeys reads, or creates, the keys used to compute keyed
+// HMAC-SHA256 hashes of secret-bearing Konnect entities persisted in their
+// status. It runs before the controllers start, so that the first reconcile
+// after a restart can verify persisted hashes instead of sending every entity.
+//
+// A failure does not prevent the operator from starting: the sync state of
+// secret-bearing entities is then tracked in memory only, so they are sent to
+// Konnect once after every restart.
+func loadKonnectSyncHashKeys(ctx context.Context, log logr.Logger, mgr manager.Manager, cfg Config) *ops.SyncHashKeys {
+	// The manager's client cannot be used before Start because of the
+	// read-your-own-writes cache semantics.
+	cl, err := client.New(mgr.GetConfig(), client.Options{
+		Scheme: mgr.GetScheme(),
+		Mapper: mgr.GetRESTMapper(),
+	})
+	if err == nil {
+		var keys ops.SyncHashKeys
+		keys, err = EnsureKonnectSyncHashKeys(ctx, log, cl, client.ObjectKey{
+			Namespace: cfg.ControllerNamespace,
+			Name:      cfg.KonnectSyncHashKeySecretName,
+		}, cfg.SecretLabelSelector)
+		if err == nil {
+			return &keys
+		}
+	}
+	log.Error(err, "Konnect sync hash key unavailable: the sync state of secret-bearing Konnect entities "+
+		"is not persisted in their status, so they are sent to Konnect once after every restart",
+		"namespace", cfg.ControllerNamespace, "name", cfg.KonnectSyncHashKeySecretName,
+	)
+	return nil
 }
 
 // clusterCACommonName is the common name of the cluster CA certificate. It

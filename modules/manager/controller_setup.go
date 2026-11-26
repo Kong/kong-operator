@@ -1094,6 +1094,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		c.KonnectSyncPeriod,
 		consts.DefaultKonnectDriftCheckPeriod,
 	)
+	if c.KonnectSyncHashKeys != nil {
+		konnectConfigVersionTracker.SetSyncHashKeys(*c.KonnectSyncHashKeys)
+	}
 
 	// MCPServer controllers
 	if c.FeatureGates.Enabled(FeatureGateMCPServer) {

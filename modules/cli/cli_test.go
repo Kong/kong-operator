@@ -271,6 +271,26 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name: "konnect sync hash key secret: set via environment variable",
+			args: []string{},
+			envVars: map[string]string{
+				"KONG_OPERATOR_KONNECT_SYNC_HASH_KEY_SECRET": "custom-sync-hash-key",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.KonnectSyncHashKeySecretName = "custom-sync-hash-key"
+				return cfg
+			},
+		},
+		{
+			name: "konnect sync hash key secret: empty environment variable falls back to the default",
+			args: []string{},
+			envVars: map[string]string{
+				"KONG_OPERATOR_KONNECT_SYNC_HASH_KEY_SECRET": "",
+			},
+			expectedCfg: expectedDefaultCfg,
+		},
+		{
 			name: "validating webhook cert dir: empty environment variable falls back to the default",
 			args: []string{},
 			envVars: map[string]string{
@@ -509,6 +529,7 @@ func expectedDefaultCfg() manager.Config {
 		OnPremEventGatewayControllerEnabled:      false,
 		FeatureGates:                             manager.FeatureGates{},
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
+		KonnectSyncHashKeySecretName:             consts.DefaultKonnectSyncHashKeySecretName,
 		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                      consts.DefaultKonnectListPageSize,
 		KonnectServerURLDomains:                  konnectserver.DefaultDomains,

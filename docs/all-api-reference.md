@@ -17321,9 +17321,10 @@ sync period, and it does not retry the pruned status write on every reconcile.
 
 | Field | Description |
 | --- | --- |
-| `payloadHash` _string_ | PayloadHash is the canonical hash of the payload the operator last sent to Konnect for this entity. |
-| `representationHash` _string_ | RepresentationHash is the canonical hash of the entity representation the operator last received from Konnect. |
+| `payloadHash` _string_ | PayloadHash is the canonical hash of the payload the operator last sent to Konnect for this entity.<br /><br />It is an unkeyed SHA-256 digest (sha256:), or a keyed HMAC-SHA256 digest (hmac-sha256:) for entities that can carry data read from Secrets. |
+| `representationHash` _string_ | RepresentationHash is the canonical hash of the entity representation the operator last received from Konnect.<br /><br />It is an unkeyed SHA-256 digest (sha256:), or a keyed HMAC-SHA256 digest (hmac-sha256:) for entities that can carry data read from Secrets. |
 | `hashVersion` _string_ | HashVersion identifies the hashing scheme used to compute PayloadHash and RepresentationHash. A change of hash version makes the stored hashes unverifiable, so the entity is sent to Konnect once more. |
+| `keyID` _string_ | KeyID identifies the operator-managed key used to compute keyed HMAC-SHA256 hashes. It is derived from the key and does not reveal it. It is empty for unkeyed SHA-256 hashes. |
 
 _Appears in:_
 

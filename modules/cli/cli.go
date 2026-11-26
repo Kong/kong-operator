@@ -106,6 +106,7 @@ func New(m metadata.Info) *CLI {
 	// feature gates
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
+	flagSet.StringVar(&cfg.KonnectSyncHashKeySecretName, "konnect-sync-hash-key-secret", consts.DefaultKonnectSyncHashKeySecretName, "Name of the Secret, in the operator namespace, holding the key used to compute keyed HMAC-SHA256 hashes of secret-bearing Konnect entities persisted in their status. The operator creates the Secret when it does not exist.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
 	flagSet.Int64Var(&cfg.KonnectListPageSize, "konnect-list-page-size", consts.DefaultKonnectListPageSize, fmt.Sprintf("Page size requested when listing Konnect entities to find the Konnect entity of an object, e.g. one whose Konnect ID was lost or that is deleted without one. Must be between 1 and %d. Only lower it if Konnect rejects the default: a lower value means more requests.", consts.MaxKonnectListPageSize))
 	flagSet.Var(newValidatedValue(&cfg.KonnectServerURLDomains, konnectserver.NewDomains, withDefault(konnectserver.DefaultDomains)), "konnect-server-url-domains", "Comma-separated list of domains a KonnectAPIAuthConfiguration serverURL host must belong to. A host outside the list is refused and reported with an APIAuthValid=False condition. Must not be empty: a deployment that needs another domain adds it here. Default: konghq.com,konghq.tech.")
@@ -320,6 +321,9 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	// error that would not name the flag.
 	if c.cfg.ValidatingWebhookCertDir == "" {
 		c.cfg.ValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookCertDir
+	}
+	if c.cfg.KonnectSyncHashKeySecretName == "" {
+		c.cfg.KonnectSyncHashKeySecretName = consts.DefaultKonnectSyncHashKeySecretName
 	}
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
