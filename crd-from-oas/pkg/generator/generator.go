@@ -3924,7 +3924,6 @@ func (g *Generator) generateUnionTypes(schema *parser.Schema, entityName string,
 // unionVariant holds the generated names for one union variant.
 type unionVariant struct {
 	discValue string // OAS discriminator value, e.g. "sasl_plain" — used for JSON tag and enum const.
-	refName   string // OAS schema of the member, when it is a $ref.
 	// requiresMember tells the member must be set when its type is: its
 	// schema has required fields, or the arm is flattened onto a value.
 	requiresMember bool
@@ -4056,7 +4055,6 @@ func (g *Generator) buildUnionVariants(prop *parser.Property, unionTypeName stri
 			refName := prop.DiscriminatorMapping[v]
 			variants = append(variants, unionVariant{
 				discValue:      v,
-				refName:        refName,
 				fieldName:      fixInitialisms(goFieldName(fieldNames[i])),
 				goTypeName:     fixInitialisms(refName),
 				requiresMember: g.unionMemberHasRequiredFields(refName, nil, prop.Discriminator),
@@ -4112,7 +4110,6 @@ func (g *Generator) buildUnionVariants(prop *parser.Property, unionTypeName stri
 
 		variants = append(variants, unionVariant{
 			discValue:        discValues[i],
-			refName:          v.RefName,
 			fieldName:        fieldName,
 			goTypeName:       goTypeName,
 			source:           v,
