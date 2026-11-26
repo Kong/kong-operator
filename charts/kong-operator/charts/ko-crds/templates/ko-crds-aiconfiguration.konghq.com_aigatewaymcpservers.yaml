@@ -896,7 +896,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -1605,8 +1604,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                        required:
-                        - url
                         type: object
                       datastores:
                         items:
@@ -4106,7 +4103,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -5083,7 +5079,6 @@ spec:
                         required:
                         - route
                         - toolsCacheTtlSeconds
-                        - url
                         type: object
                       datastores:
                         items:

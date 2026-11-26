@@ -908,6 +908,29 @@ types:
 	assert.True(t, identityRealms.OmitZero)
 }
 
+func TestFieldConfig_AllowZero(t *testing.T) {
+	var agv APIGroupVersionConfig
+	require.NoError(t, yaml.Unmarshal([]byte(`
+types:
+  - path: /v1/ai-gateways/{gatewayId}/agents
+    name: AIGatewayAgent
+    cel:
+      spec:
+        apiSpec:
+          config:
+            maxRequestBodySize:
+              _allowZero: true
+`), &agv))
+
+	fc := agv.FieldConfig(map[string]string{
+		"/v1/ai-gateways/{gatewayId}/agents": "AIGatewayAgent",
+	})
+	field := fc.GetFieldConfig("AIGatewayAgent", "spec", "apiSpec", "config", "maxRequestBodySize")
+	require.NotNil(t, field)
+	assert.True(t, field.AllowZero)
+	assert.False(t, field.OmitZero)
+}
+
 func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 	t.Run("with cel validations", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{

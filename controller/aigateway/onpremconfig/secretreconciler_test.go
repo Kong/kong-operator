@@ -37,7 +37,7 @@ func onPremAuthStrategyWithSecretRef(name, secretName string) *aiconfigurationv1
 				AIGatewayAuthStrategyConfig: &aiconfigurationv1alpha1.AIGatewayAuthStrategyConfig{
 					Type: aiconfigurationv1alpha1.AIGatewayAuthStrategyConfigTypeOpenIDConnect,
 					OpenIDConnect: &aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnect{
-						Config: aiconfigurationv1alpha1.AIGWOpenIDConnectGeneratedConfig{
+						Config: aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnectConfig{
 							ClientSecret: []aiconfigurationv1alpha1.SensitiveDataSource{
 								{
 									Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,

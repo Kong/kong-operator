@@ -97,9 +97,6 @@ spec:
                     properties:
                       config:
                         properties:
-                          anonymous:
-                            maxLength: 253
-                            type: string
                           hideCredentials:
                             enum:
                             - Enabled
@@ -142,6 +139,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -967,6 +965,7 @@ spec:
                             - Disabled
                             type: string
                           leeway:
+                            minimum: 0
                             type: number
                           loginAction:
                             enum:
@@ -1052,6 +1051,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -1594,6 +1594,7 @@ spec:
                             - Disabled
                             type: string
                           timeout:
+                            minimum: 0
                             type: number
                           tlsClientAuthCertID:
                             maxLength: 253

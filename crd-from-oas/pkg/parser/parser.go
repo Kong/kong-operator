@@ -725,6 +725,31 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 		schema.Properties = flattenAllOfProperties(schemaValue, 0, p.visited)
 	}
 
+	// An allOf whose members refine a non-object base (e.g. a $ref to an array
+	// schema with a minItems sibling, as in CreateOIDCIdentityProviderScopes)
+	// constrains that base rather than composing an object: adopt the first
+	// member's concrete non-object type so the schema keeps it instead of
+	// degrading to map[string]string.
+	if len(schemaValue.AllOf) > 0 && schema.Type == "" && len(schema.Properties) == 0 &&
+		len(schema.OneOf) == 0 && len(schema.AnyOf) == 0 && schema.Discriminator == "" {
+		for _, member := range schemaValue.AllOf {
+			memberValue := member.Value
+			if memberValue == nil {
+				continue
+			}
+			memberType := getSchemaType(memberValue)
+			if memberType == "" || memberType == "object" {
+				continue
+			}
+			schema.Type = memberType
+			schema.Format = memberValue.Format
+			if memberType == "array" && memberValue.Items != nil {
+				schema.Items = ParseProperty("items", memberValue.Items, 0, p.visited)
+			}
+			break
+		}
+	}
+
 	// Handle allOf: merge properties from every entry that declares its own,
 	// e.g. a route matcher composed from a base config schema (a $ref) plus a
 	// validation-only "at least one of X" anyOf sibling. Entries with no

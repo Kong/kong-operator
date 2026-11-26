@@ -99,7 +99,7 @@ func UpdateGeneratedOps[
 	case *konnectv1alpha1.PortalIPAllowList:
 		return updatePortalIPAllowList(ctx, sdk.GetPortalsIPAllowListSDK(), ent)
 	case *konnectv1alpha1.PortalIdentityProviderRequest:
-		return updatePortalIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
+		return updatePortalIdentityProviderRequest(ctx, cl, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
 		return updatePortalPage(ctx, cl, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:

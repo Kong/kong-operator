@@ -31,9 +31,15 @@ type KongFakeValidator struct {
 	Result            bool
 	Message           string
 	Error             error
+	NotReady          bool
+	NoClassMatch      bool
 }
 
 var _ KongValidator = KongFakeValidator{}
+
+func (v KongFakeValidator) IsReady() bool {
+	return !v.NotReady
+}
 
 func (v KongFakeValidator) ValidateConsumer(
 	_ context.Context,
@@ -98,10 +104,10 @@ func (v KongFakeValidator) GetReferenceIndexers() ctrlref.CacheIndexers {
 }
 
 func (v KongFakeValidator) IngressClassMatcher(obj *metav1.ObjectMeta) bool {
-	return true
+	return !v.NoClassMatch
 }
 func (v KongFakeValidator) IngressV1ClassMatcher(ing *netv1.Ingress) bool {
-	return true
+	return !v.NoClassMatch
 }
 
 func TestServeHTTPBasic(t *testing.T) {

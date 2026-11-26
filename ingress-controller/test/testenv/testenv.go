@@ -114,10 +114,20 @@ func KongEnterpriseOverride() (enabled bool, set bool) {
 	return enabled, true
 }
 
-// isKongEnterpriseImage reports whether the given image repository (without a tag)
-// is kong/kong-gateway or one of its variants (e.g. kong/kong-gateway-dev),
-// optionally prefixed with a registry host (e.g. docker.io/kong/kong-gateway).
+// isKongEnterpriseImage reports whether the given image reference is
+// kong/kong-gateway or one of its variants (e.g. kong/kong-gateway-dev),
+// optionally prefixed with a registry host (e.g. docker.io/kong/kong-gateway)
+// and optionally suffixed with a tag or digest.
 func isKongEnterpriseImage(image string) bool {
+	// Strip an optional digest (e.g. @sha256:...) and tag (e.g. :3.9.0).
+	// The tag separator must come after the last slash so that a registry
+	// port (e.g. localhost:5000/) is not mistaken for a tag.
+	if i := strings.IndexByte(image, '@'); i >= 0 {
+		image = image[:i]
+	}
+	if i := strings.LastIndexByte(image, ':'); i > strings.LastIndexByte(image, '/') {
+		image = image[:i]
+	}
 	// Strip an optional registry host (e.g. docker.io/, localhost:5000/).
 	if host, rest, ok := strings.Cut(image, "/"); ok && (strings.ContainsAny(host, ".:") || host == "localhost") {
 		image = rest
