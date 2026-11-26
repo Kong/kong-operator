@@ -21,9 +21,9 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/configuration"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	constsmgr "github.com/kong/kong-operator/v2/ingress-controller/test/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -142,7 +142,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 			ns := GetNamespaceForT(ctx, t)
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 
 			container := generators.NewContainer("goecho", test.EchoImage, test.EchoHTTPSPort)
 			container.VolumeMounts = []corev1.VolumeMount{
@@ -187,22 +187,22 @@ func TestBackendTLSPolicy(t *testing.T) {
 			ctx = SetInCtxForT(ctx, t, service)
 
 			t.Logf("Expose service %s via HTTPRoute", service.Name)
-			httpRoute := &gatewayapi.HTTPRoute{
+			httpRoute := &gwtypes.HTTPRoute{
 				Name: uuid.NewString(),
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Name: gatewayapi.ObjectName(gateway.Name),
+								Name: gwtypes.ObjectName(gateway.Name),
 							},
 						},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									Name: gatewayapi.ObjectName(service.Name),
-									Port: new(gatewayapi.PortNumber(1028)),
+									Name: gwtypes.ObjectName(service.Name),
+									Port: new(gwtypes.PortNumber(1028)),
 								},
 							},
 						},
@@ -213,18 +213,18 @@ func TestBackendTLSPolicy(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Logf("Targeting service %s with backendTLSPolicy", service.Name)
-			backendTLSPolicy := &gatewayapi.BackendTLSPolicy{
+			backendTLSPolicy := &gwtypes.BackendTLSPolicy{
 				Name: "goecho-tls-policy",
-				Spec: gatewayapi.BackendTLSPolicySpec{
-					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
+				Spec: gwtypes.BackendTLSPolicySpec{
+					TargetRefs: []gwtypes.LocalPolicyTargetReferenceWithSectionName{
 						{
 							Group: "core",
 							Kind:  "Service",
-							Name:  gatewayapi.ObjectName(service.Name),
+							Name:  gwtypes.ObjectName(service.Name),
 						},
 					},
-					Validation: gatewayapi.BackendTLSPolicyValidation{
-						CACertificateRefs: []gatewayapi.LocalObjectReference{
+					Validation: gwtypes.BackendTLSPolicyValidation{
+						CACertificateRefs: []gwtypes.LocalObjectReference{
 							{
 								Group: "core",
 								Kind:  "ConfigMap",
@@ -238,8 +238,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 						},
 						Hostname: goEchoServerHostname,
 					},
-					Options: map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue{
-						gatewayapi.TLSVerifyDepthKey: gatewayapi.AnnotationValue("0"),
+					Options: map[gwtypes.AnnotationKey]gwtypes.AnnotationValue{
+						gwtypes.TLSVerifyDepthKey: gwtypes.AnnotationValue("0"),
 					},
 				},
 			}
@@ -268,7 +268,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 			return ctx
 		}).
 		Assess("verify that Kong can access the upstream service when using correct host", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			backendTLSPolicy := GetFromCtxForT[*gatewayapi.BackendTLSPolicy](ctx, t)
+			backendTLSPolicy := GetFromCtxForT[*gwtypes.BackendTLSPolicy](ctx, t)
 			gwapiClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 
 			t.Log("Fixing TLS verification depth to a sufficient value = 1")
@@ -278,7 +278,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 					t.Logf("Failed to get BackendTLSPolicy: %v", err)
 					return false
 				}
-				backendTLSPolicy.Spec.Options[gatewayapi.TLSVerifyDepthKey] = "1"
+				backendTLSPolicy.Spec.Options[gwtypes.TLSVerifyDepthKey] = "1"
 				_, err = gwapiClient.GatewayV1().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Update(ctx, backendTLSPolicy, metav1.UpdateOptions{})
 				if err != nil {
 					t.Logf("Failed to update BackendTLSPolicy: %v", err)

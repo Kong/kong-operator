@@ -11,12 +11,12 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func generateMatcherFromGRPCMatch(match gatewayapi.GRPCRouteMatch, hostnames []string, metaAnnotations map[string]string) atc.Matcher {
+func generateMatcherFromGRPCMatch(match gwtypes.GRPCRouteMatch, hostnames []string, metaAnnotations map[string]string) atc.Matcher {
 	routeMatcher := atc.And()
 
 	if match.Method != nil {
@@ -44,16 +44,16 @@ func generateMatcherFromGRPCMatch(match gatewayapi.GRPCRouteMatch, hostnames []s
 }
 
 // methodMatcherFromGRPCMethodMatch translates ONE GRPC method match in GRPCRoute to ATC matcher.
-func methodMatcherFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch) atc.Matcher {
-	matchType := gatewayapi.GRPCMethodMatchExact
+func methodMatcherFromGRPCMethodMatch(methodMatch *gwtypes.GRPCMethodMatch) atc.Matcher {
+	matchType := gwtypes.GRPCMethodMatchExact
 	if methodMatch.Type != nil {
 		matchType = *methodMatch.Type
 	}
 
 	switch matchType {
-	case gatewayapi.GRPCMethodMatchExact:
+	case gwtypes.GRPCMethodMatchExact:
 		return methodMatcherFromGRPCExactMethodMatch(methodMatch.Service, methodMatch.Method)
-	case gatewayapi.GRPCMethodMatchRegularExpression:
+	case gwtypes.GRPCMethodMatchRegularExpression:
 		return methodMatcherFromGRPCRegexMethodMatch(methodMatch.Service, methodMatch.Method)
 	}
 
@@ -98,7 +98,7 @@ func methodMatcherFromGRPCRegexMethodMatch(service *string, method *string) atc.
 	return atc.NewPredicateHTTPPath(atc.OpRegexMatch, fmt.Sprintf("^/%s/%s", serviceRegex, methodRegex))
 }
 
-func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMatch) atc.Matcher {
+func headerMatcherFromGRPCHeaderMatches(headerMatches []gwtypes.GRPCHeaderMatch) atc.Matcher {
 	// Sort headerMatches by names to generate a stable output.
 	sort.SliceStable(headerMatches, func(i, j int) bool {
 		return string(headerMatches[i].Name) < string(headerMatches[j].Name)
@@ -108,13 +108,13 @@ func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMat
 	for _, headerMatch := range headerMatches {
 		// For GRPC and HTTP code is common,
 		// due too limitations of generics in Go converting seems to be the best option.
-		var hmt *gatewayapi.HeaderMatchType
+		var hmt *gwtypes.HeaderMatchType
 		if headerMatch.Type != nil {
-			hmt = new(gatewayapi.HeaderMatchType(*headerMatch.Type))
+			hmt = new(gwtypes.HeaderMatchType(*headerMatch.Type))
 		}
-		httpHeaderMatch := gatewayapi.HTTPHeaderMatch{
+		httpHeaderMatch := gwtypes.HTTPHeaderMatch{
 			Type:  hmt,
-			Name:  gatewayapi.HTTPHeaderName(headerMatch.Name),
+			Name:  gwtypes.HTTPHeaderName(headerMatch.Name),
 			Value: headerMatch.Value,
 		}
 		matchers = append(matchers, headerMatcherFromHTTPHeaderMatch(httpHeaderMatch))
@@ -127,7 +127,7 @@ func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMat
 // Hostnames are the effective hostnames of the GRPCRoute: the ones defined in
 // the spec, or - when none are specified - the ones inherited from the listeners
 // of the Gateways referenced in the GRPCRoute's parentRefs.
-func SplitGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []SplitGRPCRouteMatch {
+func SplitGRPCRoute(grpcroute *gwtypes.GRPCRoute, storer store.Storer) []SplitGRPCRouteMatch {
 	splitMatches := []SplitGRPCRouteMatch{}
 	splitGRPCRouteByMatch := func(hostname string) {
 		for ruleIndex, rule := range grpcroute.Spec.Rules {
@@ -136,7 +136,7 @@ func SplitGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []Spli
 				splitMatches = append(splitMatches, SplitGRPCRouteMatch{
 					Source:     grpcroute,
 					Hostname:   hostname,
-					Match:      gatewayapi.GRPCRouteMatch{}, // empty grpcRoute match with ALL nil fields
+					Match:      gwtypes.GRPCRouteMatch{}, // empty grpcRoute match with ALL nil fields
 					RuleIndex:  ruleIndex,
 					MatchIndex: 0,
 				})
@@ -178,7 +178,7 @@ type GRPCRoutePriorityTraits struct {
 	// preserve this field since the API specification has not provided priority of type of method match yet.
 	// (In normal situation should be higher than length of service/method value).
 	// related issue: https://github.com/kubernetes-sigs/gateway-api/issues/2216
-	MethodMatchType gatewayapi.GRPCMethodMatchType
+	MethodMatchType gwtypes.GRPCMethodMatchType
 	// ServiceLength is the length of GRPC service name. Max 1024.
 	ServiceLength int
 	// MethodLength is the length of GRPC method name. Max 1024.
@@ -280,9 +280,9 @@ func (t GRPCRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 // SplitGRPCRouteMatch is the GRPCRouteMatch split by rule and match from the source GRPCRoute.
 // RuleIndex and MatchIndex annotates the place of the match in the source GRPCRoute.
 type SplitGRPCRouteMatch struct {
-	Source     *gatewayapi.GRPCRoute
+	Source     *gwtypes.GRPCRoute
 	Hostname   string
-	Match      gatewayapi.GRPCRouteMatch
+	Match      gwtypes.GRPCRouteMatch
 	RuleIndex  int
 	MatchIndex int
 }

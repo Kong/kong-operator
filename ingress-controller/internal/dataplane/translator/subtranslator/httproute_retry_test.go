@@ -12,24 +12,24 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func httpRouteWithRetry(name string, attempts *int) *gatewayapi.HTTPRoute {
-	rule := gatewayapi.HTTPRouteRule{
-		BackendRefs: []gatewayapi.HTTPBackendRef{
+func httpRouteWithRetry(name string, attempts *int) *gwtypes.HTTPRoute {
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gwtypes.HTTPBackendRef{
 			builder.NewHTTPBackendRef(testHTTPRouteBackend).WithPort(80).Build(),
 		},
 	}
 	if attempts != nil {
-		rule.Retry = &gatewayapi.HTTPRouteRetry{Attempts: attempts}
+		rule.Retry = &gwtypes.HTTPRouteRetry{Attempts: attempts}
 	}
-	return &gatewayapi.HTTPRoute{
+	return &gwtypes.HTTPRoute{
 		Namespace: testHTTPRouteNamespace, Name: name,
-		Spec: gatewayapi.HTTPRouteSpec{
-			Rules: []gatewayapi.HTTPRouteRule{rule},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{rule},
 		},
 	}
 }
@@ -37,7 +37,7 @@ func httpRouteWithRetry(name string, attempts *int) *gatewayapi.HTTPRoute {
 func TestApplyRetriesToServiceFromHTTPRouteRule(t *testing.T) {
 	tests := []struct {
 		name             string
-		retry            *gatewayapi.HTTPRouteRetry
+		retry            *gwtypes.HTTPRouteRetry
 		expectedRetries  *int
 		expectedErrorMsg string
 	}{
@@ -47,27 +47,27 @@ func TestApplyRetriesToServiceFromHTTPRouteRule(t *testing.T) {
 		},
 		{
 			name:            "retry stanza defaults attempts to one",
-			retry:           &gatewayapi.HTTPRouteRetry{},
+			retry:           &gwtypes.HTTPRouteRetry{},
 			expectedRetries: new(1),
 		},
 		{
 			name:            "attempts are applied",
-			retry:           &gatewayapi.HTTPRouteRetry{Attempts: new(3)},
+			retry:           &gwtypes.HTTPRouteRetry{Attempts: new(3)},
 			expectedRetries: new(3),
 		},
 		{
 			name:            "zero attempts disables retries",
-			retry:           &gatewayapi.HTTPRouteRetry{Attempts: new(0)},
+			retry:           &gwtypes.HTTPRouteRetry{Attempts: new(0)},
 			expectedRetries: new(0),
 		},
 		{
 			name:             "retry codes are rejected",
-			retry:            &gatewayapi.HTTPRouteRetry{Codes: []gatewayapi.HTTPRouteRetryStatusCode{500}},
+			retry:            &gwtypes.HTTPRouteRetry{Codes: []gwtypes.HTTPRouteRetryStatusCode{500}},
 			expectedErrorMsg: "retry.codes is unsupported",
 		},
 		{
 			name:             "retry backoff is rejected",
-			retry:            &gatewayapi.HTTPRouteRetry{Backoff: new(gatewayapi.Duration("100ms"))},
+			retry:            &gwtypes.HTTPRouteRetry{Backoff: new(gwtypes.Duration("100ms"))},
 			expectedErrorMsg: "retry.backoff is unsupported",
 		},
 	}
@@ -75,7 +75,7 @@ func TestApplyRetriesToServiceFromHTTPRouteRule(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := kongstate.Service{Retries: new(DefaultRetries)}
-			err := applyRetriesToServiceFromHTTPRouteRule(&svc, gatewayapi.HTTPRouteRule{Retry: tt.retry})
+			err := applyRetriesToServiceFromHTTPRouteRule(&svc, gwtypes.HTTPRouteRule{Retry: tt.retry})
 			if tt.expectedErrorMsg != "" {
 				require.ErrorContains(t, err, tt.expectedErrorMsg)
 				return
@@ -88,15 +88,15 @@ func TestApplyRetriesToServiceFromHTTPRouteRule(t *testing.T) {
 
 func TestGroupRulesByBackendRefsSeparatesDifferentRetries(t *testing.T) {
 	groups := groupRulesByBackendRefs([]httpRouteRuleMeta{
-		{Rule: gatewayapi.HTTPRouteRule{BackendRefs: []gatewayapi.HTTPBackendRef{{Name: testHTTPRouteBackend}}, Retry: &gatewayapi.HTTPRouteRetry{Attempts: new(0)}}},
-		{Rule: gatewayapi.HTTPRouteRule{BackendRefs: []gatewayapi.HTTPBackendRef{{Name: testHTTPRouteBackend}}, Retry: &gatewayapi.HTTPRouteRetry{Attempts: new(3)}}},
+		{Rule: gwtypes.HTTPRouteRule{BackendRefs: []gwtypes.HTTPBackendRef{{Name: testHTTPRouteBackend}}, Retry: &gwtypes.HTTPRouteRetry{Attempts: new(0)}}},
+		{Rule: gwtypes.HTTPRouteRule{BackendRefs: []gwtypes.HTTPBackendRef{{Name: testHTTPRouteBackend}}, Retry: &gwtypes.HTTPRouteRetry{Attempts: new(3)}}},
 	})
 
 	require.Len(t, groups, 2)
 }
 
 func TestGroupRulesCombinedSplitsConflictingRetries(t *testing.T) {
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithRetry("route-a", new(0)),
 		httpRouteWithRetry("route-b", new(3)),
 	}, true)
@@ -107,7 +107,7 @@ func TestGroupRulesCombinedSplitsConflictingRetries(t *testing.T) {
 }
 
 func TestGroupRulesCombinedDoesNotSplitEquivalentRetries(t *testing.T) {
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithRetry("route-a", new(5)),
 		httpRouteWithRetry("route-b", nil),
 	}, true)
@@ -135,7 +135,7 @@ func TestTranslateHTTPRoutesToKongstateServicesAppliesRetries(t *testing.T) {
 	result := TranslateHTTPRoutesToKongstateServices(
 		logr.Discard(),
 		fakeStore,
-		[]*gatewayapi.HTTPRoute{route},
+		[]*gwtypes.HTTPRoute{route},
 		TranslateHTTPRouteToKongstateServiceOptions{},
 	)
 	require.Empty(t, result.HTTPRouteNameToTranslationErrors)
@@ -147,7 +147,7 @@ func TestTranslateHTTPRoutesToKongstateServicesAppliesRetries(t *testing.T) {
 }
 
 func TestTranslateHTTPRoutesToKongstateServicesKeepsPerRuleRetries(t *testing.T) {
-	routes := []*gatewayapi.HTTPRoute{
+	routes := []*gwtypes.HTTPRoute{
 		httpRouteWithRetry("route-a", new(0)),
 		httpRouteWithRetry("route-b", new(3)),
 	}
@@ -189,12 +189,12 @@ func TestTranslateHTTPRoutesToKongstateServicesRejectsUnsupportedRetry(t *testin
 	route := httpRouteWithRetry("retry-route", new(2))
 	route.TypeMeta = metav1.TypeMeta{APIVersion: "gateway.networking.k8s.io/v1", Kind: "HTTPRoute"}
 	route.Spec.CommonRouteSpec = commonRouteSpecMock("fake-gateway-1")
-	route.Spec.Rules[0].Retry.Codes = []gatewayapi.HTTPRouteRetryStatusCode{500}
+	route.Spec.Rules[0].Retry.Codes = []gwtypes.HTTPRouteRetryStatusCode{500}
 
 	result := TranslateHTTPRoutesToKongstateServices(
 		logr.Discard(),
 		store.NewFakeStoreEmpty(),
-		[]*gatewayapi.HTTPRoute{route},
+		[]*gwtypes.HTTPRoute{route},
 		TranslateHTTPRouteToKongstateServiceOptions{},
 	)
 
@@ -213,8 +213,8 @@ func TestTranslateHTTPRoutesToKongstateServicesIsolatesUnsupportedRetryFromHealt
 	invalidRoute := httpRouteWithRetry("invalid-retry-route", nil)
 	invalidRoute.TypeMeta = metav1.TypeMeta{APIVersion: "gateway.networking.k8s.io/v1", Kind: "HTTPRoute"}
 	invalidRoute.Spec.CommonRouteSpec = commonRouteSpecMock("fake-gateway-1")
-	invalidRoute.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{
-		Codes: []gatewayapi.HTTPRouteRetryStatusCode{503},
+	invalidRoute.Spec.Rules[0].Retry = &gwtypes.HTTPRouteRetry{
+		Codes: []gwtypes.HTTPRouteRetryStatusCode{503},
 	}
 
 	fakeStore, err := store.NewFakeStore(store.FakeObjects{
@@ -231,7 +231,7 @@ func TestTranslateHTTPRoutesToKongstateServicesIsolatesUnsupportedRetryFromHealt
 	result := TranslateHTTPRoutesToKongstateServices(
 		logr.Discard(),
 		fakeStore,
-		[]*gatewayapi.HTTPRoute{healthyRoute, invalidRoute},
+		[]*gwtypes.HTTPRoute{healthyRoute, invalidRoute},
 		TranslateHTTPRouteToKongstateServiceOptions{CombinedServicesFromDifferentHTTPRoutes: true},
 	)
 

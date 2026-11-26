@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
@@ -53,12 +53,12 @@ func TestSpecificGatewayNN(t *testing.T) {
 
 	t.Run("configured specific gateway gets its listener status filled", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			var gw gatewayapi.Gateway
+			var gw gwtypes.Gateway
 			if err := ctrlClient.Get(ctx, nn, &gw); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nn, err)
 				return false
 			}
-			httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gatewayapi.ListenerStatus) bool {
+			httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gwtypes.ListenerStatus) bool {
 				return listener.Name == "http"
 			})
 			if !ok {
@@ -75,7 +75,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	})
 	t.Run("HTTPRoute attached to configured specific gateway gets its status parent filled", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			route := gatewayapi.HTTPRoute{}
+			route := gwtypes.HTTPRoute{}
 			routeNN := client.ObjectKeyFromObject(routes[0])
 			if err := ctrlClient.Get(ctx, routeNN, &route); err != nil {
 				t.Logf("Failed to get route %s: %v", routeNN, err)
@@ -83,7 +83,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 			}
 			for _, p := range route.Status.Parents {
 				return lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
-					return c.Type == string(gatewayapi.RouteConditionAccepted) && c.Status == metav1.ConditionTrue
+					return c.Type == string(gwtypes.RouteConditionAccepted) && c.Status == metav1.ConditionTrue
 				})
 			}
 
@@ -94,7 +94,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	t.Run("not configured gateway does not gets its listener status filled and HTTPRoute attached to it doesn't get its status parent filled", func(t *testing.T) {
 		asserts.Never(t, func(ctx context.Context) bool {
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
-			var gwIgnored gatewayapi.Gateway
+			var gwIgnored gwtypes.Gateway
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
 				return true
@@ -110,7 +110,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 			}
 
 			t.Logf("Checking if HTTPRoute %s is ignored as expected", ignoredRoutes[0].Name)
-			routeIgnored := gatewayapi.HTTPRoute{}
+			routeIgnored := gwtypes.HTTPRoute{}
 			routeIgnoredNN := client.ObjectKeyFromObject(ignoredRoutes[0])
 			if err := ctrlClient.Get(ctx, routeIgnoredNN, &routeIgnored); err != nil {
 				t.Logf("Failed to get ignored route %s: %v", routeIgnoredNN, err)
@@ -118,7 +118,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 			}
 			for _, p := range routeIgnored.Status.Parents {
 				return lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
-					return c.Type == string(gatewayapi.RouteConditionAccepted) &&
+					return c.Type == string(gwtypes.RouteConditionAccepted) &&
 						c.Status == metav1.ConditionTrue
 				})
 			}
@@ -136,7 +136,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return true
 			}
 
-			var gwIgnored gatewayapi.Gateway
+			var gwIgnored gwtypes.Gateway
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
@@ -167,7 +167,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return true
 			}
 
-			var gwIgnored gatewayapi.Gateway
+			var gwIgnored gwtypes.Gateway
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", gwIgnored.Name)
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
@@ -188,20 +188,20 @@ func TestSpecificGatewayNN(t *testing.T) {
 	})
 
 	t.Run("changes to referencegrant used by not configured gateway do not get gateway's listener status filled", func(t *testing.T) {
-		refGrant := gatewayapi.ReferenceGrant{
+		refGrant := gwtypes.ReferenceGrant{
 			Name:      "refgrant-1",
 			Namespace: nnIgnored.Namespace,
-			Spec: gatewayapi.ReferenceGrantSpec{
-				From: []gatewayapi.ReferenceGrantFrom{
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
-						Group:     gatewayapi.V1Group,
+						Group:     gwtypes.V1Group,
 						Kind:      "Gateway",
-						Namespace: gatewayapi.Namespace(nnIgnored.Namespace),
+						Namespace: gwtypes.Namespace(nnIgnored.Namespace),
 					},
 				},
-				To: []gatewayapi.ReferenceGrantTo{
+				To: []gwtypes.ReferenceGrantTo{
 					{
-						Group: gatewayapi.V1Group,
+						Group: gwtypes.V1Group,
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -217,7 +217,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 				return true
 			}
 
-			var gwIgnored gatewayapi.Gateway
+			var gwIgnored gwtypes.Gateway
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
 				t.Logf("Failed to get gateway %s: %v", nnIgnored, err)
@@ -239,14 +239,14 @@ func TestSpecificGatewayNN(t *testing.T) {
 	})
 }
 
-func gatewayStatusContainsProgrammedOrAcceptedCondition(t *testing.T, gw gatewayapi.Gateway) bool {
+func gatewayStatusContainsProgrammedOrAcceptedCondition(t *testing.T, gw gwtypes.Gateway) bool {
 	nn := client.ObjectKeyFromObject(&gw)
 	for _, c := range gw.Status.Conditions {
-		if c.Type == string(gatewayapi.GatewayConditionProgrammed) && c.Status != metav1.ConditionUnknown {
+		if c.Type == string(gwtypes.GatewayConditionProgrammed) && c.Status != metav1.ConditionUnknown {
 			t.Logf("%s gateway should not have Programmed status condition set to something else than Unknown.", nn)
 			return true
 		}
-		if c.Type == string(gatewayapi.GatewayConditionAccepted) && c.Status != metav1.ConditionUnknown {
+		if c.Type == string(gwtypes.GatewayConditionAccepted) && c.Status != metav1.ConditionUnknown {
 			t.Logf("%s gateway should not have Accepted status condition set to something else than Unknown.", nn)
 			return true
 		}

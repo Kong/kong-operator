@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
@@ -66,7 +67,7 @@ func HostForKongService(serviceName string, backendCount, backendRefCount int) s
 func TranslateHTTPRoutesToKongstateServices(
 	logger logr.Logger,
 	storer store.Storer,
-	routes []*gatewayapi.HTTPRoute,
+	routes []*gwtypes.HTTPRoute,
 	options TranslateHTTPRouteToKongstateServiceOptions,
 ) HTTPRoutesTranslationResult {
 	serviceNameToRules := groupRulesFromHTTPRoutesByKongServiceName(routes, options.CombinedServicesFromDifferentHTTPRoutes)
@@ -133,7 +134,7 @@ func TranslateHTTPRoutesToKongstateServices(
 // If combinedServicesFromDifferentHTTPRoutes is true, it groups rules from different HTTPRoutes in the same namespace.
 // Otherwise, it only groups rules from the same HTTPRoute.
 func groupRulesFromHTTPRoutesByKongServiceName(
-	routes []*gatewayapi.HTTPRoute,
+	routes []*gwtypes.HTTPRoute,
 	combinedServicesFromDifferentHTTPRoutes bool,
 ) map[string][]httpRouteRuleMeta {
 	// If we enabled combined service from different HTTPRoutes, we group rules sharing the same backendRefs
@@ -183,16 +184,16 @@ func groupRulesFromHTTPRoutesByKongServiceName(
 	return serviceNameToRules
 }
 
-func httpBackendRefsToBackendRefs(httpBackendRef []gatewayapi.HTTPBackendRef, parentRoute *gatewayapi.HTTPRoute) []gatewayapi.BackendRef {
-	backendRefs := make([]gatewayapi.BackendRef, 0, len(httpBackendRef))
+func httpBackendRefsToBackendRefs(httpBackendRef []gwtypes.HTTPBackendRef, parentRoute *gwtypes.HTTPRoute) []gwtypes.BackendRef {
+	backendRefs := make([]gwtypes.BackendRef, 0, len(httpBackendRef))
 
 	for _, hRef := range httpBackendRef {
 		backendRef := hRef.BackendRef
 		if backendRef.Group == nil {
-			backendRef.Group = new(gatewayapi.Group(""))
+			backendRef.Group = new(gwtypes.Group(""))
 		}
 		if backendRef.Namespace == nil {
-			backendRef.Namespace = new(gatewayapi.Namespace(parentRoute.Namespace))
+			backendRef.Namespace = new(gwtypes.Namespace(parentRoute.Namespace))
 		}
 		backendRefs = append(backendRefs, backendRef)
 	}
@@ -240,10 +241,10 @@ func translateHTTPRouteRulesMetaToKongstateService(
 		return kongstate.Service{}, fmt.Errorf("could not retrieve ReferenceGrants: %w", err)
 	}
 
-	grantFrom := gatewayapi.ReferenceGrantFrom{
-		Group:     gatewayapi.Group(firstHTTPRoute.GetObjectKind().GroupVersionKind().Group),
-		Kind:      gatewayapi.Kind(firstHTTPRoute.GetObjectKind().GroupVersionKind().Kind),
-		Namespace: gatewayapi.Namespace(firstHTTPRoute.GetNamespace()),
+	grantFrom := gwtypes.ReferenceGrantFrom{
+		Group:     gwtypes.Group(firstHTTPRoute.GetObjectKind().GroupVersionKind().Group),
+		Kind:      gwtypes.Kind(firstHTTPRoute.GetObjectKind().GroupVersionKind().Kind),
+		Namespace: gwtypes.Namespace(firstHTTPRoute.GetNamespace()),
 	}
 	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
 		logger,
@@ -276,8 +277,8 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	// we skip the request-termination plugin because it has higher Kong priority than the redirect
 	// plugin and would intercept the request before the redirect could fire.
 	if len(service.Backends) == 0 && !lo.SomeBy(rulesMeta, func(m httpRouteRuleMeta) bool {
-		return lo.SomeBy(m.Rule.Filters, func(f gatewayapi.HTTPRouteFilter) bool {
-			return f.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+		return lo.SomeBy(m.Rule.Filters, func(f gwtypes.HTTPRouteFilter) bool {
+			return f.Type == gwtypes.HTTPRouteFilterRequestRedirect
 		})
 	}) {
 		if service.Plugins == nil {
@@ -331,7 +332,7 @@ func translateHTTPRouteRulesMetaToKongstateService(
 // report differsFromDefault=false so that they neither alter the service nor force a split.
 // Grouping (getBackendRequestTimeoutKey) and application (applyTimeoutToServiceFromHTTPRouteRule)
 // both rely on this so they stay in sync.
-func effectiveBackendRequestTimeout(rule gatewayapi.HTTPRouteRule) (timeoutMS int, differsFromDefault bool) {
+func effectiveBackendRequestTimeout(rule gwtypes.HTTPRouteRule) (timeoutMS int, differsFromDefault bool) {
 	if rule.Timeouts == nil || rule.Timeouts.BackendRequest == nil {
 		return DefaultServiceTimeout, false
 	}
@@ -350,7 +351,7 @@ func effectiveBackendRequestTimeout(rule gatewayapi.HTTPRouteRule) (timeoutMS in
 }
 
 // applyTimeoutToServiceFromHTTPRouteRule applies timeout on the translated Kong service from the timeout settings in the rule.
-func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gatewayapi.HTTPRouteRule) {
+func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gwtypes.HTTPRouteRule) {
 	timeoutMS, differsFromDefault := effectiveBackendRequestTimeout(rule)
 	// If the backendRequest timeout is unset or equal to the default timeout, we don't need to apply it to the service.
 	if !differsFromDefault {
@@ -365,7 +366,7 @@ func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 // attempts to the translated Kong service. A nil retry stanza leaves the Kong
 // default in place. Unsupported retry fields return an error so translation
 // fails instead of silently dropping them.
-func applyRetriesToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gatewayapi.HTTPRouteRule) error {
+func applyRetriesToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gwtypes.HTTPRouteRule) error {
 	retries, err := gatewayapipkg.KongRetriesForHTTPRouteRule(rule)
 	if err != nil {
 		return err
@@ -380,14 +381,14 @@ func applyRetriesToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
 // in an HTTPRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
-func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRoute) []*string {
-	return lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
+func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gwtypes.HTTPRoute) []*string {
+	return lo.Map(httproute.Spec.Hostnames, func(h gwtypes.Hostname, _ int) *string {
 		return new(string(h))
 	})
 }
 
 func groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(
-	routes []*gatewayapi.HTTPRoute,
+	routes []*gwtypes.HTTPRoute,
 ) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
 	splitMatches := []SplitHTTPRouteMatch{}
 	for _, route := range routes {
@@ -495,11 +496,11 @@ func traditionalHTTPRouteMatchPriorityClass(match SplitHTTPRouteMatch) RoutePrio
 // with a ReplacePrefixMatch path modifier. The rewritten path for such a filter depends on which
 // prefix matched, so matches sharing this filter must never be consolidated into a single Kong
 // route/plugin.
-func filtersContainURLRewriteReplacePrefixMatch(filters []gatewayapi.HTTPRouteFilter) bool {
-	return lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
+func filtersContainURLRewriteReplacePrefixMatch(filters []gwtypes.HTTPRouteFilter) bool {
+	return lo.ContainsBy(filters, func(filter gwtypes.HTTPRouteFilter) bool {
+		return filter.Type == gwtypes.HTTPRouteFilterURLRewrite &&
 			filter.URLRewrite.Path != nil &&
-			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
+			filter.URLRewrite.Path.Type == gwtypes.PrefixMatchHTTPPathModifier &&
 			filter.URLRewrite.Path.ReplacePrefixMatch != nil
 	})
 }
@@ -509,9 +510,9 @@ func filtersContainURLRewriteReplacePrefixMatch(filters []gatewayapi.HTTPRouteFi
 // generally depends on which match fired, so matches sharing this filter must never be
 // consolidated into a single Kong route/plugin either - see getRoutesFromMatches, which already
 // builds one independent route per match for this reason.
-func filtersContainRequestRedirect(filters []gatewayapi.HTTPRouteFilter) bool {
-	return lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+func filtersContainRequestRedirect(filters []gwtypes.HTTPRouteFilter) bool {
+	return lo.ContainsBy(filters, func(filter gwtypes.HTTPRouteFilter) bool {
+		return filter.Type == gwtypes.HTTPRouteFilterRequestRedirect
 	})
 }
 
@@ -558,7 +559,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 				hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
 				routesFromRule, err := GenerateKongRoutesFromHTTPRouteMatches(
 					routeName,
-					[]gatewayapi.HTTPRouteMatch{},
+					[]gwtypes.HTTPRouteMatch{},
 					filters,
 					objectInfo,
 					hostnames,
@@ -664,11 +665,11 @@ func regexPriorityForHTTPRouteMatchMeta(
 }
 
 // extractUniqueHTTPRoutes extracts unique HTTPRoutes in a grouped list of HTTPRouteRuleMeta.
-func extractUniqueHTTPRoutes(rulesMeta []httpRouteRuleMeta) []*gatewayapi.HTTPRoute {
-	routes := lo.Map(rulesMeta, func(m httpRouteRuleMeta, _ int) *gatewayapi.HTTPRoute {
+func extractUniqueHTTPRoutes(rulesMeta []httpRouteRuleMeta) []*gwtypes.HTTPRoute {
+	routes := lo.Map(rulesMeta, func(m httpRouteRuleMeta, _ int) *gwtypes.HTTPRoute {
 		return m.parentRoute
 	})
-	uniqueRoutes := lo.UniqBy(routes, func(route *gatewayapi.HTTPRoute) k8stypes.NamespacedName {
+	uniqueRoutes := lo.UniqBy(routes, func(route *gwtypes.HTTPRoute) k8stypes.NamespacedName {
 		return k8stypes.NamespacedName{
 			Namespace: route.Namespace,
 			Name:      route.Name,
@@ -749,9 +750,9 @@ func groupSliceByKeyFn[T any](vals []T, keyFn func(val T) string) map[string][]T
 // -----------------------------------------------------------------------------
 
 type httpRouteRuleMeta struct {
-	Rule        gatewayapi.HTTPRouteRule
+	Rule        gwtypes.HTTPRouteRule
 	RuleNumber  int
-	parentRoute *gatewayapi.HTTPRoute
+	parentRoute *gwtypes.HTTPRoute
 }
 
 // getHTTPBackendRefsKey computes a key from a list of backendRefs and the
@@ -921,14 +922,14 @@ func (m *httpRouteRuleMeta) matches() httpRouteMatchMetaList {
 }
 
 type httpRouteMatchMeta struct {
-	Match *gatewayapi.HTTPRouteMatch
+	Match *gwtypes.HTTPRouteMatch
 	// OptionalNamedRouteRule represents RouteName - an optional name
 	// of the particular route that can be defined in the K8s HTTPRoute,
 	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
 	OptionalRouteRuleName string
 	RuleNumber            int
 	MatchNumber           int
-	parentRoute           *gatewayapi.HTTPRoute
+	parentRoute           *gwtypes.HTTPRoute
 }
 
 // getKey computes a key from an HTTPRouteMatch. Two HTTPRouteMatches will generate the same key if their
@@ -947,10 +948,10 @@ func (m httpRouteMatchMeta) getKey() string {
 	// equivalent.
 	//
 	seenHeaders := make(map[string]struct{})
-	headers := make([]gatewayapi.HTTPHeaderMatch, 0, len(m.Match.Headers))
+	headers := make([]gwtypes.HTTPHeaderMatch, 0, len(m.Match.Headers))
 	for _, header := range m.Match.Headers {
 		name := strings.ToLower(string(header.Name))
-		header.Name = gatewayapi.HTTPHeaderName(strings.ToLower(string(header.Name)))
+		header.Name = gwtypes.HTTPHeaderName(strings.ToLower(string(header.Name)))
 		if _, ok := seenHeaders[name]; ok {
 			continue
 		}
@@ -968,7 +969,7 @@ func (m httpRouteMatchMeta) getKey() string {
 	// entries with an equivalent query param name MUST be ignored.
 	//
 	seenQueryParams := make(map[string]struct{})
-	queryParams := make([]gatewayapi.HTTPQueryParamMatch, 0, len(m.Match.QueryParams))
+	queryParams := make([]gwtypes.HTTPQueryParamMatch, 0, len(m.Match.QueryParams))
 	for _, queryParam := range m.Match.QueryParams {
 		if _, ok := seenQueryParams[string(queryParam.Name)]; ok {
 			continue
@@ -981,9 +982,9 @@ func (m httpRouteMatchMeta) getKey() string {
 		Namespace string
 		Name      string
 		HasPath   bool
-		Method    *gatewayapi.HTTPMethod
-		Headers   []gatewayapi.HTTPHeaderMatch
-		Query     []gatewayapi.HTTPQueryParamMatch
+		Method    *gwtypes.HTTPMethod
+		Headers   []gwtypes.HTTPHeaderMatch
+		Query     []gwtypes.HTTPQueryParamMatch
 	}{
 		Namespace: m.parentRoute.Namespace,
 		Name:      m.parentRoute.Name,
@@ -1006,9 +1007,9 @@ func (m httpRouteMatchMeta) getUniqueKey() string {
 type httpRouteMatchMetaList []httpRouteMatchMeta
 
 func (l httpRouteMatchMetaList) httpRouteMatches() (
-	matches []gatewayapi.HTTPRouteMatch, optionalNamedRouteRules []string,
+	matches []gwtypes.HTTPRouteMatch, optionalNamedRouteRules []string,
 ) {
-	matches = make([]gatewayapi.HTTPRouteMatch, 0, len(l))
+	matches = make([]gwtypes.HTTPRouteMatch, 0, len(l))
 	for _, matchMeta := range l {
 		matches = append(matches, *matchMeta.Match)
 		if sn := matchMeta.OptionalRouteRuleName; sn != "" {
@@ -1072,8 +1073,8 @@ func mustMarshalJSON[T any](val T) string {
 // This function assumes that the HTTPRouteMatches share the query params, headers and methods.
 func GenerateKongRoutesFromHTTPRouteMatches(
 	routeName string,
-	matches []gatewayapi.HTTPRouteMatch,
-	filters []gatewayapi.HTTPRouteFilter,
+	matches []gwtypes.HTTPRouteMatch,
+	filters []gwtypes.HTTPRouteFilter,
 	ingressObjectInfo util.K8sObjectInfo,
 	hostnames []*string,
 	tags []*string,
@@ -1176,7 +1177,7 @@ func generateKongstateHTTPRoute(routeName string, ingressObjectInfo util.K8sObje
 // referenced by all provided HTTPRoutes' parentRefs.
 // It collects unique protocols from all matching listeners.
 // It returns nil (relies on Kong Gateway defaults) as a fallback when no matching Gateway listeners are found.
-func protocolsFromHTTPRoutesGatewayListeners(storer store.Storer, routes []*gatewayapi.HTTPRoute) []*string {
+func protocolsFromHTTPRoutesGatewayListeners(storer store.Storer, routes []*gwtypes.HTTPRoute) []*string {
 	protoSet := make(map[string]struct{})
 	for _, route := range routes {
 		for _, pr := range route.Spec.ParentRefs {
@@ -1199,7 +1200,7 @@ func protocolsFromHTTPRoutesGatewayListeners(storer store.Storer, routes []*gate
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch
 // and converts these header matching rules to the format expected by go-kong.
-func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTPHeaderMatch) (map[string][]string, error) {
+func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gwtypes.HTTPHeaderMatch) (map[string][]string, error) {
 	// iterate through each provided header match checking for invalid
 	// options and otherwise converting to kong type format.
 	convertedHeaders := make(map[string][]string)
@@ -1216,9 +1217,9 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTP
 		}
 		seenHeaderNames[lowercaseHeaderName] = struct{}{}
 		switch {
-		case header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression:
+		case header.Type != nil && *header.Type == gwtypes.HeaderMatchRegularExpression:
 			convertedHeaders[string(header.Name)] = []string{KongHeaderRegexPrefix + header.Value}
-		case header.Type == nil || *header.Type == gatewayapi.HeaderMatchExact:
+		case header.Type == nil || *header.Type == gwtypes.HeaderMatchExact:
 			convertedHeaders[string(header.Name)] = []string{header.Value}
 		default:
 			return nil, fmt.Errorf("unknown/unsupported header match type: %s", string(*header.Type))
@@ -1230,9 +1231,9 @@ func convertGatewayMatchHeadersToKongRouteMatchHeaders(headers []gatewayapi.HTTP
 
 // getRoutesFromMatches converts all the httpRoute matches to the proper set of kong routes.
 func getRoutesFromMatches(
-	matches []gatewayapi.HTTPRouteMatch,
+	matches []gwtypes.HTTPRouteMatch,
 	route *kongstate.Route,
-	filters []gatewayapi.HTTPRouteFilter,
+	filters []gwtypes.HTTPRouteFilter,
 	tags []*string,
 	hasRedirectFilter bool,
 	supportRedirectPlugin bool,
@@ -1305,7 +1306,7 @@ func getRoutesFromMatches(
 	return routes, nil
 }
 
-func addPathsFromHTTPRouteMatch(route *kongstate.Route, match gatewayapi.HTTPRouteMatch) {
+func addPathsFromHTTPRouteMatch(route *kongstate.Route, match gwtypes.HTTPRouteMatch) {
 	if match.Path == nil {
 		if route.RegexPriority != nil && len(match.Headers) > 0 {
 			route.Paths = append(route.Paths, new(kongHTTPRouteHeaderOnlyRegexPath))
@@ -1318,12 +1319,12 @@ func addPathsFromHTTPRouteMatch(route *kongstate.Route, match gatewayapi.HTTPRou
 	}
 }
 
-func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []string {
+func generateKongRoutePathFromHTTPRouteMatch(match gwtypes.HTTPRouteMatch) []string {
 	switch *match.Path.Type {
-	case gatewayapi.PathMatchExact:
+	case gwtypes.PathMatchExact:
 		return []string{KongPathRegexPrefix + *match.Path.Value + "$"}
 
-	case gatewayapi.PathMatchPathPrefix:
+	case gwtypes.PathMatchPathPrefix:
 		paths := make([]string, 0, 2)
 		path := *match.Path.Value
 		paths = append(paths, fmt.Sprintf("%s%s$", KongPathRegexPrefix, path))
@@ -1332,7 +1333,7 @@ func generateKongRoutePathFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch) []
 		}
 		return append(paths, path)
 
-	case gatewayapi.PathMatchRegularExpression:
+	case gwtypes.PathMatchRegularExpression:
 		return []string{KongPathRegexPrefix + *match.Path.Value}
 	}
 
@@ -1350,7 +1351,7 @@ type setKongRoutePluginsOptions struct {
 // - ExtensionRef to plugins annotation from the ExtensionRef filter.
 func setRoutePlugins(
 	route *kongstate.Route,
-	filters []gatewayapi.HTTPRouteFilter,
+	filters []gwtypes.HTTPRouteFilter,
 	path string,
 	tags []*string,
 	options setKongRoutePluginsOptions,
@@ -1391,7 +1392,7 @@ type kongRouteModifier func(*kongstate.Route)
 // - Kong Route modifiers that need to be applied to the Kong Route
 // - PluginsAnnotation that is generated from the ExtensionRef filter.
 func generatePluginsFromHTTPRouteFilters(
-	filters []gatewayapi.HTTPRouteFilter,
+	filters []gwtypes.HTTPRouteFilter,
 	path string,
 	tags []*string,
 	options setKongRoutePluginsOptions,
@@ -1408,10 +1409,10 @@ func generatePluginsFromHTTPRouteFilters(
 
 	for _, filter := range filters {
 		switch filter.Type {
-		case gatewayapi.HTTPRouteFilterRequestHeaderModifier:
+		case gwtypes.HTTPRouteFilterRequestHeaderModifier:
 			transformerPlugins = append(transformerPlugins, generateRequestHeaderModifierKongPlugin(filter.RequestHeaderModifier))
 
-		case gatewayapi.HTTPRouteFilterRequestRedirect:
+		case gwtypes.HTTPRouteFilterRequestRedirect:
 			if options.redirectKongPluginEnabled {
 				kongPlugins = append(kongPlugins, generateRequestRedirectUsingRedirectKongPlugin(filter.RequestRedirect))
 			} else {
@@ -1420,17 +1421,17 @@ func generatePluginsFromHTTPRouteFilters(
 				transformerPlugins = append(transformerPlugins, transformerPlugin)
 			}
 
-		case gatewayapi.HTTPRouteFilterResponseHeaderModifier:
+		case gwtypes.HTTPRouteFilterResponseHeaderModifier:
 			transformerPlugins = append(transformerPlugins, generateResponseHeaderModifierKongPlugin(filter.ResponseHeaderModifier))
 
-		case gatewayapi.HTTPRouteFilterExtensionRef:
+		case gwtypes.HTTPRouteFilterExtensionRef:
 			plugin, err := generateExtensionRefKongPlugin(filter.ExtensionRef)
 			if err != nil {
 				return httpRouteFiltersOriginatedPlugins{}, err
 			}
 			pluginNamesFromExtensionRef = append(pluginNamesFromExtensionRef, plugin)
 
-		case gatewayapi.HTTPRouteFilterURLRewrite:
+		case gwtypes.HTTPRouteFilterURLRewrite:
 			plugins, routeModifiers, err := generateRequestTransformerForURLRewrite(filter.URLRewrite, path, options.expressionsRouterEnabled)
 			if err != nil {
 				return httpRouteFiltersOriginatedPlugins{}, err
@@ -1542,7 +1543,7 @@ func generateKongRouteModifierFromExtensionRef(pluginNamesFromExtensionRef []str
 
 // hostPortFromHTTPPathModifier returns the part of scheme and hostport in the URL of `Location` header
 // for generating configuration of Kong plugins to satisfy `requestRedirect` filter of HTTPRoute.
-func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirectFilter) (string, string) {
+func schemeHostPortFromHTTPPathModifier(modifier *gwtypes.HTTPRequestRedirectFilter) (string, string) {
 	// Since the `redirect` plugin requires the scheme, we do not change the logic to use `http` scheme when scheme is empty.
 	// TODO: According to the spec of gateway API, the original scheme should be kept if no scheme is given.
 	// So the logic may be changed if Kong gateway supports:
@@ -1561,7 +1562,7 @@ func schemeHostPortFromHTTPPathModifier(modifier *gatewayapi.HTTPRequestRedirect
 
 // generateRequestRedirectKongPlugin generates configurations of plugins to satisfy the specification
 // of request redirect filter.
-func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectFilter, path string) (kong.Plugin, transformerPlugin) {
+func generateRequestRedirectKongPlugin(modifier *gwtypes.HTTPRequestRedirectFilter, path string) (kong.Plugin, transformerPlugin) {
 	requestTerminationPlugin := kong.Plugin{
 		Name: new("request-termination"),
 		Config: kong.Configuration{
@@ -1570,7 +1571,7 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 	}
 
 	if modifier.Path != nil &&
-		modifier.Path.Type == gatewayapi.FullPathHTTPPathModifier &&
+		modifier.Path.Type == gwtypes.FullPathHTTPPathModifier &&
 		modifier.Path.ReplaceFullPath != nil {
 		// only ReplaceFullPath currently supported
 		path = *modifier.Path.ReplaceFullPath
@@ -1603,7 +1604,7 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 // of request redirect filter.
 // Used if Kong version is >= 3.9.
 func generateRequestRedirectUsingRedirectKongPlugin(
-	modifier *gatewayapi.HTTPRequestRedirectFilter,
+	modifier *gwtypes.HTTPRequestRedirectFilter,
 ) kong.Plugin {
 	redirectPlugin := kong.Plugin{
 		Name: new("redirect"),
@@ -1617,7 +1618,7 @@ func generateRequestRedirectUsingRedirectKongPlugin(
 	var location string
 
 	if modifier.Path != nil &&
-		modifier.Path.Type == gatewayapi.FullPathHTTPPathModifier &&
+		modifier.Path.Type == gwtypes.FullPathHTTPPathModifier &&
 		modifier.Path.ReplaceFullPath != nil {
 		path = *modifier.Path.ReplaceFullPath
 		preservePath = false
@@ -1637,22 +1638,22 @@ func generateRequestRedirectUsingRedirectKongPlugin(
 	return redirectPlugin
 }
 
-func generateExtensionRefKongPlugin(modifier *gatewayapi.LocalObjectReference) (string, error) {
+func generateExtensionRefKongPlugin(modifier *gwtypes.LocalObjectReference) (string, error) {
 	if modifier.Group != "configuration.konghq.com" || modifier.Kind != "KongPlugin" {
 		return "", fmt.Errorf("plugin %s/%s unsupported", modifier.Group, modifier.Kind)
 	}
 	return string(modifier.Name), nil
 }
 
-// generateRequestHeaderModifierKongPlugin converts a gatewayapi.HTTPRequestHeaderFilter into a
+// generateRequestHeaderModifierKongPlugin converts a gwtypes.HTTPHeaderFilter (RequestHeaderModifier) into a
 // kong.Plugin of type request-transformer.
-func generateRequestHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter) transformerPlugin {
+func generateRequestHeaderModifierKongPlugin(modifier *gwtypes.HTTPHeaderFilter) transformerPlugin {
 	return generateHeaderModifierKongPlugin(modifier, transformerPluginTypeRequest)
 }
 
-// generateResponseHeaderModifierKongPlugin converts a gatewayapi.HTTPResponseHeaderFilter into a
+// generateResponseHeaderModifierKongPlugin converts a gwtypes.HTTPHeaderFilter (ResponseHeaderModifier) into a
 // kong.Plugin of type response-transformer.
-func generateResponseHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter) transformerPlugin {
+func generateResponseHeaderModifierKongPlugin(modifier *gwtypes.HTTPHeaderFilter) transformerPlugin {
 	return generateHeaderModifierKongPlugin(modifier, transformerPluginTypeResponse)
 }
 
@@ -1703,7 +1704,7 @@ type TransformerPluginReplaceConfig struct {
 	URI     string   `json:"uri,omitempty"`
 }
 
-func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, pluginType transformerPluginType) transformerPlugin {
+func generateHeaderModifierKongPlugin(modifier *gwtypes.HTTPHeaderFilter, pluginType transformerPluginType) transformerPlugin {
 	plugin := transformerPlugin{
 		Type: pluginType,
 	}
@@ -1744,20 +1745,20 @@ func generateHeaderModifierKongPlugin(modifier *gatewayapi.HTTPHeaderFilter, plu
 	return plugin
 }
 
-func kongHeaderFormatter(header gatewayapi.HTTPHeader) Header {
+func kongHeaderFormatter(header gwtypes.HTTPHeader) Header {
 	return NewHeader(string(header.Name), header.Value)
 }
 
 func generateRequestTransformerForURLRewrite(
-	filter *gatewayapi.HTTPURLRewriteFilter,
+	filter *gwtypes.HTTPURLRewriteFilter,
 	path string,
 	expressionsRouterEnabled bool,
 ) ([]transformerPlugin, []kongRouteModifier, error) {
 	if filter == nil {
-		return nil, nil, fmt.Errorf("%s is not provided", gatewayapi.HTTPRouteFilterURLRewrite)
+		return nil, nil, fmt.Errorf("%s is not provided", gwtypes.HTTPRouteFilterURLRewrite)
 	}
 	if filter.Path == nil && filter.Hostname == nil {
-		return nil, nil, fmt.Errorf("%s missing Path and Hostname", gatewayapi.HTTPRouteFilterURLRewrite)
+		return nil, nil, fmt.Errorf("%s missing Path and Hostname", gwtypes.HTTPRouteFilterURLRewrite)
 	}
 
 	var (
@@ -1782,28 +1783,28 @@ func generateRequestTransformerForURLRewrite(
 }
 
 func generateRequestTransformerForURLRewritePath(
-	filter *gatewayapi.HTTPURLRewriteFilter,
+	filter *gwtypes.HTTPURLRewriteFilter,
 	path string,
 	expressionsRouterEnabled bool,
 ) (transformerPlugin, kongRouteModifier, error) {
 	switch filter.Path.Type {
-	case gatewayapi.FullPathHTTPPathModifier:
+	case gwtypes.FullPathHTTPPathModifier:
 		plugin, err := generateRequestTransformerForURLRewriteFullPath(filter)
 		if err != nil {
-			return transformerPlugin{}, nil, fmt.Errorf("failed to generate request-transformer plugin for %s: %w", gatewayapi.HTTPRouteFilterURLRewrite, err)
+			return transformerPlugin{}, nil, fmt.Errorf("failed to generate request-transformer plugin for %s: %w", gwtypes.HTTPRouteFilterURLRewrite, err)
 		}
 		return plugin, nil, nil
 
-	case gatewayapi.PrefixMatchHTTPPathModifier:
+	case gwtypes.PrefixMatchHTTPPathModifier:
 		plugin, routeModifier := generateRequestTransformerForURLRewritePrefixMatch(filter, path, expressionsRouterEnabled)
 		return plugin, routeModifier, nil
 	default:
-		return transformerPlugin{}, nil, fmt.Errorf("unsupported path type %s for %s", filter.Path.Type, gatewayapi.HTTPRouteFilterURLRewrite)
+		return transformerPlugin{}, nil, fmt.Errorf("unsupported path type %s for %s", filter.Path.Type, gwtypes.HTTPRouteFilterURLRewrite)
 	}
 }
 
 func generateRequestTransformerForURLRewriteHostname(
-	filter *gatewayapi.HTTPURLRewriteFilter,
+	filter *gwtypes.HTTPURLRewriteFilter,
 ) transformerPlugin {
 	hostHeader := []Header{NewHeader("host", string(*filter.Hostname))}
 	return transformerPlugin{
@@ -1819,9 +1820,9 @@ func generateRequestTransformerForURLRewriteHostname(
 
 // generateRequestTransformerForURLRewriteFullPath generates a request-transformer plugin for the URLRewrite filter
 // with a FullPathHTTPPathModifier.
-func generateRequestTransformerForURLRewriteFullPath(filter *gatewayapi.HTTPURLRewriteFilter) (transformerPlugin, error) {
+func generateRequestTransformerForURLRewriteFullPath(filter *gwtypes.HTTPURLRewriteFilter) (transformerPlugin, error) {
 	if filter.Path.ReplaceFullPath == nil {
-		return transformerPlugin{}, fmt.Errorf("%s missing ReplaceFullPath", gatewayapi.HTTPRouteFilterURLRewrite)
+		return transformerPlugin{}, fmt.Errorf("%s missing ReplaceFullPath", gwtypes.HTTPRouteFilterURLRewrite)
 	}
 
 	return transformerPlugin{
@@ -1835,7 +1836,7 @@ func generateRequestTransformerForURLRewriteFullPath(filter *gatewayapi.HTTPURLR
 // generateRequestTransformerForURLRewritePrefixMatch generates a request-transformer plugin and a route modifier
 // for the URLRewrite filter with a PrefixMatchHTTPPathModifier.
 func generateRequestTransformerForURLRewritePrefixMatch(
-	filter *gatewayapi.HTTPURLRewriteFilter,
+	filter *gwtypes.HTTPURLRewriteFilter,
 	path string,
 	expressionsRouterEnabled bool,
 ) (transformerPlugin, kongRouteModifier) {

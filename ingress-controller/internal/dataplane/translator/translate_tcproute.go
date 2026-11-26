@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 	var errs []error
 
 	// Validate first; keep only structurally-valid routes for arbitration.
-	valid := make([]*gatewayapi.TCPRoute, 0, len(tcpRouteList))
+	valid := make([]*gwtypes.TCPRoute, 0, len(tcpRouteList))
 	for _, r := range tcpRouteList {
 		if err := validateTCPRoute(r); err != nil {
 			errs = append(errs, err)
@@ -39,10 +39,10 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 	}
 
 	// Build gateway -> TCP listeners index for the gateways referenced anywhere.
-	listenersByGateway := collectL4ListenersByGateway(t.storer, valid, gatewayapi.TCPProtocolType)
+	listenersByGateway := collectL4ListenersByGateway(t.storer, valid, gwtypes.TCPProtocolType)
 
 	// Group routes by l4ListenerKey.
-	attachments := make(map[l4ListenerKey][]*gatewayapi.TCPRoute)
+	attachments := make(map[l4ListenerKey][]*gwtypes.TCPRoute)
 	for _, r := range valid {
 		listenerKeys := l4RouteListenerAttachments(r, t.logger, t.storer, listenersByGateway)
 		for _, k := range listenerKeys {
@@ -52,7 +52,7 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 
 	// Pick a winner per listener, then aggregate the listener ports each
 	// winning route owns.
-	winningPorts := make(map[*gatewayapi.TCPRoute][]gatewayapi.PortNumber)
+	winningPorts := make(map[*gwtypes.TCPRoute][]gwtypes.PortNumber)
 	for key, candidates := range attachments {
 		winner := pickWinningL4Route(candidates)
 		if winner == nil {
@@ -98,8 +98,8 @@ func (t *Translator) ingressRulesFromTCPRoutes() ingressRules {
 // Callers must pass only ports for listeners where `route` won arbitration.
 func (t *Translator) translateTCPRouteWithPorts(
 	result *ingressRules,
-	route *gatewayapi.TCPRoute,
-	gwPorts []gatewayapi.PortNumber,
+	route *gwtypes.TCPRoute,
+	gwPorts []gwtypes.PortNumber,
 ) error {
 	spec := route.Spec
 	if len(spec.Rules) == 0 {
@@ -129,7 +129,7 @@ func (t *Translator) translateTCPRouteWithPorts(
 // validation at this level as well as a fallback so that if routes are posted which
 // are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 // at least try to provide a helpful message about the situation in the manager logs.
-func validateTCPRoute(tcproute *gatewayapi.TCPRoute) error {
+func validateTCPRoute(tcproute *gwtypes.TCPRoute) error {
 	if len(tcproute.Spec.Rules) == 0 {
 		return subtranslator.ErrRouteValidationNoRules
 	}

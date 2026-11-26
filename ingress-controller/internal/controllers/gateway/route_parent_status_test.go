@@ -9,25 +9,25 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGetParentStatuses(t *testing.T) {
 	t.Run("HTTPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayapi.HTTPRoute
-			want  map[string]*gatewayapi.RouteParentStatus
+			route *gwtypes.HTTPRoute
+			want  map[string]*gwtypes.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayapi.HTTPRoute{
+				route: &gwtypes.HTTPRoute{
 					Name:      uuid.NewString(),
 					Namespace: uuid.NewString(),
-					Status: gatewayapi.HTTPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.HTTPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("group").
@@ -41,7 +41,7 @@ func TestGetParentStatuses(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/name/section1": {
 						ParentRef: builder.NewParentReference().
 							Group("group").
@@ -55,12 +55,12 @@ func TestGetParentStatuses(t *testing.T) {
 			},
 			{
 				name: "nil namespace",
-				route: &gatewayapi.HTTPRoute{
+				route: &gwtypes.HTTPRoute{
 					Name:      uuid.NewString(),
 					Namespace: "object-namespace",
-					Status: gatewayapi.HTTPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.HTTPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("group").
@@ -73,7 +73,7 @@ func TestGetParentStatuses(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"object-namespace/name/section1": {
 						ParentRef: builder.NewParentReference().
 							Group("group").
@@ -96,17 +96,17 @@ func TestGetParentStatuses(t *testing.T) {
 	t.Run("UDPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayapi.UDPRoute
-			want  map[string]*gatewayapi.RouteParentStatus
+			route *gwtypes.UDPRoute
+			want  map[string]*gwtypes.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayapi.UDPRoute{
+				route: &gwtypes.UDPRoute{
 					Name:      uuid.NewString(),
 					Namespace: uuid.NewString(),
-					Status: gatewayapi.UDPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.UDPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("group").
@@ -119,7 +119,7 @@ func TestGetParentStatuses(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/name": {
 						ParentRef: builder.NewParentReference().
 							Group("group").
@@ -142,17 +142,17 @@ func TestGetParentStatuses(t *testing.T) {
 	t.Run("TCPRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayapi.TCPRoute
-			want  map[string]*gatewayapi.RouteParentStatus
+			route *gwtypes.TCPRoute
+			want  map[string]*gwtypes.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayapi.TCPRoute{
+				route: &gwtypes.TCPRoute{
 					Name:      uuid.NewString(),
 					Namespace: uuid.NewString(),
-					Status: gatewayapi.TCPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.TCPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("group").
@@ -165,7 +165,7 @@ func TestGetParentStatuses(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/name": {
 						ParentRef: builder.NewParentReference().
 							Group("group").
@@ -188,17 +188,17 @@ func TestGetParentStatuses(t *testing.T) {
 	t.Run("TLSRoute", func(t *testing.T) {
 		tests := []struct {
 			name  string
-			route *gatewayapi.TLSRoute
-			want  map[string]*gatewayapi.RouteParentStatus
+			route *gwtypes.TLSRoute
+			want  map[string]*gwtypes.RouteParentStatus
 		}{
 			{
 				name: "basic",
-				route: &gatewayapi.TLSRoute{
+				route: &gwtypes.TLSRoute{
 					Name:      uuid.NewString(),
 					Namespace: uuid.NewString(),
-					Status: gatewayapi.TLSRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.TLSRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("group").
@@ -211,7 +211,7 @@ func TestGetParentStatuses(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/name": {
 						ParentRef: builder.NewParentReference().
 							Group("group").
@@ -236,21 +236,21 @@ func TestParentStatusesForRoute(t *testing.T) {
 	t.Run("HTTPRoute", func(t *testing.T) {
 		tests := []struct {
 			name     string
-			route    *gatewayapi.HTTPRoute
-			statuses []gatewayapi.RouteParentStatus
+			route    *gwtypes.HTTPRoute
+			statuses []gwtypes.RouteParentStatus
 			gateways []supportedGatewayWithCondition
-			want     map[string]*gatewayapi.RouteParentStatus
+			want     map[string]*gwtypes.RouteParentStatus
 			changed  bool
 		}{
 			{
 				name: "no Programmed condition on a route, update and return true",
-				route: &gatewayapi.HTTPRoute{
+				route: &gwtypes.HTTPRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.HTTPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.HTTPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -267,7 +267,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -279,7 +279,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						listenerName: "section1",
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1/section1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -298,13 +298,13 @@ func TestParentStatusesForRoute(t *testing.T) {
 			},
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
-				route: &gatewayapi.HTTPRoute{
+				route: &gwtypes.HTTPRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.HTTPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.HTTPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -324,7 +324,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -336,7 +336,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						listenerName: "section1",
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1/section1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -370,21 +370,21 @@ func TestParentStatusesForRoute(t *testing.T) {
 	t.Run("UDPRoute", func(t *testing.T) {
 		tests := []struct {
 			name     string
-			route    *gatewayapi.UDPRoute
-			statuses []gatewayapi.RouteParentStatus
+			route    *gwtypes.UDPRoute
+			statuses []gwtypes.RouteParentStatus
 			gateways []supportedGatewayWithCondition
-			want     map[string]*gatewayapi.RouteParentStatus
+			want     map[string]*gwtypes.RouteParentStatus
 			changed  bool
 		}{
 			{
 				name: "no Programmed condition on a route, update and return true",
-				route: &gatewayapi.UDPRoute{
+				route: &gwtypes.UDPRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.UDPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.UDPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -400,7 +400,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -411,7 +411,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -429,13 +429,13 @@ func TestParentStatusesForRoute(t *testing.T) {
 			},
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
-				route: &gatewayapi.UDPRoute{
+				route: &gwtypes.UDPRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.UDPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.UDPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -454,7 +454,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -465,7 +465,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -498,21 +498,21 @@ func TestParentStatusesForRoute(t *testing.T) {
 	t.Run("TCPRoute", func(t *testing.T) {
 		tests := []struct {
 			name     string
-			route    *gatewayapi.TCPRoute
-			statuses []gatewayapi.RouteParentStatus
+			route    *gwtypes.TCPRoute
+			statuses []gwtypes.RouteParentStatus
 			gateways []supportedGatewayWithCondition
-			want     map[string]*gatewayapi.RouteParentStatus
+			want     map[string]*gwtypes.RouteParentStatus
 			changed  bool
 		}{
 			{
 				name: "no Programmed condition on a route, update and return true",
-				route: &gatewayapi.TCPRoute{
+				route: &gwtypes.TCPRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.TCPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.TCPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -528,7 +528,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -539,7 +539,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -557,13 +557,13 @@ func TestParentStatusesForRoute(t *testing.T) {
 			},
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
-				route: &gatewayapi.TCPRoute{
+				route: &gwtypes.TCPRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.TCPRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.TCPRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -582,7 +582,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -593,7 +593,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -626,21 +626,21 @@ func TestParentStatusesForRoute(t *testing.T) {
 	t.Run("TLSRoute", func(t *testing.T) {
 		tests := []struct {
 			name     string
-			route    *gatewayapi.TLSRoute
-			statuses []gatewayapi.RouteParentStatus
+			route    *gwtypes.TLSRoute
+			statuses []gwtypes.RouteParentStatus
 			gateways []supportedGatewayWithCondition
-			want     map[string]*gatewayapi.RouteParentStatus
+			want     map[string]*gwtypes.RouteParentStatus
 			changed  bool
 		}{
 			{
 				name: "no Programmed condition on a route, update and return true",
-				route: &gatewayapi.TLSRoute{
+				route: &gwtypes.TLSRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.TLSRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.TLSRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -656,7 +656,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -667,7 +667,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -685,13 +685,13 @@ func TestParentStatusesForRoute(t *testing.T) {
 			},
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
-				route: &gatewayapi.TLSRoute{
+				route: &gwtypes.TLSRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.TLSRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.TLSRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -710,7 +710,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -721,7 +721,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						},
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -754,21 +754,21 @@ func TestParentStatusesForRoute(t *testing.T) {
 	t.Run("GRPCRoute", func(t *testing.T) {
 		tests := []struct {
 			name     string
-			route    *gatewayapi.GRPCRoute
-			statuses []gatewayapi.RouteParentStatus
+			route    *gwtypes.GRPCRoute
+			statuses []gwtypes.RouteParentStatus
 			gateways []supportedGatewayWithCondition
-			want     map[string]*gatewayapi.RouteParentStatus
+			want     map[string]*gwtypes.RouteParentStatus
 			changed  bool
 		}{
 			{
 				name: "no Programmed condition on a route, update and return true",
-				route: &gatewayapi.GRPCRoute{
+				route: &gwtypes.GRPCRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.GRPCRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.GRPCRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -785,7 +785,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -797,7 +797,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						listenerName: "section1",
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1/section1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -816,13 +816,13 @@ func TestParentStatusesForRoute(t *testing.T) {
 			},
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
-				route: &gatewayapi.GRPCRoute{
+				route: &gwtypes.GRPCRoute{
 					Name:       uuid.NewString(),
 					Namespace:  uuid.NewString(),
 					Generation: 7,
-					Status: gatewayapi.GRPCRouteStatus{
-						RouteStatus: gatewayapi.RouteStatus{
-							Parents: []gatewayapi.RouteParentStatus{
+					Status: gwtypes.GRPCRouteStatus{
+						RouteStatus: gwtypes.RouteStatus{
+							Parents: []gwtypes.RouteParentStatus{
 								{
 									ParentRef: builder.NewParentReference().
 										Group("gateway.networking.k8s.io").
@@ -842,7 +842,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 				},
 				gateways: []supportedGatewayWithCondition{
 					{
-						gateway: &gatewayapi.Gateway{
+						gateway: &gwtypes.Gateway{
 							Name:      "gateway1",
 							Namespace: "namespace",
 						},
@@ -854,7 +854,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 						listenerName: "section1",
 					},
 				},
-				want: map[string]*gatewayapi.RouteParentStatus{
+				want: map[string]*gwtypes.RouteParentStatus{
 					"namespace/gateway1/section1": {
 						ParentRef: builder.NewParentReference().
 							Group("gateway.networking.k8s.io").
@@ -887,7 +887,7 @@ func TestParentStatusesForRoute(t *testing.T) {
 }
 
 func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
-	foreignParentStatus := gatewayapi.RouteParentStatus{
+	foreignParentStatus := gwtypes.RouteParentStatus{
 		ParentRef: builder.NewParentReference().
 			Group("gateway.networking.k8s.io").
 			Kind("Gateway").
@@ -896,10 +896,10 @@ func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
 			Build(),
 		ControllerName: "gateway.networking.k8s.io/stale-controller",
 		Conditions: []metav1.Condition{
-			newCondition(string(gatewayapi.RouteConditionAccepted), metav1.ConditionTrue, string(gatewayapi.RouteReasonAccepted), 7),
+			newCondition(string(gwtypes.RouteConditionAccepted), metav1.ConditionTrue, string(gwtypes.RouteReasonAccepted), 7),
 		},
 	}
-	ownParentStatus := gatewayapi.RouteParentStatus{
+	ownParentStatus := gwtypes.RouteParentStatus{
 		ParentRef: builder.NewParentReference().
 			Group("gateway.networking.k8s.io").
 			Kind("Gateway").
@@ -910,13 +910,13 @@ func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
 	}
 
 	t.Run("foreign parent status entries are not modified", func(t *testing.T) {
-		route := &gatewayapi.HTTPRoute{
+		route := &gwtypes.HTTPRoute{
 			Name:       uuid.NewString(),
 			Namespace:  "namespace",
 			Generation: 7,
 		}
 		foreign := foreignParentStatus
-		parentStatuses := map[string]*gatewayapi.RouteParentStatus{
+		parentStatuses := map[string]*gwtypes.RouteParentStatus{
 			"namespace/unmanaged-gateway": &foreign,
 			"namespace/gateway1":          &ownParentStatus,
 		}
@@ -933,13 +933,13 @@ func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
 	})
 
 	t.Run("no changes when only a foreign parent status entry exists", func(t *testing.T) {
-		route := &gatewayapi.HTTPRoute{
+		route := &gwtypes.HTTPRoute{
 			Name:       uuid.NewString(),
 			Namespace:  "namespace",
 			Generation: 7,
 		}
 		foreign := foreignParentStatus
-		parentStatuses := map[string]*gatewayapi.RouteParentStatus{
+		parentStatuses := map[string]*gwtypes.RouteParentStatus{
 			"namespace/unmanaged-gateway": &foreign,
 		}
 
@@ -951,21 +951,21 @@ func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
 }
 
 func TestGatewayParentStatusForRoutePropagatesConditionMessage(t *testing.T) {
-	route := &gatewayapi.HTTPRoute{
+	route := &gwtypes.HTTPRoute{
 		Name:       "route",
 		Namespace:  "namespace",
 		Generation: 7,
 	}
 	message := "rules[0].retry.codes is unsupported: Kong Gateway cannot retry on HTTP response status codes"
 	parentStatus := gatewayParentStatusForRoute(route, supportedGatewayWithCondition{
-		gateway: &gatewayapi.Gateway{
+		gateway: &gwtypes.Gateway{
 			Name:      "gateway",
 			Namespace: "namespace",
 		},
 		condition: metav1.Condition{
-			Type:    string(gatewayapi.RouteConditionAccepted),
+			Type:    string(gwtypes.RouteConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(gatewayapi.RouteReasonUnsupportedValue),
+			Reason:  string(gwtypes.RouteReasonUnsupportedValue),
 			Message: message,
 		},
 	})

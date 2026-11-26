@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -18,21 +18,21 @@ const (
 
 // httpRouteWithBackendTimeout builds a single-rule HTTPRoute with one backendRef and an
 // optional backendRequest timeout, for exercising combined-mode service grouping.
-func httpRouteWithBackendTimeout(name string, timeout *gatewayapi.Duration) *gatewayapi.HTTPRoute {
-	rule := gatewayapi.HTTPRouteRule{
-		BackendRefs: []gatewayapi.HTTPBackendRef{
+func httpRouteWithBackendTimeout(name string, timeout *gwtypes.Duration) *gwtypes.HTTPRoute {
+	rule := gwtypes.HTTPRouteRule{
+		BackendRefs: []gwtypes.HTTPBackendRef{
 			{
-				Name: gatewayapi.ObjectName(testHTTPRouteBackend),
+				Name: gwtypes.ObjectName(testHTTPRouteBackend),
 			},
 		},
 	}
 	if timeout != nil {
-		rule.Timeouts = &gatewayapi.HTTPRouteTimeouts{BackendRequest: timeout}
+		rule.Timeouts = &gwtypes.HTTPRouteTimeouts{BackendRequest: timeout}
 	}
-	return &gatewayapi.HTTPRoute{
+	return &gwtypes.HTTPRoute{
 		Namespace: testHTTPRouteNamespace, Name: name,
-		Spec: gatewayapi.HTTPRouteSpec{
-			Rules: []gatewayapi.HTTPRouteRule{rule},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{rule},
 		},
 	}
 }
@@ -49,8 +49,8 @@ func countServiceNamesWithTimeoutSuffix(groups map[string][]httpRouteRuleMeta) i
 }
 
 func TestGroupRulesCombinedKeepsServiceNameForUniformTimeout(t *testing.T) {
-	timeout := gatewayapi.Duration("500ms")
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	timeout := gwtypes.Duration("500ms")
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithBackendTimeout("route-a", &timeout),
 		httpRouteWithBackendTimeout("route-b", &timeout),
 	}, true)
@@ -64,14 +64,14 @@ func TestGroupRulesCombinedKeepsServiceNameForUniformTimeout(t *testing.T) {
 }
 
 func TestGroupRulesCombinedUniformTimeoutKeepsBaseName(t *testing.T) {
-	timeout := gatewayapi.Duration("500ms")
+	timeout := gwtypes.Duration("500ms")
 	// Same backends across two HTTPRoutes, all rules carrying the same (non-default) timeout.
-	withTimeout := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	withTimeout := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithBackendTimeout("route-a", &timeout),
 		httpRouteWithBackendTimeout("route-b", &timeout),
 	}, true)
 	// The same backends with no timeout at all - this is the pre-feature (baseline) name.
-	noTimeout := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	noTimeout := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithBackendTimeout("route-a", nil),
 		httpRouteWithBackendTimeout("route-b", nil),
 	}, true)
@@ -85,9 +85,9 @@ func TestGroupRulesCombinedUniformTimeoutKeepsBaseName(t *testing.T) {
 }
 
 func TestGroupRulesCombinedSplitsConflictingTimeouts(t *testing.T) {
-	timeout500ms := gatewayapi.Duration("500ms")
-	timeout1s := gatewayapi.Duration("1s")
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	timeout500ms := gwtypes.Duration("500ms")
+	timeout1s := gwtypes.Duration("1s")
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithBackendTimeout("route-a", &timeout500ms),
 		httpRouteWithBackendTimeout("route-b", &timeout1s),
 	}, true)
@@ -100,8 +100,8 @@ func TestGroupRulesCombinedSplitsConflictingTimeouts(t *testing.T) {
 }
 
 func TestGroupRulesCombinedSplitsTimeoutAndNone(t *testing.T) {
-	timeout := gatewayapi.Duration("500ms")
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	timeout := gwtypes.Duration("500ms")
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithBackendTimeout("route-a", &timeout),
 		httpRouteWithBackendTimeout("route-b", nil),
 	}, true)
@@ -112,9 +112,9 @@ func TestGroupRulesCombinedSplitsTimeoutAndNone(t *testing.T) {
 }
 
 func TestGroupRulesCombinedDoesNotSplitEquivalentTimeouts(t *testing.T) {
-	timeoutMs := gatewayapi.Duration("500ms")
-	timeoutS := gatewayapi.Duration("0.5s")
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
+	timeoutMs := gwtypes.Duration("500ms")
+	timeoutS := gwtypes.Duration("0.5s")
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
 		httpRouteWithBackendTimeout("route-a", &timeoutMs),
 		httpRouteWithBackendTimeout("route-b", &timeoutS),
 	}, true)
@@ -138,33 +138,33 @@ func TestGroupRulesCombinedSuffixedNameRespectsLengthLimit(t *testing.T) {
 	// Build a base service name that is valid on its own but close to maxKongServiceNameLength,
 	// so appending ".timeout.<ms>" would push it over the limit unless the final name is trimmed.
 	ns := strings.Repeat("n", 63)
-	backends := []gatewayapi.HTTPBackendRef{
-		{Name: gatewayapi.ObjectName(strings.Repeat("a", 200))},
-		{Name: gatewayapi.ObjectName(strings.Repeat("b", 95))},
+	backends := []gwtypes.HTTPBackendRef{
+		{Name: gwtypes.ObjectName(strings.Repeat("a", 200))},
+		{Name: gwtypes.ObjectName(strings.Repeat("b", 95))},
 	}
-	routeWith := func(name string, timeout gatewayapi.Duration) *gatewayapi.HTTPRoute {
-		return &gatewayapi.HTTPRoute{
+	routeWith := func(name string, timeout gwtypes.Duration) *gwtypes.HTTPRoute {
+		return &gwtypes.HTTPRoute{
 			Namespace: ns, Name: name,
-			Spec: gatewayapi.HTTPRouteSpec{
-				Rules: []gatewayapi.HTTPRouteRule{{
+			Spec: gwtypes.HTTPRouteSpec{
+				Rules: []gwtypes.HTTPRouteRule{{
 					BackendRefs: backends,
-					Timeouts:    &gatewayapi.HTTPRouteTimeouts{BackendRequest: &timeout},
+					Timeouts:    &gwtypes.HTTPRouteTimeouts{BackendRequest: &timeout},
 				}},
 			},
 		}
 	}
 
 	// Sanity: the base name (no suffix) is valid, but base+suffix would exceed the limit.
-	base := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{routeWith("route-a", gatewayapi.Duration("500ms"))}, true)
+	base := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{routeWith("route-a", gwtypes.Duration("500ms"))}, true)
 	baseName := onlyServiceName(t, base)
 	require.LessOrEqual(t, len(baseName), maxKongServiceNameLength)
 	require.Greater(t, len(baseName)+len(".timeout.500"), maxKongServiceNameLength,
 		"test setup: base+suffix must exceed the limit to exercise the trim path")
 
 	// Same backends, conflicting timeouts -> split; every resulting name must respect the limit.
-	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gatewayapi.HTTPRoute{
-		routeWith("route-a", gatewayapi.Duration("500ms")),
-		routeWith("route-b", gatewayapi.Duration("1s")),
+	groups := groupRulesFromHTTPRoutesByKongServiceName([]*gwtypes.HTTPRoute{
+		routeWith("route-a", gwtypes.Duration("500ms")),
+		routeWith("route-b", gwtypes.Duration("1s")),
 	}, true)
 	require.Len(t, groups, 2)
 	for name := range groups {
@@ -184,25 +184,25 @@ func hasServiceNameWithSuffix(groups map[string][]httpRouteRuleMeta, suffix stri
 }
 
 func TestGroupRulesByBackendRefsSeparatesDifferentBackendRequestTimeouts(t *testing.T) {
-	backendRef := gatewayapi.HTTPBackendRef{
+	backendRef := gwtypes.HTTPBackendRef{
 		Name: "service-1",
 	}
-	timeout500ms := gatewayapi.Duration("500ms")
-	timeout0s := gatewayapi.Duration("0s")
+	timeout500ms := gwtypes.Duration("500ms")
+	timeout0s := gwtypes.Duration("0s")
 
 	groups := groupRulesByBackendRefs([]httpRouteRuleMeta{
 		{
-			Rule: gatewayapi.HTTPRouteRule{
-				BackendRefs: []gatewayapi.HTTPBackendRef{backendRef},
-				Timeouts: &gatewayapi.HTTPRouteTimeouts{
+			Rule: gwtypes.HTTPRouteRule{
+				BackendRefs: []gwtypes.HTTPBackendRef{backendRef},
+				Timeouts: &gwtypes.HTTPRouteTimeouts{
 					BackendRequest: &timeout500ms,
 				},
 			},
 		},
 		{
-			Rule: gatewayapi.HTTPRouteRule{
-				BackendRefs: []gatewayapi.HTTPBackendRef{backendRef},
-				Timeouts: &gatewayapi.HTTPRouteTimeouts{
+			Rule: gwtypes.HTTPRouteRule{
+				BackendRefs: []gwtypes.HTTPBackendRef{backendRef},
+				Timeouts: &gwtypes.HTTPRouteTimeouts{
 					BackendRequest: &timeout0s,
 				},
 			},
@@ -213,15 +213,15 @@ func TestGroupRulesByBackendRefsSeparatesDifferentBackendRequestTimeouts(t *test
 }
 
 func TestApplyTimeoutToServiceFromHTTPRouteRuleMapsZeroToMaxKongTimeout(t *testing.T) {
-	timeout := gatewayapi.Duration("0s")
+	timeout := gwtypes.Duration("0s")
 	service := kongstate.Service{
 		ConnectTimeout: new(DefaultServiceTimeout),
 		ReadTimeout:    new(DefaultServiceTimeout),
 		WriteTimeout:   new(DefaultServiceTimeout),
 	}
 
-	applyTimeoutToServiceFromHTTPRouteRule(&service, gatewayapi.HTTPRouteRule{
-		Timeouts: &gatewayapi.HTTPRouteTimeouts{
+	applyTimeoutToServiceFromHTTPRouteRule(&service, gwtypes.HTTPRouteRule{
+		Timeouts: &gwtypes.HTTPRouteTimeouts{
 			BackendRequest: &timeout,
 		},
 	})

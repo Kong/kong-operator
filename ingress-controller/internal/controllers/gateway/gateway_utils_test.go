@@ -12,99 +12,100 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGetListenerSupportedRouteKinds(t *testing.T) {
 	testCases := []struct {
 		name                   string
-		listener               gatewayapi.Listener
-		expectedSupportedKinds []gatewayapi.RouteGroupKind
-		resolvedRefsReason     gatewayapi.ListenerConditionReason
+		listener               gwtypes.Listener
+		expectedSupportedKinds []gwtypes.RouteGroupKind
+		resolvedRefsReason     gwtypes.ListenerConditionReason
 	}{
 		{
 			name: "only HTTP protocol specified",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.HTTPProtocolType,
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPProtocolType,
 			},
-			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				builder.NewRouteGroupKind().HTTPRoute().Build(),
 				builder.NewRouteGroupKind().GRPCRoute().Build(),
 			},
-			resolvedRefsReason: gatewayapi.ListenerReasonResolvedRefs,
+			resolvedRefsReason: gwtypes.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only HTTPS protocol specified",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.HTTPSProtocolType,
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPSProtocolType,
 			},
-			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				builder.NewRouteGroupKind().HTTPRoute().Build(),
 				builder.NewRouteGroupKind().GRPCRoute().Build(),
 			},
-			resolvedRefsReason: gatewayapi.ListenerReasonResolvedRefs,
+			resolvedRefsReason: gwtypes.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only TCP protocol specified",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.TCPProtocolType,
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.TCPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gwtypes.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only UDP protocol specified",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.UDPProtocolType,
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.UDPProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().UDPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gwtypes.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "only TLS protocol specified",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.TLSProtocolType,
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.TLSProtocolType,
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().TLSRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gwtypes.ListenerReasonResolvedRefs,
 		},
 		{
 			name: "Kind not included in global gets discarded",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.HTTPProtocolType,
-				AllowedRoutes: &gatewayapi.AllowedRoutes{
-					Kinds: []gatewayapi.RouteGroupKind{
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPProtocolType,
+				AllowedRoutes: &gwtypes.AllowedRoutes{
+					Kinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.Group("unknown.group.com")),
-							Kind:  gatewayapi.Kind("UnknownKind"),
+							Group: new(gwtypes.Group("unknown.group.com")),
+							Kind:  gwtypes.Kind("UnknownKind"),
 						},
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 				},
 			},
-			expectedSupportedKinds: []gatewayapi.RouteGroupKind{
+			expectedSupportedKinds: []gwtypes.RouteGroupKind{
 				{
-					Group: new(gatewayapi.V1Group),
-					Kind:  gatewayapi.Kind("HTTPRoute"),
+					Group: new(gwtypes.V1Group),
+					Kind:  gwtypes.Kind("HTTPRoute"),
 				},
 			},
-			resolvedRefsReason: gatewayapi.ListenerReasonInvalidRouteKinds,
+			resolvedRefsReason: gwtypes.ListenerReasonInvalidRouteKinds,
 		},
 		{
 			name: "Kind included in global gets passed",
-			listener: gatewayapi.Listener{
-				Protocol: gatewayapi.HTTPProtocolType,
-				AllowedRoutes: &gatewayapi.AllowedRoutes{
+			listener: gwtypes.Listener{
+				Protocol: gwtypes.HTTPProtocolType,
+				AllowedRoutes: &gwtypes.AllowedRoutes{
 					Kinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
 				},
 			},
 			expectedSupportedKinds: builder.NewRouteGroupKind().HTTPRoute().IntoSlice(),
-			resolvedRefsReason:     gatewayapi.ListenerReasonResolvedRefs,
+			resolvedRefsReason:     gwtypes.ListenerReasonResolvedRefs,
 		},
 	}
 
@@ -120,44 +121,44 @@ func TestGetListenerSupportedRouteKinds(t *testing.T) {
 func TestGetListenerStatus(t *testing.T) {
 	ctx := t.Context()
 	scheme := runtime.NewScheme()
-	require.NoError(t, gatewayapi.InstallV1(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	client := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 	testCases := []struct {
 		name                     string
-		gateway                  *gatewayapi.Gateway
-		kongListens              []gatewayapi.Listener
-		expectedListenerStatuses []gatewayapi.ListenerStatus
+		gateway                  *gwtypes.Gateway
+		kongListens              []gwtypes.Listener
+		expectedListenerStatuses []gwtypes.ListenerStatus
 	}{
 		{
 			name: "only one listener",
-			gateway: &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+			gateway: &gwtypes.Gateway{
+				TypeMeta: gwtypes.V1GatewayTypeMeta,
 				Name:     "single-listener",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
-					Listeners: []gatewayapi.Listener{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: gatewayapi.TCPProtocolType,
+							Protocol: gwtypes.TCPProtocolType,
 						},
 					},
 				},
 			},
-			kongListens: []gatewayapi.Listener{
+			kongListens: []gwtypes.Listener{
 				{
 					Port:     80,
-					Protocol: gatewayapi.TCPProtocolType,
+					Protocol: gwtypes.TCPProtocolType,
 				},
 			},
-			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+			expectedListenerStatuses: []gwtypes.ListenerStatus{
 				{
-					Name: gatewayapi.SectionName("tcp-80"),
+					Name: gwtypes.SectionName("tcp-80"),
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Type:   string(gwtypes.ListenerConditionAccepted),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -166,32 +167,32 @@ func TestGetListenerStatus(t *testing.T) {
 		},
 		{
 			name: "only one listener without a matching protocol or port",
-			gateway: &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+			gateway: &gwtypes.Gateway{
+				TypeMeta: gwtypes.V1GatewayTypeMeta,
 				Name:     "single-listener",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
-					Listeners: []gatewayapi.Listener{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: gatewayapi.TLSProtocolType,
+							Protocol: gwtypes.TLSProtocolType,
 						},
 					},
 				},
 			},
-			kongListens: []gatewayapi.Listener{
+			kongListens: []gwtypes.Listener{
 				{
 					Port:     80,
-					Protocol: gatewayapi.TCPProtocolType,
+					Protocol: gwtypes.TCPProtocolType,
 				},
 			},
-			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+			expectedListenerStatuses: []gwtypes.ListenerStatus{
 				{
-					Name: gatewayapi.SectionName("tcp-80"),
+					Name: gwtypes.SectionName("tcp-80"),
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Type:   string(gwtypes.ListenerConditionAccepted),
 							Status: metav1.ConditionFalse,
 						},
 					},
@@ -200,46 +201,46 @@ func TestGetListenerStatus(t *testing.T) {
 		},
 		{
 			name: "2 listeners, 1 with a matching protocol",
-			gateway: &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
+			gateway: &gwtypes.Gateway{
+				TypeMeta: gwtypes.V1GatewayTypeMeta,
 				Name:     "single-listener",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
-					Listeners: []gatewayapi.Listener{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:     "tls-443",
 							Port:     443,
-							Protocol: gatewayapi.TLSProtocolType,
+							Protocol: gwtypes.TLSProtocolType,
 						},
 						{
 							Name:     "tcp-80",
 							Port:     80,
-							Protocol: gatewayapi.TCPProtocolType,
+							Protocol: gwtypes.TCPProtocolType,
 						},
 					},
 				},
 			},
-			kongListens: []gatewayapi.Listener{
+			kongListens: []gwtypes.Listener{
 				{
 					Port:     80,
-					Protocol: gatewayapi.TCPProtocolType,
+					Protocol: gwtypes.TCPProtocolType,
 				},
 			},
-			expectedListenerStatuses: []gatewayapi.ListenerStatus{
+			expectedListenerStatuses: []gwtypes.ListenerStatus{
 				{
-					Name: gatewayapi.SectionName("tcp-80"),
+					Name: gwtypes.SectionName("tcp-80"),
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Type:   string(gwtypes.ListenerConditionAccepted),
 							Status: metav1.ConditionTrue,
 						},
 					},
 				},
 				{
-					Name: gatewayapi.SectionName("tls-443"),
+					Name: gwtypes.SectionName("tls-443"),
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(gatewayapi.ListenerConditionAccepted),
+							Type:   string(gwtypes.ListenerConditionAccepted),
 							Status: metav1.ConditionFalse,
 						},
 					},
@@ -254,7 +255,7 @@ func TestGetListenerStatus(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, statuses, len(tc.expectedListenerStatuses), "should return expected number of listener statused")
 			for _, expectedListenerStatus := range tc.expectedListenerStatuses {
-				listenerStatus, ok := lo.Find(statuses, func(ls gatewayapi.ListenerStatus) bool {
+				listenerStatus, ok := lo.Find(statuses, func(ls gwtypes.ListenerStatus) bool {
 					return ls.Name == expectedListenerStatus.Name
 				})
 				require.Truef(t, ok, "should find listener status of listener %s", expectedListenerStatus.Name)
@@ -274,28 +275,28 @@ func TestGetListenerStatus(t *testing.T) {
 }
 
 func TestGetAttachedRoutesForListener(t *testing.T) {
-	group := gatewayapi.V1Group
-	kind := gatewayapi.Kind("Gateway")
-	sectionName := gatewayapi.SectionName("http")
+	group := gwtypes.V1Group
+	kind := gwtypes.Kind("Gateway")
+	sectionName := gwtypes.SectionName("http")
 	gatewayName := "my-gateway"
-	myGateway := gatewayapi.Gateway{
+	myGateway := gwtypes.Gateway{
 		Name:      gatewayName,
 		Namespace: "default",
-		Spec: gatewayapi.GatewaySpec{
-			Listeners: []gatewayapi.Listener{{
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
 				Name:     sectionName,
 				Port:     80,
-				Protocol: gatewayapi.HTTPProtocolType,
+				Protocol: gwtypes.HTTPProtocolType,
 			}},
 		},
-		Status: gatewayapi.GatewayStatus{
-			Listeners: []gatewayapi.ListenerStatus{
+		Status: gwtypes.GatewayStatus{
+			Listeners: []gwtypes.ListenerStatus{
 				{
 					Name: sectionName,
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 				},
@@ -305,23 +306,23 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := runtime.NewScheme()
-	require.NoError(t, gatewayapi.InstallV1(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	client := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	generateHTTPRoute := func(gateways []gatewayapi.ObjectName) gatewayapi.HTTPRoute {
-		var parentRefs []gatewayapi.ParentReference
+	generateHTTPRoute := func(gateways []gwtypes.ObjectName) gwtypes.HTTPRoute {
+		var parentRefs []gwtypes.ParentReference
 		for _, gateway := range gateways {
-			parentRefs = append(parentRefs, gatewayapi.ParentReference{
+			parentRefs = append(parentRefs, gwtypes.ParentReference{
 				Group: &group,
 				Kind:  &kind,
 				Name:  gateway,
 			})
 		}
-		var parentRefsStatus []gatewayapi.RouteParentStatus
+		var parentRefsStatus []gwtypes.RouteParentStatus
 		for _, gateway := range gateways {
-			parentRefsStatus = append(parentRefsStatus, gatewayapi.RouteParentStatus{
-				ParentRef: gatewayapi.ParentReference{
+			parentRefsStatus = append(parentRefsStatus, gwtypes.RouteParentStatus{
+				ParentRef: gwtypes.ParentReference{
 					Group: &group,
 					Kind:  &kind,
 					Name:  gateway,
@@ -329,16 +330,16 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 			})
 		}
 		// Create a single HTTPRoute with the specified parentRefs
-		return gatewayapi.HTTPRoute{
+		return gwtypes.HTTPRoute{
 			GenerateName: "http-1-",
 			Namespace:    "default",
-			Spec: gatewayapi.HTTPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{
+			Spec: gwtypes.HTTPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{
 					ParentRefs: parentRefs,
 				},
 			},
-			Status: gatewayapi.HTTPRouteStatus{
-				RouteStatus: gatewayapi.RouteStatus{
+			Status: gwtypes.HTTPRouteStatus{
+				RouteStatus: gwtypes.RouteStatus{
 					Parents: parentRefsStatus,
 				},
 			},
@@ -347,15 +348,15 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		routes        []gatewayapi.HTTPRoute
+		routes        []gwtypes.HTTPRoute
 		listenerIndex int
 		want          int32
 	}{
 		{
 			name: "single route with single parentRef",
-			routes: []gatewayapi.HTTPRoute{
+			routes: []gwtypes.HTTPRoute{
 				generateHTTPRoute(
-					[]gatewayapi.ObjectName{gatewayapi.ObjectName(gatewayName)},
+					[]gwtypes.ObjectName{gwtypes.ObjectName(gatewayName)},
 				),
 			},
 			listenerIndex: 0,
@@ -363,10 +364,10 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 		},
 		{
 			name: "single route with multiple parentRefs",
-			routes: []gatewayapi.HTTPRoute{
+			routes: []gwtypes.HTTPRoute{
 				generateHTTPRoute(
-					[]gatewayapi.ObjectName{
-						gatewayapi.ObjectName(gatewayName), "other-gateway",
+					[]gwtypes.ObjectName{
+						gwtypes.ObjectName(gatewayName), "other-gateway",
 					},
 				),
 			},
@@ -375,15 +376,15 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 		},
 		{
 			name: "multiple routes with multiple parentRefs",
-			routes: []gatewayapi.HTTPRoute{
+			routes: []gwtypes.HTTPRoute{
 				generateHTTPRoute(
-					[]gatewayapi.ObjectName{
-						gatewayapi.ObjectName(gatewayName), "other-gateway",
+					[]gwtypes.ObjectName{
+						gwtypes.ObjectName(gatewayName), "other-gateway",
 					},
 				),
 				generateHTTPRoute(
-					[]gatewayapi.ObjectName{
-						gatewayapi.ObjectName(gatewayName), "other-gateway",
+					[]gwtypes.ObjectName{
+						gwtypes.ObjectName(gatewayName), "other-gateway",
 					},
 				),
 			},
@@ -392,9 +393,9 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 		},
 		{
 			name: "route not accepted by gateway",
-			routes: []gatewayapi.HTTPRoute{
+			routes: []gwtypes.HTTPRoute{
 				generateHTTPRoute(
-					[]gatewayapi.ObjectName{
+					[]gwtypes.ObjectName{
 						"other-gateway",
 					},
 				),
@@ -413,7 +414,7 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 			got, err := getAttachedRoutesForListener(ctx, client, myGateway, tt.listenerIndex)
 
 			// Tear down the created routes
-			require.NoError(t, client.DeleteAllOf(ctx, &gatewayapi.HTTPRoute{}))
+			require.NoError(t, client.DeleteAllOf(ctx, &gwtypes.HTTPRoute{}))
 
 			// Check that the number of routes returned matches the expected count
 			assert.NoError(t, err)
@@ -435,21 +436,21 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 	testCases := []struct {
 		name               string
 		routeNamespace     string
-		route              *gatewayapi.HTTPRoute
+		route              *gwtypes.HTTPRoute
 		gateways           []client.Object
 		expectedGatewayNNs []k8stypes.NamespacedName
 	}{
 		{
 			name:           "returns the gateway regardless of the route parent status conditions",
 			routeNamespace: "default",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: "default",
 				Name:      "route-1",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name: "gateway-1",
 								},
 							},
@@ -458,20 +459,20 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 				},
 			},
 			gateways: []client.Object{
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: "default",
 					Name:      "gateway-1",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
-					Status: gatewayapi.GatewayStatus{
-						Listeners: []gatewayapi.ListenerStatus{
+					Status: gwtypes.GatewayStatus{
+						Listeners: []gwtypes.ListenerStatus{
 							{
 								Name: "http",
-								SupportedKinds: []gatewayapi.RouteGroupKind{
+								SupportedKinds: []gwtypes.RouteGroupKind{
 									{
-										Group: new(gatewayapi.V1Group),
-										Kind:  gatewayapi.Kind("HTTPRoute"),
+										Group: new(gwtypes.V1Group),
+										Kind:  gwtypes.Kind("HTTPRoute"),
 									},
 								},
 							},
@@ -489,55 +490,55 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 		{
 			name:           "returns the gateway regardless of the route parent status conditions",
 			routeNamespace: "default",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: "default",
 				Name:      "route-1",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:  "gateway-1",
-									Group: new(gatewayapi.Group("wrong-group")),
+									Group: new(gwtypes.Group("wrong-group")),
 								},
 								Conditions: []metav1.Condition{
 									{
 										Status: metav1.ConditionTrue,
-										Type:   string(gatewayapi.RouteConditionAccepted),
+										Type:   string(gwtypes.RouteConditionAccepted),
 									},
 								},
 							},
 							{
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name: "gateway-2",
-									Kind: new(gatewayapi.Kind("wrong-kind")),
+									Kind: new(gwtypes.Kind("wrong-kind")),
 								},
 								Conditions: []metav1.Condition{
 									{
 										Status: metav1.ConditionTrue,
-										Type:   string(gatewayapi.RouteConditionAccepted),
+										Type:   string(gwtypes.RouteConditionAccepted),
 									},
 								},
 							},
 							{
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name: "gateway-3",
 								},
 								Conditions: []metav1.Condition{
 									{
 										Status: metav1.ConditionTrue,
-										Type:   string(gatewayapi.RouteConditionAccepted),
+										Type:   string(gwtypes.RouteConditionAccepted),
 									},
 								},
 							},
 							{
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name: "gateway-4",
 								},
 								Conditions: []metav1.Condition{
 									{
 										Status: metav1.ConditionFalse,
-										Type:   string(gatewayapi.RouteConditionAccepted),
+										Type:   string(gwtypes.RouteConditionAccepted),
 									},
 								},
 							},
@@ -546,84 +547,84 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 				},
 			},
 			gateways: []client.Object{
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					APIVersion: "wrong-group/v1",
 					Kind:       "Gateway",
 					Namespace:  "default",
 					Name:       "gateway-1",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
-					Status: gatewayapi.GatewayStatus{
-						Listeners: []gatewayapi.ListenerStatus{
+					Status: gwtypes.GatewayStatus{
+						Listeners: []gwtypes.ListenerStatus{
 							{
 								Name: "http",
-								SupportedKinds: []gatewayapi.RouteGroupKind{
+								SupportedKinds: []gwtypes.RouteGroupKind{
 									{
-										Group: new(gatewayapi.V1Group),
-										Kind:  gatewayapi.Kind("HTTPRoute"),
+										Group: new(gwtypes.V1Group),
+										Kind:  gwtypes.Kind("HTTPRoute"),
 									},
 								},
 							},
 						},
 					},
 				},
-				&gatewayapi.Gateway{
-					APIVersion: gatewayapi.GroupVersion.String(),
+				&gwtypes.Gateway{
+					APIVersion: gwtypes.GroupVersion.String(),
 					Kind:       "wrong-kind",
 					Namespace:  "default",
 					Name:       "gateway-2",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
-					Status: gatewayapi.GatewayStatus{
-						Listeners: []gatewayapi.ListenerStatus{
+					Status: gwtypes.GatewayStatus{
+						Listeners: []gwtypes.ListenerStatus{
 							{
 								Name: "http",
-								SupportedKinds: []gatewayapi.RouteGroupKind{
+								SupportedKinds: []gwtypes.RouteGroupKind{
 									{
-										Group: new(gatewayapi.V1Group),
-										Kind:  gatewayapi.Kind("HTTPRoute"),
+										Group: new(gwtypes.V1Group),
+										Kind:  gwtypes.Kind("HTTPRoute"),
 									},
 								},
 							},
 						},
 					},
 				},
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: "default",
 					Name:      "gateway-3",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
-					Status: gatewayapi.GatewayStatus{
-						Listeners: []gatewayapi.ListenerStatus{
+					Status: gwtypes.GatewayStatus{
+						Listeners: []gwtypes.ListenerStatus{
 							{
 								Name: "http",
-								SupportedKinds: []gatewayapi.RouteGroupKind{
+								SupportedKinds: []gwtypes.RouteGroupKind{
 									{
-										Group: new(gatewayapi.V1Group),
-										Kind:  gatewayapi.Kind("HTTPRoute"),
+										Group: new(gwtypes.V1Group),
+										Kind:  gwtypes.Kind("HTTPRoute"),
 									},
 								},
 							},
 						},
 					},
 				},
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: "default",
 					Name:      "gateway-4",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
-					Status: gatewayapi.GatewayStatus{
-						Listeners: []gatewayapi.ListenerStatus{
+					Status: gwtypes.GatewayStatus{
+						Listeners: []gwtypes.ListenerStatus{
 							{
 								Name: "http",
-								SupportedKinds: []gatewayapi.RouteGroupKind{
+								SupportedKinds: []gwtypes.RouteGroupKind{
 									{
-										Group: new(gatewayapi.V1Group),
-										Kind:  gatewayapi.Kind("HTTPRoute"),
+										Group: new(gwtypes.V1Group),
+										Kind:  gwtypes.Kind("HTTPRoute"),
 									},
 								},
 							},
@@ -658,28 +659,28 @@ func Test_isEqualListenersStatus(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		a        []gatewayapi.ListenerStatus
-		b        []gatewayapi.ListenerStatus
+		a        []gwtypes.ListenerStatus
+		b        []gwtypes.ListenerStatus
 		expected bool
 	}{
 		{
 			name: "equal listeners status",
-			a: []gatewayapi.ListenerStatus{
+			a: []gwtypes.ListenerStatus{
 				{
 					Name: "http",
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 				},
 				{
 					Name: "https",
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 					Conditions: []metav1.Condition{
@@ -691,13 +692,13 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					},
 				},
 			},
-			b: []gatewayapi.ListenerStatus{
+			b: []gwtypes.ListenerStatus{
 				{
 					Name: "https",
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 					Conditions: []metav1.Condition{
@@ -710,10 +711,10 @@ func Test_isEqualListenersStatus(t *testing.T) {
 				},
 				{
 					Name: "http",
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 				},
@@ -722,13 +723,13 @@ func Test_isEqualListenersStatus(t *testing.T) {
 		},
 		{
 			name: "not equal listeners status",
-			a: []gatewayapi.ListenerStatus{
+			a: []gwtypes.ListenerStatus{
 				{
 					Name: "http",
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 					Conditions: []metav1.Condition{
@@ -739,13 +740,13 @@ func Test_isEqualListenersStatus(t *testing.T) {
 					},
 				},
 			},
-			b: []gatewayapi.ListenerStatus{
+			b: []gwtypes.ListenerStatus{
 				{
 					Name: "http",
-					SupportedKinds: []gatewayapi.RouteGroupKind{
+					SupportedKinds: []gwtypes.RouteGroupKind{
 						{
-							Group: new(gatewayapi.V1Group),
-							Kind:  gatewayapi.Kind("HTTPRoute"),
+							Group: new(gwtypes.V1Group),
+							Kind:  gwtypes.Kind("HTTPRoute"),
 						},
 					},
 					Conditions: []metav1.Condition{
@@ -760,8 +761,8 @@ func Test_isEqualListenersStatus(t *testing.T) {
 		},
 		{
 			name:     "no listeners",
-			a:        []gatewayapi.ListenerStatus{},
-			b:        []gatewayapi.ListenerStatus{},
+			a:        []gwtypes.ListenerStatus{},
+			b:        []gwtypes.ListenerStatus{},
 			expected: true,
 		},
 	}

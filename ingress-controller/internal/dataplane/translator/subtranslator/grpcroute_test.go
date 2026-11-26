@@ -10,9 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 var grpcRouteGVK = schema.GroupVersionKind{
@@ -29,21 +29,21 @@ var grpcRouteTypeMeta = metav1.TypeMeta{
 func makeTestGRPCRoute(
 	name string, namespace string, annotations map[string]string,
 	hostnames []string,
-	rules []gatewayapi.GRPCRouteRule,
-	parentRef []gatewayapi.ParentReference,
-) *gatewayapi.GRPCRoute {
-	return &gatewayapi.GRPCRoute{
+	rules []gwtypes.GRPCRouteRule,
+	parentRef []gwtypes.ParentReference,
+) *gwtypes.GRPCRoute {
+	return &gwtypes.GRPCRoute{
 		Kind:        "GRPCRoute",
 		APIVersion:  "gateway.networking.k8s.io/v1",
 		Name:        name,
 		Namespace:   namespace,
 		Annotations: annotations,
-		Spec: gatewayapi.GRPCRouteSpec{
-			Hostnames: lo.Map(hostnames, func(h string, _ int) gatewayapi.Hostname {
-				return gatewayapi.Hostname(h)
+		Spec: gwtypes.GRPCRouteSpec{
+			Hostnames: lo.Map(hostnames, func(h string, _ int) gwtypes.Hostname {
+				return gwtypes.Hostname(h)
 			}),
 			Rules: rules,
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: parentRef,
 			},
 		},
@@ -56,25 +56,25 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 		objectName     string
 		annotations    map[string]string
 		hostnames      []string
-		rule           gatewayapi.GRPCRouteRule
+		rule           gwtypes.GRPCRouteRule
 		expectedRoutes []kongstate.Route
-		parentRef      []gatewayapi.ParentReference
+		parentRef      []gwtypes.ParentReference
 		storer         store.Storer
 	}{
 		{
 			name:        "single match without hostname",
 			objectName:  "single-match",
 			annotations: map[string]string{},
-			rule: gatewayapi.GRPCRouteRule{
-				Matches: []gatewayapi.GRPCRouteMatch{
+			rule: gwtypes.GRPCRouteRule{
+				Matches: []gwtypes.GRPCRouteMatch{
 					{
-						Method: &gatewayapi.GRPCMethodMatch{
+						Method: &gwtypes.GRPCMethodMatch{
 							Service: new("service0"),
 							Method:  nil,
 						},
-						Headers: []gatewayapi.GRPCHeaderMatch{
+						Headers: []gwtypes.GRPCHeaderMatch{
 							{
-								Name:  gatewayapi.GRPCHeaderName("X-Foo"),
+								Name:  gwtypes.GRPCHeaderName("X-Foo"),
 								Value: "Bar",
 							},
 						},
@@ -110,10 +110,10 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			objectName:  "single-match-with-hostname",
 			annotations: map[string]string{},
 			hostnames:   []string{"foo.com", "*.foo.com"},
-			rule: gatewayapi.GRPCRouteRule{
-				Matches: []gatewayapi.GRPCRouteMatch{
+			rule: gwtypes.GRPCRouteRule{
+				Matches: []gwtypes.GRPCRouteMatch{
 					{
-						Method: &gatewayapi.GRPCMethodMatch{
+						Method: &gwtypes.GRPCMethodMatch{
 							Service: new("service0"),
 							Method:  new("method0"),
 						},
@@ -147,14 +147,14 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 		{
 			name:       "multiple matches without hostname",
 			objectName: "multiple-matches",
-			rule: gatewayapi.GRPCRouteRule{
-				Matches: []gatewayapi.GRPCRouteMatch{
+			rule: gwtypes.GRPCRouteRule{
+				Matches: []gwtypes.GRPCRouteMatch{
 					{
-						Method: &gatewayapi.GRPCMethodMatch{
+						Method: &gwtypes.GRPCMethodMatch{
 							Service: nil,
 							Method:  new("method0"),
 						},
-						Headers: []gatewayapi.GRPCHeaderMatch{
+						Headers: []gwtypes.GRPCHeaderMatch{
 							{
 								Name:  "Version",
 								Value: "2",
@@ -166,8 +166,8 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 						},
 					},
 					{
-						Method: &gatewayapi.GRPCMethodMatch{
-							Type:    new(gatewayapi.GRPCMethodMatchRegularExpression),
+						Method: &gwtypes.GRPCMethodMatch{
+							Type:    new(gwtypes.GRPCMethodMatchRegularExpression),
 							Service: new("v[012]"),
 						},
 					},
@@ -218,16 +218,16 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 		{
 			name:       "multiple exact method matches with overlapping method names",
 			objectName: "overlapping-exact-methods",
-			rule: gatewayapi.GRPCRouteRule{
-				Matches: []gatewayapi.GRPCRouteMatch{
+			rule: gwtypes.GRPCRouteRule{
+				Matches: []gwtypes.GRPCRouteMatch{
 					{
-						Method: &gatewayapi.GRPCMethodMatch{
+						Method: &gwtypes.GRPCMethodMatch{
 							Service: new("gateway_api_conformance.echo_basic.grpcecho.GrpcEcho"),
 							Method:  new("Echo"),
 						},
 					},
 					{
-						Method: &gatewayapi.GRPCMethodMatch{
+						Method: &gwtypes.GRPCMethodMatch{
 							Service: new("gateway_api_conformance.echo_basic.grpcecho.GrpcEcho"),
 							Method:  new("EchoTwo"),
 						},
@@ -278,7 +278,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			objectName:  "hostname-only",
 			annotations: map[string]string{},
 			hostnames:   []string{"foo.com"},
-			rule:        gatewayapi.GRPCRouteRule{},
+			rule:        gwtypes.GRPCRouteRule{},
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -304,7 +304,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			name:        "single no hostnames, no matches",
 			objectName:  "catch-all",
 			annotations: map[string]string{},
-			rule:        gatewayapi.GRPCRouteRule{},
+			rule:        gwtypes.GRPCRouteRule{},
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -330,7 +330,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 			name:        "no match with hostname from gateway",
 			objectName:  "hostname-from-gateway",
 			annotations: map[string]string{},
-			rule:        gatewayapi.GRPCRouteRule{},
+			rule:        gwtypes.GRPCRouteRule{},
 			expectedRoutes: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -351,25 +351,25 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 					),
 				},
 			},
-			parentRef: []gatewayapi.ParentReference{
+			parentRef: []gwtypes.ParentReference{
 				{
 					Name:        "gateway",
-					Namespace:   new(gatewayapi.Namespace("default")),
-					SectionName: new(gatewayapi.SectionName("listener-1")),
+					Namespace:   new(gwtypes.Namespace("default")),
+					SectionName: new(gwtypes.SectionName("listener-1")),
 				},
 			},
 			storer: lo.Must(store.NewFakeStore(store.FakeObjects{
-				Gateways: []*gatewayapi.Gateway{
+				Gateways: []*gwtypes.Gateway{
 					{
 						Name:       "gateway",
 						Namespace:  "default",
 						Kind:       "Gateway",
 						APIVersion: "gateway.networking.k8s.io/v1",
-						Spec: gatewayapi.GatewaySpec{
-							Listeners: []gatewayapi.Listener{
+						Spec: gwtypes.GatewaySpec{
+							Listeners: []gwtypes.Listener{
 								{
 									Name:     "listener-1",
-									Hostname: new(gatewayapi.Hostname("bar.com")),
+									Hostname: new(gwtypes.Hostname("bar.com")),
 								},
 							},
 						},
@@ -381,7 +381,7 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gatewayapi.GRPCRouteRule{tc.rule}, tc.parentRef)
+			grpcroute := makeTestGRPCRoute(tc.objectName, "default", tc.annotations, tc.hostnames, []gwtypes.GRPCRouteRule{tc.rule}, tc.parentRef)
 			routes := GenerateKongRoutesFromGRPCRouteRule(grpcroute, 0, tc.storer)
 			require.Equal(t, tc.expectedRoutes, routes)
 		})
@@ -391,14 +391,14 @@ func TestGenerateKongRoutesFromGRPCRouteRule(t *testing.T) {
 func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 	for _, tC := range []struct {
 		name      string
-		grpcroute *gatewayapi.GRPCRoute
+		grpcroute *gwtypes.GRPCRoute
 		expected  []*string
 	}{
 		{
 			name: "single hostname",
-			grpcroute: &gatewayapi.GRPCRoute{
-				Spec: gatewayapi.GRPCRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"example.com"},
+			grpcroute: &gwtypes.GRPCRoute{
+				Spec: gwtypes.GRPCRouteSpec{
+					Hostnames: []gwtypes.Hostname{"example.com"},
 				},
 			},
 			expected: []*string{
@@ -407,9 +407,9 @@ func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 		},
 		{
 			name: "multiple hostnames",
-			grpcroute: &gatewayapi.GRPCRoute{
-				Spec: gatewayapi.GRPCRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"example.com", "api.example.com"},
+			grpcroute: &gwtypes.GRPCRoute{
+				Spec: gwtypes.GRPCRouteSpec{
+					Hostnames: []gwtypes.Hostname{"example.com", "api.example.com"},
 				},
 			},
 			expected: []*string{
@@ -419,7 +419,7 @@ func TestGetGRPCRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
 		},
 		{
 			name:      "nil hostnames",
-			grpcroute: &gatewayapi.GRPCRoute{},
+			grpcroute: &gwtypes.GRPCRoute{},
 			expected:  nil,
 		},
 	} {

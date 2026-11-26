@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // ParseNameNS parses a string searching a namespace and name.
@@ -133,7 +133,7 @@ var backendRefSupportedGroupKinds = map[string]struct{}{
 
 // IsBackendRefGroupKindSupported checks if the GroupKind of the object used as
 // BackendRef for the HTTPRoute is supported.
-func IsBackendRefGroupKindSupported(gatewayAPIGroup *gatewayapi.Group, gatewayAPIKind *gatewayapi.Kind) bool {
+func IsBackendRefGroupKindSupported(gatewayAPIGroup *gwtypes.Group, gatewayAPIKind *gwtypes.Kind) bool {
 	if gatewayAPIKind == nil {
 		return false
 	}

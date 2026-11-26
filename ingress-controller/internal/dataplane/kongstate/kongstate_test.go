@@ -33,12 +33,12 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/rels"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -2080,7 +2080,7 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 		referrer        client.Object
 		pluginNamespace string
 		pluginName      string
-		referenceGrants []*gatewayapi.ReferenceGrant
+		referenceGrants []*gwtypes.ReferenceGrant
 		shouldAllow     bool
 	}{
 		{
@@ -2103,21 +2103,21 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 			},
 			pluginNamespace: "bar",
 			pluginName:      "plugin-bar",
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "bar", // same namespace as plugin
 					Name:      "grant-1",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Kind:      gatewayapi.Kind("Service"),
+								Kind:      gwtypes.Kind("Service"),
 								Namespace: "foo",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(configurationv1.GroupVersion.Group),
-								Kind:  gatewayapi.Kind("KongPlugin"),
+								Group: gwtypes.Group(configurationv1.GroupVersion.Group),
+								Kind:  gwtypes.Kind("KongPlugin"),
 							},
 						},
 					},
@@ -2134,21 +2134,21 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 			},
 			pluginNamespace: "bar",
 			pluginName:      "plugin-bar",
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "foo", // Not same namespace as plugin
 					Name:      "grant-1",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Kind:      gatewayapi.Kind("Service"),
+								Kind:      gwtypes.Kind("Service"),
 								Namespace: "foo",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(configurationv1.GroupVersion.Group),
-								Kind:  gatewayapi.Kind("KongPlugin"),
+								Group: gwtypes.Group(configurationv1.GroupVersion.Group),
+								Kind:  gwtypes.Kind("KongPlugin"),
 							},
 						},
 					},

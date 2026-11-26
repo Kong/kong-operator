@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -36,29 +36,29 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 			return SetInCtxForT(ctx, t, gatewayClient)
 		}).
 		Assess("Create an HTTPRoute redirecting to the httpbin service and verify if the request is redirected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			proxyHTTPURL := GetHTTPURLFromCtx(ctx)
 
-			httpRoute := &gatewayapi.HTTPRoute{
+			httpRoute := &gwtypes.HTTPRoute{
 				Name: "httproute-request-redirect-test",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
-							Name: gatewayapi.ObjectName(gateway.Name),
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
+							Name: gwtypes.ObjectName(gateway.Name),
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							Matches: []gatewayapi.HTTPRouteMatch{
+							Matches: []gwtypes.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathPrefix("/").Build(),
 							},
-							Filters: []gatewayapi.HTTPRouteFilter{
+							Filters: []gwtypes.HTTPRouteFilter{
 								builder.NewHTTPRouteRequestRedirectFilter().
 									WithRequestRedirectStatusCode(http.StatusMovedPermanently).
 									WithRequestRedirectHost("example.com").WithRequestRedirectPathModifier(
-									gatewayapi.FullPathHTTPPathModifier,
+									gwtypes.FullPathHTTPPathModifier,
 									"/redirect-target",
 								).Build(),
 							},
@@ -100,13 +100,13 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 			}
 
 			t.Log("Update RequestRedirect filter of HTTPRoute to test preserving path in request redirect")
-			_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(namespace), httpRoute.Name, func(r *gatewayapi.HTTPRoute) {
-				r.Spec.Rules = []gatewayapi.HTTPRouteRule{
+			_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(namespace), httpRoute.Name, func(r *gwtypes.HTTPRoute) {
+				r.Spec.Rules = []gwtypes.HTTPRouteRule{
 					{
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/").Build(),
 						},
-						Filters: []gatewayapi.HTTPRouteFilter{
+						Filters: []gwtypes.HTTPRouteFilter{
 							builder.NewHTTPRouteRequestRedirectFilter().
 								WithRequestRedirectStatusCode(http.StatusMovedPermanently).
 								WithRequestRedirectScheme("http").

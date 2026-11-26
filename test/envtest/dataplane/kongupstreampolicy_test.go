@@ -25,9 +25,9 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
@@ -190,8 +190,8 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	}
 	require.NoError(t, ctrlClient.Create(ctx, kup))
 
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
+	gwc := gwtypes.GatewayClass{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		GenerateName: "gwc-",
@@ -202,17 +202,17 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &gwc) })
 
-	gw := gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
+	gw := gwtypes.Gateway{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gwc.Name),
+			Listeners: []gwtypes.Listener{
 				{
-					Name:     gatewayapi.SectionName("http"),
-					Port:     gatewayapi.PortNumber(80),
-					Protocol: gatewayapi.HTTPProtocolType,
-					AllowedRoutes: &gatewayapi.AllowedRoutes{
-						Namespaces: &gatewayapi.RouteNamespaces{
-							From: new(gatewayapi.NamespacesFromAll),
+					Name:     gwtypes.SectionName("http"),
+					Port:     gwtypes.PortNumber(80),
+					Protocol: gwtypes.HTTPProtocolType,
+					AllowedRoutes: &gwtypes.AllowedRoutes{
+						Namespaces: &gwtypes.RouteNamespaces{
+							From: new(gwtypes.NamespacesFromAll),
 						},
 					},
 				},
@@ -224,10 +224,10 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &gw))
 
 	gwOld := gw.DeepCopy()
-	gw.Status = gatewayapi.GatewayStatus{
-		Addresses: []gatewayapi.GatewayStatusAddress{
+	gw.Status = gwtypes.GatewayStatus{
+		Addresses: []gwtypes.GatewayStatusAddress{
 			{
-				Type:  new(gatewayapi.IPAddressType),
+				Type:  new(gwtypes.IPAddressType),
 				Value: "10.0.0.1",
 			},
 		},
@@ -247,7 +247,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 				ObservedGeneration: gw.Generation,
 			},
 		},
-		Listeners: []gatewayapi.ListenerStatus{
+		Listeners: []gwtypes.ListenerStatus{
 			{
 				Name: "http",
 				Conditions: []metav1.Condition{
@@ -264,9 +264,9 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 						LastTransitionTime: metav1.Now(),
 					},
 				},
-				SupportedKinds: []gatewayapi.RouteGroupKind{
+				SupportedKinds: []gwtypes.RouteGroupKind{
 					{
-						Group: new(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
+						Group: new(gwtypes.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -290,19 +290,19 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	t.Logf("exposing deployment %s via service %s", deployment.Name, service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, service))
 
-	route := gatewayapi.HTTPRoute{
+	route := gwtypes.HTTPRoute{
 		Kind:         "HTTPRoute",
 		APIVersion:   "v1beta1",
 		Namespace:    ns.Name,
 		GenerateName: "httproute-",
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name:      gatewayapi.ObjectName(gw.Name),
-					Namespace: new(gatewayapi.Namespace(ns.Name)),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name:      gwtypes.ObjectName(gw.Name),
+					Namespace: new(gwtypes.Namespace(ns.Name)),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{{
+			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: builder.NewHTTPBackendRef(service.Name).WithNamespace(ns.Name).ToSlice(),
 			}},
 		},
@@ -319,7 +319,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 			}
 		)
 		require.NoError(t, ctrlClient.Get(ctx, nn, &kup))
-		return lo.ContainsBy(kup.Status.Ancestors, func(ancestorStatus gatewayapi.PolicyAncestorStatus) bool {
+		return lo.ContainsBy(kup.Status.Ancestors, func(ancestorStatus gwtypes.PolicyAncestorStatus) bool {
 			return ancestorStatus.AncestorRef.Kind != nil &&
 				string(*ancestorStatus.AncestorRef.Kind) == "Service" &&
 				string(ancestorStatus.AncestorRef.Name) == service.Name

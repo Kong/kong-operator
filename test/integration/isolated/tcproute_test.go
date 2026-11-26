@@ -22,8 +22,8 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -46,10 +46,10 @@ func TestTCPRouteEssentials(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindTCPRoute).
 		WithSetup("deploy Gateway managed by Kong Operator", featureSetup(
 			withKongRouterFlavor(dpconf.RouterFlavorExpressions),
-			withGatewayListeners(gatewayapi.Listener{
+			withGatewayListeners(gwtypes.Listener{
 				Name:     gatewayTCPPortName,
-				Protocol: gatewayapi.TCPProtocolType,
-				Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
+				Protocol: gwtypes.TCPProtocolType,
+				Port:     gwtypes.PortNumber(ktfkong.DefaultTCPServicePort),
 			}),
 		)).
 		WithSetup("configure TCP Deployments with Services and TCPRoutes", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -60,7 +60,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			cluster := GetClusterFromCtx(ctx)
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 
 			t.Log("creating a tcpecho pod to test TCPRoute traffic routing")
 			container1 := generators.NewContainer(service1Name, test.EchoImage, test.EchoTCPPort)
@@ -121,19 +121,19 @@ func TestTCPRouteEssentials(t *testing.T) {
 			cleaner.Add(service2)
 
 			t.Logf("creating a TCPRoute to access deployment %s via kong", deployment1.Name)
-			tcpRoute := &gatewayapi.TCPRoute{
+			tcpRoute := &gwtypes.TCPRoute{
 				Name: uuid.NewString(),
-				Spec: gatewayapi.TCPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
-							Name:        gatewayapi.ObjectName(gateway.Name),
-							SectionName: new(gatewayapi.SectionName(gatewayTCPPortName)),
+				Spec: gwtypes.TCPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
+							Name:        gwtypes.ObjectName(gateway.Name),
+							SectionName: new(gwtypes.SectionName(gatewayTCPPortName)),
 						}},
 					},
-					Rules: []gatewayapi.TCPRouteRule{{
-						BackendRefs: []gatewayapi.BackendRef{{
-							Name: gatewayapi.ObjectName(service1.Name),
-							Port: new(gatewayapi.PortNumber(service1Port)),
+					Rules: []gwtypes.TCPRouteRule{{
+						BackendRefs: []gwtypes.BackendRef{{
+							Name: gwtypes.ObjectName(service1.Name),
+							Port: new(gwtypes.PortNumber(service1Port)),
 						}},
 					}},
 				},
@@ -148,13 +148,13 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Assess("basic test - route status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
+			tcpRoute := GetFromCtxForT[*gwtypes.TCPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 			t.Log("verifying that the tcproute contains 'Programmed' condition")
 			assert.Eventually(t,
-				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name, metav1.ConditionTrue),
+				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name, metav1.ConditionTrue),
 				consts.IngressWait, consts.WaitTick,
 			)
 
@@ -167,7 +167,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Assess("verifying behavior when TCPRoute is modified", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("removing the parentrefs from the TCPRoute")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
+			tcpRoute := GetFromCtxForT[*gwtypes.TCPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
@@ -181,7 +181,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the Gateway gets unlinked from the route via status")
-			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the tcpecho is no longer responding")
@@ -204,7 +204,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -215,16 +215,16 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Assess("verifying behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
-			gatewayClass := GetFromCtxForT[*gatewayapi.GatewayClass](ctx, t)
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			tcpRoute := GetFromCtxForT[*gwtypes.TCPRoute](ctx, t)
+			gatewayClass := GetFromCtxForT[*gwtypes.GatewayClass](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("deleting the GatewayClass")
 			deleteGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("verifying that the Gateway gets unlinked from the route via status")
-			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the TCPRoute gets dropped with the GatewayClass now removed")
@@ -234,7 +234,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			recreateGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the GatewayClass again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -250,7 +250,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			tcpGatewayURL = GetTCPURLFromCtx(ctx)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -268,7 +268,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 			tcpGatewayURL = GetTCPURLFromCtx(ctx)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TCPProtocolType, namespace, tcpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.TCPProtocolType, namespace, tcpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of TCPRoutes and the route becomes available again")
@@ -279,21 +279,21 @@ func TestTCPRouteEssentials(t *testing.T) {
 		Assess("verifying behavior with many backends", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			tcpRoute := GetFromCtxForT[*gatewayapi.TCPRoute](ctx, t)
+			tcpRoute := GetFromCtxForT[*gwtypes.TCPRoute](ctx, t)
 			tcpGatewayURL := GetTCPURLFromCtx(ctx)
 
 			t.Log("adding an additional backendRef to the TCPRoute")
 			assert.Eventually(t, func() bool {
 				tcpRoute, err := gatewayClient.GatewayV1().TCPRoutes(namespace).Get(ctx, tcpRoute.Name, metav1.GetOptions{})
 				assert.NoError(t, err)
-				tcpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
+				tcpRoute.Spec.Rules[0].BackendRefs = []gwtypes.BackendRef{
 					{
-						Name: gatewayapi.ObjectName(service1Name),
-						Port: new(gatewayapi.PortNumber(service1Port)),
+						Name: gwtypes.ObjectName(service1Name),
+						Port: new(gwtypes.PortNumber(service1Port)),
 					},
 					{
-						Name: gatewayapi.ObjectName(service2Name),
-						Port: new(gatewayapi.PortNumber(service2Port)),
+						Name: gwtypes.ObjectName(service2Name),
+						Port: new(gwtypes.PortNumber(service2Port)),
 					},
 				}
 
@@ -310,10 +310,10 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
-			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TCPRoutes(namespace), tcpRoute.Name, func(r *gatewayapi.TCPRoute) {
-				notExistingPort := gatewayapi.PortNumber(81)
+			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TCPRoutes(namespace), tcpRoute.Name, func(r *gwtypes.TCPRoute) {
+				notExistingPort := gwtypes.PortNumber(81)
 				r.Spec.ParentRefs[0].Port = &notExistingPort
-				r.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
+				r.Spec.ParentRefs[0].Name = gwtypes.ObjectName(service1Name)
 			})
 			assert.NoError(t, err)
 

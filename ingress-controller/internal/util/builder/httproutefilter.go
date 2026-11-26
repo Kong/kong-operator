@@ -1,31 +1,31 @@
 package builder
 
 import (
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // HTTPRouteFilterBuilder is a builder for gateway api HTTPRouteMatch.
 // Primarily used for testing.
 type HTTPRouteFilterBuilder struct {
-	httpRouteFilter gatewayapi.HTTPRouteFilter
+	httpRouteFilter gwtypes.HTTPRouteFilter
 }
 
-func (b *HTTPRouteFilterBuilder) Build() gatewayapi.HTTPRouteFilter {
+func (b *HTTPRouteFilterBuilder) Build() gwtypes.HTTPRouteFilter {
 	return b.httpRouteFilter
 }
 
 // NewHTTPRouteRequestRedirectFilter builds a request redirect HTTPRoute filter.
 func NewHTTPRouteRequestRedirectFilter() *HTTPRouteFilterBuilder {
-	filter := gatewayapi.HTTPRouteFilter{
-		Type:            gatewayapi.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{},
+	filter := gwtypes.HTTPRouteFilter{
+		Type:            gwtypes.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &gwtypes.HTTPRequestRedirectFilter{},
 	}
 	return &HTTPRouteFilterBuilder{httpRouteFilter: filter}
 }
 
 // WithRequestRedirectScheme sets scheme of request redirect filter.
 func (b *HTTPRouteFilterBuilder) WithRequestRedirectScheme(scheme string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
@@ -36,19 +36,19 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectScheme(scheme string) *HTTPR
 
 // WithRequestRedirectHost sets host of request redirect filter.
 func (b *HTTPRouteFilterBuilder) WithRequestRedirectHost(host string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
 
-	preciseHost := (gatewayapi.PreciseHostname)(host)
+	preciseHost := (gwtypes.PreciseHostname)(host)
 	b.httpRouteFilter.RequestRedirect.Hostname = new(preciseHost)
 	return b
 }
 
 // WithRequestRedirectStatusCode sets status code of response in request redirect filter.
 func (b *HTTPRouteFilterBuilder) WithRequestRedirectStatusCode(code int) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
@@ -57,20 +57,20 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectStatusCode(code int) *HTTPRo
 	return b
 }
 
-func (b *HTTPRouteFilterBuilder) WithRequestRedirectPathModifier(modifierType gatewayapi.HTTPPathModifierType, path string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestRedirect ||
+func (b *HTTPRouteFilterBuilder) WithRequestRedirectPathModifier(modifierType gwtypes.HTTPPathModifierType, path string) *HTTPRouteFilterBuilder {
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestRedirect ||
 		b.httpRouteFilter.RequestRedirect == nil {
 		return b
 	}
-	if modifierType == gatewayapi.FullPathHTTPPathModifier {
-		b.httpRouteFilter.RequestRedirect.Path = &gatewayapi.HTTPPathModifier{
-			Type:            gatewayapi.FullPathHTTPPathModifier,
+	if modifierType == gwtypes.FullPathHTTPPathModifier {
+		b.httpRouteFilter.RequestRedirect.Path = &gwtypes.HTTPPathModifier{
+			Type:            gwtypes.FullPathHTTPPathModifier,
 			ReplaceFullPath: new(path),
 		}
 	}
-	if modifierType == gatewayapi.PrefixMatchHTTPPathModifier {
-		b.httpRouteFilter.RequestRedirect.Path = &gatewayapi.HTTPPathModifier{
-			Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+	if modifierType == gwtypes.PrefixMatchHTTPPathModifier {
+		b.httpRouteFilter.RequestRedirect.Path = &gwtypes.HTTPPathModifier{
+			Type:               gwtypes.PrefixMatchHTTPPathModifier,
 			ReplacePrefixMatch: new(path),
 		}
 	}
@@ -79,15 +79,15 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectPathModifier(modifierType ga
 
 // NewHTTPRouteRequestHeaderModifierFilter builds a request header modifier HTTPRoute filter.
 func NewHTTPRouteRequestHeaderModifierFilter() *HTTPRouteFilterBuilder {
-	filter := gatewayapi.HTTPRouteFilter{
-		Type:                  gatewayapi.HTTPRouteFilterRequestHeaderModifier,
-		RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{},
+	filter := gwtypes.HTTPRouteFilter{
+		Type:                  gwtypes.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gwtypes.HTTPHeaderFilter{},
 	}
 	return &HTTPRouteFilterBuilder{httpRouteFilter: filter}
 }
 
-func (b *HTTPRouteFilterBuilder) WithRequestHeaderAdd(headers []gatewayapi.HTTPHeader) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestHeaderModifier ||
+func (b *HTTPRouteFilterBuilder) WithRequestHeaderAdd(headers []gwtypes.HTTPHeader) *HTTPRouteFilterBuilder {
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestHeaderModifier ||
 		b.httpRouteFilter.RequestHeaderModifier == nil {
 		return b
 	}
@@ -95,8 +95,8 @@ func (b *HTTPRouteFilterBuilder) WithRequestHeaderAdd(headers []gatewayapi.HTTPH
 	return b
 }
 
-func (b *HTTPRouteFilterBuilder) WithRequestHeaderSet(headers []gatewayapi.HTTPHeader) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestHeaderModifier ||
+func (b *HTTPRouteFilterBuilder) WithRequestHeaderSet(headers []gwtypes.HTTPHeader) *HTTPRouteFilterBuilder {
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestHeaderModifier ||
 		b.httpRouteFilter.RequestHeaderModifier == nil {
 		return b
 	}
@@ -105,7 +105,7 @@ func (b *HTTPRouteFilterBuilder) WithRequestHeaderSet(headers []gatewayapi.HTTPH
 }
 
 func (b *HTTPRouteFilterBuilder) WithRequestHeaderRemove(headerNames []string) *HTTPRouteFilterBuilder {
-	if b.httpRouteFilter.Type != gatewayapi.HTTPRouteFilterRequestHeaderModifier ||
+	if b.httpRouteFilter.Type != gwtypes.HTTPRouteFilterRequestHeaderModifier ||
 		b.httpRouteFilter.RequestHeaderModifier == nil {
 		return b
 	}

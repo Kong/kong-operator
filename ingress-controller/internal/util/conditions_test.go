@@ -6,13 +6,13 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestCheckCondition(t *testing.T) {
-	expectedType := util.ConditionType(gatewayapi.ListenerConditionProgrammed)
-	expectedReason := util.ConditionReason(gatewayapi.GatewayReasonAccepted)
+	expectedType := util.ConditionType(gwtypes.ListenerConditionProgrammed)
+	expectedReason := util.ConditionReason(gwtypes.GatewayReasonAccepted)
 	expectedStatus := metav1.ConditionTrue
 	generation := int64(1)
 	givenConditions := []metav1.Condition{
@@ -24,8 +24,8 @@ func TestCheckCondition(t *testing.T) {
 		},
 	}
 
-	otherType := util.ConditionType(gatewayapi.ListenerConditionConflicted)
-	otherReason := util.ConditionReason(gatewayapi.GatewayReasonProgrammed)
+	otherType := util.ConditionType(gwtypes.ListenerConditionConflicted)
+	otherReason := util.ConditionReason(gwtypes.GatewayReasonProgrammed)
 	otherStatus := metav1.ConditionFalse
 
 	testCases := []struct {
@@ -101,8 +101,8 @@ func TestCheckCondition(t *testing.T) {
 }
 
 func TestCheckCondition_observed_generations_lower_than_actual_are_ignored(t *testing.T) {
-	expectedType := util.ConditionType(gatewayapi.ListenerConditionProgrammed)
-	expectedReason := util.ConditionReason(gatewayapi.GatewayReasonAccepted)
+	expectedType := util.ConditionType(gwtypes.ListenerConditionProgrammed)
+	expectedReason := util.ConditionReason(gwtypes.GatewayReasonAccepted)
 	expectedStatus := metav1.ConditionTrue
 	givenConditions := []metav1.Condition{
 		{

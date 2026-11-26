@@ -7,7 +7,7 @@ import (
 
 	kongv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	kongv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -54,39 +54,39 @@ func TestCacheStores(t *testing.T) {
 		},
 		{
 			name:          "HTTPRoute",
-			objectToStore: &gatewayapi.HTTPRoute{},
+			objectToStore: &gwtypes.HTTPRoute{},
 		},
 		{
 			name:          "UDPRoute",
-			objectToStore: &gatewayapi.UDPRoute{},
+			objectToStore: &gwtypes.UDPRoute{},
 		},
 		{
 			name:          "TCPRoute",
-			objectToStore: &gatewayapi.TCPRoute{},
+			objectToStore: &gwtypes.TCPRoute{},
 		},
 		{
 			name:          "TLSRoute",
-			objectToStore: &gatewayapi.TLSRoute{},
+			objectToStore: &gwtypes.TLSRoute{},
 		},
 		{
 			name:          "GRPCRoute",
-			objectToStore: &gatewayapi.GRPCRoute{},
+			objectToStore: &gwtypes.GRPCRoute{},
 		},
 		{
 			name:          "ReferenceGrant",
-			objectToStore: &gatewayapi.ReferenceGrant{},
+			objectToStore: &gwtypes.ReferenceGrant{},
 		},
 		{
 			name:          "Gateway",
-			objectToStore: &gatewayapi.Gateway{},
+			objectToStore: &gwtypes.Gateway{},
 		},
 		{
 			name:          "GatewayClass",
-			objectToStore: &gatewayapi.GatewayClass{},
+			objectToStore: &gwtypes.GatewayClass{},
 		},
 		{
 			name:          "BackendTLSPolicy",
-			objectToStore: &gatewayapi.BackendTLSPolicy{},
+			objectToStore: &gwtypes.BackendTLSPolicy{},
 		},
 		{
 			name:          "KongPlugin",

@@ -6,35 +6,37 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
-	grants := []*ReferenceGrant{
+	grants := []*gwtypes.ReferenceGrant{
 		{
 			Name:      uuid.NewString(),
 			Namespace: "fitrat",
-			Spec: ReferenceGrantSpec{
-				From: []ReferenceGrantFrom{
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
-						Group:     Group("gateway.networking.k8s.io"),
-						Kind:      Kind("TCPRoute"),
-						Namespace: Namespace("garbage"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("garbage"),
 					},
 					{
-						Group:     Group("gateway.networking.k8s.io"),
-						Kind:      Kind("TCPRoute"),
-						Namespace: Namespace("behbudiy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("behbudiy"),
 					},
 					{
-						Group:     Group("gateway.networking.k8s.io"),
-						Kind:      Kind("TCPRoute"),
-						Namespace: Namespace("qodiriy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("qodiriy"),
 					},
 				},
-				To: []ReferenceGrantTo{
+				To: []gwtypes.ReferenceGrantTo{
 					{
-						Group: Group(""),
-						Kind:  Kind("GrantOne"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("GrantOne"),
 					},
 				},
 			},
@@ -42,23 +44,23 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 		{
 			Name:      uuid.NewString(),
 			Namespace: "cholpon",
-			Spec: ReferenceGrantSpec{
-				From: []ReferenceGrantFrom{
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
-						Group:     Group("gateway.networking.k8s.io"),
-						Kind:      Kind("UDPRoute"),
-						Namespace: Namespace("behbudiy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("UDPRoute"),
+						Namespace: gwtypes.Namespace("behbudiy"),
 					},
 					{
-						Group:     Group("gateway.networking.k8s.io"),
-						Kind:      Kind("TCPRoute"),
-						Namespace: Namespace("qodiriy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("qodiriy"),
 					},
 				},
-				To: []ReferenceGrantTo{
+				To: []gwtypes.ReferenceGrantTo{
 					{
-						Group: Group(""),
-						Kind:  Kind("GrantTwo"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("GrantTwo"),
 					},
 				},
 			},
@@ -66,79 +68,79 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	}
 	tests := []struct {
 		msg    string
-		from   ReferenceGrantFrom
-		result map[Namespace][]ReferenceGrantTo
+		from   gwtypes.ReferenceGrantFrom
+		result map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo
 	}{
 		{
 			msg: "no matches whatsoever",
-			from: ReferenceGrantFrom{
-				Group:     Group("invalid.example"),
-				Kind:      Kind("invalid"),
-				Namespace: Namespace("invalid"),
+			from: gwtypes.ReferenceGrantFrom{
+				Group:     gwtypes.Group("invalid.example"),
+				Kind:      gwtypes.Kind("invalid"),
+				Namespace: gwtypes.Namespace("invalid"),
 			},
-			result: map[Namespace][]ReferenceGrantTo{},
+			result: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching namespace",
-			from: ReferenceGrantFrom{
-				Group:     Group("gateway.networking.k8s.io"),
-				Kind:      Kind("UDPRoute"),
-				Namespace: Namespace("niyazi"),
+			from: gwtypes.ReferenceGrantFrom{
+				Group:     gwtypes.Group("gateway.networking.k8s.io"),
+				Kind:      gwtypes.Kind("UDPRoute"),
+				Namespace: gwtypes.Namespace("niyazi"),
 			},
-			result: map[Namespace][]ReferenceGrantTo{},
+			result: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching kind",
-			from: ReferenceGrantFrom{
-				Group:     Group("gateway.networking.k8s.io"),
-				Kind:      Kind("TLSRoute"),
-				Namespace: Namespace("behbudiy"),
+			from: gwtypes.ReferenceGrantFrom{
+				Group:     gwtypes.Group("gateway.networking.k8s.io"),
+				Kind:      gwtypes.Kind("TLSRoute"),
+				Namespace: gwtypes.Namespace("behbudiy"),
 			},
-			result: map[Namespace][]ReferenceGrantTo{},
+			result: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{},
 		},
 		{
 			msg: "non-matching group",
-			from: ReferenceGrantFrom{
-				Group:     Group("invalid.example"),
-				Kind:      Kind("UDPRoute"),
-				Namespace: Namespace("behbudiy"),
+			from: gwtypes.ReferenceGrantFrom{
+				Group:     gwtypes.Group("invalid.example"),
+				Kind:      gwtypes.Kind("UDPRoute"),
+				Namespace: gwtypes.Namespace("behbudiy"),
 			},
-			result: map[Namespace][]ReferenceGrantTo{},
+			result: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{},
 		},
 		{
 			msg: "single match",
-			from: ReferenceGrantFrom{
-				Group:     Group("gateway.networking.k8s.io"),
-				Kind:      Kind("UDPRoute"),
-				Namespace: Namespace("behbudiy"),
+			from: gwtypes.ReferenceGrantFrom{
+				Group:     gwtypes.Group("gateway.networking.k8s.io"),
+				Kind:      gwtypes.Kind("UDPRoute"),
+				Namespace: gwtypes.Namespace("behbudiy"),
 			},
-			result: map[Namespace][]ReferenceGrantTo{
+			result: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
 				"cholpon": {
 					{
-						Group: Group(""),
-						Kind:  Kind("GrantTwo"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("GrantTwo"),
 					},
 				},
 			},
 		},
 		{
 			msg: "multiple matches",
-			from: ReferenceGrantFrom{
-				Group:     Group("gateway.networking.k8s.io"),
-				Kind:      Kind("TCPRoute"),
-				Namespace: Namespace("qodiriy"),
+			from: gwtypes.ReferenceGrantFrom{
+				Group:     gwtypes.Group("gateway.networking.k8s.io"),
+				Kind:      gwtypes.Kind("TCPRoute"),
+				Namespace: gwtypes.Namespace("qodiriy"),
 			},
-			result: map[Namespace][]ReferenceGrantTo{
+			result: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
 				"cholpon": {
 					{
-						Group: Group(""),
-						Kind:  Kind("GrantTwo"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("GrantTwo"),
 					},
 				},
 				"fitrat": {
 					{
-						Group: Group(""),
-						Kind:  Kind("GrantOne"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("GrantOne"),
 					},
 				},
 			},

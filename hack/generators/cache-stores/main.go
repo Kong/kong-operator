@@ -14,7 +14,7 @@ type cacheStoreSupportedType struct {
 	// Type is the name of the type that the store supports (e.g. Ingress, Service, etc.).
 	Type string
 
-	// Package is the package name of the type (e.g. gatewayapi, netv1, etc.).
+	// Package is the package name of the type (e.g. gwtypes, netv1, etc.).
 	Package string
 
 	// KeyFunc is a function to be used as the type's store's KeyFunc.

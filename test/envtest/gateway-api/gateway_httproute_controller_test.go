@@ -17,10 +17,10 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
@@ -62,8 +62,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &svc))
 	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
+	gwc := gwtypes.GatewayClass{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		GenerateName: "gwc-",
@@ -74,17 +74,17 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
-	gw := gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
+	gw := gwtypes.Gateway{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gwc.Name),
+			Listeners: []gwtypes.Listener{
 				{
-					Name:     gatewayapi.SectionName("http"),
-					Port:     gatewayapi.PortNumber(80),
-					Protocol: gatewayapi.HTTPProtocolType,
-					AllowedRoutes: &gatewayapi.AllowedRoutes{
-						Namespaces: &gatewayapi.RouteNamespaces{
-							From: new(gatewayapi.NamespacesFromAll),
+					Name:     gwtypes.SectionName("http"),
+					Port:     gwtypes.PortNumber(80),
+					Protocol: gwtypes.HTTPProtocolType,
+					AllowedRoutes: &gwtypes.AllowedRoutes{
+						Namespaces: &gwtypes.RouteNamespaces{
+							From: new(gwtypes.NamespacesFromAll),
 						},
 					},
 				},
@@ -96,10 +96,10 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gw))
 
 	gwOld := gw.DeepCopy()
-	gw.Status = gatewayapi.GatewayStatus{
-		Addresses: []gatewayapi.GatewayStatusAddress{
+	gw.Status = gwtypes.GatewayStatus{
+		Addresses: []gwtypes.GatewayStatusAddress{
 			{
-				Type:  new(gatewayapi.IPAddressType),
+				Type:  new(gwtypes.IPAddressType),
 				Value: "10.0.0.1",
 			},
 		},
@@ -119,7 +119,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 				ObservedGeneration: gw.Generation,
 			},
 		},
-		Listeners: []gatewayapi.ListenerStatus{
+		Listeners: []gwtypes.ListenerStatus{
 			{
 				Name: "http",
 				Conditions: []metav1.Condition{
@@ -136,9 +136,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 						LastTransitionTime: metav1.Now(),
 					},
 				},
-				SupportedKinds: []gatewayapi.RouteGroupKind{
+				SupportedKinds: []gwtypes.RouteGroupKind{
 					{
-						Group: new(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
+						Group: new(gwtypes.Group(gatewayv1.GroupVersion.Group)),
 						Kind:  "HTTPRoute",
 					},
 				},
@@ -147,19 +147,19 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
-	route := gatewayapi.HTTPRoute{
+	route := gwtypes.HTTPRoute{
 		Kind:         "HTTPRoute",
 		APIVersion:   "v1beta1",
 		Namespace:    nsRoute.Name,
 		GenerateName: "httproute-",
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name:      gatewayapi.ObjectName(gw.Name),
-					Namespace: new(gatewayapi.Namespace(ns.Name)),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name:      gwtypes.ObjectName(gw.Name),
+					Namespace: new(gwtypes.Namespace(ns.Name)),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{{
+			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
 			}},
 		},
@@ -186,18 +186,18 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		t.Fatal(printHTTPRoutesConditions(ctx, client, nn))
 	}
 
-	rg := gatewayapi.ReferenceGrant{
+	rg := gwtypes.ReferenceGrant{
 		Namespace:    ns.Name,
 		GenerateName: "referencegrant-",
-		Spec: gatewayapi.ReferenceGrantSpec{
-			From: []gatewayapi.ReferenceGrantFrom{
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{
 				{
-					Group:     gatewayapi.Group(gatewayv1.GroupVersion.Group),
+					Group:     gwtypes.Group(gatewayv1.GroupVersion.Group),
 					Kind:      "HTTPRoute",
-					Namespace: gatewayapi.Namespace(nsRoute.Name),
+					Namespace: gwtypes.Namespace(nsRoute.Name),
 				},
 			},
-			To: []gatewayapi.ReferenceGrantTo{
+			To: []gwtypes.ReferenceGrantTo{
 				{
 					Group: "",
 					Kind:  "Service",
@@ -271,8 +271,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 
 	envtest.StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
+	gwc := gwtypes.GatewayClass{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		GenerateName: "kong-gwclass-",
@@ -282,8 +282,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
-	gwcNonKong := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
+	gwcNonKong := gwtypes.GatewayClass{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: "acme.com/dummy-controller",
 		},
 		GenerateName: "non-kong-gwclass-",
@@ -291,16 +291,16 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gwcNonKong))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwcNonKong) })
 
-	gw := gatewayapi.Gateway{
+	gw := gwtypes.Gateway{
 		Namespace:    ns.Name,
 		GenerateName: "gw-kong-",
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gwc.Name),
+			Listeners: []gwtypes.Listener{
 				{
-					Name:          gatewayapi.SectionName("http"),
-					Port:          gatewayapi.PortNumber(80),
-					Protocol:      gatewayapi.HTTPProtocolType,
+					Name:          gwtypes.SectionName("http"),
+					Port:          gwtypes.PortNumber(80),
+					Protocol:      gwtypes.HTTPProtocolType,
 					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},
@@ -308,16 +308,16 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &gw))
 
-	gwNonKong := gatewayapi.Gateway{
+	gwNonKong := gwtypes.Gateway{
 		GenerateName: "gw-nonkong-",
 		Namespace:    ns.Name,
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwcNonKong.Name),
-			Listeners: []gatewayapi.Listener{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gwcNonKong.Name),
+			Listeners: []gwtypes.Listener{
 				{
-					Name:          gatewayapi.SectionName("http"),
-					Port:          gatewayapi.PortNumber(80),
-					Protocol:      gatewayapi.HTTPProtocolType,
+					Name:          gwtypes.SectionName("http"),
+					Port:          gwtypes.PortNumber(80),
+					Protocol:      gwtypes.HTTPProtocolType,
 					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},
@@ -325,30 +325,30 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 	require.NoError(t, client.Create(ctx, &gwNonKong))
 
-	route := gatewayapi.HTTPRoute{
+	route := gwtypes.HTTPRoute{
 		Kind:         "HTTPRoute",
 		APIVersion:   "v1beta1",
 		Namespace:    nsRoute.Name,
 		GenerateName: "httproute-kong-",
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name:      gatewayapi.ObjectName(gw.Name),
-					Namespace: new(gatewayapi.Namespace(ns.Name)),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name:      gwtypes.ObjectName(gw.Name),
+					Namespace: new(gwtypes.Namespace(ns.Name)),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{{
+			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
 			}},
 		},
 	}
 	require.NoError(t, client.Create(ctx, &route))
 	// Status has to be updated separately.
-	route.Status = gatewayapi.HTTPRouteStatus{
-		Parents: []gatewayapi.RouteParentStatus{
+	route.Status = gwtypes.HTTPRouteStatus{
+		Parents: []gwtypes.RouteParentStatus{
 			{
-				ParentRef: gatewayapi.ParentReference{
-					Name: gatewayapi.ObjectName(gwNonKong.Name),
+				ParentRef: gwtypes.ParentReference{
+					Name: gwtypes.ObjectName(gwNonKong.Name),
 				},
 				ControllerName: gateway.GetControllerName(),
 				Conditions: []metav1.Condition{
@@ -365,30 +365,30 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	}
 	require.NoError(t, client.Status().Update(ctx, &route))
 
-	routeNonKong := gatewayapi.HTTPRoute{
+	routeNonKong := gwtypes.HTTPRoute{
 		Kind:         "HTTPRoute",
 		APIVersion:   "v1beta1",
 		Namespace:    nsRoute.Name,
 		GenerateName: "httproute-nonkong-",
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name:      gatewayapi.ObjectName(gwNonKong.Name),
-					Namespace: new(gatewayapi.Namespace(ns.Name)),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name:      gwtypes.ObjectName(gwNonKong.Name),
+					Namespace: new(gwtypes.Namespace(ns.Name)),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{{
+			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: builder.NewHTTPBackendRef("backend-1").WithNamespace(ns.Name).ToSlice(),
 			}},
 		},
 	}
 	require.NoError(t, client.Create(ctx, &routeNonKong))
 	// Status has to be updated separately.
-	routeNonKong.Status = gatewayapi.HTTPRouteStatus{
-		Parents: []gatewayapi.RouteParentStatus{
+	routeNonKong.Status = gwtypes.HTTPRouteStatus{
+		Parents: []gwtypes.RouteParentStatus{
 			{
-				ParentRef: gatewayapi.ParentReference{
-					Name: gatewayapi.ObjectName(gwNonKong.Name),
+				ParentRef: gwtypes.ParentReference{
+					Name: gwtypes.ObjectName(gwNonKong.Name),
 				},
 				ControllerName: gwcNonKong.Spec.ControllerName,
 				Conditions: []metav1.Condition{
@@ -412,7 +412,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 				return false
 			}
 
-			if staleStatusFound := lo.ContainsBy(route.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
+			if staleStatusFound := lo.ContainsBy(route.Status.Parents, func(ps gwtypes.RouteParentStatus) bool {
 				return string(ps.ParentRef.Name) == gwNonKong.Name
 			}); staleStatusFound {
 				t.Logf("found stale status for parent Gateway %s that does not belong to KIC GatewayClass", gwNonKong.Name)
@@ -449,7 +449,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 				return true
 			}
 
-			if staleStatusFound := lo.ContainsBy(routeNonKong.Status.Parents, func(ps gatewayapi.RouteParentStatus) bool {
+			if staleStatusFound := lo.ContainsBy(routeNonKong.Status.Parents, func(ps gwtypes.RouteParentStatus) bool {
 				return string(ps.ParentRef.Name) == gwNonKong.Name
 			}); !staleStatusFound {
 				t.Logf("status for parent %s not found, it should not have been cleared", gwNonKong.Name)
@@ -462,7 +462,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 }
 
 func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn k8stypes.NamespacedName) string {
-	var route gatewayapi.HTTPRoute
+	var route gwtypes.HTTPRoute
 	err := client.Get(ctx, k8stypes.NamespacedName{Namespace: nn.Namespace, Name: nn.Name}, &route)
 	if err != nil {
 		return fmt.Sprintf("Failed to get HTTPRoute %s/%s when trying to print its conditions", nn.Namespace, nn.Name)

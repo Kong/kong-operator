@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 	var errs []error
 
 	// Validate first; keep only structurally-valid routes for arbitration.
-	valid := make([]*gatewayapi.UDPRoute, 0, len(udpRouteList))
+	valid := make([]*gwtypes.UDPRoute, 0, len(udpRouteList))
 	for _, r := range udpRouteList {
 		if err := validateUDPRoute(r); err != nil {
 			errs = append(errs, err)
@@ -40,10 +40,10 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 	}
 
 	// Build gateway -> UDP listeners index for the gateways referenced anywhere.
-	listenersByGateway := collectL4ListenersByGateway(t.storer, valid, gatewayapi.UDPProtocolType)
+	listenersByGateway := collectL4ListenersByGateway(t.storer, valid, gwtypes.UDPProtocolType)
 
 	// Group routes by l4ListenerKey.
-	attachments := make(map[l4ListenerKey][]*gatewayapi.UDPRoute)
+	attachments := make(map[l4ListenerKey][]*gwtypes.UDPRoute)
 	for _, r := range valid {
 		listenerKeys := l4RouteListenerAttachments(r, t.logger, t.storer, listenersByGateway)
 		for _, k := range listenerKeys {
@@ -53,7 +53,7 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 
 	// Pick a winner per listener, then aggregate the listener ports each
 	// winning route owns.
-	winningPorts := make(map[*gatewayapi.UDPRoute][]gatewayapi.PortNumber)
+	winningPorts := make(map[*gwtypes.UDPRoute][]gwtypes.PortNumber)
 	for key, candidates := range attachments {
 		winner := pickWinningL4Route(candidates)
 		if winner == nil {
@@ -99,8 +99,8 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 // Callers must pass only ports for listeners where `route` won arbitration.
 func (t *Translator) translateUDPRouteWithPorts(
 	result *ingressRules,
-	route *gatewayapi.UDPRoute,
-	gwPorts []gatewayapi.PortNumber,
+	route *gwtypes.UDPRoute,
+	gwPorts []gwtypes.PortNumber,
 ) error {
 	spec := route.Spec
 	if len(spec.Rules) == 0 {
@@ -127,12 +127,12 @@ func (t *Translator) translateUDPRouteWithPorts(
 
 // dedupPorts returns ports with duplicates removed, sorted ascending for
 // deterministic output across map-iteration runs.
-func dedupPorts(ports []gatewayapi.PortNumber) []gatewayapi.PortNumber {
+func dedupPorts(ports []gwtypes.PortNumber) []gwtypes.PortNumber {
 	if len(ports) == 0 {
 		return ports
 	}
-	seen := make(map[gatewayapi.PortNumber]struct{}, len(ports))
-	out := make([]gatewayapi.PortNumber, 0, len(ports))
+	seen := make(map[gwtypes.PortNumber]struct{}, len(ports))
+	out := make([]gwtypes.PortNumber, 0, len(ports))
 	for _, p := range ports {
 		if _, ok := seen[p]; ok {
 			continue
@@ -149,7 +149,7 @@ func dedupPorts(ports []gatewayapi.PortNumber) []gatewayapi.PortNumber {
 // validation at this level as well as a fallback so that if routes are posted which
 // are invalid somehow make it past validation (e.g. the webhook is not enabled) we can
 // at least try to provide a helpful message about the situation in the manager logs.
-func validateUDPRoute(udproute *gatewayapi.UDPRoute) error {
+func validateUDPRoute(udproute *gwtypes.UDPRoute) error {
 	if len(udproute.Spec.Rules) == 0 {
 		return subtranslator.ErrRouteValidationNoRules
 	}

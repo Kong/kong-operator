@@ -8,16 +8,16 @@ import (
 	"github.com/samber/mo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // getParentStatuses creates a parent status map for the provided route given the
 // route parent status slice.
-func getParentStatuses[routeT gatewayapi.RouteT](
-	route routeT, parentStatuses []gatewayapi.RouteParentStatus,
-) map[string]*gatewayapi.RouteParentStatus {
-	m := make(map[string]*gatewayapi.RouteParentStatus)
+func getParentStatuses[routeT gwtypes.RouteT](
+	route routeT, parentStatuses []gwtypes.RouteParentStatus,
+) map[string]*gwtypes.RouteParentStatus {
+	m := make(map[string]*gwtypes.RouteParentStatus)
 
 	for _, existingParent := range parentStatuses {
 		parentRef := getParentRef(existingParent)
@@ -35,7 +35,7 @@ type namespacedNamer interface {
 	GetSectionName() mo.Option[string]
 }
 
-func routeParentStatusKey[routeT gatewayapi.RouteT](
+func routeParentStatusKey[routeT gwtypes.RouteT](
 	route routeT, parentRef namespacedNamer,
 ) string {
 	namespace := route.GetNamespace()
@@ -44,8 +44,8 @@ func routeParentStatusKey[routeT gatewayapi.RouteT](
 	}
 
 	switch any(route).(type) {
-	case *gatewayapi.HTTPRoute,
-		*gatewayapi.GRPCRoute:
+	case *gwtypes.HTTPRoute,
+		*gwtypes.GRPCRoute:
 		return fmt.Sprintf("%s/%s/%s",
 			namespace,
 			parentRef.GetName(),
@@ -80,8 +80,8 @@ func (p parentRef) GetSectionName() mo.Option[string] {
 }
 
 // getParentRef serves as glue code to generically get parentRef from either
-// gatewayapi.RouteParentStatus or gatewayapi.RouteParentStatus.
-func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
+// gwtypes.RouteParentStatus or gwtypes.RouteParentStatus.
+func getParentRef(parentStatus gwtypes.RouteParentStatus) parentRef {
 	var (
 		sectionName *string
 		namespace   *string
@@ -100,34 +100,34 @@ func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
 	}
 }
 
-func getRouteStatusParents[T gatewayapi.RouteT](route T) []gatewayapi.RouteParentStatus {
+func getRouteStatusParents[T gwtypes.RouteT](route T) []gwtypes.RouteParentStatus {
 	switch r := any(route).(type) {
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		return r.Status.Parents
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return r.Status.Parents
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return r.Status.Parents
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return r.Status.Parents
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		return r.Status.Parents
 	default:
 		return nil
 	}
 }
 
-func setRouteStatusParents[T gatewayapi.RouteT](route T, parents []gatewayapi.RouteParentStatus) {
+func setRouteStatusParents[T gwtypes.RouteT](route T, parents []gwtypes.RouteParentStatus) {
 	switch r := any(route).(type) {
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		r.Status.Parents = parents
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		r.Status.Parents = parents
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		r.Status.Parents = parents
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		r.Status.Parents = parents
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		r.Status.Parents = parents
 	}
 }
@@ -136,11 +136,11 @@ func setRouteStatusParents[T gatewayapi.RouteT](route T, parents []gatewayapi.Ro
 // and its supported gateways.
 // It returns a map of parent statuses and a boolean indicating whether any
 // changes were made.
-func parentStatusesForRoute[routeT gatewayapi.RouteT](
+func parentStatusesForRoute[routeT gwtypes.RouteT](
 	route routeT,
-	routeParentStatuses []gatewayapi.RouteParentStatus,
+	routeParentStatuses []gwtypes.RouteParentStatus,
 	gateways ...supportedGatewayWithCondition,
-) (map[string]*gatewayapi.RouteParentStatus, bool) {
+) (map[string]*gwtypes.RouteParentStatus, bool) {
 	// map the existing parentStatues to avoid duplications
 	parentStatuses := getParentStatuses(route, routeParentStatuses)
 
@@ -172,36 +172,36 @@ func parentStatusesForRoute[routeT gatewayapi.RouteT](
 	return parentStatuses, statusChangesWereMade
 }
 
-func withSectionName(sectionName string) func(*gatewayapi.RouteParentStatus) {
-	return func(routeParentStatus *gatewayapi.RouteParentStatus) {
+func withSectionName(sectionName string) func(*gwtypes.RouteParentStatus) {
+	return func(routeParentStatus *gwtypes.RouteParentStatus) {
 		if sectionName != "" {
-			routeParentStatus.ParentRef.SectionName = (*gatewayapi.SectionName)(&sectionName)
+			routeParentStatus.ParentRef.SectionName = (*gwtypes.SectionName)(&sectionName)
 		}
 	}
 }
 
-func gatewayParentStatusForRoute[routeT gatewayapi.RouteT](
+func gatewayParentStatusForRoute[routeT gwtypes.RouteT](
 	route routeT,
 	parentGateway supportedGatewayWithCondition,
-	opts ...func(*gatewayapi.RouteParentStatus),
-) *gatewayapi.RouteParentStatus {
+	opts ...func(*gwtypes.RouteParentStatus),
+) *gwtypes.RouteParentStatus {
 	parentGVK := parentGateway.gateway.GroupVersionKind()
 	if parentGVK.Kind == "" {
-		parentGVK.Kind = gatewayapi.V1GatewayTypeMeta.Kind
+		parentGVK.Kind = gwtypes.V1GatewayTypeMeta.Kind
 	}
 	if parentGVK.Group == "" {
-		parentGVK.Group = gatewayapi.V1GatewayTypeMeta.GroupVersionKind().Group
+		parentGVK.Group = gwtypes.V1GatewayTypeMeta.GroupVersionKind().Group
 		parentGateway.gateway.SetGroupVersionKind(parentGVK)
 	}
 
 	var (
-		parentRef = gatewayapi.ParentReference{
-			Group:     util.StringToTypedPtr[*gatewayapi.Group](parentGateway.gateway.GroupVersionKind().Group),
-			Kind:      util.StringToTypedPtr[*gatewayapi.Kind](parentGateway.gateway.Kind),
-			Namespace: (*gatewayapi.Namespace)(&parentGateway.gateway.Namespace),
-			Name:      gatewayapi.ObjectName(parentGateway.gateway.Name),
+		parentRef = gwtypes.ParentReference{
+			Group:     util.StringToTypedPtr[*gwtypes.Group](parentGateway.gateway.GroupVersionKind().Group),
+			Kind:      util.StringToTypedPtr[*gwtypes.Kind](parentGateway.gateway.Kind),
+			Namespace: (*gwtypes.Namespace)(&parentGateway.gateway.Namespace),
+			Name:      gwtypes.ObjectName(parentGateway.gateway.Name),
 		}
-		routeParentStatus = &gatewayapi.RouteParentStatus{
+		routeParentStatus = &gwtypes.RouteParentStatus{
 			ParentRef:      parentRef,
 			ControllerName: GetControllerName(),
 			Conditions: []metav1.Condition{
@@ -224,9 +224,9 @@ func gatewayParentStatusForRoute[routeT gatewayapi.RouteT](
 	return routeParentStatus
 }
 
-func initializeParentStatusesWithProgrammedCondition[routeT gatewayapi.RouteT](
+func initializeParentStatusesWithProgrammedCondition[routeT gwtypes.RouteT](
 	route routeT,
-	parentStatuses map[string]*gatewayapi.RouteParentStatus,
+	parentStatuses map[string]*gwtypes.RouteParentStatus,
 ) bool {
 	// do not update the condition if a "Programmed" condition is already present.
 	changed := false
@@ -247,6 +247,6 @@ func initializeParentStatusesWithProgrammedCondition[routeT gatewayapi.RouteT](
 // another controller. Such entries must never be modified (see the
 // HTTPRoutePreserveForeignStatus conformance test). Entries with an empty
 // controller name predate per-controller ownership and are still updated.
-func isForeignParentStatus(ps *gatewayapi.RouteParentStatus) bool {
+func isForeignParentStatus(ps *gwtypes.RouteParentStatus) bool {
 	return ps.ControllerName != "" && ps.ControllerName != GetControllerName()
 }

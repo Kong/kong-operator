@@ -9,6 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // Sentinel errors returned by ListenerSupportsRouteInStatus and ListenerProgrammed.
@@ -24,18 +26,18 @@ var (
 // carry a populated TypeMeta/GVK (see
 // https://github.com/kubernetes/kubernetes/issues/3030), so it's filled in
 // manually here for comparison against a listener's AllowedRoutes/SupportedKinds.
-func routeGVK[T RouteT](route T) schema.GroupVersionKind {
+func routeGVK[T gwtypes.RouteT](route T) schema.GroupVersionKind {
 	switch any(route).(type) {
-	case *HTTPRoute:
-		return schema.GroupVersionKind{Group: GroupVersion.Group, Kind: "HTTPRoute"}
-	case *TLSRoute:
-		return schema.GroupVersionKind{Group: GroupVersion.Group, Kind: "TLSRoute"}
-	case *GRPCRoute:
-		return schema.GroupVersionKind{Group: GroupVersion.Group, Kind: "GRPCRoute"}
-	case *UDPRoute:
-		return schema.GroupVersionKind{Group: GroupVersion.Group, Kind: "UDPRoute"}
-	case *TCPRoute:
-		return schema.GroupVersionKind{Group: GroupVersion.Group, Kind: "TCPRoute"}
+	case *gwtypes.HTTPRoute:
+		return schema.GroupVersionKind{Group: gwtypes.GroupVersion.Group, Kind: "HTTPRoute"}
+	case *gwtypes.TLSRoute:
+		return schema.GroupVersionKind{Group: gwtypes.GroupVersion.Group, Kind: "TLSRoute"}
+	case *gwtypes.GRPCRoute:
+		return schema.GroupVersionKind{Group: gwtypes.GroupVersion.Group, Kind: "GRPCRoute"}
+	case *gwtypes.UDPRoute:
+		return schema.GroupVersionKind{Group: gwtypes.GroupVersion.Group, Kind: "UDPRoute"}
+	case *gwtypes.TCPRoute:
+		return schema.GroupVersionKind{Group: gwtypes.GroupVersion.Group, Kind: "TCPRoute"}
 	default:
 		return route.GetObjectKind().GroupVersionKind()
 	}
@@ -43,12 +45,12 @@ func routeGVK[T RouteT](route T) schema.GroupVersionKind {
 
 // ListenerAcceptsRouteKind reports whether listener's AllowedRoutes.Kinds
 // permits route's kind. An unset Kinds list allows every kind.
-func ListenerAcceptsRouteKind[T RouteT](listener Listener, route T) bool {
+func ListenerAcceptsRouteKind[T gwtypes.RouteT](listener gwtypes.Listener, route T) bool {
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 		return true
 	}
 	gvk := routeGVK(route)
-	_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk RouteGroupKind) bool {
+	_, ok := lo.Find(listener.AllowedRoutes.Kinds, func(rgk gwtypes.RouteGroupKind) bool {
 		return rgk.Group != nil && string(*rgk.Group) == gvk.Group && string(rgk.Kind) == gvk.Kind
 	})
 	return ok
@@ -64,18 +66,18 @@ type NamespaceGetter func(name string) (*corev1.Namespace, error)
 // against route, covering the All, Same and Selector cases. getNamespace is
 // only invoked (and only needs to resolve route's namespace) for the
 // Selector case.
-func ListenerAllowsNamespace[T RouteT](
-	listener Listener, route T, gatewayNamespace string, parentRefNamespace *Namespace, getNamespace NamespaceGetter,
+func ListenerAllowsNamespace[T gwtypes.RouteT](
+	listener gwtypes.Listener, route T, gatewayNamespace string, parentRefNamespace *gwtypes.Namespace, getNamespace NamespaceGetter,
 ) (bool, error) {
 	if listener.AllowedRoutes == nil || listener.AllowedRoutes.Namespaces == nil || listener.AllowedRoutes.Namespaces.From == nil {
 		return true, nil
 	}
 
 	switch *listener.AllowedRoutes.Namespaces.From {
-	case NamespacesFromAll:
+	case gwtypes.NamespacesFromAll:
 		return true, nil
 
-	case NamespacesFromSame:
+	case gwtypes.NamespacesFromSame:
 		// If parentRef didn't specify the namespace then we check if
 		// the gateway is from the same namespace as the route
 		if parentRefNamespace == nil {
@@ -84,7 +86,7 @@ func ListenerAllowsNamespace[T RouteT](
 		// Otherwise compare routes namespace with parentRef's one.
 		return route.GetNamespace() == string(*parentRefNamespace), nil
 
-	case NamespacesFromSelector:
+	case gwtypes.NamespacesFromSelector:
 		namespace, err := getNamespace(route.GetNamespace())
 		if err != nil {
 			return false, fmt.Errorf("failed to get namespace %s: %w", route.GetNamespace(), err)
@@ -110,24 +112,24 @@ func ListenerAllowsNamespace[T RouteT](
 }
 
 // GatewayClassControlledBy reports whether gatewayClass is managed by controllerName.
-func GatewayClassControlledBy(gatewayClass *GatewayClass, controllerName GatewayController) bool {
+func GatewayClassControlledBy(gatewayClass *gwtypes.GatewayClass, controllerName gwtypes.GatewayController) bool {
 	return gatewayClass.Spec.ControllerName == controllerName
 }
 
 // ListenerSupportsRouteInStatus checks if:
 // - A listener status exists with the given name.
 // - The route's kind is within the supported kinds recorded in that listener's status.
-func ListenerSupportsRouteInStatus[T RouteT](route T, listenerName SectionName, lss []ListenerStatus) error {
+func ListenerSupportsRouteInStatus[T gwtypes.RouteT](route T, listenerName gwtypes.SectionName, lss []gwtypes.ListenerStatus) error {
 	listenerFound := false
 
-	_, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+	_, ok := lo.Find(lss, func(ls gwtypes.ListenerStatus) bool {
 		if ls.Name != listenerName {
 			return false
 		}
 		listenerFound = true
 
 		gvk := routeGVK(route)
-		_, ok := lo.Find(ls.SupportedKinds, func(rgk RouteGroupKind) bool {
+		_, ok := lo.Find(ls.SupportedKinds, func(rgk gwtypes.RouteGroupKind) bool {
 			return rgk.Group != nil && string(*rgk.Group) == gvk.Group && string(rgk.Kind) == gvk.Kind
 		})
 		return ok
@@ -146,8 +148,8 @@ func ListenerSupportsRouteInStatus[T RouteT](route T, listenerName SectionName, 
 
 // ListenerResolvedRefsFalse reports whether listenerName's ResolvedRefs condition
 // in lss is explicitly False as of generation (the Gateway's current generation).
-func ListenerResolvedRefsFalse(listenerName SectionName, generation int64, lss []ListenerStatus) bool {
-	listenerStatus, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+func ListenerResolvedRefsFalse(listenerName gwtypes.SectionName, generation int64, lss []gwtypes.ListenerStatus) bool {
+	listenerStatus, ok := lo.Find(lss, func(ls gwtypes.ListenerStatus) bool {
 		return ls.Name == listenerName
 	})
 	if !ok {
@@ -155,7 +157,7 @@ func ListenerResolvedRefsFalse(listenerName SectionName, generation int64, lss [
 	}
 
 	resolvedRefs, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-		return condition.Type == string(ListenerConditionResolvedRefs)
+		return condition.Type == string(gwtypes.ListenerConditionResolvedRefs)
 	})
 	if !ok {
 		return false
@@ -167,8 +169,8 @@ func ListenerResolvedRefsFalse(listenerName SectionName, generation int64, lss [
 // ListenerProgrammedFalseForSettledReason reports whether listenerName's
 // Programmed condition in lss is False for a reason other than "Pending", as of
 // generation (the Gateway's current generation).
-func ListenerProgrammedFalseForSettledReason(listenerName SectionName, generation int64, lss []ListenerStatus) bool {
-	listenerStatus, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+func ListenerProgrammedFalseForSettledReason(listenerName gwtypes.SectionName, generation int64, lss []gwtypes.ListenerStatus) bool {
+	listenerStatus, ok := lo.Find(lss, func(ls gwtypes.ListenerStatus) bool {
 		return ls.Name == listenerName
 	})
 	if !ok {
@@ -176,7 +178,7 @@ func ListenerProgrammedFalseForSettledReason(listenerName SectionName, generatio
 	}
 
 	programmed, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-		return condition.Type == string(ListenerConditionProgrammed)
+		return condition.Type == string(gwtypes.ListenerConditionProgrammed)
 	})
 	if !ok {
 		return false
@@ -184,13 +186,13 @@ func ListenerProgrammedFalseForSettledReason(listenerName SectionName, generatio
 
 	return programmed.Status == metav1.ConditionFalse &&
 		programmed.ObservedGeneration == generation &&
-		programmed.Reason != string(ListenerReasonPending)
+		programmed.Reason != string(gwtypes.ListenerReasonPending)
 }
 
 // ListenerProgrammed reports whether listenerName's Programmed condition in
 // lss is True.
-func ListenerProgrammed(listenerName SectionName, lss []ListenerStatus) error {
-	listenerStatus, ok := lo.Find(lss, func(ls ListenerStatus) bool {
+func ListenerProgrammed(listenerName gwtypes.SectionName, lss []gwtypes.ListenerStatus) error {
+	listenerStatus, ok := lo.Find(lss, func(ls gwtypes.ListenerStatus) bool {
 		return ls.Name == listenerName
 	})
 	if !ok {
@@ -198,7 +200,7 @@ func ListenerProgrammed(listenerName SectionName, lss []ListenerStatus) error {
 	}
 
 	programmedStatus, ok := lo.Find(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-		return condition.Type == string(ListenerConditionProgrammed)
+		return condition.Type == string(gwtypes.ListenerConditionProgrammed)
 	})
 	if !ok {
 		return ErrListenerNoProgrammedCondition // "Programmed" condition not found in conditions of listener's conditions.

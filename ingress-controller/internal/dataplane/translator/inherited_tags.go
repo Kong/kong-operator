@@ -16,6 +16,7 @@ import (
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // Kinds of the Gateway API routes whose translated Kong entities inherit tags from their parent
@@ -38,7 +39,7 @@ func routeKey(kind, namespace, name string) string {
 
 // routeKeyForObjectInfo returns the key of the Gateway API route a Kong route was translated from.
 func routeKeyForObjectInfo(info util.K8sObjectInfo) (string, bool) {
-	if info.GroupVersionKind.Group != gatewayapi.GroupVersion.Group {
+	if info.GroupVersionKind.Group != gwtypes.GroupVersion.Group {
 		return "", false
 	}
 	switch kind := info.GroupVersionKind.Kind; kind {
@@ -54,15 +55,15 @@ func routeKeyForObjectInfo(info util.K8sObjectInfo) (string, bool) {
 func routeKeyForObject(obj client.Object) (string, bool) {
 	var kind string
 	switch obj.(type) {
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		kind = kindHTTPRoute
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		kind = kindGRPCRoute
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		kind = kindTCPRoute
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		kind = kindUDPRoute
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		kind = kindTLSRoute
 	default:
 		return "", false
@@ -92,7 +93,7 @@ func newInheritedTagResolver(logger logr.Logger, storer store.Storer) *inherited
 }
 
 // forGateway returns the tags of gw followed by the tags of its GatewayClass.
-func (r *inheritedTagResolver) forGateway(gw *gatewayapi.Gateway) util.InheritedTags {
+func (r *inheritedTagResolver) forGateway(gw *gwtypes.Gateway) util.InheritedTags {
 	nn := k8stypes.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}
 	if tags, ok := r.gateways[nn]; ok {
 		return tags
@@ -120,12 +121,12 @@ func (r *inheritedTagResolver) forGateway(gw *gatewayapi.Gateway) util.Inherited
 // routeNamespace point to: all the Gateways' tags, followed by all their GatewayClasses' tags.
 // The Gateways are ordered by namespace and name, so the result does not depend on the order of
 // the parentRefs in the route's spec.
-func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs []gatewayapi.ParentReference) util.InheritedTags {
+func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs []gwtypes.ParentReference) util.InheritedTags {
 	gatewayNNs := make([]k8stypes.NamespacedName, 0, len(parentRefs))
 	seen := map[k8stypes.NamespacedName]struct{}{}
 	for _, pr := range parentRefs {
 		// Only Gateways contribute tags.
-		if pr.Group != nil && *pr.Group != gatewayapi.V1Group {
+		if pr.Group != nil && *pr.Group != gwtypes.V1Group {
 			continue
 		}
 		if pr.Kind != nil && *pr.Kind != KindGateway {
@@ -162,7 +163,7 @@ func (r *inheritedTagResolver) forParentRefs(routeNamespace string, parentRefs [
 // translated Kong entities inherit from its parent Gateways and their GatewayClasses.
 func (t *Translator) buildInheritedTagIndex(resolver *inheritedTagResolver) inheritedTagIndex {
 	index := inheritedTagIndex{}
-	add := func(kind string, route client.Object, parentRefs []gatewayapi.ParentReference) {
+	add := func(kind string, route client.Object, parentRefs []gwtypes.ParentReference) {
 		if tags := resolver.forParentRefs(route.GetNamespace(), parentRefs); !tags.IsEmpty() {
 			index[routeKey(kind, route.GetNamespace(), route.GetName())] = tags
 		}

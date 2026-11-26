@@ -18,7 +18,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
@@ -53,12 +53,12 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Log("deploying a gateway to the test cluster using unmanaged gateway mode")
 	gatewayName := uuid.NewString()
-	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns.Name, gatewayClassName, func(gw *gwtypes.Gateway) {
 		gw.Name = gatewayName
-		gw.Spec.Listeners = []gatewayapi.Listener{{
+		gw.Spec.Listeners = []gwtypes.Listener{{
 			Name:     gatewayTCPPortName,
-			Protocol: gatewayapi.TCPProtocolType,
-			Port:     gatewayapi.PortNumber(ktfkong.DefaultTCPServicePort),
+			Protocol: gwtypes.TCPProtocolType,
+			Port:     gwtypes.PortNumber(ktfkong.DefaultTCPServicePort),
 		}}
 	})
 	require.NoError(t, err)
@@ -123,26 +123,26 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	cleaner.Add(service2)
 
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
-	remoteNamespace := gatewayapi.Namespace(otherNs.Name)
-	tcproute := &gatewayapi.TCPRoute{
+	remoteNamespace := gwtypes.Namespace(otherNs.Name)
+	tcproute := &gwtypes.TCPRoute{
 		Name: uuid.NewString(),
-		Spec: gatewayapi.TCPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name:        gatewayapi.ObjectName(gatewayName),
-					SectionName: new(gatewayapi.SectionName(gatewayTCPPortName)),
+		Spec: gwtypes.TCPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name:        gwtypes.ObjectName(gatewayName),
+					SectionName: new(gwtypes.SectionName(gatewayTCPPortName)),
 				}},
 			},
-			Rules: []gatewayapi.TCPRouteRule{{
-				BackendRefs: []gatewayapi.BackendRef{
+			Rules: []gwtypes.TCPRouteRule{{
+				BackendRefs: []gwtypes.BackendRef{
 					{
-						Name: gatewayapi.ObjectName(service1.Name),
-						Port: new(gatewayapi.PortNumber(service1Port)),
+						Name: gwtypes.ObjectName(service1.Name),
+						Port: new(gwtypes.PortNumber(service1Port)),
 					},
 					{
-						Name:      gatewayapi.ObjectName(service2.Name),
+						Name:      gwtypes.ObjectName(service2.Name),
 						Namespace: &remoteNamespace,
-						Port:      new(gatewayapi.PortNumber(service2Port)),
+						Port:      new(gwtypes.PortNumber(service2Port)),
 					},
 				},
 			}},
@@ -161,31 +161,31 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, time.Second*10, time.Second)
 
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
-	grant := &gatewayapi.ReferenceGrant{
+	grant := &gwtypes.ReferenceGrant{
 		Name: uuid.NewString(),
-		Spec: gatewayapi.ReferenceGrantSpec{
-			From: []gatewayapi.ReferenceGrantFrom{
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{
 				{
 					// this isn't actually used, it's just a dummy extra from to confirm we handle multiple fine
-					Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-					Kind:      gatewayapi.Kind("TCPRoute"),
-					Namespace: gatewayapi.Namespace("garbage"),
+					Group:     gwtypes.Group("gateway.networking.k8s.io"),
+					Kind:      gwtypes.Kind("TCPRoute"),
+					Namespace: gwtypes.Namespace("garbage"),
 				},
 				{
-					Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-					Kind:      gatewayapi.Kind("TCPRoute"),
-					Namespace: gatewayapi.Namespace(tcproute.Namespace),
+					Group:     gwtypes.Group("gateway.networking.k8s.io"),
+					Kind:      gwtypes.Kind("TCPRoute"),
+					Namespace: gwtypes.Namespace(tcproute.Namespace),
 				},
 			},
-			To: []gatewayapi.ReferenceGrantTo{
+			To: []gwtypes.ReferenceGrantTo{
 				// also a dummy
 				{
-					Group: gatewayapi.Group(""),
-					Kind:  gatewayapi.Kind("Pterodactyl"),
+					Group: gwtypes.Group(""),
+					Kind:  gwtypes.Kind("Pterodactyl"),
 				},
 				{
-					Group: gatewayapi.Group(""),
-					Kind:  gatewayapi.Kind("Service"),
+					Group: gwtypes.Group(""),
+					Kind:  gwtypes.Kind("Service"),
 				},
 			},
 		},
@@ -203,10 +203,10 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("testing specific name references")
-	serviceName := gatewayapi.ObjectName(service2.Name)
-	grant.Spec.To[1] = gatewayapi.ReferenceGrantTo{
-		Kind:  gatewayapi.Kind("Service"),
-		Group: gatewayapi.Group(""),
+	serviceName := gwtypes.ObjectName(service2.Name)
+	grant.Spec.To[1] = gwtypes.ReferenceGrantTo{
+		Kind:  gwtypes.Kind("Service"),
+		Group: gwtypes.Group(""),
 		Name:  &serviceName,
 	}
 
@@ -218,7 +218,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, ingressWait*2, waitTick)
 
 	t.Logf("testing incorrect name does not match")
-	blueguyName := gatewayapi.ObjectName("blueguy")
+	blueguyName := gwtypes.ObjectName("blueguy")
 	grant.Spec.To[1].Name = &blueguyName
 	_, err = gatewayClient.GatewayV1().ReferenceGrants(otherNs.Name).Update(ctx, grant, metav1.UpdateOptions{})
 	require.NoError(t, err)

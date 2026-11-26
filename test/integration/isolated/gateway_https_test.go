@@ -19,8 +19,8 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -87,19 +87,19 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 				require.NoError(t, err)
 
 				t.Log("deploying a new gateway, with only HTTPS listeners")
-				createHTTPSListener := func(t *testing.T, domainName string, certSecretName string) gatewayapi.Listener {
+				createHTTPSListener := func(t *testing.T, domainName string, certSecretName string) gwtypes.Listener {
 					t.Helper()
-					return gatewayapi.Listener{
-						Name:     gatewayapi.SectionName(fmt.Sprintf("https-%s", certSecretName)),
-						Protocol: gatewayapi.HTTPSProtocolType,
-						Port:     gatewayapi.PortNumber(443),
-						Hostname: new(gatewayapi.Hostname(domainName)),
-						TLS: &gatewayapi.GatewayTLSConfig{
-							Mode: new(gatewayapi.TLSModeTerminate),
-							CertificateRefs: []gatewayapi.SecretObjectReference{
+					return gwtypes.Listener{
+						Name:     gwtypes.SectionName(fmt.Sprintf("https-%s", certSecretName)),
+						Protocol: gwtypes.HTTPSProtocolType,
+						Port:     gwtypes.PortNumber(443),
+						Hostname: new(gwtypes.Hostname(domainName)),
+						TLS: &gwtypes.GatewayTLSConfig{
+							Mode: new(gwtypes.TLSModeTerminate),
+							CertificateRefs: []gwtypes.SecretObjectReference{
 								{
-									Name: gatewayapi.ObjectName(certSecretName),
-									Kind: new(gatewayapi.Kind("Secret")),
+									Name: gwtypes.ObjectName(certSecretName),
+									Kind: new(gwtypes.Kind("Secret")),
 								},
 							},
 						},
@@ -112,7 +112,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 						createHTTPSListener(t, wildCardOneInternalExample, nameWildcardOneInternalExample),
 					),
 				)
-				gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+				gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 
 				t.Log("deploying a minimal HTTP container")
 				deployment := generators.NewDeploymentForContainer(
@@ -131,25 +131,25 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 				require.NoError(t, err)
 
 				t.Logf("creating a HTTPRoute to access deployment %q via Kong", deployment.Name)
-				httpRoute := &gatewayapi.HTTPRoute{
+				httpRoute := &gwtypes.HTTPRoute{
 					Name: "echo-httproute",
-					Spec: gatewayapi.HTTPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{{
-								Name: gatewayapi.ObjectName(gateway.Name),
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{{
+								Name: gwtypes.ObjectName(gateway.Name),
 							}},
 						},
-						Hostnames: []gatewayapi.Hostname{
-							gatewayapi.Hostname(wildcardExample),
-							gatewayapi.Hostname(wildCardOneInternalExample),
+						Hostnames: []gwtypes.Hostname{
+							gwtypes.Hostname(wildcardExample),
+							gwtypes.Hostname(wildCardOneInternalExample),
 						},
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
-										Name: gatewayapi.ObjectName(service.Name),
-										Port: new(gatewayapi.PortNumber(test.EchoHTTPPort)),
-										Kind: new(gatewayapi.Kind("Service")),
+										Name: gwtypes.ObjectName(service.Name),
+										Port: new(gwtypes.PortNumber(test.EchoHTTPPort)),
+										Kind: new(gwtypes.Kind("Service")),
 									},
 								},
 							},

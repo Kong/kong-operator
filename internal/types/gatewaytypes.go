@@ -106,3 +106,114 @@ const (
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
 	TLSModePassthrough                    = gatewayv1.TLSModePassthrough
 )
+
+type (
+	AnnotationKey                             = gatewayv1.AnnotationKey
+	AnnotationValue                           = gatewayv1.AnnotationValue
+	BackendTLSPolicy                          = gatewayv1.BackendTLSPolicy
+	BackendTLSPolicyList                      = gatewayv1.BackendTLSPolicyList
+	BackendTLSPolicySpec                      = gatewayv1.BackendTLSPolicySpec
+	BackendTLSPolicyValidation                = gatewayv1.BackendTLSPolicyValidation
+	GRPCHeaderMatch                           = gatewayv1.GRPCHeaderMatch
+	GRPCHeaderMatchType                       = gatewayv1.GRPCHeaderMatchType
+	GRPCHeaderName                            = gatewayv1.GRPCHeaderName
+	GRPCMethodMatch                           = gatewayv1.GRPCMethodMatch
+	GRPCMethodMatchType                       = gatewayv1.GRPCMethodMatchType
+	GRPCRouteMatch                            = gatewayv1.GRPCRouteMatch
+	GRPCRouteStatus                           = gatewayv1.GRPCRouteStatus
+	GatewayClassList                          = gatewayv1.GatewayClassList
+	GatewayClassStatus                        = gatewayv1.GatewayClassStatus
+	GatewayStatus                             = gatewayv1.GatewayStatus
+	HTTPHeaderMatch                           = gatewayv1.HTTPHeaderMatch
+	HTTPHeaderName                            = gatewayv1.HTTPHeaderName
+	HTTPMethod                                = gatewayv1.HTTPMethod
+	HTTPPathMatch                             = gatewayv1.HTTPPathMatch
+	HTTPPathModifier                          = gatewayv1.HTTPPathModifier
+	HTTPPathModifierType                      = gatewayv1.HTTPPathModifierType
+	HTTPQueryParamMatch                       = gatewayv1.HTTPQueryParamMatch
+	HTTPRequestRedirectFilter                 = gatewayv1.HTTPRequestRedirectFilter
+	HTTPRouteTimeouts                         = gatewayv1.HTTPRouteTimeouts
+	HTTPURLRewriteFilter                      = gatewayv1.HTTPURLRewriteFilter
+	HeaderMatchType                           = gatewayv1.HeaderMatchType
+	ListenerConditionReason                   = gatewayv1.ListenerConditionReason
+	ListenerConditionType                     = gatewayv1.ListenerConditionType
+	ListenerStatus                            = gatewayv1.ListenerStatus
+	LocalPolicyTargetReference                = gatewayv1.LocalPolicyTargetReference
+	LocalPolicyTargetReferenceWithSectionName = gatewayv1.LocalPolicyTargetReferenceWithSectionName
+	PathMatchType                             = gatewayv1.PathMatchType
+	PolicyAncestorStatus                      = gatewayv1.PolicyAncestorStatus
+	PolicyStatus                              = gatewayv1.PolicyStatus
+	PreciseHostname                           = gatewayv1.PreciseHostname
+	ProtocolType                              = gatewayv1.ProtocolType
+	RouteConditionReason                      = gatewayv1.RouteConditionReason
+	RouteStatus                               = gatewayv1.RouteStatus
+	SecretObjectReference                     = gatewayv1.SecretObjectReference
+	SubjectAltName                            = gatewayv1.SubjectAltName
+	SubjectAltNameType                        = gatewayv1.SubjectAltNameType
+	WellKnownCACertificatesType               = gatewayv1.WellKnownCACertificatesType
+)
+
+const (
+	FullPathHTTPPathModifier              = gatewayv1.FullPathHTTPPathModifier
+	GRPCHeaderMatchExact                  = gatewayv1.GRPCHeaderMatchExact
+	GRPCMethodMatchExact                  = gatewayv1.GRPCMethodMatchExact
+	GRPCMethodMatchRegularExpression      = gatewayv1.GRPCMethodMatchRegularExpression
+	GatewayClassConditionStatusAccepted   = gatewayv1.GatewayClassConditionStatusAccepted
+	GatewayClassReasonAccepted            = gatewayv1.GatewayClassReasonAccepted
+	GatewayConditionAccepted              = gatewayv1.GatewayConditionAccepted
+	GatewayConditionProgrammed            = gatewayv1.GatewayConditionProgrammed
+	GatewayReasonAccepted                 = gatewayv1.GatewayReasonAccepted
+	GatewayReasonPending                  = gatewayv1.GatewayReasonPending
+	GatewayReasonProgrammed               = gatewayv1.GatewayReasonProgrammed
+	HTTPMethodDelete                      = gatewayv1.HTTPMethodDelete
+	HTTPMethodGet                         = gatewayv1.HTTPMethodGet
+	HTTPRouteFilterCORS                   = gatewayv1.HTTPRouteFilterCORS
+	HTTPRouteFilterRequestMirror          = gatewayv1.HTTPRouteFilterRequestMirror
+	HTTPRouteFilterRequestRedirect        = gatewayv1.HTTPRouteFilterRequestRedirect
+	HTTPRouteFilterResponseHeaderModifier = gatewayv1.HTTPRouteFilterResponseHeaderModifier
+	HTTPRouteFilterURLRewrite             = gatewayv1.HTTPRouteFilterURLRewrite
+	HeaderMatchExact                      = gatewayv1.HeaderMatchExact
+	HeaderMatchRegularExpression          = gatewayv1.HeaderMatchRegularExpression
+	HostnameAddressType                   = gatewayv1.HostnameAddressType
+	HostnameSubjectAltNameType            = gatewayv1.HostnameSubjectAltNameType
+	IPAddressType                         = gatewayv1.IPAddressType
+	ListenerConditionAccepted             = gatewayv1.ListenerConditionAccepted
+	ListenerConditionConflicted           = gatewayv1.ListenerConditionConflicted
+	ListenerConditionResolvedRefs         = gatewayv1.ListenerConditionResolvedRefs
+	ListenerReasonAccepted                = gatewayv1.ListenerReasonAccepted
+	ListenerReasonHostnameConflict        = gatewayv1.ListenerReasonHostnameConflict
+	ListenerReasonInvalid                 = gatewayv1.ListenerReasonInvalid
+	ListenerReasonInvalidCertificateRef   = gatewayv1.ListenerReasonInvalidCertificateRef
+	ListenerReasonInvalidRouteKinds       = gatewayv1.ListenerReasonInvalidRouteKinds
+	ListenerReasonNoConflicts             = gatewayv1.ListenerReasonNoConflicts
+	ListenerReasonPending                 = gatewayv1.ListenerReasonPending
+	ListenerReasonPortUnavailable         = gatewayv1.ListenerReasonPortUnavailable
+	ListenerReasonProgrammed              = gatewayv1.ListenerReasonProgrammed
+	ListenerReasonProtocolConflict        = gatewayv1.ListenerReasonProtocolConflict
+	ListenerReasonRefNotPermitted         = gatewayv1.ListenerReasonRefNotPermitted
+	ListenerReasonResolvedRefs            = gatewayv1.ListenerReasonResolvedRefs
+	ListenerReasonUnsupportedProtocol     = gatewayv1.ListenerReasonUnsupportedProtocol
+	PathMatchExact                        = gatewayv1.PathMatchExact
+	PathMatchPathPrefix                   = gatewayv1.PathMatchPathPrefix
+	PathMatchRegularExpression            = gatewayv1.PathMatchRegularExpression
+	PolicyConditionAccepted               = gatewayv1.PolicyConditionAccepted
+	PolicyReasonAccepted                  = gatewayv1.PolicyReasonAccepted
+	PolicyReasonConflicted                = gatewayv1.PolicyReasonConflicted
+	PolicyReasonInvalid                   = gatewayv1.PolicyReasonInvalid
+	PrefixMatchHTTPPathModifier           = gatewayv1.PrefixMatchHTTPPathModifier
+	QueryParamMatchExact                  = gatewayv1.QueryParamMatchExact
+	QueryParamMatchRegularExpression      = gatewayv1.QueryParamMatchRegularExpression
+	URISubjectAltNameType                 = gatewayv1.URISubjectAltNameType
+)
+
+const (
+	// V1Group is the Gateway API group as a typed Group.
+	V1Group = Group(GroupName)
+
+	// TLSVerifyDepthKey is the key used to store the tls verify depth.
+	// This is used in the BackendTLSPolicy options.
+	TLSVerifyDepthKey AnnotationKey = "tls-verify-depth"
+)
+
+// V1GroupVersion is the version of the Gateway API v1 group.
+var V1GroupVersion = gatewayv1.GroupVersion.Version

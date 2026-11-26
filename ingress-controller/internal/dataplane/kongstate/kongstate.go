@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/rels"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
@@ -1015,10 +1016,10 @@ func isRemotePluginReferenceAllowed(log logr.Logger, s store.Storer, r pluginRef
 	}
 	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
 		log,
-		gatewayapi.ReferenceGrantFrom{
-			Group:     gatewayapi.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
-			Kind:      gatewayapi.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
-			Namespace: gatewayapi.Namespace(r.Referrer.GetNamespace()),
+		gwtypes.ReferenceGrantFrom{
+			Group:     gwtypes.Group(r.Referrer.GetObjectKind().GroupVersionKind().Group),
+			Kind:      gwtypes.Kind(r.Referrer.GetObjectKind().GroupVersionKind().Kind),
+			Namespace: gwtypes.Namespace(r.Referrer.GetNamespace()),
 		},
 		grants,
 	)

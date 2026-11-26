@@ -11,8 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
@@ -50,8 +50,8 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 				helpers.ExitOnErr(ctx, err)
 				ok := util.CheckCondition(
 					gw.Status.Conditions,
-					util.ConditionType(gatewayapi.GatewayConditionProgrammed),
-					util.ConditionReason(gatewayapi.GatewayReasonProgrammed),
+					util.ConditionType(gwtypes.GatewayConditionProgrammed),
+					util.ConditionReason(gwtypes.GatewayReasonProgrammed),
 					metav1.ConditionTrue,
 					gw.Generation,
 				)
@@ -70,13 +70,13 @@ func gatewayHealthCheck(ctx context.Context, client *gatewayclient.Clientset, ga
 // checks if the provided HTTPRoute has an Accepted condition with:
 // - Status matching the provided 'accepted' boolean argument.
 // - Reason matching the provided 'reason' string argument.
-func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayapi.HTTPRoute, accepted bool, reason gatewayapi.RouteConditionReason) func() bool {
+func HTTPRouteMatchesAcceptedCallback(t *testing.T, c *gatewayclient.Clientset, httpRoute *gwtypes.HTTPRoute, accepted bool, reason gwtypes.RouteConditionReason) func() bool {
 	return func() bool {
 		return httpRouteAcceptedConditionMatches(t, c, httpRoute, accepted, reason)
 	}
 }
 
-func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gatewayapi.HTTPRoute, accepted bool, reason gatewayapi.RouteConditionReason) bool {
+func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset, httpRoute *gwtypes.HTTPRoute, accepted bool, reason gwtypes.RouteConditionReason) bool {
 	var err error
 	httpRoute, err = c.GatewayV1().HTTPRoutes(httpRoute.Namespace).Get(t.Context(), httpRoute.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -91,7 +91,7 @@ func httpRouteAcceptedConditionMatches(t *testing.T, c *gatewayclient.Clientset,
 	}
 
 	for _, cond := range httpRoute.Status.Parents[0].Conditions {
-		if cond.Type == string(gatewayapi.RouteConditionAccepted) &&
+		if cond.Type == string(gwtypes.RouteConditionAccepted) &&
 			cond.Status == expectedStatus &&
 			cond.Reason == string(reason) {
 			return true

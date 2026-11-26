@@ -83,3 +83,20 @@ func GetBackendRef[T SupportedBackendRef](bRef T) BackendRef {
 	}
 	panic("Unsupported BackendRef type")
 }
+
+// HostnameT defines a type constraint for a hostname, either a Gateway API Hostname or a plain string.
+type HostnameT interface {
+	Hostname | string
+}
+
+// RouteT defines a type constraint for a pointer to a supported route type.
+// It includes the client.Object interface to extract metadata.
+type RouteT interface {
+	client.Object
+
+	*HTTPRoute |
+		*UDPRoute |
+		*TCPRoute |
+		*TLSRoute |
+		*GRPCRoute
+}

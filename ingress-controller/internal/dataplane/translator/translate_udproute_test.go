@@ -17,10 +17,10 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1.GroupVersion.String()}
@@ -29,9 +29,9 @@ var udpRouteTypeMeta = metav1.TypeMeta{Kind: "UDPRoute", APIVersion: gatewayv1.G
 // used by the Gateway fixtures below, so listener-attachment arbitration's
 // GatewayClass-ownership check (see collectL4ListenersByGateway) passes for
 // them the same way a real Gateway's non-empty GatewayClassName would.
-var defaultOwnedGatewayClass = &gatewayapi.GatewayClass{
+var defaultOwnedGatewayClass = &gwtypes.GatewayClass{
 	Name: "",
-	Spec: gatewayapi.GatewayClassSpec{ControllerName: mgrconsts.GetControllerName()},
+	Spec: gwtypes.GatewayClassSpec{ControllerName: mgrconsts.GetControllerName()},
 }
 
 // udpProgrammedStatus builds Gateway.Status.Listeners entries that mark each
@@ -39,27 +39,27 @@ var defaultOwnedGatewayClass = &gatewayapi.GatewayClass{
 // GatewayReconciler would have written by the time the Gateway is pushed
 // into the translator's cache (see gateway_controller.go's UpdateObject
 // call), and what listener-attachment arbitration now requires.
-func udpProgrammedStatus(listenerNames ...string) gatewayapi.GatewayStatus {
+func udpProgrammedStatus(listenerNames ...string) gwtypes.GatewayStatus {
 	kinds := builder.NewRouteGroupKind().UDPRoute().IntoSlice()
-	statuses := make([]gatewayapi.ListenerStatus, 0, len(listenerNames))
+	statuses := make([]gwtypes.ListenerStatus, 0, len(listenerNames))
 	for _, name := range listenerNames {
-		statuses = append(statuses, gatewayapi.ListenerStatus{
-			Name:           gatewayapi.SectionName(name),
+		statuses = append(statuses, gwtypes.ListenerStatus{
+			Name:           gwtypes.SectionName(name),
 			SupportedKinds: kinds,
 			Conditions: []metav1.Condition{{
-				Type:   string(gatewayapi.ListenerConditionProgrammed),
+				Type:   string(gwtypes.ListenerConditionProgrammed),
 				Status: metav1.ConditionTrue,
 			}},
 		})
 	}
-	return gatewayapi.GatewayStatus{Listeners: statuses}
+	return gwtypes.GatewayStatus{Listeners: statuses}
 }
 
 func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		gateways             []*gatewayapi.Gateway
-		udpRoutes            []*gatewayapi.UDPRoute
+		gateways             []*gwtypes.Gateway
+		udpRoutes            []*gwtypes.UDPRoute
 		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
@@ -67,12 +67,12 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	}{
 		{
 			name: "single UDPRoute with single rule, single backendref and Gateway in the same namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 						},
@@ -84,22 +84,22 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "single-rule",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name: "gateway-1",
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -139,12 +139,12 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple UDPRoute with single rule, different SectionName and Gateway in the same namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
@@ -156,23 +156,23 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "rule-1",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("udp80")),
+									SectionName: new(gwtypes.SectionName("udp80")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -183,18 +183,18 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "rule-2",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("udp81")),
+									SectionName: new(gwtypes.SectionName("udp81")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service2").WithPort(81).Build(),
 								},
 							},
@@ -254,12 +254,12 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "single UDPRoute with single rule and multiple backendRefs and Gateway in a different namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "test-1",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
@@ -271,23 +271,23 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "multiple-backends",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:      "gateway-1",
-									Namespace: new(gatewayapi.Namespace("test-1")),
+									Namespace: new(gwtypes.Namespace("test-1")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service1").WithPort(81).Build(),
 								},
@@ -333,32 +333,32 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "two UDPRoutes on the same listener — only the older one wins",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Namespace: "default", Name: "udp-gw",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{{
 							Name:     "udp",
-							Protocol: gatewayapi.UDPProtocolType,
+							Protocol: gwtypes.UDPProtocolType,
 							Port:     9999,
 						}},
 					},
 					Status: udpProgrammedStatus("udp"),
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:          udpRouteTypeMeta,
 					Namespace:         "default",
 					Name:              "older",
 					CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gatewayv1.ParentReference{{
 								Name: gatewayv1.ObjectName("udp-gw"),
 							}},
 						},
-						Rules: []gatewayapi.UDPRouteRule{{
+						Rules: []gwtypes.UDPRouteRule{{
 							BackendRefs: []gatewayv1.BackendRef{{
 								Name: "svc-older",
 								Kind: new(gatewayv1.Kind("Service")),
@@ -372,13 +372,13 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					Namespace:         "default",
 					Name:              "newer",
 					CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gatewayv1.ParentReference{{
 								Name: gatewayv1.ObjectName("udp-gw"),
 							}},
 						},
-						Rules: []gatewayapi.UDPRouteRule{{
+						Rules: []gwtypes.UDPRouteRule{{
 							BackendRefs: []gatewayv1.BackendRef{{
 								Name: "svc-newer",
 								Kind: new(gatewayv1.Kind("Service")),
@@ -416,12 +416,12 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple UDPRoutes with translation errors",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("udp8080").WithPort(8080).UDP().Build(),
 						},
@@ -433,22 +433,22 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta: udpRouteTypeMeta,
 					Name:     "single-rule", Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("udp80")),
+									SectionName: new(gwtypes.SectionName("udp80")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -458,18 +458,18 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				{
 					TypeMeta: udpRouteTypeMeta,
 					Name:     "single-rule-2", Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("udp8080")),
+									SectionName: new(gwtypes.SectionName("udp8080")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service2").WithPort(8080).Build(),
 								},
 							},
@@ -479,7 +479,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 				{
 					TypeMeta: udpRouteTypeMeta,
 					Name:     "no-rule", Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{},
+					Spec: gwtypes.UDPRouteSpec{},
 				},
 			},
 			services: []*corev1.Service{
@@ -534,7 +534,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
 					t, subtranslator.ErrRouteValidationNoRules.Error(),
-					&gatewayapi.UDPRoute{
+					&gwtypes.UDPRoute{
 						TypeMeta:  udpRouteTypeMeta,
 						Namespace: "default", Name: "no-rule",
 					},
@@ -546,7 +546,7 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				GatewayClasses: []*gwtypes.GatewayClass{defaultOwnedGatewayClass},
 				Gateways:       tc.gateways,
 				UDPRoutes:      tc.udpRoutes,
 				Services:       tc.services,
@@ -600,8 +600,8 @@ func TestIngressRulesFromUDPRoutes(t *testing.T) {
 func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		gateways             []*gatewayapi.Gateway
-		udpRoutes            []*gatewayapi.UDPRoute
+		gateways             []*gwtypes.Gateway
+		udpRoutes            []*gwtypes.UDPRoute
 		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
@@ -609,12 +609,12 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	}{
 		{
 			name: "UDPRoute with single rule, single backendref and Gateway in the same namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 						},
 					},
@@ -625,22 +625,22 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "single-rule",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name: "gateway-1",
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -678,12 +678,12 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "UDPRoute with single rule, multiple backendrefs and Gateway in a different namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "test-1",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
@@ -695,24 +695,24 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "rule-1",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									Namespace:   new(gatewayapi.Namespace("test-1")),
-									SectionName: new(gatewayapi.SectionName("udp80")),
+									Namespace:   new(gwtypes.Namespace("test-1")),
+									SectionName: new(gwtypes.SectionName("udp80")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(8080).Build(),
 								},
 							},
@@ -723,19 +723,19 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "rule-2",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									Namespace:   new(gatewayapi.Namespace("test-1")),
-									SectionName: new(gatewayapi.SectionName("udp81")),
+									Namespace:   new(gwtypes.Namespace("test-1")),
+									SectionName: new(gwtypes.SectionName("udp81")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service2").WithPort(8181).Build(),
 								},
 							},
@@ -788,12 +788,12 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "single UDPRoute with single rule and multiple backendRefs",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("udp81").WithPort(81).UDP().Build(),
 						},
@@ -805,22 +805,22 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta:  udpRouteTypeMeta,
 					Name:      "multiple-backends",
 					Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name: "gateway-1",
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service1").WithPort(81).Build(),
 								},
@@ -867,12 +867,12 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple UDPRoutes with translation errors",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 							builder.NewListener("udp8080").WithPort(8080).UDP().Build(),
 						},
@@ -884,22 +884,22 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			udpRoutes: []*gatewayapi.UDPRoute{
+			udpRoutes: []*gwtypes.UDPRoute{
 				{
 					TypeMeta: udpRouteTypeMeta,
 					Name:     "single-rule", Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("udp80")),
+									SectionName: new(gwtypes.SectionName("udp80")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -909,18 +909,18 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				{
 					TypeMeta: udpRouteTypeMeta,
 					Name:     "single-rule-2", Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.UDPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("udp8080")),
+									SectionName: new(gwtypes.SectionName("udp8080")),
 								},
 							},
 						},
-						Rules: []gatewayapi.UDPRouteRule{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service2").WithPort(8080).Build(),
 								},
 							},
@@ -930,7 +930,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 				{
 					TypeMeta: udpRouteTypeMeta,
 					Name:     "no-rule", Namespace: "default",
-					Spec: gatewayapi.UDPRouteSpec{},
+					Spec: gwtypes.UDPRouteSpec{},
 				},
 			},
 			services: []*corev1.Service{
@@ -981,7 +981,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
 					t, subtranslator.ErrRouteValidationNoRules.Error(),
-					&gatewayapi.UDPRoute{
+					&gwtypes.UDPRoute{
 						TypeMeta:  udpRouteTypeMeta,
 						Namespace: "default", Name: "no-rule",
 					},
@@ -993,7 +993,7 @@ func TestIngressRulesFromUDPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakestore, err := store.NewFakeStore(store.FakeObjects{
-				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				GatewayClasses: []*gwtypes.GatewayClass{defaultOwnedGatewayClass},
 				Gateways:       tc.gateways,
 				UDPRoutes:      tc.udpRoutes,
 				Services:       tc.services,

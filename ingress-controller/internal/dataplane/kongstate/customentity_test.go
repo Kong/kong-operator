@@ -20,9 +20,9 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 var customEntityTypeMeta = metav1.TypeMeta{
@@ -261,7 +261,7 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		plugins                  []*configurationv1.KongPlugin
-		referenceGrants          []*gatewayapi.ReferenceGrant
+		referenceGrants          []*gwtypes.ReferenceGrant
 		customEntity             *configurationv1alpha1.KongCustomEntity
 		schema                   EntitySchema
 		pluginRelEntities        PluginRelatedEntitiesRefs
@@ -386,22 +386,22 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 					Name:      "fake-plugin",
 				},
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "another-namespace",
 					Name:      "grant-kce-to-plugin",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Namespace: gatewayapi.Namespace("default"),
-								Group:     gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
+								Namespace: gwtypes.Namespace("default"),
+								Group:     gwtypes.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:      "KongCustomEntity",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
-								Kind:  gatewayapi.Kind("KongPlugin"),
+								Group: gwtypes.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:  gwtypes.Kind("KongPlugin"),
 							},
 						},
 					},
@@ -472,22 +472,22 @@ func TestFindCustomEntityForeignFields(t *testing.T) {
 					"service": {Name: "service", Type: EntityFieldTypeForeign, Reference: "services"},
 				},
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "default", // same namespace as KCE but not same as KongPlugin
 					Name:      "grant-kce-to-plugin-misconfigured",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Namespace: gatewayapi.Namespace("default"),
-								Group:     gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
+								Namespace: gwtypes.Namespace("default"),
+								Group:     gwtypes.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:      "KongCustomEntity",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
-								Kind:  gatewayapi.Kind("KongPlugin"),
+								Group: gwtypes.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:  gwtypes.Kind("KongPlugin"),
 							},
 						},
 					},
@@ -1076,7 +1076,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 	testCases := []struct {
 		name            string
-		referenceGrants []*gatewayapi.ReferenceGrant
+		referenceGrants []*gwtypes.ReferenceGrant
 		plugins         []*configurationv1.KongPlugin
 		customEntity    *configurationv1alpha1.KongCustomEntity
 		expectedRef     string
@@ -1167,22 +1167,22 @@ func TestFindCustomEntityRelatedPlugin(t *testing.T) {
 		},
 		{
 			name: "referenced plugin exists but in different namespace with cross-namespace reference grant",
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "different-ns",
 					Name:      "grant-kce-to-plugin",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Namespace: gatewayapi.Namespace("default"),
-								Group:     gatewayapi.Group(configurationv1alpha1.GroupVersion.Group),
+								Namespace: gwtypes.Namespace("default"),
+								Group:     gwtypes.Group(configurationv1alpha1.GroupVersion.Group),
 								Kind:      "KongCustomEntity",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
-								Group: gatewayapi.Group(configurationv1.GroupVersion.Group),
-								Kind:  gatewayapi.Kind("KongPlugin"),
+								Group: gwtypes.Group(configurationv1.GroupVersion.Group),
+								Kind:  gwtypes.Kind("KongPlugin"),
 							},
 						},
 					},

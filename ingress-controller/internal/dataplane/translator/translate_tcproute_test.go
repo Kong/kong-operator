@@ -19,9 +19,9 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // tcpProgrammedStatus builds Gateway.Status.Listeners entries that mark each
@@ -29,20 +29,20 @@ import (
 // GatewayReconciler would have written by the time the Gateway is pushed
 // into the translator's cache, and what listener-attachment arbitration now
 // requires.
-func tcpProgrammedStatus(listenerNames ...string) gatewayapi.GatewayStatus {
+func tcpProgrammedStatus(listenerNames ...string) gwtypes.GatewayStatus {
 	kinds := builder.NewRouteGroupKind().TCPRoute().IntoSlice()
-	statuses := make([]gatewayapi.ListenerStatus, 0, len(listenerNames))
+	statuses := make([]gwtypes.ListenerStatus, 0, len(listenerNames))
 	for _, name := range listenerNames {
-		statuses = append(statuses, gatewayapi.ListenerStatus{
-			Name:           gatewayapi.SectionName(name),
+		statuses = append(statuses, gwtypes.ListenerStatus{
+			Name:           gwtypes.SectionName(name),
 			SupportedKinds: kinds,
 			Conditions: []metav1.Condition{{
-				Type:   string(gatewayapi.ListenerConditionProgrammed),
+				Type:   string(gwtypes.ListenerConditionProgrammed),
 				Status: metav1.ConditionTrue,
 			}},
 		})
 	}
-	return gatewayapi.GatewayStatus{Listeners: statuses}
+	return gwtypes.GatewayStatus{Listeners: statuses}
 }
 
 func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
@@ -50,8 +50,8 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		gateways             []*gatewayapi.Gateway
-		tcpRoutes            []*gatewayapi.TCPRoute
+		gateways             []*gwtypes.Gateway
+		tcpRoutes            []*gwtypes.TCPRoute
 		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
@@ -59,12 +59,12 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 	}{
 		{
 			name: "TCPRoute with single rule, single backendref and Gateway in the same namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 						},
@@ -76,22 +76,22 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					Namespace: "test-1",
 				},
 			},
-			tcpRoutes: []*gatewayapi.TCPRoute{
+			tcpRoutes: []*gwtypes.TCPRoute{
 				{
 					TypeMeta:  tcpRouteTypeMeta,
 					Name:      "tcproute-1",
 					Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name: "gateway-1",
 								},
 							},
 						},
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(8080).Build(),
 								},
 							},
@@ -127,12 +127,12 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "TCPRoute with single rule, multiple backendrefs and Gateway in the different namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "test-1",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 							builder.NewListener("tcp443").WithPort(443).TCP().Build(),
 						},
@@ -144,23 +144,23 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			tcpRoutes: []*gatewayapi.TCPRoute{
+			tcpRoutes: []*gwtypes.TCPRoute{
 				{
 					TypeMeta:  tcpRouteTypeMeta,
 					Name:      "tcproute-1",
 					Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:      "gateway-1",
-									Namespace: new(gatewayapi.Namespace("test-1")),
+									Namespace: new(gwtypes.Namespace("test-1")),
 								},
 							},
 						},
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service2").WithPort(443).Build(),
 								},
@@ -204,59 +204,59 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "TCPRoute with multiple rules and multiple Gateways with multiple listeners and sectionName for Gateway specified",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "tcp80",
 								Port:     80,
-								Protocol: gatewayapi.TCPProtocolType,
+								Protocol: gwtypes.TCPProtocolType,
 							},
 							{
 								Name:     "tcp443",
 								Port:     443,
-								Protocol: gatewayapi.TCPProtocolType,
+								Protocol: gwtypes.TCPProtocolType,
 							},
 							{
 								Name:     "tcp8080",
 								Port:     8080,
-								Protocol: gatewayapi.TCPProtocolType,
+								Protocol: gwtypes.TCPProtocolType,
 							},
 							{
 								Name:     "tcp8443",
 								Port:     8443,
-								Protocol: gatewayapi.TCPProtocolType,
+								Protocol: gwtypes.TCPProtocolType,
 							},
 						},
 					},
 					Status: tcpProgrammedStatus("tcp80", "tcp443", "tcp8080", "tcp8443"),
 				},
 			},
-			tcpRoutes: []*gatewayapi.TCPRoute{
+			tcpRoutes: []*gwtypes.TCPRoute{
 				{
 					TypeMeta:  tcpRouteTypeMeta,
 					Name:      "tcproute-1",
 					Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("tcp80")),
+									SectionName: new(gwtypes.SectionName("tcp80")),
 								},
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("tcp443")),
+									SectionName: new(gwtypes.SectionName("tcp443")),
 								},
 							},
 						},
 
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 									builder.NewBackendRef("service2").WithPort(443).Build(),
 								},
@@ -268,23 +268,23 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					TypeMeta:  tcpRouteTypeMeta,
 					Name:      "tcproute-2",
 					Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("tcp8080")),
+									SectionName: new(gwtypes.SectionName("tcp8080")),
 								},
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("tcp8443")),
+									SectionName: new(gwtypes.SectionName("tcp8443")),
 								},
 							},
 						},
 
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service3").WithPort(8080).Build(),
 									builder.NewBackendRef("service4").WithPort(8443).Build(),
 								},
@@ -355,7 +355,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore, err := store.NewFakeStore(store.FakeObjects{
-				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				GatewayClasses: []*gwtypes.GatewayClass{defaultOwnedGatewayClass},
 				Gateways:       tc.gateways,
 				TCPRoutes:      tc.tcpRoutes,
 				Services:       tc.services,
@@ -408,8 +408,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		gateways             []*gatewayapi.Gateway
-		tcpRoutes            []*gatewayapi.TCPRoute
+		gateways             []*gwtypes.Gateway
+		tcpRoutes            []*gwtypes.TCPRoute
 		services             []*corev1.Service
 		expectedKongServices []kongstate.Service
 		expectedKongRoutes   map[string][]kongstate.Route
@@ -417,12 +417,12 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 	}{
 		{
 			name: "single TCPRoute with single rule, single backendref and Gateway in the same namespace",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 							builder.NewListener("udp80").WithPort(80).UDP().Build(),
 						},
@@ -430,22 +430,22 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 					Status: tcpProgrammedStatus("tcp80"),
 				},
 			},
-			tcpRoutes: []*gatewayapi.TCPRoute{
+			tcpRoutes: []*gwtypes.TCPRoute{
 				{
 					TypeMeta:  tcpRouteTypeMeta,
 					Name:      "single-rule",
 					Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name: "gateway-1",
 								},
 							},
 						},
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(8080).Build(),
 								},
 							},
@@ -485,32 +485,32 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 		},
 		{
 			name: "two TCPRoutes on the same listener — only the older one wins",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Namespace: "default", Name: "tcp-gw",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{{
 							Name:     "tcp",
-							Protocol: gatewayapi.TCPProtocolType,
+							Protocol: gwtypes.TCPProtocolType,
 							Port:     9999,
 						}},
 					},
 					Status: tcpProgrammedStatus("tcp"),
 				},
 			},
-			tcpRoutes: []*gatewayapi.TCPRoute{
+			tcpRoutes: []*gwtypes.TCPRoute{
 				{
 					TypeMeta:          tcpRouteTypeMeta,
 					Namespace:         "default",
 					Name:              "older",
 					CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gatewayv1.ParentReference{{
 								Name: gatewayv1.ObjectName("tcp-gw"),
 							}},
 						},
-						Rules: []gatewayapi.TCPRouteRule{{
+						Rules: []gwtypes.TCPRouteRule{{
 							BackendRefs: []gatewayv1.BackendRef{{
 								Name: "svc-older",
 								Kind: new(gatewayv1.Kind("Service")),
@@ -524,13 +524,13 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 					Namespace:         "default",
 					Name:              "newer",
 					CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gatewayv1.ParentReference{{
 								Name: gatewayv1.ObjectName("tcp-gw"),
 							}},
 						},
-						Rules: []gatewayapi.TCPRouteRule{{
+						Rules: []gwtypes.TCPRouteRule{{
 							BackendRefs: []gatewayv1.BackendRef{{
 								Name: "svc-newer",
 								Kind: new(gatewayv1.Kind("Service")),
@@ -568,12 +568,12 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple TCPRoutes with translation errors",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "gateway-1",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
 							builder.NewListener("tcp8080").WithPort(8080).TCP().Build(),
 						},
@@ -581,22 +581,22 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 					Status: tcpProgrammedStatus("tcp80", "tcp8080"),
 				},
 			},
-			tcpRoutes: []*gatewayapi.TCPRoute{
+			tcpRoutes: []*gwtypes.TCPRoute{
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					Name:     "single-rule", Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("tcp80")),
+									SectionName: new(gwtypes.SectionName("tcp80")),
 								},
 							},
 						},
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service1").WithPort(80).Build(),
 								},
 							},
@@ -606,18 +606,18 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					Name:     "single-rule-2", Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{
-						CommonRouteSpec: gatewayapi.CommonRouteSpec{
-							ParentRefs: []gatewayapi.ParentReference{
+					Spec: gwtypes.TCPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
 								{
 									Name:        "gateway-1",
-									SectionName: new(gatewayapi.SectionName("tcp8080")),
+									SectionName: new(gwtypes.SectionName("tcp8080")),
 								},
 							},
 						},
-						Rules: []gatewayapi.TCPRouteRule{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									builder.NewBackendRef("service2").WithPort(8080).Build(),
 								},
 							},
@@ -627,7 +627,7 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 				{
 					TypeMeta: tcpRouteTypeMeta,
 					Name:     "no-rule", Namespace: "default",
-					Spec: gatewayapi.TCPRouteSpec{},
+					Spec: gwtypes.TCPRouteSpec{},
 				},
 			},
 			services: []*corev1.Service{
@@ -682,7 +682,7 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			expectedFailures: []failures.ResourceFailure{
 				newResourceFailure(
 					t, subtranslator.ErrRouteValidationNoRules.Error(),
-					&gatewayapi.TCPRoute{
+					&gwtypes.TCPRoute{
 						TypeMeta:  tcpRouteTypeMeta,
 						Namespace: "default", Name: "no-rule",
 					},
@@ -694,7 +694,7 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeStore, err := store.NewFakeStore(store.FakeObjects{
-				GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
+				GatewayClasses: []*gwtypes.GatewayClass{defaultOwnedGatewayClass},
 				Gateways:       tc.gateways,
 				TCPRoutes:      tc.tcpRoutes,
 				Services:       tc.services,
@@ -753,43 +753,43 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 func TestIngressRulesFromTCPRoutes_ArbitrationReporting(t *testing.T) {
 	tcpRouteTypeMeta := metav1.TypeMeta{Kind: "TCPRoute", APIVersion: gatewayv1.GroupVersion.String()}
 
-	gw := &gatewayapi.Gateway{
+	gw := &gwtypes.Gateway{
 		Namespace: "default", Name: "tcp-gw",
-		Spec: gatewayapi.GatewaySpec{
-			Listeners: []gatewayapi.Listener{{
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
 				Name:     "tcp",
-				Protocol: gatewayapi.TCPProtocolType,
+				Protocol: gwtypes.TCPProtocolType,
 				Port:     9999,
 			}},
 		},
 		Status: tcpProgrammedStatus("tcp"),
 	}
-	older := &gatewayapi.TCPRoute{
+	older := &gwtypes.TCPRoute{
 		TypeMeta:          tcpRouteTypeMeta,
 		Namespace:         "default",
 		Name:              "older",
 		CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		Spec: gatewayapi.TCPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+		Spec: gwtypes.TCPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: gatewayv1.ObjectName("tcp-gw")}},
 			},
-			Rules: []gatewayapi.TCPRouteRule{{
+			Rules: []gwtypes.TCPRouteRule{{
 				BackendRefs: []gatewayv1.BackendRef{{
 					Name: "svc-older", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(8080)),
 				}},
 			}},
 		},
 	}
-	newer := &gatewayapi.TCPRoute{
+	newer := &gwtypes.TCPRoute{
 		TypeMeta:          tcpRouteTypeMeta,
 		Namespace:         "default",
 		Name:              "newer",
 		CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
-		Spec: gatewayapi.TCPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
+		Spec: gwtypes.TCPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: gatewayv1.ObjectName("tcp-gw")}},
 			},
-			Rules: []gatewayapi.TCPRouteRule{{
+			Rules: []gwtypes.TCPRouteRule{{
 				BackendRefs: []gatewayv1.BackendRef{{
 					Name: "svc-newer", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(9090)),
 				}},
@@ -798,9 +798,9 @@ func TestIngressRulesFromTCPRoutes_ArbitrationReporting(t *testing.T) {
 	}
 
 	fakestore, err := store.NewFakeStore(store.FakeObjects{
-		GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
-		Gateways:       []*gatewayapi.Gateway{gw},
-		TCPRoutes:      []*gatewayapi.TCPRoute{older, newer},
+		GatewayClasses: []*gwtypes.GatewayClass{defaultOwnedGatewayClass},
+		Gateways:       []*gwtypes.Gateway{gw},
+		TCPRoutes:      []*gwtypes.TCPRoute{older, newer},
 		Services: []*corev1.Service{
 			{Namespace: "default", Name: "svc-older"},
 			{Namespace: "default", Name: "svc-newer"},

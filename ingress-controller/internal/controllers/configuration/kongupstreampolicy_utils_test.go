@@ -20,9 +20,9 @@ import (
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
@@ -39,7 +39,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 		kongUpstreamPolicy               configurationv1beta1.KongUpstreamPolicy
 		inputObjects                     []client.Object
 		objectsConfiguredInDataPlane     bool
-		expectedKongUpstreamPolicyStatus gatewayapi.PolicyStatus
+		expectedKongUpstreamPolicyStatus gwtypes.PolicyStatus
 		updated                          bool
 	}{
 		{
@@ -79,13 +79,13 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Time: now.Add(5 * time.Second),
 					},
 				},
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "httpRoute",
 					Namespace: testNamespace,
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
 										Name: "svc-1",
 									},
@@ -102,69 +102,69 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				},
 			},
 			objectsConfiguredInDataPlane: true,
-			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expectedKongUpstreamPolicyStatus: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					// Order of ancestors should be svc-1 - svc-3 - svc-2 for the order of creationTimestamp.
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-3"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-3"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-2"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-2"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -179,47 +179,47 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					Name:      policyName,
 					Namespace: testNamespace,
 				},
-				Status: gatewayapi.PolicyStatus{
-					Ancestors: []gatewayapi.PolicyAncestorStatus{
+				Status: gwtypes.PolicyStatus{
+					Ancestors: []gwtypes.PolicyAncestorStatus{
 						{
-							AncestorRef: gatewayapi.ParentReference{
-								Group:     new(gatewayapi.Group("core")),
-								Kind:      new(gatewayapi.Kind("Service")),
-								Namespace: new(gatewayapi.Namespace(testNamespace)),
-								Name:      gatewayapi.ObjectName("svc-1"),
+							AncestorRef: gwtypes.ParentReference{
+								Group:     new(gwtypes.Group("core")),
+								Kind:      new(gwtypes.Kind("Service")),
+								Namespace: new(gwtypes.Namespace(testNamespace)),
+								Name:      gwtypes.ObjectName("svc-1"),
 							},
 							ControllerName: gatewaycontroller.GetControllerName(),
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.PolicyConditionAccepted),
+									Type:   string(gwtypes.PolicyConditionAccepted),
 									Status: metav1.ConditionTrue,
-									Reason: string(gatewayapi.PolicyReasonAccepted),
+									Reason: string(gwtypes.PolicyReasonAccepted),
 								},
 								{
-									Type:   string(gatewayapi.GatewayConditionProgrammed),
+									Type:   string(gwtypes.GatewayConditionProgrammed),
 									Status: metav1.ConditionTrue,
-									Reason: string(gatewayapi.GatewayReasonProgrammed),
+									Reason: string(gwtypes.GatewayReasonProgrammed),
 								},
 							},
 						},
 						{
-							AncestorRef: gatewayapi.ParentReference{
-								Group:     new(gatewayapi.Group("core")),
-								Kind:      new(gatewayapi.Kind("Service")),
-								Namespace: new(gatewayapi.Namespace(testNamespace)),
-								Name:      gatewayapi.ObjectName("svc-2"),
+							AncestorRef: gwtypes.ParentReference{
+								Group:     new(gwtypes.Group("core")),
+								Kind:      new(gwtypes.Kind("Service")),
+								Namespace: new(gwtypes.Namespace(testNamespace)),
+								Name:      gwtypes.ObjectName("svc-2"),
 							},
 							ControllerName: gatewaycontroller.GetControllerName(),
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.PolicyConditionAccepted),
+									Type:   string(gwtypes.PolicyConditionAccepted),
 									Status: metav1.ConditionTrue,
-									Reason: string(gatewayapi.PolicyReasonAccepted),
+									Reason: string(gwtypes.PolicyReasonAccepted),
 								},
 								{
-									Type:   string(gatewayapi.GatewayConditionProgrammed),
+									Type:   string(gwtypes.GatewayConditionProgrammed),
 									Status: metav1.ConditionTrue,
-									Reason: string(gatewayapi.GatewayReasonProgrammed),
+									Reason: string(gwtypes.GatewayReasonProgrammed),
 								},
 							},
 						},
@@ -243,13 +243,13 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 					},
 					CreationTimestamp: now,
 				},
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "httpRoute",
 					Namespace: testNamespace,
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
 										Name: "svc-1",
 									},
@@ -263,47 +263,47 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				},
 			},
 			objectsConfiguredInDataPlane: true,
-			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expectedKongUpstreamPolicyStatus: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-2"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-2"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -338,13 +338,13 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Time: now.Add(10 * time.Second),
 					},
 				},
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "httpRoute",
 					Namespace: testNamespace,
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
 										Name: "svc-1",
 									},
@@ -358,26 +358,26 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				},
 			},
 			objectsConfiguredInDataPlane: true,
-			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expectedKongUpstreamPolicyStatus: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionFalse,
-								Reason: string(gatewayapi.PolicyReasonConflicted),
+								Reason: string(gwtypes.PolicyReasonConflicted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionFalse,
-								Reason: string(gatewayapi.GatewayReasonPending),
+								Reason: string(gwtypes.GatewayReasonPending),
 							},
 						},
 					},
@@ -412,20 +412,20 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Time: now.Add(10 * time.Second),
 					},
 				},
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "httpRoute",
 					Namespace: testNamespace,
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
 										Name: "svc-1",
 									},
 								},
 							},
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
 										Name: "svc-2",
 									},
@@ -436,26 +436,26 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				},
 			},
 			objectsConfiguredInDataPlane: true,
-			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expectedKongUpstreamPolicyStatus: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -490,13 +490,13 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Time: now.Add(10 * time.Second),
 					},
 				},
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "httpRoute",
 					Namespace: testNamespace,
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("svc-1").Build(),
 								},
 							},
@@ -505,47 +505,47 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				},
 			},
 			objectsConfiguredInDataPlane: true,
-			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expectedKongUpstreamPolicyStatus: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-							Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-facade-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group(incubatorv1alpha1.GroupVersion.Group)),
+							Kind:      new(gwtypes.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-facade-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.GatewayReasonProgrammed),
+								Reason: string(gwtypes.GatewayReasonProgrammed),
 							},
 						},
 					},
@@ -580,13 +580,13 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 						Time: now.Add(10 * time.Second),
 					},
 				},
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "httpRoute",
 					Namespace: testNamespace,
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("svc-1").Build(),
 								},
 							},
@@ -595,47 +595,47 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				},
 			},
 			objectsConfiguredInDataPlane: false,
-			expectedKongUpstreamPolicyStatus: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expectedKongUpstreamPolicyStatus: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group("core")),
-							Kind:      new(gatewayapi.Kind("Service")),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group("core")),
+							Kind:      new(gwtypes.Kind("Service")),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionFalse,
-								Reason: string(gatewayapi.GatewayReasonPending),
+								Reason: string(gwtypes.GatewayReasonPending),
 							},
 						},
 					},
 					{
-						AncestorRef: gatewayapi.ParentReference{
-							Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-							Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-							Namespace: new(gatewayapi.Namespace(testNamespace)),
-							Name:      gatewayapi.ObjectName("svc-facade-1"),
+						AncestorRef: gwtypes.ParentReference{
+							Group:     new(gwtypes.Group(incubatorv1alpha1.GroupVersion.Group)),
+							Kind:      new(gwtypes.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+							Namespace: new(gwtypes.Namespace(testNamespace)),
+							Name:      gwtypes.ObjectName("svc-facade-1"),
 						},
 						ControllerName: gatewaycontroller.GetControllerName(),
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.PolicyConditionAccepted),
+								Type:   string(gwtypes.PolicyConditionAccepted),
 								Status: metav1.ConditionTrue,
-								Reason: string(gatewayapi.PolicyReasonAccepted),
+								Reason: string(gwtypes.PolicyReasonAccepted),
 							},
 							{
-								Type:   string(gatewayapi.GatewayConditionProgrammed),
+								Type:   string(gwtypes.GatewayConditionProgrammed),
 								Status: metav1.ConditionFalse,
-								Reason: string(gatewayapi.GatewayReasonPending),
+								Reason: string(gwtypes.GatewayReasonPending),
 							},
 						},
 					},
@@ -654,7 +654,7 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 				WithObjects(tc.inputObjects...).
 				WithStatusSubresource(tc.inputObjects...).
 				WithIndex(&corev1.Service{}, upstreamPolicyIndexKey, indexServicesOnUpstreamPolicyAnnotation).
-				WithIndex(&gatewayapi.HTTPRoute{}, routeBackendRefServiceNameIndexKey, indexRoutesOnBackendRefServiceName).
+				WithIndex(&gwtypes.HTTPRoute{}, routeBackendRefServiceNameIndexKey, indexRoutesOnBackendRefServiceName).
 				WithIndex(&incubatorv1alpha1.KongServiceFacade{}, upstreamPolicyIndexKey, indexServiceFacadesOnUpstreamPolicyAnnotation).
 				Build()
 
@@ -692,7 +692,7 @@ func (d DataPlaneStatusClientMock) KubernetesObjectIsConfigured(client.Object) b
 func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T) {
 	testCases := []struct {
 		name                   string
-		httpRoute              gatewayapi.HTTPRoute
+		httpRoute              gwtypes.HTTPRoute
 		upstreamPolicyServices servicesSet
 		serviceRef             serviceKey
 		expected               bool
@@ -703,15 +703,15 @@ func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T
 			upstreamPolicyServices: servicesSet{
 				"default/svc-not-referenced": {},
 			},
-			httpRoute: gatewayapi.HTTPRoute{
+			httpRoute: gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httpRoute",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("svc-1").Build(),
 							},
 						},
@@ -726,15 +726,15 @@ func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T
 			upstreamPolicyServices: servicesSet{
 				"default/svc-1": {},
 			},
-			httpRoute: gatewayapi.HTTPRoute{
+			httpRoute: gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httpRoute",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("svc-1").Build(),
 							},
 						},
@@ -749,20 +749,20 @@ func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T
 			upstreamPolicyServices: servicesSet{
 				"default/svc-1": {},
 			},
-			httpRoute: gatewayapi.HTTPRoute{
+			httpRoute: gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httpRoute",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("svc-1").Build(),
 							},
 						},
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("svc-2").Build(),
 							},
 						},
@@ -778,15 +778,15 @@ func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T
 				"default/svc-1": {},
 				"default/svc-2": {},
 			},
-			httpRoute: gatewayapi.HTTPRoute{
+			httpRoute: gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httpRoute",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("svc-1").Build(),
 								builder.NewHTTPBackendRef("svc-2").Build(),
 							},
@@ -802,15 +802,15 @@ func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T
 			upstreamPolicyServices: servicesSet{
 				"default/svc-1": {},
 			},
-			httpRoute: gatewayapi.HTTPRoute{
+			httpRoute: gwtypes.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httpRoute",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("svc-1").Build(),
 								builder.NewHTTPBackendRef("svc-2").Build(),
 							},
@@ -834,14 +834,14 @@ func TestHttpRouteHasUpstreamPolicyConflictedBackendRefsWithService(t *testing.T
 
 func TestBuildPolicyStatus(t *testing.T) {
 	acceptedCondition := metav1.Condition{
-		Type:   string(gatewayapi.PolicyConditionAccepted),
+		Type:   string(gwtypes.PolicyConditionAccepted),
 		Status: metav1.ConditionTrue,
-		Reason: string(gatewayapi.PolicyReasonAccepted),
+		Reason: string(gwtypes.PolicyReasonAccepted),
 	}
 	programmedCondition := metav1.Condition{
-		Type:   string(gatewayapi.GatewayConditionProgrammed),
+		Type:   string(gwtypes.GatewayConditionProgrammed),
 		Status: metav1.ConditionTrue,
-		Reason: string(gatewayapi.GatewayReasonProgrammed),
+		Reason: string(gwtypes.GatewayReasonProgrammed),
 	}
 
 	serviceStatus := func(name string, creationTimestamp time.Time) ancestorStatus {
@@ -863,13 +863,13 @@ func TestBuildPolicyStatus(t *testing.T) {
 		}
 	}
 
-	serviceExpectedPolicyAncestorStatus := func(name string) gatewayapi.PolicyAncestorStatus {
-		return gatewayapi.PolicyAncestorStatus{
-			AncestorRef: gatewayapi.ParentReference{
-				Group:     new(gatewayapi.Group("core")),
-				Kind:      new(gatewayapi.Kind("Service")),
-				Namespace: new(gatewayapi.Namespace("default")),
-				Name:      gatewayapi.ObjectName(name),
+	serviceExpectedPolicyAncestorStatus := func(name string) gwtypes.PolicyAncestorStatus {
+		return gwtypes.PolicyAncestorStatus{
+			AncestorRef: gwtypes.ParentReference{
+				Group:     new(gwtypes.Group("core")),
+				Kind:      new(gwtypes.Kind("Service")),
+				Namespace: new(gwtypes.Namespace("default")),
+				Name:      gwtypes.ObjectName(name),
 			},
 			ControllerName: gatewaycontroller.GetControllerName(),
 			Conditions: []metav1.Condition{
@@ -878,13 +878,13 @@ func TestBuildPolicyStatus(t *testing.T) {
 			},
 		}
 	}
-	serviceFacadeExpectedPolicyAncestorStatus := func(name string) gatewayapi.PolicyAncestorStatus {
-		return gatewayapi.PolicyAncestorStatus{
-			AncestorRef: gatewayapi.ParentReference{
-				Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-				Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-				Namespace: new(gatewayapi.Namespace("default")),
-				Name:      gatewayapi.ObjectName(name),
+	serviceFacadeExpectedPolicyAncestorStatus := func(name string) gwtypes.PolicyAncestorStatus {
+		return gwtypes.PolicyAncestorStatus{
+			AncestorRef: gwtypes.ParentReference{
+				Group:     new(gwtypes.Group(incubatorv1alpha1.GroupVersion.Group)),
+				Kind:      new(gwtypes.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+				Namespace: new(gwtypes.Namespace("default")),
+				Name:      gwtypes.ObjectName(name),
 			},
 			ControllerName: gatewaycontroller.GetControllerName(),
 			Conditions: []metav1.Condition{
@@ -898,7 +898,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 	testCases := []struct {
 		name              string
 		ancestorsStatuses []ancestorStatus
-		expected          gatewayapi.PolicyStatus
+		expected          gwtypes.PolicyStatus
 	}{
 		{
 			name: "all ordered by creation timestamp (oldest first)",
@@ -908,8 +908,8 @@ func TestBuildPolicyStatus(t *testing.T) {
 				serviceFacadeStatus("svc-facade-1", now.Add(2*time.Second)),
 				serviceFacadeStatus("svc-facade-2", now.Add(1*time.Second)),
 			},
-			expected: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expected: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-2"),
 					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-1"),
 					serviceExpectedPolicyAncestorStatus("svc-2"),
@@ -925,8 +925,8 @@ func TestBuildPolicyStatus(t *testing.T) {
 				serviceFacadeStatus("svc-facade-1", now),
 				serviceFacadeStatus("svc-facade-2", now),
 			},
-			expected: gatewayapi.PolicyStatus{
-				Ancestors: []gatewayapi.PolicyAncestorStatus{
+			expected: gwtypes.PolicyStatus{
+				Ancestors: []gwtypes.PolicyAncestorStatus{
 					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-1"),
 					serviceFacadeExpectedPolicyAncestorStatus("svc-facade-2"),
 					serviceExpectedPolicyAncestorStatus("svc-1"),
@@ -943,9 +943,9 @@ func TestBuildPolicyStatus(t *testing.T) {
 				}
 				return ancestors
 			}(),
-			expected: gatewayapi.PolicyStatus{
-				Ancestors: func() []gatewayapi.PolicyAncestorStatus {
-					var ancestors []gatewayapi.PolicyAncestorStatus
+			expected: gwtypes.PolicyStatus{
+				Ancestors: func() []gwtypes.PolicyAncestorStatus {
+					var ancestors []gwtypes.PolicyAncestorStatus
 					for i := range maxNAncestors {
 						ancestors = append(ancestors, serviceExpectedPolicyAncestorStatus(fmt.Sprintf("svc-%d", i)))
 					}
@@ -968,78 +968,78 @@ func TestBuildPolicyStatus(t *testing.T) {
 func TestIsSupportedHTTPRouteBackendRef(t *testing.T) {
 	testCases := []struct {
 		name       string
-		backendRef gatewayapi.BackendObjectReference
+		backendRef gwtypes.BackendObjectReference
 		expected   bool
 	}{
 		{
 			name: "core service backend ref",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("core")),
-				Kind:  new(gatewayapi.Kind("Service")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("core")),
+				Kind:  new(gwtypes.Kind("Service")),
 			},
 			expected: true,
 		},
 		{
 			name: "core service with nil group",
-			backendRef: gatewayapi.BackendObjectReference{
-				Kind: new(gatewayapi.Kind("Service")),
+			backendRef: gwtypes.BackendObjectReference{
+				Kind: new(gwtypes.Kind("Service")),
 			},
 			expected: true,
 		},
 		{
 			name: "core service with nil kind",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("core")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("core")),
 			},
 			expected: true,
 		},
 		{
 			name:       "core service with nil group and kind",
-			backendRef: gatewayapi.BackendObjectReference{},
+			backendRef: gwtypes.BackendObjectReference{},
 			expected:   true,
 		},
 		{
 			name: "core group unsupported kind",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("core")),
-				Kind:  new(gatewayapi.Kind("UnsupportedKind")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("core")),
+				Kind:  new(gwtypes.Kind("UnsupportedKind")),
 			},
 			expected: false,
 		},
 		{
 			name: "service unsupported group",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("unsupported")),
-				Kind:  new(gatewayapi.Kind("Service")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("unsupported")),
+				Kind:  new(gwtypes.Kind("Service")),
 			},
 			expected: false,
 		},
 		{
 			name: "unsupported group",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("unsupported")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("unsupported")),
 			},
 			expected: false,
 		},
 		{
 			name: "unsupported kind",
-			backendRef: gatewayapi.BackendObjectReference{
-				Kind: new(gatewayapi.Kind("UnsupportedKind")),
+			backendRef: gwtypes.BackendObjectReference{
+				Kind: new(gwtypes.Kind("UnsupportedKind")),
 			},
 			expected: false,
 		},
 		{
 			name: "empty group",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("")),
-				Kind:  new(gatewayapi.Kind("Service")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("")),
+				Kind:  new(gwtypes.Kind("Service")),
 			},
 			expected: true,
 		},
 		{
 			name: "empty group with nil kind",
-			backendRef: gatewayapi.BackendObjectReference{
-				Group: new(gatewayapi.Group("")),
+			backendRef: gwtypes.BackendObjectReference{
+				Group: new(gwtypes.Group("")),
 			},
 			expected: true,
 		},
@@ -1047,7 +1047,7 @@ func TestIsSupportedHTTPRouteBackendRef(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.expected, isSupportedHTTPRouteBackendRef(gatewayapi.BackendRef{BackendObjectReference: tc.backendRef}))
+			require.Equal(t, tc.expected, isSupportedHTTPRouteBackendRef(gwtypes.BackendRef{BackendObjectReference: tc.backendRef}))
 		})
 	}
 }

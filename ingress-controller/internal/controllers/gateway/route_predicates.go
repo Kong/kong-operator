@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func IsRouteAttachedToReconciledGatewayPredicate[routeT gatewayapi.RouteT](
+func IsRouteAttachedToReconciledGatewayPredicate[routeT gwtypes.RouteT](
 	cl client.Reader,
 	logger logr.Logger,
 	gatewayNN controllers.OptionalNamespacedName,
@@ -36,7 +36,7 @@ func IsRouteAttachedToReconciledGatewayPredicate[routeT gatewayapi.RouteT](
 	}
 }
 
-func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
+func IsRouteAttachedToReconciledGateway[routeT gwtypes.RouteT](
 	cl client.Reader, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, obj client.Object,
 ) bool {
 	route, ok := obj.(routeT)
@@ -64,7 +64,7 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
 				continue
 			}
-			if parentRef.Group != nil && *parentRef.Group != gatewayapi.Group(gatewayapi.GroupVersion.Group) {
+			if parentRef.Group != nil && *parentRef.Group != gwtypes.Group(gwtypes.GroupVersion.Group) {
 				continue
 			}
 			return true
@@ -80,18 +80,18 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 			namespace = string(*parentRef.Namespace)
 		}
 
-		kind := gatewayapi.Kind("Gateway")
+		kind := gwtypes.Kind("Gateway")
 		if parentRef.Kind != nil && *parentRef.Kind != "" {
 			kind = *parentRef.Kind
 		}
 
-		group := gatewayapi.GroupVersion.Group
+		group := gwtypes.GroupVersion.Group
 		if parentRef.Group != nil && *parentRef.Group != "" {
 			group = string(*parentRef.Group)
 		}
 		// Check the parent gateway if the parentRef points to a gateway that is possible to be controlled by KIC.
-		if kind == "Gateway" && group == gatewayapi.GroupVersion.Group {
-			var gateway gatewayapi.Gateway
+		if kind == "Gateway" && group == gwtypes.GroupVersion.Group {
+			var gateway gwtypes.Gateway
 			err := cl.Get(context.Background(), k8stypes.NamespacedName{Namespace: namespace, Name: string(parentRef.Name)}, &gateway)
 			if err != nil {
 				log.Error(err, "Failed to get Gateway in HTTPRoute watch")
@@ -100,7 +100,7 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 				return true
 			}
 
-			var gatewayClass gatewayapi.GatewayClass
+			var gatewayClass gwtypes.GatewayClass
 			err = cl.Get(context.Background(), k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass)
 			if err != nil {
 				log.Error(err, "Failed to get GatewayClass in HTTPRoute watch")
@@ -118,7 +118,7 @@ func IsRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 	return false
 }
 
-func isOrWasRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
+func isOrWasRouteAttachedToReconciledGateway[routeT gwtypes.RouteT](
 	cl client.Reader, log logr.Logger, gatewayNN controllers.OptionalNamespacedName, e event.UpdateEvent,
 ) bool {
 	oldObj, newObj := e.ObjectOld, e.ObjectNew
@@ -137,7 +137,7 @@ func isOrWasRouteAttachedToReconciledGateway[routeT gatewayapi.RouteT](
 // When gatewayNN is set, only statuses whose parentRef matches the specified Gateway
 // are considered, preventing cross-instance interference when multiple KIC instances
 // share the same controller name.
-func routeHasKongParentStatus[routeT gatewayapi.RouteT](obj client.Object, gatewayNN controllers.OptionalNamespacedName) bool {
+func routeHasKongParentStatus[routeT gwtypes.RouteT](obj client.Object, gatewayNN controllers.OptionalNamespacedName) bool {
 	route, ok := obj.(routeT)
 	if !ok {
 		return false

@@ -29,8 +29,8 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/labels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
@@ -683,20 +683,20 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	}, negativeCheckWait, waitTick)
 
 	t.Logf("creating a ReferenceGrant that does not permit kongconsumer access to kongplugins")
-	grant := &gatewayapi.ReferenceGrant{
+	grant := &gwtypes.ReferenceGrant{
 		Name: uuid.NewString(),
-		Spec: gatewayapi.ReferenceGrantSpec{
-			From: []gatewayapi.ReferenceGrantFrom{
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{
 				{
-					Group:     gatewayapi.Group("configuration.konghq.com"),
-					Kind:      gatewayapi.Kind("KongConsumer"),
-					Namespace: gatewayapi.Namespace(remote.Name),
+					Group:     gwtypes.Group("configuration.konghq.com"),
+					Kind:      gwtypes.Kind("KongConsumer"),
+					Namespace: gwtypes.Namespace(remote.Name),
 				},
 			},
-			To: []gatewayapi.ReferenceGrantTo{
+			To: []gwtypes.ReferenceGrantTo{
 				{
-					Group: gatewayapi.Group("configuration.konghq.com"),
-					Kind:  gatewayapi.Kind("KongPlugin"),
+					Group: gwtypes.Group("configuration.konghq.com"),
+					Kind:  gwtypes.Kind("KongPlugin"),
 				},
 			},
 		},
@@ -718,20 +718,20 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	}, negativeCheckWait, waitTick)
 
 	t.Logf("creating a ReferenceGrant that permits kongconsumer access from %s to kongplugins in %s", remote.Name, ns.Name)
-	grant2 := &gatewayapi.ReferenceGrant{
+	grant2 := &gwtypes.ReferenceGrant{
 		Name: uuid.NewString(),
-		Spec: gatewayapi.ReferenceGrantSpec{
-			From: []gatewayapi.ReferenceGrantFrom{
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{
 				{
-					Group:     gatewayapi.Group("configuration.konghq.com"),
-					Kind:      gatewayapi.Kind("KongConsumer"),
-					Namespace: gatewayapi.Namespace(remote.Name),
+					Group:     gwtypes.Group("configuration.konghq.com"),
+					Kind:      gwtypes.Kind("KongConsumer"),
+					Namespace: gwtypes.Namespace(remote.Name),
 				},
 			},
-			To: []gatewayapi.ReferenceGrantTo{
+			To: []gwtypes.ReferenceGrantTo{
 				{
-					Group: gatewayapi.Group("configuration.konghq.com"),
-					Kind:  gatewayapi.Kind("KongPlugin"),
+					Group: gwtypes.Group("configuration.konghq.com"),
+					Kind:  gwtypes.Kind("KongPlugin"),
 				},
 			},
 		},

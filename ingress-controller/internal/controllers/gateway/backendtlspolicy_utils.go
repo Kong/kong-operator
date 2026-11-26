@@ -15,13 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // getBackendTLSPoliciesByHTTPRoute returns the list of BackendTLSPolicies that targets a service
 // used as backend by the given HTTPRoute.
-func (r *BackendTLSPolicyReconciler) getBackendTLSPoliciesByHTTPRoute(ctx context.Context, httpRoute gatewayapi.HTTPRoute) ([]gatewayapi.BackendTLSPolicy, error) {
-	objects := []gatewayapi.BackendTLSPolicy{}
+func (r *BackendTLSPolicyReconciler) getBackendTLSPoliciesByHTTPRoute(ctx context.Context, httpRoute gwtypes.HTTPRoute) ([]gwtypes.BackendTLSPolicy, error) {
+	objects := []gwtypes.BackendTLSPolicy{}
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			// no need to check group and kind nilness, as they have a default value in case not specified
@@ -33,7 +33,7 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPoliciesByHTTPRoute(ctx contex
 			if backend.Namespace != nil {
 				namespace = string(*backend.Namespace)
 			}
-			policies := &gatewayapi.BackendTLSPolicyList{}
+			policies := &gwtypes.BackendTLSPolicyList{}
 			if err := r.List(ctx, policies,
 				client.InNamespace(namespace),
 				client.MatchingFields{backendTLSPolicyTargetRefIndexKey: string(backend.Name)},
@@ -51,14 +51,14 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPoliciesByHTTPRoute(ctx contex
 // 1. Get all the HTTPRoutes that reference the backends targeted by the policy;
 // 2. Find all the parents in the HTTPRoute status that have already properly resolved by KIC and have the resolvedRefs condition set to true.
 // 3. Return all the successfully resolved Gateways.
-func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Context, policy gatewayapi.BackendTLSPolicy) ([]gatewayapi.Gateway, error) {
-	gateways := []gatewayapi.Gateway{}
+func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Context, policy gwtypes.BackendTLSPolicy) ([]gwtypes.Gateway, error) {
+	gateways := []gwtypes.Gateway{}
 	for _, targetRef := range policy.Spec.TargetRefs {
 		if (targetRef.Group != "core" && targetRef.Group != "") && targetRef.Kind != "Service" {
 			continue
 		}
 
-		httpRoutes := gatewayapi.HTTPRouteList{}
+		httpRoutes := gwtypes.HTTPRouteList{}
 		if err := r.List(ctx, &httpRoutes,
 			client.MatchingFields{httpRouteBackendRefIndexKey: policy.Namespace + "/" + string(targetRef.Name)},
 		); err != nil {
@@ -67,7 +67,7 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Co
 
 		for _, httpRoute := range httpRoutes.Items {
 			for _, parentRef := range httpRoute.Spec.ParentRefs {
-				if *parentRef.Group != gatewayapi.V1Group || *parentRef.Kind != "Gateway" {
+				if *parentRef.Group != gwtypes.V1Group || *parentRef.Kind != "Gateway" {
 					continue
 				}
 
@@ -84,10 +84,10 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Co
 						*parentStatus.ParentRef.Group == *parentRef.Group &&
 						*parentStatus.ParentRef.Kind == *parentRef.Kind &&
 						parentStatus.ParentRef.Name == parentRef.Name &&
-						*parentStatus.ParentRef.Namespace == gatewayapi.Namespace(namespace) &&
+						*parentStatus.ParentRef.Namespace == gwtypes.Namespace(namespace) &&
 						r.GatewayNN.MatchesNN(k8stypes.NamespacedName{Namespace: namespace, Name: string(parentRef.Name)}) {
 						if _, found := lo.Find(parentStatus.Conditions, func(c metav1.Condition) bool {
-							return c.Type == string(gatewayapi.RouteConditionResolvedRefs) && c.Status == metav1.ConditionTrue
+							return c.Type == string(gwtypes.RouteConditionResolvedRefs) && c.Status == metav1.ConditionTrue
 						}); found {
 							resolvedRefsStatus = true
 							break
@@ -95,7 +95,7 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Co
 					}
 				}
 				if resolvedRefsStatus {
-					gateway := &gatewayapi.Gateway{}
+					gateway := &gwtypes.Gateway{}
 					if err := r.Get(ctx, client.ObjectKey{Namespace: namespace, Name: string(parentRef.Name)}, gateway); err != nil {
 						// In case the object is not found, we don't want to return an error, but we want to continue.
 						if apierrors.IsNotFound(err) {
@@ -113,12 +113,12 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Co
 }
 
 // setPolicyStatus enforces an ancestorStatus for each Gateway associated to the given policy.
-func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy gatewayapi.BackendTLSPolicy, gateways []gatewayapi.Gateway, acceptedCondition metav1.Condition) error {
-	ancestors := []gatewayapi.PolicyAncestorStatus{}
+func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy gwtypes.BackendTLSPolicy, gateways []gwtypes.Gateway, acceptedCondition metav1.Condition) error {
+	ancestors := []gwtypes.PolicyAncestorStatus{}
 
 	var completeAcceptedCondition *metav1.Condition
 	// First copy all the ancestorstatuses managed by other controllers.
-	kicAncestors := []gatewayapi.PolicyAncestorStatus{}
+	kicAncestors := []gwtypes.PolicyAncestorStatus{}
 	for _, ancestor := range policy.Status.Ancestors {
 		if ancestor.ControllerName == GetControllerName() {
 			kicAncestors = append(kicAncestors, ancestor)
@@ -143,12 +143,12 @@ func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy
 		if len(ancestors) >= 16 {
 			break
 		}
-		ancestor := gatewayapi.PolicyAncestorStatus{
-			AncestorRef: gatewayapi.ParentReference{
-				Group:     new(gatewayapi.V1Group),
-				Kind:      new(gatewayapi.Kind("Gateway")),
-				Name:      gatewayapi.ObjectName(gateway.Name),
-				Namespace: new(gatewayapi.Namespace(gateway.Namespace)),
+		ancestor := gwtypes.PolicyAncestorStatus{
+			AncestorRef: gwtypes.ParentReference{
+				Group:     new(gwtypes.V1Group),
+				Kind:      new(gwtypes.Kind("Gateway")),
+				Name:      gwtypes.ObjectName(gateway.Name),
+				Namespace: new(gwtypes.Namespace(gateway.Namespace)),
 			},
 			ControllerName: GetControllerName(),
 			Conditions:     []metav1.Condition{*completeAcceptedCondition},
@@ -163,7 +163,7 @@ func (r *BackendTLSPolicyReconciler) setPolicyStatus(ctx context.Context, policy
 	return r.Status().Patch(ctx, newPolicy, client.MergeFrom(&policy))
 }
 
-func getCompleteAcceptedCondition(ancestors gatewayapi.PolicyAncestorStatus, acceptedCondition metav1.Condition) *metav1.Condition {
+func getCompleteAcceptedCondition(ancestors gwtypes.PolicyAncestorStatus, acceptedCondition metav1.Condition) *metav1.Condition {
 	for _, condition := range ancestors.Conditions {
 		if condition.Type == acceptedCondition.Type &&
 			condition.Status == acceptedCondition.Status &&
@@ -178,8 +178,8 @@ func getCompleteAcceptedCondition(ancestors gatewayapi.PolicyAncestorStatus, acc
 }
 
 // sortGateways sorts the given slice of Gateway objects by namespace and name.
-func sortGateways(gateways []gatewayapi.Gateway, kicAncestors []gatewayapi.PolicyAncestorStatus, policyNamespace string) {
-	kicAncestorsMap := lo.SliceToMap(kicAncestors, func(ancestor gatewayapi.PolicyAncestorStatus) (string, gatewayapi.PolicyAncestorStatus) {
+func sortGateways(gateways []gwtypes.Gateway, kicAncestors []gwtypes.PolicyAncestorStatus, policyNamespace string) {
+	kicAncestorsMap := lo.SliceToMap(kicAncestors, func(ancestor gwtypes.PolicyAncestorStatus) (string, gwtypes.PolicyAncestorStatus) {
 		namespace := policyNamespace
 		if ancestor.AncestorRef.Namespace != nil {
 			namespace = string(*ancestor.AncestorRef.Namespace)
@@ -207,11 +207,11 @@ func sortGateways(gateways []gatewayapi.Gateway, kicAncestors []gatewayapi.Polic
 }
 
 // validateBackendTLSPolicy validates the given BackendTLSPolicy and returns the accepted Condition related to the policy.
-func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Context, policy gatewayapi.BackendTLSPolicy) (acceptedCondition *metav1.Condition, err error) {
+func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Context, policy gwtypes.BackendTLSPolicy) (acceptedCondition *metav1.Condition, err error) {
 	acceptedCondition = &metav1.Condition{
-		Type:               string(gatewayapi.PolicyConditionAccepted),
+		Type:               string(gwtypes.PolicyConditionAccepted),
 		Status:             metav1.ConditionTrue,
-		Reason:             string(gatewayapi.PolicyConditionAccepted),
+		Reason:             string(gwtypes.PolicyConditionAccepted),
 		ObservedGeneration: policy.Generation,
 	}
 
@@ -219,7 +219,7 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 		if (targetRef.Group != "core" && targetRef.Group != "") || targetRef.Kind != "Service" {
 			continue
 		}
-		policies := &gatewayapi.BackendTLSPolicyList{}
+		policies := &gwtypes.BackendTLSPolicyList{}
 		if err := r.List(ctx, policies,
 			client.InNamespace(policy.Namespace),
 			client.MatchingFields{backendTLSPolicyTargetRefIndexKey: string(targetRef.Name)},
@@ -229,9 +229,9 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 
 		if len(policies.Items) > 1 {
 			acceptedCondition = &metav1.Condition{
-				Type:    string(gatewayapi.PolicyConditionAccepted),
+				Type:    string(gwtypes.PolicyConditionAccepted),
 				Status:  metav1.ConditionFalse,
-				Reason:  string(gatewayapi.PolicyReasonConflicted),
+				Reason:  string(gwtypes.PolicyReasonConflicted),
 				Message: "Multiple BackendTLSPolicies target the same service",
 			}
 			return acceptedCondition, nil
@@ -275,7 +275,7 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 	}
 	if len(invalidMessages) > 0 {
 		acceptedCondition.Status = metav1.ConditionFalse
-		acceptedCondition.Reason = string(gatewayapi.PolicyReasonInvalid)
+		acceptedCondition.Reason = string(gwtypes.PolicyReasonInvalid)
 		acceptedCondition.Message = strings.Join(invalidMessages, " - ")
 	}
 
@@ -283,7 +283,7 @@ func (r *BackendTLSPolicyReconciler) validateBackendTLSPolicy(ctx context.Contex
 }
 
 // list namespaced names of configmaps or secrets referred by the gateway.
-func listCaCertNamespacedNamesReferredByBackendTLSPolicy(policy *gatewayapi.BackendTLSPolicy, caCertKind gatewayapi.Kind) map[k8stypes.NamespacedName]struct{} {
+func listCaCertNamespacedNamesReferredByBackendTLSPolicy(policy *gwtypes.BackendTLSPolicy, caCertKind gwtypes.Kind) map[k8stypes.NamespacedName]struct{} {
 	nsNames := make(map[k8stypes.NamespacedName]struct{}, len(policy.Spec.Validation.CACertificateRefs))
 	for _, certRef := range policy.Spec.Validation.CACertificateRefs {
 		if certRef.Kind != caCertKind {

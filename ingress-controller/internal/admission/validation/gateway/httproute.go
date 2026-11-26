@@ -17,8 +17,8 @@ import (
 	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 )
 
@@ -40,7 +40,7 @@ func ValidateHTTPRoute(
 	routesValidator routeValidator,
 	kongVersion semver.Version,
 	translatorFeatures translator.FeatureFlags,
-	httproute *gatewayapi.HTTPRoute,
+	httproute *gwtypes.HTTPRoute,
 	managerClient client.Client,
 ) (bool, string, error) {
 	// Check if route is managed by this controller. If not, we don't need to validate it.
@@ -80,15 +80,15 @@ func ValidateHTTPRoute(
 // -----------------------------------------------------------------------------
 
 // parentRefIsGateway returns true if the group/kind of ParentReference is empty or gateway.networking.k8s.io/Gateway.
-func parentRefIsGateway(parentRef gatewayapi.ParentReference) bool {
-	const KindGateway = gatewayapi.Kind("Gateway")
+func parentRefIsGateway(parentRef gwtypes.ParentReference) bool {
+	const KindGateway = gwtypes.Kind("Gateway")
 
-	return (parentRef.Group == nil || (*parentRef.Group == "" || *parentRef.Group == gatewayapi.V1Group)) &&
+	return (parentRef.Group == nil || (*parentRef.Group == "" || *parentRef.Group == gwtypes.V1Group)) &&
 		(parentRef.Kind == nil || (*parentRef.Kind == "" || *parentRef.Kind == KindGateway))
 }
 
 // ensureHTTPRouteIsManagedByController checks whether the provided HTTPRoute is managed by this controller implementation.
-func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewayapi.HTTPRoute, managerClient client.Client) (bool, error) {
+func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gwtypes.HTTPRoute, managerClient client.Client) (bool, error) {
 	// In order to be sure whether an HTTPRoute resource is managed by this
 	// controller we ignore references to Gateway resources that do not exist.
 	for _, parentRef := range httproute.Spec.ParentRefs {
@@ -107,7 +107,7 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 
 		// gather the Gateway resource referenced by parentRef and fail validation
 		// if there is no such Gateway resource.
-		gateway := gatewayapi.Gateway{}
+		gateway := gwtypes.Gateway{}
 		if err := managerClient.Get(ctx, client.ObjectKey{
 			Namespace: namespace,
 			Name:      string(parentRef.Name),
@@ -119,7 +119,7 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 		}
 
 		// Pull the referenced GatewayClass object from the Gateway.
-		gatewayClass := gatewayapi.GatewayClass{}
+		gatewayClass := gwtypes.GatewayClass{}
 		if err := managerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 			if apierrors.IsNotFound(err) {
 				return false, nil
@@ -140,17 +140,17 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 // validateHTTPRouteFeatures checks for features that are not supported by this
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
-func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
+func validateHTTPRouteFeatures(httproute *gwtypes.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
 	// list of filters currently supported.
-	supportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
-		gatewayapi.HTTPRouteFilterRequestHeaderModifier:  {},
-		gatewayapi.HTTPRouteFilterResponseHeaderModifier: {},
-		gatewayapi.HTTPRouteFilterRequestRedirect:        {},
-		gatewayapi.HTTPRouteFilterURLRewrite:             {},
-		gatewayapi.HTTPRouteFilterExtensionRef:           {},
+	supportedFilterMap := map[gwtypes.HTTPRouteFilterType]struct{}{
+		gwtypes.HTTPRouteFilterRequestHeaderModifier:  {},
+		gwtypes.HTTPRouteFilterResponseHeaderModifier: {},
+		gwtypes.HTTPRouteFilterRequestRedirect:        {},
+		gwtypes.HTTPRouteFilterURLRewrite:             {},
+		gwtypes.HTTPRouteFilterExtensionRef:           {},
 	}
 	const (
-		KindService = gatewayapi.Kind("Service")
+		KindService = gwtypes.Kind("Service")
 	)
 
 	for ruleIndex, rule := range httproute.Spec.Rules {
@@ -200,13 +200,13 @@ func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatur
 // Note: Kong uses PCRE (Perl Compatible Regular Expressions) while Go uses RE2.
 // This validation catches common syntax errors (e.g., unclosed brackets) but may
 // not catch all PCRE-specific issues.
-func validateHTTPRouteRegexes(httproute *gatewayapi.HTTPRoute) error {
+func validateHTTPRouteRegexes(httproute *gwtypes.HTTPRoute) error {
 	for ruleIndex, rule := range httproute.Spec.Rules {
 		for matchIndex, match := range rule.Matches {
 			// Validate path regex
 			if match.Path != nil &&
 				match.Path.Type != nil &&
-				*match.Path.Type == gatewayapi.PathMatchRegularExpression &&
+				*match.Path.Type == gwtypes.PathMatchRegularExpression &&
 				match.Path.Value != nil {
 				if _, err := regexp.Compile(*match.Path.Value); err != nil {
 					return fmt.Errorf("rules[%d].matches[%d].path has invalid regex %q: %w",
@@ -216,7 +216,7 @@ func validateHTTPRouteRegexes(httproute *gatewayapi.HTTPRoute) error {
 
 			// Validate header regex
 			for headerIndex, header := range match.Headers {
-				if header.Type != nil && *header.Type == gatewayapi.HeaderMatchRegularExpression {
+				if header.Type != nil && *header.Type == gwtypes.HeaderMatchRegularExpression {
 					if _, err := regexp.Compile(header.Value); err != nil {
 						return fmt.Errorf("rules[%d].matches[%d].headers[%d] has invalid regex %q: %w",
 							ruleIndex, matchIndex, headerIndex, header.Value, err)
@@ -233,7 +233,7 @@ func validateHTTPRouteRegexes(httproute *gatewayapi.HTTPRoute) error {
 // -----------------------------------------------------------------------------
 
 func validateWithKongGateway(
-	ctx context.Context, routesValidator routeValidator, kongVersion semver.Version, translatorFeatures translator.FeatureFlags, httproute *gatewayapi.HTTPRoute,
+	ctx context.Context, routesValidator routeValidator, kongVersion semver.Version, translatorFeatures translator.FeatureFlags, httproute *gwtypes.HTTPRoute,
 ) (bool, string) {
 	// Translate HTTPRoute to Kong Route object(s) that can be sent directly to the Admin API for validation.
 	// Reuse KIC translator that works both for traditional and expressions router to use exactly the same logic.
@@ -241,7 +241,7 @@ func validateWithKongGateway(
 	translationResult := subtranslator.TranslateHTTPRoutesToKongstateServices(
 		logr.Discard(),
 		store.NewFakeStoreEmpty(),
-		[]*gatewayapi.HTTPRoute{httproute},
+		[]*gwtypes.HTTPRoute{httproute},
 		subtranslator.TranslateHTTPRouteToKongstateServiceOptions{
 			CombinedServicesFromDifferentHTTPRoutes: translatorFeatures.CombinedServicesFromDifferentHTTPRoutes,
 			ExpressionRoutes:                        translatorFeatures.ExpressionRoutes,

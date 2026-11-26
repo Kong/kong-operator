@@ -31,8 +31,8 @@ import (
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -144,7 +144,7 @@ func TestMain(m *testing.M) {
 
 type featureSetupCfg struct {
 	kongRouterFlavor dpconf.RouterFlavor
-	gatewayListeners []gatewayapi.Listener
+	gatewayListeners []gwtypes.Listener
 	skipGateway      bool
 }
 
@@ -159,7 +159,7 @@ func withKongRouterFlavor(flavor dpconf.RouterFlavor) featureSetupOpt {
 
 // withGatewayListeners sets the listeners of the Gateway created for the test.
 // By default, the Gateway gets an HTTP listener on port 80 and an HTTPS listener on port 443.
-func withGatewayListeners(listeners ...gatewayapi.Listener) featureSetupOpt {
+func withGatewayListeners(listeners ...gwtypes.Listener) featureSetupOpt {
 	return func(o *featureSetupCfg) {
 		o.gatewayListeners = listeners
 	}
@@ -177,7 +177,7 @@ func withoutGateway() featureSetupOpt {
 // by the operator, which provisions a DataPlane and a ControlPlane for it. It stores in the context:
 // - the namespace (GetNamespaceForT) and the cleaner,
 // - the ingress class of the ControlPlane (GetIngressClassFromCtx),
-// - the Gateway (GetFromCtxForT[*gatewayapi.Gateway]) and the proxy URLs of its listeners,
+// - the Gateway (GetFromCtxForT[*gwtypes.Gateway]) and the proxy URLs of its listeners,
 // - the operator's diagnostics server URL (GetDiagURLFromCtx).
 func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
 	var setupCfg featureSetupCfg
@@ -273,7 +273,7 @@ func dataPlaneImage() string {
 }
 
 // deployGateway deploys a GatewayConfiguration, a GatewayClass and a Gateway for the test.
-// It stores the GatewayClass in the context (GetFromCtxForT[*gatewayapi.GatewayClass]) and returns
+// It stores the GatewayClass in the context (GetFromCtxForT[*gwtypes.GatewayClass]) and returns
 // the Gateway's namespaced name, or false when the deployment failed.
 func deployGateway(
 	ctx context.Context, t *testing.T, setupCfg featureSetupCfg, ingressClass string,
@@ -291,19 +291,19 @@ func deployGateway(
 		if !ok {
 			return ctx, k8stypes.NamespacedName{}, false
 		}
-		listeners = []gatewayapi.Listener{
+		listeners = []gwtypes.Listener{
 			{
 				Name:     gatewayHTTPListenerName,
-				Protocol: gatewayapi.HTTPProtocolType,
+				Protocol: gwtypes.HTTPProtocolType,
 				Port:     80,
 			},
 			{
 				Name:     gatewayHTTPSListenerName,
-				Protocol: gatewayapi.HTTPSProtocolType,
+				Protocol: gwtypes.HTTPSProtocolType,
 				Port:     443,
-				TLS: &gatewayapi.GatewayTLSConfig{
-					CertificateRefs: []gatewayapi.SecretObjectReference{
-						{Name: gatewayapi.ObjectName(secret.Name)},
+				TLS: &gwtypes.GatewayTLSConfig{
+					CertificateRefs: []gwtypes.SecretObjectReference{
+						{Name: gwtypes.ObjectName(secret.Name)},
 					},
 				},
 			},
@@ -416,7 +416,7 @@ func waitForGateway(ctx context.Context, t *testing.T, gatewayNN k8stypes.Namesp
 	cl := integration.GetClients().MgrClient
 
 	t.Logf("waiting for Gateway %s to be Programmed and get an address", gatewayNN)
-	var gateway gatewayapi.Gateway
+	var gateway gwtypes.Gateway
 	if !assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		if !assert.NoError(c, cl.Get(ctx, gatewayNN, &gateway)) {
 			return
@@ -470,59 +470,59 @@ func waitForDataPlane(ctx context.Context, t *testing.T, dataPlaneNN k8stypes.Na
 
 	address := dataPlane.Status.Addresses[0].Value
 	t.Logf("DataPlane %s got address %s", dataPlaneNN, address)
-	return setGatewayListenersURLsInCtx(ctx, address, []gatewayapi.Listener{
-		{Protocol: gatewayapi.HTTPProtocolType, Port: consts.DefaultHTTPPort},
-		{Protocol: gatewayapi.HTTPSProtocolType, Port: consts.DefaultHTTPSPort},
+	return setGatewayListenersURLsInCtx(ctx, address, []gwtypes.Listener{
+		{Protocol: gwtypes.HTTPProtocolType, Port: consts.DefaultHTTPPort},
+		{Protocol: gwtypes.HTTPSProtocolType, Port: consts.DefaultHTTPSPort},
 	})
 }
 
 // setGatewayListenersURLsInCtx stores in the context the proxy URLs of the first listener
 // of each protocol of a Gateway reachable at the given address.
-func setGatewayListenersURLsInCtx(ctx context.Context, address string, listeners []gatewayapi.Listener) context.Context {
-	firstListenerAddr := func(protocol gatewayapi.ProtocolType) (string, bool) {
-		l, ok := lo.Find(listeners, func(l gatewayapi.Listener) bool { return l.Protocol == protocol })
+func setGatewayListenersURLsInCtx(ctx context.Context, address string, listeners []gwtypes.Listener) context.Context {
+	firstListenerAddr := func(protocol gwtypes.ProtocolType) (string, bool) {
+		l, ok := lo.Find(listeners, func(l gwtypes.Listener) bool { return l.Protocol == protocol })
 		if !ok {
 			return "", false
 		}
 		return helpers.HostPort(address, int(l.Port)), true
 	}
-	if addr, ok := firstListenerAddr(gatewayapi.HTTPProtocolType); ok {
+	if addr, ok := firstListenerAddr(gwtypes.HTTPProtocolType); ok {
 		ctx = SetHTTPURLInCtx(ctx, &url.URL{Scheme: "http", Host: addr})
 	}
-	if addr, ok := firstListenerAddr(gatewayapi.HTTPSProtocolType); ok {
+	if addr, ok := firstListenerAddr(gwtypes.HTTPSProtocolType); ok {
 		ctx = SetHTTPSURLInCtx(ctx, &url.URL{Scheme: "https", Host: addr})
 	}
-	if addr, ok := firstListenerAddr(gatewayapi.TCPProtocolType); ok {
+	if addr, ok := firstListenerAddr(gwtypes.TCPProtocolType); ok {
 		ctx = SetTCPURLInCtx(ctx, addr)
 	}
-	if addr, ok := firstListenerAddr(gatewayapi.UDPProtocolType); ok {
+	if addr, ok := firstListenerAddr(gwtypes.UDPProtocolType); ok {
 		ctx = SetUDPURLInCtx(ctx, addr)
 	}
-	if addr, ok := firstListenerAddr(gatewayapi.TLSProtocolType); ok {
+	if addr, ok := firstListenerAddr(gwtypes.TLSProtocolType); ok {
 		ctx = SetTLSURLInCtx(ctx, addr)
 	}
 	return ctx
 }
 
 // deleteGatewayClass deletes the GatewayClass and waits until it's gone.
-func deleteGatewayClass(ctx context.Context, t *testing.T, gatewayClass *gatewayapi.GatewayClass) {
+func deleteGatewayClass(ctx context.Context, t *testing.T, gatewayClass *gwtypes.GatewayClass) {
 	t.Helper()
 
 	cl := integration.GetClients().MgrClient
 	t.Logf("deleting GatewayClass %s", gatewayClass.Name)
 	assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, gatewayClass.DeepCopy())))
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		err := cl.Get(ctx, client.ObjectKeyFromObject(gatewayClass), &gatewayapi.GatewayClass{})
+		err := cl.Get(ctx, client.ObjectKeyFromObject(gatewayClass), &gwtypes.GatewayClass{})
 		assert.True(c, apierrors.IsNotFound(err), "GatewayClass still exists (err: %v)", err)
 	}, kicconsts.IngressWait, kicconsts.WaitTick)
 }
 
 // recreateGatewayClass creates the deleted GatewayClass again, with the same name and spec.
-func recreateGatewayClass(ctx context.Context, t *testing.T, gatewayClass *gatewayapi.GatewayClass) {
+func recreateGatewayClass(ctx context.Context, t *testing.T, gatewayClass *gwtypes.GatewayClass) {
 	t.Helper()
 
 	t.Logf("creating GatewayClass %s again", gatewayClass.Name)
-	assert.NoError(t, integration.GetClients().MgrClient.Create(ctx, &gatewayapi.GatewayClass{
+	assert.NoError(t, integration.GetClients().MgrClient.Create(ctx, &gwtypes.GatewayClass{
 		Name: gatewayClass.Name,
 		Spec: *gatewayClass.Spec.DeepCopy(),
 	}))
@@ -530,25 +530,25 @@ func recreateGatewayClass(ctx context.Context, t *testing.T, gatewayClass *gatew
 
 // deleteGateway deletes the Gateway and waits until it's gone. The operator removes
 // the Gateway's DataPlane and ControlPlane before letting it go (finalizers).
-func deleteGateway(ctx context.Context, t *testing.T, gateway *gatewayapi.Gateway) {
+func deleteGateway(ctx context.Context, t *testing.T, gateway *gwtypes.Gateway) {
 	t.Helper()
 
 	cl := integration.GetClients().MgrClient
 	t.Logf("deleting Gateway %s/%s", gateway.Namespace, gateway.Name)
 	assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, gateway.DeepCopy())))
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		err := cl.Get(ctx, client.ObjectKeyFromObject(gateway), &gatewayapi.Gateway{})
+		err := cl.Get(ctx, client.ObjectKeyFromObject(gateway), &gwtypes.Gateway{})
 		assert.True(c, apierrors.IsNotFound(err), "Gateway still exists (err: %v)", err)
 	}, kicconsts.IngressWait, kicconsts.WaitTick)
 }
 
 // recreateGateway creates the deleted Gateway again, with the same name and spec, and waits for it
 // to be ready (see waitForGateway). Its address, and so the proxy URLs, might differ from the previous ones.
-func recreateGateway(ctx context.Context, t *testing.T, gateway *gatewayapi.Gateway) context.Context {
+func recreateGateway(ctx context.Context, t *testing.T, gateway *gwtypes.Gateway) context.Context {
 	t.Helper()
 
 	t.Logf("creating Gateway %s/%s again", gateway.Namespace, gateway.Name)
-	if !assert.NoError(t, integration.GetClients().MgrClient.Create(ctx, &gatewayapi.Gateway{
+	if !assert.NoError(t, integration.GetClients().MgrClient.Create(ctx, &gwtypes.Gateway{
 		Namespace: gateway.Namespace,
 		Name:      gateway.Name,
 		Spec:      *gateway.Spec.DeepCopy(),

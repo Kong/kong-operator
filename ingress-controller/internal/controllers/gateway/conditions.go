@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func newCondition(
@@ -44,7 +44,7 @@ func sameCondition(a, b metav1.Condition) bool {
 		a.ObservedGeneration == b.ObservedGeneration
 }
 
-func setRouteParentStatusCondition(parentStatus *gatewayapi.RouteParentStatus, newCondition metav1.Condition) bool {
+func setRouteParentStatusCondition(parentStatus *gwtypes.RouteParentStatus, newCondition metav1.Condition) bool {
 	var conditionFound, changed bool
 	for i, condition := range parentStatus.Conditions {
 		if condition.Type == newCondition.Type {
@@ -63,7 +63,7 @@ func setRouteParentStatusCondition(parentStatus *gatewayapi.RouteParentStatus, n
 	return changed
 }
 
-func parentStatusHasProgrammedCondition(parentStatus *gatewayapi.RouteParentStatus) bool {
+func parentStatusHasProgrammedCondition(parentStatus *gwtypes.RouteParentStatus) bool {
 	return lo.ContainsBy(parentStatus.Conditions, func(c metav1.Condition) bool {
 		return c.Type == ConditionTypeProgrammed
 	})
@@ -77,12 +77,12 @@ func parentStatusHasProgrammedCondition(parentStatus *gatewayapi.RouteParentStat
 // Type will be set to Programmed whereas ObservedGeneration and LastTransitionTime
 // will be set accordingly based on the route's generation and current time.
 func ensureParentsProgrammedCondition[
-	routeT gatewayapi.RouteT,
+	routeT gwtypes.RouteT,
 ](
 	ctx context.Context,
 	client client.SubResourceWriter,
 	route routeT,
-	routeParentStatuses []gatewayapi.RouteParentStatus,
+	routeParentStatuses []gwtypes.RouteParentStatus,
 	gateways []supportedGatewayWithCondition,
 	condition metav1.Condition,
 ) (bool, error) {
@@ -109,16 +109,16 @@ func ensureParentsProgrammedCondition[
 			statusChanged = statusChanged || changed
 		} else {
 			// add a new parent if the parent is not found in status.
-			newParentStatus := gatewayapi.RouteParentStatus{
-				ParentRef: gatewayapi.ParentReference{
-					Namespace: new(gatewayapi.Namespace(gateway.Namespace)),
-					Name:      gatewayapi.ObjectName(gateway.Name),
-					Kind:      new(gatewayapi.Kind("Gateway")),
-					Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
+			newParentStatus := gwtypes.RouteParentStatus{
+				ParentRef: gwtypes.ParentReference{
+					Namespace: new(gwtypes.Namespace(gateway.Namespace)),
+					Name:      gwtypes.ObjectName(gateway.Name),
+					Kind:      new(gwtypes.Kind("Gateway")),
+					Group:     new(gwtypes.Group(gatewayv1.GroupName)),
 					// We don't need to check whether the listener matches route's spec
 					// because that should already be done via getSupportedGatewayForRoute
 					// at this point.
-					SectionName: lo.EmptyableToPtr(gatewayapi.SectionName(g.listenerName)),
+					SectionName: lo.EmptyableToPtr(gwtypes.SectionName(g.listenerName)),
 
 					// TODO: set port after gateway port matching implemented:
 					// https://github.com/Kong/kubernetes-ingress-controller/issues/3016

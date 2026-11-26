@@ -34,7 +34,6 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/diagnostics"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/k8s"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
@@ -48,6 +47,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
@@ -103,7 +103,7 @@ func New(
 		"Starting controller manager for ControlPlane", "instanceID", instanceID.String(), "ingressClassName", c.IngressClassName,
 	)
 
-	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
+	gateway.SetControllerName(gwtypes.GatewayController(c.GatewayAPIControllerName))
 
 	setupLog.Info("Getting the Kubernetes client configuration")
 	if c.KubeRestConfig != nil {

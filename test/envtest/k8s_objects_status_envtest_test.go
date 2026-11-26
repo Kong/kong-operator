@@ -13,8 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
@@ -57,16 +57,16 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	require.NoError(t, ctrlClient.Create(ctx, &backendService))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &backendService) })
 
-	httpRoute := gatewayapi.HTTPRoute{
+	httpRoute := gwtypes.HTTPRoute{
 		Namespace:    gw.Namespace,
 		GenerateName: "httproute-",
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name: gatewayapi.ObjectName(gw.Name),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name: gwtypes.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{{
+			Rules: []gwtypes.HTTPRouteRule{{
 				Matches: builder.NewHTTPRouteMatch().
 					WithPathPrefix("/path").
 					ToSlice(),
@@ -83,7 +83,7 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 		time.Second*10, time.Millisecond*50)
 }
 
-func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gatewayapi.HTTPRoute) func() bool {
+func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client, httpRoute gwtypes.HTTPRoute) func() bool {
 	return func() bool {
 		if err := cl.Get(ctx, client.ObjectKeyFromObject(&httpRoute), &httpRoute); err != nil {
 			t.Logf("Failed to get httpRoute: %v", err)
@@ -94,7 +94,7 @@ func httpRouteGetsProgrammed(ctx context.Context, t *testing.T, cl client.Client
 			return false
 		}
 		programmed, ok := lo.Find(httpRoute.Status.Parents[0].Conditions, func(c metav1.Condition) bool {
-			return c.Type == string(gatewayapi.GatewayConditionProgrammed)
+			return c.Type == string(gwtypes.GatewayConditionProgrammed)
 		})
 		if !ok {
 			t.Logf("no programmed condition in httpRoute status")
@@ -157,16 +157,16 @@ func Test_WatchNamespaces(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, backendService))
 	require.NoError(t, ctrlClient.Create(ctx, hiddenService))
 
-	httpRoute := &gatewayapi.HTTPRoute{
+	httpRoute := &gwtypes.HTTPRoute{
 		Namespace: gw.Namespace,
 		Name:      uuid.NewString(),
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name: gatewayapi.ObjectName(gw.Name),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name: gwtypes.ObjectName(gw.Name),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{{
+			Rules: []gwtypes.HTTPRouteRule{{
 				Matches: builder.NewHTTPRouteMatch().
 					WithPathPrefix("/path").
 					ToSlice(),

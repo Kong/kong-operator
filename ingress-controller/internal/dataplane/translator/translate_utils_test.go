@@ -11,38 +11,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGenerateKongServiceFromBackendRef(t *testing.T) {
-	grants := []*gatewayapi.ReferenceGrant{
+	grants := []*gwtypes.ReferenceGrant{
 		{
 			Name:      uuid.NewString(),
 			Namespace: "fitrat",
-			Spec: gatewayapi.ReferenceGrantSpec{
-				From: []gatewayapi.ReferenceGrantFrom{
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
-						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayapi.Kind("TCPRoute"),
-						Namespace: gatewayapi.Namespace("garbage"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("garbage"),
 					},
 					{
-						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayapi.Kind("TCPRoute"),
-						Namespace: gatewayapi.Namespace("behbudiy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("behbudiy"),
 					},
 					{
-						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayapi.Kind("TCPRoute"),
-						Namespace: gatewayapi.Namespace("qodiriy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayapi.ReferenceGrantTo{
+				To: []gwtypes.ReferenceGrantTo{
 					{
-						Group: gatewayapi.Group(""),
-						Kind:  gatewayapi.Kind("Service"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("Service"),
 					},
 				},
 			},
@@ -50,23 +50,23 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		{
 			Name:      uuid.NewString(),
 			Namespace: "cholpon",
-			Spec: gatewayapi.ReferenceGrantSpec{
-				From: []gatewayapi.ReferenceGrantFrom{
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gwtypes.ReferenceGrantFrom{
 					{
-						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayapi.Kind("UDPRoute"),
-						Namespace: gatewayapi.Namespace("behbudiy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("UDPRoute"),
+						Namespace: gwtypes.Namespace("behbudiy"),
 					},
 					{
-						Group:     gatewayapi.Group("gateway.networking.k8s.io"),
-						Kind:      gatewayapi.Kind("TCPRoute"),
-						Namespace: gatewayapi.Namespace("qodiriy"),
+						Group:     gwtypes.Group("gateway.networking.k8s.io"),
+						Kind:      gwtypes.Kind("TCPRoute"),
+						Namespace: gwtypes.Namespace("qodiriy"),
 					},
 				},
-				To: []gatewayapi.ReferenceGrantTo{
+				To: []gwtypes.ReferenceGrantTo{
 					{
-						Group: gatewayapi.Group(""),
-						Kind:  gatewayapi.Kind("Service"),
+						Group: gwtypes.Group(""),
+						Kind:  gwtypes.Kind("Service"),
 					},
 				},
 			},
@@ -77,12 +77,12 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	rules := ingressRules{ServiceNameToServices: map[string]kongstate.Service{}}
 	ruleNumber := 999
 	protocol := "example"
-	port := gatewayapi.PortNumber(7777)
-	redObjName := gatewayapi.ObjectName("red-service")
-	blueObjName := gatewayapi.ObjectName("blue-service")
-	cholponNamespace := gatewayapi.Namespace("cholpon")
-	serviceKind := gatewayapi.Kind("Service")
-	serviceGroup := gatewayapi.Group("")
+	port := gwtypes.PortNumber(7777)
+	redObjName := gwtypes.ObjectName("red-service")
+	blueObjName := gwtypes.ObjectName("blue-service")
+	cholponNamespace := gwtypes.Namespace("cholpon")
+	serviceKind := gwtypes.Kind("Service")
+	serviceGroup := gwtypes.Group("")
 
 	fakestore, err := store.NewFakeStore(store.FakeObjects{
 		ReferenceGrants: grants,
@@ -110,20 +110,20 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	tests := []struct {
 		msg     string
 		route   client.Object
-		refs    []gatewayapi.BackendRef
+		refs    []gwtypes.BackendRef
 		result  kongstate.Service
 		wantErr bool
 	}{
 		{
 			msg: "all backends in route namespace",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here
 				Kind:       "HTTPRoute",
 				APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				Name:       "tong-sirlari",
 				Namespace:  "cholpon",
 			},
-			refs: []gatewayapi.BackendRef{
+			refs: []gwtypes.BackendRef{
 				{
 					Name:  blueObjName,
 					Kind:  &serviceKind,
@@ -158,7 +158,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						WithPortNumber(int(port)).
 						MustBuild(),
 				},
-				Parent: &gatewayapi.HTTPRoute{
+				Parent: &gwtypes.HTTPRoute{
 					Name:       "tong-sirlari",
 					Namespace:  "cholpon",
 					Kind:       "HTTPRoute",
@@ -169,13 +169,13 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			msg: "same and different ns backend",
-			route: &gatewayapi.UDPRoute{
+			route: &gwtypes.UDPRoute{
 				Kind:       "UDPRoute",
 				APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				Name:       "padarkush",
 				Namespace:  "behbudiy",
 			},
-			refs: []gatewayapi.BackendRef{
+			refs: []gwtypes.BackendRef{
 				{
 					Name:      blueObjName,
 					Port:      &port,
@@ -211,7 +211,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						WithPortNumber(int(port)).
 						MustBuild(),
 				},
-				Parent: &gatewayapi.UDPRoute{
+				Parent: &gwtypes.UDPRoute{
 					Name:       "padarkush",
 					Namespace:  "behbudiy",
 					Kind:       "UDPRoute",
@@ -222,13 +222,13 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			msg: "only not permitted remote ns",
-			route: &gatewayapi.TCPRoute{
+			route: &gwtypes.TCPRoute{
 				Kind:       "TCPRoute",
 				APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				Name:       "kitab-ul-atfol",
 				Namespace:  "behbudiy",
 			},
-			refs: []gatewayapi.BackendRef{
+			refs: []gwtypes.BackendRef{
 				{
 					Name:      blueObjName,
 					Port:      &port,
@@ -258,7 +258,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						},
 					},
 				},
-				Parent: &gatewayapi.TCPRoute{
+				Parent: &gwtypes.TCPRoute{
 					Name:       "kitab-ul-atfol",
 					Namespace:  "behbudiy",
 					Kind:       "TCPRoute",
@@ -269,13 +269,13 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		},
 		{
 			msg: "same and different ns backend",
-			route: &gatewayapi.TCPRoute{
+			route: &gwtypes.TCPRoute{
 				Kind:       "TCPRoute",
 				APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				Name:       "muntaxabi-jugrofiyai-umumiy",
 				Namespace:  "behbudiy",
 			},
-			refs: []gatewayapi.BackendRef{
+			refs: []gwtypes.BackendRef{
 				{
 					Name:      blueObjName,
 					Port:      &port,
@@ -307,7 +307,7 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						WithPortNumber(int(port)).
 						MustBuild(),
 				},
-				Parent: &gatewayapi.TCPRoute{
+				Parent: &gwtypes.TCPRoute{
 					Name:       "muntaxabi-jugrofiyai-umumiy",
 					Namespace:  "behbudiy",
 					Kind:       "TCPRoute",

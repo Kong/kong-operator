@@ -11,8 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestCacheStores_TakeSnapshot(t *testing.T) {
@@ -149,35 +149,35 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 
 	var k8sObjects []runtime.Object
 	for i := range 1_000 {
-		route := &gatewayapi.HTTPRoute{
+		route := &gwtypes.HTTPRoute{
 			APIVersion:      "gateway.networking.k8s.io/v1",
 			Kind:            "HTTPRoute",
 			Name:            fmt.Sprintf("route-%d", i),
 			Namespace:       "default",
 			ResourceVersion: fmt.Sprintf("12%d", i),
 			UID:             k8stypes.UID(uuid.New().String()),
-			Spec: gatewayapi.HTTPRouteSpec{
-				Rules: []gatewayapi.HTTPRouteRule{
+			Spec: gwtypes.HTTPRouteSpec{
+				Rules: []gwtypes.HTTPRouteRule{
 					{
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/test1"),
 								},
-								Method: new(gatewayapi.HTTPMethodGet),
+								Method: new(gwtypes.HTTPMethodGet),
 							},
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/test2"),
 								},
-								Method: new(gatewayapi.HTTPMethodGet),
+								Method: new(gwtypes.HTTPMethodGet),
 							},
 						},
 					},
 				},
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{},
+				CommonRouteSpec: gwtypes.CommonRouteSpec{},
 			},
 		}
 		k8sObjects = append(k8sObjects, route)

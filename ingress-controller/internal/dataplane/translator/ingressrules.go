@@ -20,10 +20,10 @@ import (
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (
@@ -165,7 +165,7 @@ func (ir *ingressRules) handleBackendTLSPolices(
 	annotations.SetHostHeader(k8sService.Annotations, string(policy.Spec.Validation.Hostname))
 	annotations.SetProtocol(k8sService.Annotations, "https")
 	annotations.SetConfigMapCACertificates(k8sService.Annotations,
-		lo.FilterMap(policy.Spec.Validation.CACertificateRefs, func(ref gatewayapi.LocalObjectReference, _ int) (string, bool) {
+		lo.FilterMap(policy.Spec.Validation.CACertificateRefs, func(ref gwtypes.LocalObjectReference, _ int) (string, bool) {
 			if ref.Kind != ctrlref.KindConfigMap {
 				return "", false
 			}
@@ -173,7 +173,7 @@ func (ir *ingressRules) handleBackendTLSPolices(
 		}),
 	)
 	annotations.SetSecretCACertificates(k8sService.Annotations,
-		lo.FilterMap(policy.Spec.Validation.CACertificateRefs, func(ref gatewayapi.LocalObjectReference, _ int) (string, bool) {
+		lo.FilterMap(policy.Spec.Validation.CACertificateRefs, func(ref gwtypes.LocalObjectReference, _ int) (string, bool) {
 			if ref.Kind != ctrlref.KindSecret {
 				return "", false
 			}
@@ -185,9 +185,9 @@ func (ir *ingressRules) handleBackendTLSPolices(
 	}
 }
 
-func getTLSVerifyDepthOption(options map[gatewayapi.AnnotationKey]gatewayapi.AnnotationValue) (int, bool) {
+func getTLSVerifyDepthOption(options map[gwtypes.AnnotationKey]gwtypes.AnnotationValue) (int, bool) {
 	// If the annotation is not set, return no depth.
-	depthStr, ok := options[gatewayapi.TLSVerifyDepthKey]
+	depthStr, ok := options[gwtypes.TLSVerifyDepthKey]
 	if !ok {
 		return 0, false
 	}

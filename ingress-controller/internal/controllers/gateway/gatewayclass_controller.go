@@ -17,10 +17,10 @@ import (
 
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -52,7 +52,7 @@ type GatewayClassReconciler struct {
 func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
-		Named(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass").
+		Named(strings.ToUpper(gwtypes.V1GroupVersion) + "GatewayClass").
 		// set the controller options
 		WithOptions(controller.Options{
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
@@ -67,7 +67,7 @@ func (r *GatewayClassReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// ControllerName is observed and the cache stops treating its Gateways
 		// as owned. Reconcile still gates the Accepted status write on
 		// isGatewayClassControlled below.
-		For(&gatewayapi.GatewayClass{}).
+		For(&gwtypes.GatewayClass{}).
 		Complete(r)
 }
 
@@ -85,7 +85,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	log.V(logging.DebugLevel).Info("Processing gatewayclass")
 
-	gwc := new(gatewayapi.GatewayClass)
+	gwc := new(gwtypes.GatewayClass)
 	if err := r.Get(ctx, req.NamespacedName, gwc); err != nil {
 		if apierrors.IsNotFound(err) {
 			gwc.Name = req.Name
@@ -104,19 +104,19 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if isGatewayClassControlled(gwc) {
 		alreadyAccepted := util.CheckCondition(
 			gwc.Status.Conditions,
-			util.ConditionType(gatewayapi.GatewayClassConditionStatusAccepted),
-			util.ConditionReason(gatewayapi.GatewayClassReasonAccepted),
+			util.ConditionType(gwtypes.GatewayClassConditionStatusAccepted),
+			util.ConditionReason(gwtypes.GatewayClassReasonAccepted),
 			metav1.ConditionTrue,
 			gwc.Generation,
 		)
 
 		if !alreadyAccepted {
 			acceptedCondtion := metav1.Condition{
-				Type:               string(gatewayapi.GatewayClassConditionStatusAccepted),
+				Type:               string(gwtypes.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: gwc.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.GatewayClassReasonAccepted),
+				Reason:             string(gwtypes.GatewayClassReasonAccepted),
 				Message:            "the gatewayclass has been accepted by the controller",
 			}
 			oldGwc := gwc.DeepCopy()
@@ -152,7 +152,7 @@ func (r *GatewayClassReconciler) SetLogger(l logr.Logger) {
 // pruneGatewayClassStatusConds cleans out old status conditions if the
 // Gatewayclass currently has more status conditions set than the 8 maximum
 // allowed by the Kubernetes API.
-func pruneGatewayClassStatusConds(gwc *gatewayapi.GatewayClass) *gatewayapi.GatewayClass {
+func pruneGatewayClassStatusConds(gwc *gwtypes.GatewayClass) *gwtypes.GatewayClass {
 	if len(gwc.Status.Conditions) > maxConds {
 		gwc.Status.Conditions = gwc.Status.Conditions[len(gwc.Status.Conditions)-maxConds:]
 	}
@@ -163,7 +163,7 @@ func pruneGatewayClassStatusConds(gwc *gatewayapi.GatewayClass) *gatewayapi.Gate
 // to expected condition in newCondition.
 // if the gatewayclass status does not contain a condition with that type, add one more condition.
 // if the gatewayclass status contains condition(s) with the type, then replace with the new condition.
-func setGatewayClassCondition(gwc *gatewayapi.GatewayClass, newCondition metav1.Condition) {
+func setGatewayClassCondition(gwc *gwtypes.GatewayClass, newCondition metav1.Condition) {
 	newConditions := []metav1.Condition{}
 	for _, condition := range gwc.Status.Conditions {
 		if condition.Type != newCondition.Type {

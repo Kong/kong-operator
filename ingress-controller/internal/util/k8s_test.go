@@ -26,7 +26,7 @@ import (
 	testclient "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestParseNameNS(t *testing.T) {
@@ -231,7 +231,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 
 	// In memory kubernetes objects do not have GVK filled in.
 	// Relevant kubernetes issue: https://github.com/kubernetes/kubernetes/issues/80609
-	testObj := &gatewayapi.HTTPRoute{
+	testObj := &gwtypes.HTTPRoute{
 		APIVersion: "gateway.networking.k8s.io/v1",
 		Kind:       "HTTPRoute",
 		Name:       "yedigei",

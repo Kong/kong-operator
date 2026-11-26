@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -48,7 +48,7 @@ func (t *Translator) ingressRulesFromGRPCRoutes() ingressRules {
 	return result
 }
 
-func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gatewayapi.GRPCRoute) error {
+func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *gwtypes.GRPCRoute) error {
 	// first we grab the spec and gather some metadata about the object
 	spec := grpcroute.Spec
 
@@ -76,12 +76,12 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 // Because we need to assign different priorities based on the hostname and match in the specification of GRPCRoutes,
 // We need to split the GRPCRoutes into ones with only one hostname and one match, then assign priority to them
 // and finally translate the split GRPCRoutes into Kong services and routes with assigned priorities.
-func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gatewayapi.GRPCRoute, result *ingressRules) {
+func (t *Translator) ingressRulesFromGRPCRoutesUsingExpressionRoutes(grpcRoutes []*gwtypes.GRPCRoute, result *ingressRules) {
 	// first, split GRPCRoutes by hostname and match.
 	splitGRPCRouteMatches := []subtranslator.SplitGRPCRouteMatch{}
 	// record GRPCRoutes passing the validation and get translated.
 	// after they are translated, register the success event in the translator.
-	translatedGRPCRoutes := []*gatewayapi.GRPCRoute{}
+	translatedGRPCRoutes := []*gwtypes.GRPCRoute{}
 	for _, grpcRoute := range grpcRoutes {
 		splitGRPCRouteMatches = append(splitGRPCRouteMatches, subtranslator.SplitGRPCRoute(grpcRoute, t.storer)...)
 		translatedGRPCRoutes = append(translatedGRPCRoutes, grpcRoute)
@@ -138,8 +138,8 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 	rules.ServiceNameToParent[serviceName] = grpcRoute
 }
 
-func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []gatewayapi.BackendRef {
-	backendRefs := make([]gatewayapi.BackendRef, 0, len(grpcBackendRef))
+func grpcBackendRefsToBackendRefs(grpcBackendRef []gwtypes.GRPCBackendRef) []gwtypes.BackendRef {
+	backendRefs := make([]gwtypes.BackendRef, 0, len(grpcBackendRef))
 
 	for _, hRef := range grpcBackendRef {
 		backendRefs = append(backendRefs, hRef.BackendRef)
@@ -149,9 +149,9 @@ func grpcBackendRefsToBackendRefs(grpcBackendRef []gatewayapi.GRPCBackendRef) []
 
 // getProtocolForKongService returns the protocol for the Kong service configuration.
 // In order to get the protocol, provided route's parentRefs are searched for a Gateway that has the matching listening ports.
-func (t *Translator) getProtocolForKongService(grpcRoute *gatewayapi.GRPCRoute) string {
+func (t *Translator) getProtocolForKongService(grpcRoute *gwtypes.GRPCRoute) string {
 	// When Gateway listens on HTTP use "grpc" protocol for the service. Otherwise for HTTPS use "grpcs".
-	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gwtypes.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
 		return "grpc"
 	}
 	return "grpcs"
@@ -159,13 +159,13 @@ func (t *Translator) getProtocolForKongService(grpcRoute *gatewayapi.GRPCRoute) 
 
 // getProtocolsForKongRoute returns Kong route protocols for a GRPCRoute based on attached Gateway listeners.
 // When no listener can be resolved, we keep compatibility with previous behavior and allow both grpc and grpcs.
-func (t *Translator) getProtocolsForKongRoute(grpcRoute *gatewayapi.GRPCRoute) []*string {
+func (t *Translator) getProtocolsForKongRoute(grpcRoute *gwtypes.GRPCRoute) []*string {
 	protocols := make([]string, 0, 2)
 
-	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gwtypes.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
 		protocols = append(protocols, "grpc")
 	}
-	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPSProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gwtypes.HTTPSProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
 		protocols = append(protocols, "grpcs")
 	}
 

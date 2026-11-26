@@ -13,14 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 	testCases := []struct {
 		name                                      string
-		match                                     gatewayapi.HTTPRouteMatch
+		match                                     gwtypes.HTTPRouteMatch
 		containReplacePrefixMatchURLRewriteFilter bool
 		expression                                string
 	}{
@@ -59,7 +59,7 @@ func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
 		{
 			name: "exact path and method and a single header",
 			match: builder.NewHTTPRouteMatch().WithPathExact("/exact/0").
-				WithMethod(gatewayapi.HTTPMethodGet).
+				WithMethod(gwtypes.HTTPMethodGet).
 				WithHeader("foo", "bar").
 				Build(),
 			expression: `(http.path == "/exact/0") && (http.headers.foo == "bar") && (http.method == "GET")`,
@@ -98,14 +98,14 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 		{
 			name: "precise hostname and exact path",
 			match: SplitHTTPRouteMatch{
-				Source: &gatewayapi.HTTPRoute{
+				Source: &gwtypes.HTTPRoute{
 					Namespace: "default",
 					Name:      "precise-hostname-exact-path",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{"foo.com"},
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Hostnames: []gwtypes.Hostname{"foo.com"},
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 								},
 							},
@@ -118,21 +118,21 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 			expectedTraits: HTTPRoutePriorityTraits{
 				PreciseHostname: true,
 				HostnameLength:  len("foo.com"),
-				PathType:        gatewayapi.PathMatchExact,
+				PathType:        gwtypes.PathMatchExact,
 				PathLength:      len("/foo"),
 			},
 		},
 		{
 			name: "wildcard hostname and prefix path",
 			match: SplitHTTPRouteMatch{
-				Source: &gatewayapi.HTTPRoute{
+				Source: &gwtypes.HTTPRoute{
 					Namespace: "default",
 					Name:      "wildcard-hostname-prefix-path",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{"*.foo.com"},
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Hostnames: []gwtypes.Hostname{"*.foo.com"},
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathPrefix("/foo/").Build(),
 								},
 							},
@@ -145,20 +145,20 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 			expectedTraits: HTTPRoutePriorityTraits{
 				PreciseHostname: false,
 				HostnameLength:  len("*.foo.com"),
-				PathType:        gatewayapi.PathMatchPathPrefix,
+				PathType:        gwtypes.PathMatchPathPrefix,
 				PathLength:      len("/foo/"),
 			},
 		},
 		{
 			name: "no hostname and regex path, with header matches",
 			match: SplitHTTPRouteMatch{
-				Source: &gatewayapi.HTTPRoute{
+				Source: &gwtypes.HTTPRoute{
 					Namespace: "default",
 					Name:      "no-hostname-regex-path",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathRegex("/[a-z0-9]+").
 										WithHeader("foo", "bar").Build(),
 								},
@@ -170,7 +170,7 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 					WithHeader("foo", "bar").Build(),
 			},
 			expectedTraits: HTTPRoutePriorityTraits{
-				PathType:    gatewayapi.PathMatchRegularExpression,
+				PathType:    gwtypes.PathMatchRegularExpression,
 				PathLength:  len("/[a-z0-9]+"),
 				HeaderCount: 1,
 			},
@@ -178,16 +178,16 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 		{
 			name: "precise hostname and method, query param match",
 			match: SplitHTTPRouteMatch{
-				Source: &gatewayapi.HTTPRoute{
+				Source: &gwtypes.HTTPRoute{
 					Namespace: "default",
 					Name:      "precise-hostname-method-query",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
+					Spec: gwtypes.HTTPRouteSpec{
+						Hostnames: []gwtypes.Hostname{
 							"foo.com",
 						},
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithMethod("GET").
 										WithQueryParam("foo", "bar").Build(),
 								},
@@ -209,17 +209,17 @@ func TestCalculateHTTPRoutePriorityTraits(t *testing.T) {
 		{
 			name: "equivalent duplicate header and query parameter names count once",
 			match: SplitHTTPRouteMatch{
-				Source: &gatewayapi.HTTPRoute{
+				Source: &gwtypes.HTTPRoute{
 					Namespace: "default",
 					Name:      "duplicate-match-names",
 				},
-				Match: gatewayapi.HTTPRouteMatch{
-					Headers: []gatewayapi.HTTPHeaderMatch{
+				Match: gwtypes.HTTPRouteMatch{
+					Headers: []gwtypes.HTTPHeaderMatch{
 						{Name: "X-Foo", Value: "one"},
 						{Name: "x-foo", Value: "two"},
 						{Name: "X-Bar", Value: "three"},
 					},
-					QueryParams: []gatewayapi.HTTPQueryParamMatch{
+					QueryParams: []gwtypes.HTTPQueryParamMatch{
 						{Name: "version", Value: "one"},
 						{Name: "version", Value: "two"},
 					},
@@ -251,7 +251,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 			traits: HTTPRoutePriorityTraits{
 				PreciseHostname: true,
 				HostnameLength:  7,
-				PathType:        gatewayapi.PathMatchExact,
+				PathType:        gwtypes.PathMatchExact,
 				PathLength:      4,
 			},
 			expectedPriority: (2 << 44) | (1 << 43) | (7 << 35) | (1 << 34) | (3 << 23),
@@ -261,7 +261,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 			traits: HTTPRoutePriorityTraits{
 				PreciseHostname: false,
 				HostnameLength:  7,
-				PathType:        gatewayapi.PathMatchPathPrefix,
+				PathType:        gwtypes.PathMatchPathPrefix,
 				PathLength:      5,
 			},
 			expectedPriority: (2 << 44) | (7 << 35) | (4 << 23),
@@ -269,7 +269,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 		{
 			name: "no hostname and regex path, with header matches",
 			traits: HTTPRoutePriorityTraits{
-				PathType:    gatewayapi.PathMatchRegularExpression,
+				PathType:    gwtypes.PathMatchRegularExpression,
 				PathLength:  5,
 				HeaderCount: 2,
 			},
@@ -278,7 +278,7 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 		{
 			name: "no hostname and exact path, with method match and query parameter matches",
 			traits: HTTPRoutePriorityTraits{
-				PathType:        gatewayapi.PathMatchExact,
+				PathType:        gwtypes.PathMatchExact,
 				PathLength:      5,
 				HasMethodMatch:  true,
 				QueryParamCount: 1,
@@ -295,12 +295,12 @@ func TestEncodeHTTPRoutePriorityFromTraits(t *testing.T) {
 }
 
 func TestSplitHTTPRoutes(t *testing.T) {
-	namesToBackendRefs := func(names []string) []gatewayapi.HTTPBackendRef {
-		backendRefs := []gatewayapi.HTTPBackendRef{}
+	namesToBackendRefs := func(names []string) []gwtypes.HTTPBackendRef {
+		backendRefs := []gwtypes.HTTPBackendRef{}
 		for _, name := range names {
 			backendRefs = append(backendRefs,
-				gatewayapi.HTTPBackendRef{
-					Name: gatewayapi.ObjectName(name),
+				gwtypes.HTTPBackendRef{
+					Name: gwtypes.ObjectName(name),
 				},
 			)
 		}
@@ -309,16 +309,16 @@ func TestSplitHTTPRoutes(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		httpRoute            *gatewayapi.HTTPRoute
+		httpRoute            *gwtypes.HTTPRoute
 		expectedSplitMatches []SplitHTTPRouteMatch
 	}{
 		{
 			name: "no hostname and only one match",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Namespace: "ns1",
 				Name:      "httproute-1",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
 							Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
 							BackendRefs: namesToBackendRefs([]string{"svc1"}),
@@ -328,7 +328,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 			},
 			expectedSplitMatches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-1",
 					},
@@ -340,15 +340,15 @@ func TestSplitHTTPRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple hostnames with one match",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Namespace: "ns1",
 				Name:      "httproute-2",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"a.foo.com",
 						"b.foo.com",
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
 							Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
 							BackendRefs: namesToBackendRefs([]string{"svc1", "svc2"}),
@@ -358,7 +358,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 			},
 			expectedSplitMatches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-2",
 					},
@@ -368,7 +368,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-2",
 					},
@@ -381,23 +381,23 @@ func TestSplitHTTPRoutes(t *testing.T) {
 		},
 		{
 			name: "single hostname with multiple rules and matches",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Namespace: "ns1",
 				Name:      "httproute-3",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"a.foo.com",
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							Matches: []gatewayapi.HTTPRouteMatch{
+							Matches: []gwtypes.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 								builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 							},
 							BackendRefs: namesToBackendRefs([]string{"svc1"}),
 						},
 						{
-							Matches: []gatewayapi.HTTPRouteMatch{
+							Matches: []gwtypes.HTTPRouteMatch{
 								builder.NewHTTPRouteMatch().WithPathExact("/v2/foo").Build(),
 								builder.NewHTTPRouteMatch().WithPathExact("/v2/bar").Build(),
 							},
@@ -408,7 +408,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 			},
 			expectedSplitMatches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-3",
 						// Spec omitted, we do not check for spec for this test
@@ -419,7 +419,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-3",
 					},
@@ -429,7 +429,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					MatchIndex: 1,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-3",
 					},
@@ -439,7 +439,7 @@ func TestSplitHTTPRoutes(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace: "ns1",
 						Name:      "httproute-3",
 					},
@@ -488,13 +488,13 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 			name: "no dupelicated fixed priority",
 			matches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-1",
 						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"foo.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"foo.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
 									Matches: builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 								},
@@ -507,13 +507,13 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-2",
 						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"*.bar.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"*.bar.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
 									Matches: builder.NewHTTPRouteMatch().WithPathExact("/bar").ToSlice(),
 								},
@@ -536,7 +536,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("foo.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/foo"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
@@ -548,7 +548,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: false,
 					HostnameLength:  len("*.bar.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/bar"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 			},
@@ -557,15 +557,15 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 			name: "break tie by creation timestamp",
 			matches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-1",
 						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"foo.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"foo.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									Matches: []gatewayapi.HTTPRouteMatch{
+									Matches: []gwtypes.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 									},
 								},
@@ -578,15 +578,15 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-2",
 						CreationTimestamp: metav1.NewTime(now.Add(-1 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"bar.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"bar.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									Matches: []gatewayapi.HTTPRouteMatch{
+									Matches: []gwtypes.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 									},
 								},
@@ -609,7 +609,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("foo.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/foo"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
@@ -621,7 +621,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("bar.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/foo"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
@@ -630,13 +630,13 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 			name: "break tie by namespace and name",
 			matches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-1",
 						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"foo.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"foo.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
 									Matches: builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 								},
@@ -649,13 +649,13 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-2",
 						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"bar.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"bar.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
 									Matches: builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 								},
@@ -678,7 +678,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("foo.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/foo"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
@@ -690,7 +690,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("bar.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/foo"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
@@ -699,15 +699,15 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 			name: "break tie by internal match index",
 			matches: []SplitHTTPRouteMatch{
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-1",
 						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"foo.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"foo.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									Matches: []gatewayapi.HTTPRouteMatch{
+									Matches: []gwtypes.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 										builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 									},
@@ -721,15 +721,15 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 					MatchIndex: 0,
 				},
 				{
-					Source: &gatewayapi.HTTPRoute{
+					Source: &gwtypes.HTTPRoute{
 						Namespace:         "default",
 						Name:              "httproute-1",
 						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Spec: gatewayapi.HTTPRouteSpec{
-							Hostnames: []gatewayapi.Hostname{"foo.com"},
-							Rules: []gatewayapi.HTTPRouteRule{
+						Spec: gwtypes.HTTPRouteSpec{
+							Hostnames: []gwtypes.Hostname{"foo.com"},
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									Matches: []gatewayapi.HTTPRouteMatch{
+									Matches: []gwtypes.HTTPRouteMatch{
 										builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 										builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 									},
@@ -753,7 +753,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("foo.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/foo"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits,
 				{
@@ -765,7 +765,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 				}: HTTPRoutePriorityTraits{
 					PreciseHostname: true,
 					HostnameLength:  len("bar.com"),
-					PathType:        gatewayapi.PathMatchExact,
+					PathType:        gwtypes.PathMatchExact,
 					PathLength:      len("/bar"),
 				}.EncodeToPriority() + maxRelativeOrderPriorityBits - 1,
 			},
@@ -795,17 +795,17 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		routes               []*gatewayapi.HTTPRoute
+		routes               []*gwtypes.HTTPRoute
 		expectedSplitMatches splitHTTPRouteMatchesWithPrioritiesGroupedByRule
 	}{
 		{
 			name: "single HTTPRoute with single rule, no hostname and single match",
-			routes: []*gatewayapi.HTTPRoute{
+			routes: []*gwtypes.HTTPRoute{
 				{
 					Namespace: "ns1",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
 								Matches:     builder.NewHTTPRouteMatch().WithPathExact("/").ToSlice(),
 								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
@@ -827,18 +827,18 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 		},
 		{
 			name: "single HTTPRoute with single rule and multiple hostnames and multiple matches",
-			routes: []*gatewayapi.HTTPRoute{
+			routes: []*gwtypes.HTTPRoute{
 				{
 					Namespace: "ns1",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
-							gatewayapi.Hostname("a.foo.com"),
-							gatewayapi.Hostname("b.bar.com"),
+					Spec: gwtypes.HTTPRouteSpec{
+						Hostnames: []gwtypes.Hostname{
+							gwtypes.Hostname("a.foo.com"),
+							gwtypes.Hostname("b.bar.com"),
 						},
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 								},
@@ -879,17 +879,17 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 		},
 		{
 			name: "single HTTPRoute with multiple rules where one of them does not contain a match",
-			routes: []*gatewayapi.HTTPRoute{
+			routes: []*gwtypes.HTTPRoute{
 				{
 					Namespace: "ns1",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
-							gatewayapi.Hostname("foo.com"),
+					Spec: gwtypes.HTTPRouteSpec{
+						Hostnames: []gwtypes.Hostname{
+							gwtypes.Hostname("foo.com"),
 						},
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 								},
@@ -929,17 +929,17 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 		},
 		{
 			name: "multiple HTTPRoutes where one of them does not have hostnames and matches",
-			routes: []*gatewayapi.HTTPRoute{
+			routes: []*gwtypes.HTTPRoute{
 				{
 					Namespace: "ns1",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
-							gatewayapi.Hostname("foo.com"),
+					Spec: gwtypes.HTTPRouteSpec{
+						Hostnames: []gwtypes.Hostname{
+							gwtypes.Hostname("foo.com"),
 						},
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									builder.NewHTTPRouteMatch().WithPathExact("/foo").Build(),
 									builder.NewHTTPRouteMatch().WithPathExact("/bar").Build(),
 								},
@@ -951,8 +951,8 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 				{
 					Namespace: "ns1",
 					Name:      "httproute-2",
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
 								BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
 							},
@@ -1024,7 +1024,7 @@ func TestGroupHTTPRouteMatchesWithPrioritiesByRule(t *testing.T) {
 func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 	testCases := []struct {
 		name                  string
-		httproute             *gatewayapi.HTTPRoute
+		httproute             *gwtypes.HTTPRoute
 		hostname              string
 		ruleIndex             int
 		matchIndex            int
@@ -1039,11 +1039,11 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 	}{
 		{
 			name: "exact path match without hostname",
-			httproute: &gatewayapi.HTTPRoute{
+			httproute: &gwtypes.HTTPRoute{
 				Namespace: "default",
 				Name:      "exact-path-match",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
 							Matches:     builder.NewHTTPRouteMatch().WithPathExact("/foo").ToSlice(),
 							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
@@ -1064,12 +1064,12 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "prefix path match with hostname",
-			httproute: &gatewayapi.HTTPRoute{
+			httproute: &gwtypes.HTTPRoute{
 				Namespace: "default",
 				Name:      "prefix-path-match-with-hostname",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"foo.com", "bar.us"},
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{"foo.com", "bar.us"},
+					Rules: []gwtypes.HTTPRouteRule{
 						{
 							Matches:     builder.NewHTTPRouteMatch().WithPathPrefix("/foo").ToSlice(),
 							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
@@ -1091,21 +1091,21 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "prefix match with hostname and ReplaceMatchPrefix URLRewrite filter",
-			httproute: &gatewayapi.HTTPRoute{
+			httproute: &gwtypes.HTTPRoute{
 				Namespace: "default",
 				Name:      "prefix-path-match-with-url-rewrite",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"foo.com", "bar.us"},
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{"foo.com", "bar.us"},
+					Rules: []gwtypes.HTTPRouteRule{
 						{
 							Matches:     builder.NewHTTPRouteMatch().WithPathPrefix("/foo").ToSlice(),
 							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
-							Filters: []gatewayapi.HTTPRouteFilter{
+							Filters: []gwtypes.HTTPRouteFilter{
 								{
-									Type: gatewayapi.HTTPRouteFilterURLRewrite,
-									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-										Path: &gatewayapi.HTTPPathModifier{
-											Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+									Type: gwtypes.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gwtypes.HTTPURLRewriteFilter{
+										Path: &gwtypes.HTTPPathModifier{
+											Type:               gwtypes.PrefixMatchHTTPPathModifier,
 											ReplacePrefixMatch: new("/bar"),
 										},
 									},
@@ -1129,14 +1129,14 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 		},
 		{
 			name: "regex path match and SNI from annotation",
-			httproute: &gatewayapi.HTTPRoute{
+			httproute: &gwtypes.HTTPRoute{
 				Namespace: "default",
 				Name:      "regex-path-match-with-sni",
 				Annotations: map[string]string{
 					"konghq.com/snis": "foo.com",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
 							Matches:     builder.NewHTTPRouteMatch().WithPathRegex("/users/[a-z0-9]+").ToSlice(),
 							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),

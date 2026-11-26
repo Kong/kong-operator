@@ -15,20 +15,20 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {
 	var (
-		group              = gatewayapi.Group("gateway.networking.k8s.io")
-		defaultGWNamespace = gatewayapi.Namespace(corev1.NamespaceDefault)
-		exampleGroup       = gatewayapi.Group("example")
-		podKind            = gatewayapi.Kind("Pod")
-		gatewayClassName   = gatewayapi.ObjectName("kong")
-		gatewayClass       = &gatewayapi.GatewayClass{
+		group              = gwtypes.Group("gateway.networking.k8s.io")
+		defaultGWNamespace = gwtypes.Namespace(corev1.NamespaceDefault)
+		exampleGroup       = gwtypes.Group("example")
+		podKind            = gwtypes.Kind("Pod")
+		gatewayClassName   = gwtypes.ObjectName("kong")
+		gatewayClass       = &gwtypes.GatewayClass{
 			Name: string(gatewayClassName),
-			Spec: gatewayapi.GatewayClassSpec{
+			Spec: gwtypes.GatewayClassSpec{
 				ControllerName: gatewaycontroller.GetControllerName(),
 			},
 		}
@@ -37,7 +37,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 
 	for _, tt := range []struct {
 		msg           string
-		route         *gatewayapi.HTTPRoute
+		route         *gwtypes.HTTPRoute
 		cachedObjects []client.Object
 		valid         bool
 		validationMsg string
@@ -45,23 +45,23 @@ func TestValidateHTTPRoute(t *testing.T) {
 	}{
 		{
 			msg: "route with no parentRef is accepted with no validations",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
 			}, // no parentRefs
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -74,16 +74,16 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "route with parentRef to non-gateway object is accepted with no validation",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Kind:      new(gatewayapi.Kind("Service")),
-								Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
-								Name:      gatewayapi.ObjectName("kuma-cp"),
+								Kind:      new(gwtypes.Kind("Service")),
+								Namespace: new(gwtypes.Namespace(corev1.NamespaceDefault)),
+								Name:      gwtypes.ObjectName("kuma-cp"),
 							},
 						},
 					},
@@ -91,17 +91,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			}, // parentRef to a Service
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -114,12 +114,12 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "parentRefs which omit the namespace pass validation in the same namespace",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -127,17 +127,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -150,15 +150,15 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "valid HTTPRoute with multiple plugins of the same type attached - passes validation",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
 				Annotations: map[string]string{
 					"konghq.com/plugins": "plugin1,plugin2,plugin3",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -166,17 +166,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -204,15 +204,15 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "valid HTTPRoute with multiple plugins of different types and one no-existing attached - passes validation",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
 				Annotations: map[string]string{
 					"konghq.com/plugins": "plugin1,plugin2,plugin3",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
@@ -220,17 +220,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -253,23 +253,23 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "if an HTTPRoute is using queryparams matching it fails validation due to only supporting expression router",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							QueryParams: []gatewayapi.HTTPQueryParamMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							QueryParams: []gwtypes.HTTPQueryParamMatch{{
 								Name:  "user-agent",
 								Value: "netscape navigator",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
 							Namespace: &defaultGWNamespace,
 						}},
 					}},
@@ -277,17 +277,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -301,23 +301,23 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Group:     &exampleGroup,
 								Kind:      &podKind,
@@ -330,17 +330,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -354,23 +354,23 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we don't support any core kind except Service for backendRefs",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Kind:      &podKind,
 								Namespace: &defaultGWNamespace,
@@ -382,17 +382,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -406,30 +406,30 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we do not support RequestMirror filter",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
 							},
 						},
-						Filters: []gatewayapi.HTTPRouteFilter{
+						Filters: []gwtypes.HTTPRouteFilter{
 							{
-								Type: gatewayapi.HTTPRouteFilterRequestMirror,
+								Type: gwtypes.HTTPRouteFilterRequestMirror,
 							},
 						},
 					}},
@@ -437,17 +437,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -461,30 +461,30 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we do not support CORS filter",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
 							},
 						},
-						Filters: []gatewayapi.HTTPRouteFilter{
+						Filters: []gwtypes.HTTPRouteFilter{
 							{
-								Type: gatewayapi.HTTPRouteFilterCORS,
+								Type: gwtypes.HTTPRouteFilterCORS,
 							},
 						},
 					}},
@@ -492,17 +492,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -516,60 +516,60 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we only support setting the timeout to the same value",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
 							},
 						},
-						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: new(gatewayapi.Duration("1s")),
+						Timeouts: &gwtypes.HTTPRouteTimeouts{
+							BackendRequest: new(gwtypes.Duration("1s")),
 						},
 					}, {
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
 							},
 						},
-						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: new(gatewayapi.Duration("1s")),
+						Timeouts: &gwtypes.HTTPRouteTimeouts{
+							BackendRequest: new(gwtypes.Duration("1s")),
 						},
 					}},
 				},
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -582,61 +582,61 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "supports setting the timeout to different values",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
 							},
 						},
-						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: new(gatewayapi.Duration("1s")),
+						Timeouts: &gwtypes.HTTPRouteTimeouts{
+							BackendRequest: new(gwtypes.Duration("1s")),
 						},
 					}, {
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
 							},
 						},
-						Timeouts: &gatewayapi.HTTPRouteTimeouts{
-							BackendRequest: new(gatewayapi.Duration("5s")),
+						Timeouts: &gwtypes.HTTPRouteTimeouts{
+							BackendRequest: new(gwtypes.Duration("5s")),
 						},
 					}},
 				},
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -649,28 +649,28 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "we do not support filters in backendRefs",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "Content-Type",
 								Value: "audio/vorbis",
 							}},
 						}},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
 								Name: "service1",
-								Filters: []gatewayapi.HTTPRouteFilter{
+								Filters: []gwtypes.HTTPRouteFilter{
 									{
-										Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
+										Type: gwtypes.HTTPRouteFilterRequestHeaderModifier,
 									},
 								},
 							},
@@ -680,17 +680,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -704,34 +704,34 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "invalid protocols",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
 				Annotations: map[string]string{
 					annotations.AnnotationPrefix + annotations.ProtocolsKey: "ohno",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{},
+					Rules: []gwtypes.HTTPRouteRule{},
 				},
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -745,23 +745,23 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "HTTPRoute URLRewrite ReplaceFullPath",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							Filters: []gatewayapi.HTTPRouteFilter{
+							Filters: []gwtypes.HTTPRouteFilter{
 								{
-									Type: gatewayapi.HTTPRouteFilterURLRewrite,
-									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-										Path: &gatewayapi.HTTPPathModifier{
-											Type:            gatewayapi.FullPathHTTPPathModifier,
+									Type: gwtypes.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gwtypes.HTTPURLRewriteFilter{
+										Path: &gwtypes.HTTPPathModifier{
+											Type:            gwtypes.FullPathHTTPPathModifier,
 											ReplaceFullPath: new("/new-path"),
 										},
 									},
@@ -773,17 +773,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -796,22 +796,22 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "HTTPRoute URLRewrite Hostname",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							Filters: []gatewayapi.HTTPRouteFilter{
+							Filters: []gwtypes.HTTPRouteFilter{
 								{
-									Type: gatewayapi.HTTPRouteFilterURLRewrite,
-									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-										Hostname: new(gatewayapi.PreciseHostname("example.com")),
+									Type: gwtypes.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gwtypes.HTTPURLRewriteFilter{
+										Hostname: new(gwtypes.PreciseHostname("example.com")),
 									},
 								},
 							},
@@ -821,17 +821,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -844,23 +844,23 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			msg: "HTTPRoute URLRewrite ReplacePrefixMatch",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "testing-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name: "testing-gateway",
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							Filters: []gatewayapi.HTTPRouteFilter{
+							Filters: []gwtypes.HTTPRouteFilter{
 								{
-									Type: gatewayapi.HTTPRouteFilterURLRewrite,
-									URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-										Path: &gatewayapi.HTTPPathModifier{
-											Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+									Type: gwtypes.HTTPRouteFilterURLRewrite,
+									URLRewrite: &gwtypes.HTTPURLRewriteFilter{
+										Path: &gwtypes.HTTPPathModifier{
+											Type:               gwtypes.PrefixMatchHTTPPathModifier,
 											ReplacePrefixMatch: new("/new"),
 										},
 									},
@@ -872,17 +872,17 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "testing-gateway",
-					Spec: gatewayapi.GatewaySpec{
+					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: gatewayClassName,
-						Listeners: []gatewayapi.Listener{{
+						Listeners: []gwtypes.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
-							AllowedRoutes: &gatewayapi.AllowedRoutes{
-								Kinds: []gatewayapi.RouteGroupKind{{
+							Protocol: (gwtypes.HTTPProtocolType),
+							AllowedRoutes: &gwtypes.AllowedRoutes{
+								Kinds: []gwtypes.RouteGroupKind{{
 									Group: &group,
 									Kind:  "HTTPRoute",
 								}},
@@ -897,32 +897,32 @@ func TestValidateHTTPRoute(t *testing.T) {
 			msg: "HTTPRoute with unsupported filter when reference both existing and non-existing gateway should be rejected",
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "existing-managed-gateway",
-					Spec:      gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
+					Spec:      gwtypes.GatewaySpec{GatewayClassName: gatewayClassName},
 				},
 			},
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "example-route",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:      "non-existent-gateway",
-								Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
+								Namespace: new(gwtypes.Namespace(corev1.NamespaceDefault)),
 							},
 							{
 								Name:      "existing-managed-gateway",
-								Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
+								Namespace: new(gwtypes.Namespace(corev1.NamespaceDefault)),
 							},
 						},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Filters: []gatewayapi.HTTPRouteFilter{{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Filters: []gwtypes.HTTPRouteFilter{{
 							// RequestMirror is explicitly unsupported — should be rejected.
-							Type: gatewayapi.HTTPRouteFilterRequestMirror,
+							Type: gwtypes.HTTPRouteFilterRequestMirror,
 						}},
 					}},
 				},
@@ -934,25 +934,25 @@ func TestValidateHTTPRoute(t *testing.T) {
 			msg: "unsupported retry fields are left to Route status",
 			cachedObjects: []client.Object{
 				gatewayClass,
-				&gatewayapi.Gateway{
+				&gwtypes.Gateway{
 					Namespace: corev1.NamespaceDefault,
 					Name:      "existing-managed-gateway",
-					Spec:      gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
+					Spec:      gwtypes.GatewaySpec{GatewayClassName: gatewayClassName},
 				},
 			},
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: corev1.NamespaceDefault,
 				Name:      "example-route",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
 							Name:      "existing-managed-gateway",
-							Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
+							Namespace: new(gwtypes.Namespace(corev1.NamespaceDefault)),
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Retry: &gatewayapi.HTTPRouteRetry{
-							Codes: []gatewayapi.HTTPRouteRetryStatusCode{500},
+					Rules: []gwtypes.HTTPRouteRule{{
+						Retry: &gwtypes.HTTPRouteRetry{
+							Codes: []gwtypes.HTTPRouteRetryStatusCode{500},
 						},
 					}},
 				},
@@ -987,20 +987,20 @@ func (mockRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 func TestValidateHTTPRouteRegexes(t *testing.T) {
 	testCases := []struct {
 		name          string
-		route         *gatewayapi.HTTPRoute
+		route         *gwtypes.HTTPRoute
 		expectError   bool
 		errorContains string
 	}{
 		{
 			name: "valid path regex",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Path: &gatewayapi.HTTPPathMatch{
-								Type:  new(gatewayapi.PathMatchRegularExpression),
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Path: &gwtypes.HTTPPathMatch{
+								Type:  new(gwtypes.PathMatchRegularExpression),
 								Value: new("/path[1-8]"),
 							},
 						}},
@@ -1011,16 +1011,16 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		},
 		{
 			name: "valid header regex",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "foo",
 								Value: "bar[1-8]",
-								Type:  new(gatewayapi.HeaderMatchRegularExpression),
+								Type:  new(gwtypes.HeaderMatchRegularExpression),
 							}},
 						}},
 					}},
@@ -1030,14 +1030,14 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		},
 		{
 			name: "invalid path regex with unclosed bracket",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Path: &gatewayapi.HTTPPathMatch{
-								Type:  new(gatewayapi.PathMatchRegularExpression),
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Path: &gwtypes.HTTPPathMatch{
+								Type:  new(gwtypes.PathMatchRegularExpression),
 								Value: new("/foo[[[["),
 							},
 						}},
@@ -1049,16 +1049,16 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		},
 		{
 			name: "invalid header regex with unclosed bracket",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "foo",
 								Value: "[[[invalid-regex[[[[",
-								Type:  new(gatewayapi.HeaderMatchRegularExpression),
+								Type:  new(gwtypes.HeaderMatchRegularExpression),
 							}},
 						}},
 					}},
@@ -1069,14 +1069,14 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		},
 		{
 			name: "exact path match type is not validated as regex",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Path: &gatewayapi.HTTPPathMatch{
-								Type:  new(gatewayapi.PathMatchExact),
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Path: &gwtypes.HTTPPathMatch{
+								Type:  new(gwtypes.PathMatchExact),
 								Value: new("/foo[[[["),
 							},
 						}},
@@ -1087,16 +1087,16 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		},
 		{
 			name: "exact header match type is not validated as regex",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{{
-						Matches: []gatewayapi.HTTPRouteMatch{{
-							Headers: []gatewayapi.HTTPHeaderMatch{{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						Matches: []gwtypes.HTTPRouteMatch{{
+							Headers: []gwtypes.HTTPHeaderMatch{{
 								Name:  "foo",
 								Value: "[[[invalid-regex[[[[",
-								Type:  new(gatewayapi.HeaderMatchExact),
+								Type:  new(gwtypes.HeaderMatchExact),
 							}},
 						}},
 					}},

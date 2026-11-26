@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
@@ -28,39 +28,39 @@ var testReferenceGrantVersion = referencegranthelpers.V1()
 
 func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 	t.Log("checking programmed condition for currently ready gateway")
-	currentlyProgrammedGateway := &gatewayapi.Gateway{
+	currentlyProgrammedGateway := &gwtypes.Gateway{
 		Generation: 1,
-		Status: gatewayapi.GatewayStatus{
+		Status: gwtypes.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Type:               string(gwtypes.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+				Reason:             string(gwtypes.GatewayReasonProgrammed),
 			}},
 		},
 	}
 	assert.True(t, isGatewayProgrammed(currentlyProgrammedGateway))
 
 	t.Log("checking programmed condition for previously programmed gateway that has since been updated")
-	previouslyProgrammedGateway := &gatewayapi.Gateway{
+	previouslyProgrammedGateway := &gwtypes.Gateway{
 		Generation: 2,
-		Status: gatewayapi.GatewayStatus{
+		Status: gwtypes.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Type:               string(gwtypes.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+				Reason:             string(gwtypes.GatewayReasonProgrammed),
 			}},
 		},
 	}
 	assert.False(t, isGatewayProgrammed(previouslyProgrammedGateway))
 
 	t.Log("checking programmed condition for a gateway which has never been ready")
-	neverBeenProgrammedGateway := &gatewayapi.Gateway{
+	neverBeenProgrammedGateway := &gwtypes.Gateway{
 		Generation: 10,
-		Status:     gatewayapi.GatewayStatus{},
+		Status:     gwtypes.GatewayStatus{},
 	}
 	assert.False(t, isGatewayProgrammed(neverBeenProgrammedGateway))
 }
@@ -68,13 +68,13 @@ func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 func TestSetGatewayCondtion(t *testing.T) {
 	testCases := []struct {
 		name            string
-		gw              *gatewayapi.Gateway
+		gw              *gwtypes.Gateway
 		condition       metav1.Condition
 		conditionLength int
 	}{
 		{
 			name: "no_such_condition_should_append_one",
-			gw:   &gatewayapi.Gateway{},
+			gw:   &gwtypes.Gateway{},
 			condition: metav1.Condition{
 				Type:               "fake1",
 				Status:             metav1.ConditionTrue,
@@ -86,8 +86,8 @@ func TestSetGatewayCondtion(t *testing.T) {
 		},
 		{
 			name: "have_condition_with_type_should_replace",
-			gw: &gatewayapi.Gateway{
-				Status: gatewayapi.GatewayStatus{
+			gw: &gwtypes.Gateway{
+				Status: gwtypes.GatewayStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",
@@ -110,8 +110,8 @@ func TestSetGatewayCondtion(t *testing.T) {
 		},
 		{
 			name: "multiple_conditions_with_type_should_preserve_one",
-			gw: &gatewayapi.Gateway{
-				Status: gatewayapi.GatewayStatus{
+			gw: &gwtypes.Gateway{
+				Status: gwtypes.GatewayStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",
@@ -170,28 +170,28 @@ func TestSetGatewayCondtion(t *testing.T) {
 
 func TestIsGatewayMarkedAsAccepted(t *testing.T) {
 	t.Log("verifying scheduled check for gateway object which has been accepted")
-	scheduledGateway := &gatewayapi.Gateway{
+	scheduledGateway := &gwtypes.Gateway{
 		Generation: 1,
-		Status: gatewayapi.GatewayStatus{
+		Status: gwtypes.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayapi.GatewayConditionAccepted),
+				Type:               string(gwtypes.GatewayConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.GatewayReasonAccepted),
+				Reason:             string(gwtypes.GatewayReasonAccepted),
 			}},
 		},
 	}
 	assert.True(t, isGatewayAccepted(scheduledGateway))
 
 	t.Log("verifying scheduled check for gateway object which has not been scheduled")
-	unscheduledGateway := &gatewayapi.Gateway{}
+	unscheduledGateway := &gwtypes.Gateway{}
 	assert.False(t, isGatewayAccepted(unscheduledGateway))
 }
 
 func TestPruneStatusConditions(t *testing.T) {
 	t.Log("verifying that a gateway with minimal status conditions is not pruned")
-	gateway := &gatewayapi.Gateway{}
+	gateway := &gwtypes.Gateway{}
 	for i := range 4 {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{Type: "fake", ObservedGeneration: int64(i)})
 	}
@@ -219,52 +219,52 @@ func TestPruneStatusConditions(t *testing.T) {
 
 func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("generating a gatewayclass to test reconciliation filters")
-	gatewayClass := &gatewayapi.GatewayClass{
+	gatewayClass := &gwtypes.GatewayClass{
 		Name: "us",
-		Spec: gatewayapi.GatewayClassSpec{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: GetControllerName(),
 		},
 	}
 
 	t.Log("generating a list of matching controllers")
-	matching := []gatewayapi.Gateway{
+	matching := []gwtypes.Gateway{
 		{
 			Name:      "sanfrancisco",
 			Namespace: "california",
-			Spec: gatewayapi.GatewaySpec{
-				GatewayClassName: gatewayapi.ObjectName(gatewayClass.Name),
+			Spec: gwtypes.GatewaySpec{
+				GatewayClassName: gwtypes.ObjectName(gatewayClass.Name),
 			},
 		},
 		{
 			Name:      "sandiego",
 			Namespace: "california",
-			Spec: gatewayapi.GatewaySpec{
-				GatewayClassName: gatewayapi.ObjectName(gatewayClass.Name),
+			Spec: gwtypes.GatewaySpec{
+				GatewayClassName: gwtypes.ObjectName(gatewayClass.Name),
 			},
 		},
 		{
 			Name:      "losangelos",
 			Namespace: "california",
-			Spec: gatewayapi.GatewaySpec{
-				GatewayClassName: gatewayapi.ObjectName(gatewayClass.Name),
+			Spec: gwtypes.GatewaySpec{
+				GatewayClassName: gwtypes.ObjectName(gatewayClass.Name),
 			},
 		},
 	}
 
 	t.Log("generating a list of non-matching controllers")
-	nonmatching := []gatewayapi.Gateway{
+	nonmatching := []gwtypes.Gateway{
 		{
 			Name:      "hamburg",
 			Namespace: "germany",
-			Spec: gatewayapi.GatewaySpec{
-				GatewayClassName: gatewayapi.ObjectName("eu"),
+			Spec: gwtypes.GatewaySpec{
+				GatewayClassName: gwtypes.ObjectName("eu"),
 			},
 		},
 		{
 			Name:      "paris",
 			Namespace: "france",
-			Spec: gatewayapi.GatewaySpec{
-				GatewayClassName: gatewayapi.ObjectName("eu"),
+			Spec: gwtypes.GatewaySpec{
+				GatewayClassName: gwtypes.ObjectName("eu"),
 			},
 		},
 	}
@@ -295,18 +295,18 @@ func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 }
 
 func TestIsGatewayControlled(t *testing.T) {
-	var testControllerName gatewayapi.GatewayController = "acme.io/gateway-controller"
+	var testControllerName gwtypes.GatewayController = "acme.io/gateway-controller"
 
 	testCases := []struct {
 		name           string
-		GatewayClass   *gatewayapi.GatewayClass
+		GatewayClass   *gwtypes.GatewayClass
 		expectedResult bool
 	}{
 		{
 			name: "uncontrolled GatewayClass",
-			GatewayClass: &gatewayapi.GatewayClass{
+			GatewayClass: &gwtypes.GatewayClass{
 				Name: "uncontrolled",
-				Spec: gatewayapi.GatewayClassSpec{
+				Spec: gwtypes.GatewayClassSpec{
 					ControllerName: testControllerName,
 				},
 			},
@@ -314,9 +314,9 @@ func TestIsGatewayControlled(t *testing.T) {
 		},
 		{
 			name: "controlled GatewayClass",
-			GatewayClass: &gatewayapi.GatewayClass{
+			GatewayClass: &gwtypes.GatewayClass{
 				Name: "controlled",
-				Spec: gatewayapi.GatewayClassSpec{
+				Spec: gwtypes.GatewayClassSpec{
 					ControllerName: GetControllerName(),
 				},
 			},
@@ -364,78 +364,78 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 	testCases := []struct {
 		name             string
 		gatewayNamespace string
-		certRef          gatewayapi.SecretObjectReference
-		referenceGrants  []*gatewayapi.ReferenceGrant
+		certRef          gwtypes.SecretObjectReference
+		referenceGrants  []*gwtypes.ReferenceGrant
 		expectedReason   string
 	}{
 		{
 			name:           "empty reference",
-			certRef:        gatewayapi.SecretObjectReference{},
-			expectedReason: string(gatewayapi.ListenerReasonResolvedRefs),
+			certRef:        gwtypes.SecretObjectReference{},
+			expectedReason: string(gwtypes.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "no need for reference",
 			gatewayNamespace: "test",
-			certRef: gatewayapi.SecretObjectReference{
+			certRef: gwtypes.SecretObjectReference{
 				Kind: util.StringToGatewayAPIKindPtr("Secret"),
 				Name: "testSecret",
 			},
-			expectedReason: string(gatewayapi.ListenerReasonResolvedRefs),
+			expectedReason: string(gwtypes.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "reference not granted - secret name not matching",
 			gatewayNamespace: "test",
-			certRef: gatewayapi.SecretObjectReference{
+			certRef: gwtypes.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: new(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gwtypes.Namespace("otherNamespace")),
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "otherNamespace",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Group:     gatewayapi.V1Group,
+								Group:     gwtypes.V1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  new(gatewayapi.ObjectName("anotherSecret")),
+								Name:  new(gwtypes.ObjectName("anotherSecret")),
 							},
 						},
 					},
 				},
 			},
-			expectedReason: string(gatewayapi.ListenerReasonRefNotPermitted),
+			expectedReason: string(gwtypes.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference not granted - no grants specified",
 			gatewayNamespace: "test",
-			certRef: gatewayapi.SecretObjectReference{
+			certRef: gwtypes.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: new(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gwtypes.Namespace("otherNamespace")),
 			},
-			expectedReason: string(gatewayapi.ListenerReasonRefNotPermitted),
+			expectedReason: string(gwtypes.ListenerReasonRefNotPermitted),
 		},
 		{
 			name:             "reference granted, secret name not specified",
 			gatewayNamespace: "test",
-			certRef: gatewayapi.SecretObjectReference{
+			certRef: gwtypes.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: new(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gwtypes.Namespace("otherNamespace")),
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "otherNamespace",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							// useless entry, just to furtherly test the function
 							{
 								Group:     "otherGroup",
@@ -444,12 +444,12 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 							},
 							// good entry
 							{
-								Group:     gatewayapi.V1Group,
+								Group:     gwtypes.V1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",
@@ -458,38 +458,38 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 					},
 				},
 			},
-			expectedReason: string(gatewayapi.ListenerReasonResolvedRefs),
+			expectedReason: string(gwtypes.ListenerReasonResolvedRefs),
 		},
 		{
 			name:             "reference granted, secret name specified",
 			gatewayNamespace: "test",
-			certRef: gatewayapi.SecretObjectReference{
+			certRef: gwtypes.SecretObjectReference{
 				Kind:      util.StringToGatewayAPIKindPtr("Secret"),
 				Name:      "testSecret",
-				Namespace: new(gatewayapi.Namespace("otherNamespace")),
+				Namespace: new(gwtypes.Namespace("otherNamespace")),
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					Namespace: "otherNamespace",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
-								Group:     gatewayapi.V1Group,
+								Group:     gwtypes.V1Group,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: "",
 								Kind:  "Secret",
-								Name:  new(gatewayapi.ObjectName("testSecret")),
+								Name:  new(gwtypes.ObjectName("testSecret")),
 							},
 						},
 					},
 				},
 			},
-			expectedReason: string(gatewayapi.ListenerReasonResolvedRefs),
+			expectedReason: string(gwtypes.ListenerReasonResolvedRefs),
 		},
 	}
 
@@ -506,21 +506,21 @@ func TestUpdateAddressesAndListenersStatus_UpdatesAddressesWhenProgrammed(t *tes
 	ctx := context.Background()
 	sch := scheme.Get()
 
-	ipType := gatewayapi.IPAddressType
-	gateway := &gatewayapi.Gateway{
+	ipType := gwtypes.IPAddressType
+	gateway := &gwtypes.Gateway{
 		Name:       "gw",
 		Namespace:  "default",
 		Generation: 1,
-		Status: gatewayapi.GatewayStatus{
-			Addresses: []gatewayapi.GatewayStatusAddress{
+		Status: gwtypes.GatewayStatus{
+			Addresses: []gwtypes.GatewayStatusAddress{
 				{Type: &ipType, Value: "10.0.0.1"},
 			},
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(gatewayapi.GatewayConditionProgrammed),
+					Type:               string(gwtypes.GatewayConditionProgrammed),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: 1,
-					Reason:             string(gatewayapi.GatewayReasonProgrammed),
+					Reason:             string(gwtypes.GatewayReasonProgrammed),
 					LastTransitionTime: metav1.Now(),
 				},
 			},
@@ -539,8 +539,8 @@ func TestUpdateAddressesAndListenersStatus_UpdatesAddressesWhenProgrammed(t *tes
 		ReferenceGrantVersion: testReferenceGrantVersion,
 	}
 
-	listenerStatuses := []gatewayapi.ListenerStatus{}
-	newAddresses := []gatewayapi.GatewayStatusAddress{
+	listenerStatuses := []gwtypes.ListenerStatus{}
+	newAddresses := []gwtypes.GatewayStatusAddress{
 		{Type: &ipType, Value: "10.0.0.2"},
 	}
 
@@ -548,7 +548,7 @@ func TestUpdateAddressesAndListenersStatus_UpdatesAddressesWhenProgrammed(t *tes
 	require.NoError(t, err)
 	require.True(t, res.IsZero())
 
-	updated := &gatewayapi.Gateway{}
+	updated := &gwtypes.Gateway{}
 	require.NoError(t, cl.Get(ctx, ctrlclient.ObjectKeyFromObject(gateway), updated))
 	require.Equal(t, newAddresses, updated.Status.Addresses)
 }

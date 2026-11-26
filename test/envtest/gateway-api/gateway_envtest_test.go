@@ -18,7 +18,6 @@ import (
 	dpreconciler "github.com/kong/kong-operator/v2/controller/dataplane"
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -104,7 +103,7 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 			t.Logf("Failed to get gateway %s/%s: %v", gw.Namespace, gw.Name, err)
 			return false
 		}
-		httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gatewayapi.ListenerStatus) bool {
+		httpListener, ok := lo.Find(gw.Status.Listeners, func(listener gwtypes.ListenerStatus) bool {
 			return listener.Name == "http"
 		})
 		if !ok {

@@ -13,7 +13,7 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestNewFakeStoreEmpty(t *testing.T) {
@@ -482,14 +482,14 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayapi.HTTPRoute{
+	classes := []*gwtypes.HTTPRoute{
 		{
 			Name: "foo",
-			Spec: gatewayapi.HTTPRouteSpec{},
+			Spec: gwtypes.HTTPRouteSpec{},
 		},
 		{
 			Name: "bar",
-			Spec: gatewayapi.HTTPRouteSpec{},
+			Spec: gwtypes.HTTPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{HTTPRoutes: classes})
@@ -504,14 +504,14 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayapi.UDPRoute{
+	classes := []*gwtypes.UDPRoute{
 		{
 			Name: "foo",
-			Spec: gatewayapi.UDPRouteSpec{},
+			Spec: gwtypes.UDPRouteSpec{},
 		},
 		{
 			Name: "bar",
-			Spec: gatewayapi.UDPRouteSpec{},
+			Spec: gwtypes.UDPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{UDPRoutes: classes})
@@ -526,14 +526,14 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayapi.TCPRoute{
+	classes := []*gwtypes.TCPRoute{
 		{
 			Name: "foo",
-			Spec: gatewayapi.TCPRouteSpec{},
+			Spec: gwtypes.TCPRouteSpec{},
 		},
 		{
 			Name: "bar",
-			Spec: gatewayapi.TCPRouteSpec{},
+			Spec: gwtypes.TCPRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TCPRoutes: classes})
@@ -548,14 +548,14 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	classes := []*gatewayapi.TLSRoute{
+	classes := []*gwtypes.TLSRoute{
 		{
 			Name: "foo",
-			Spec: gatewayapi.TLSRouteSpec{},
+			Spec: gwtypes.TLSRouteSpec{},
 		},
 		{
 			Name: "bar",
-			Spec: gatewayapi.TLSRouteSpec{},
+			Spec: gwtypes.TLSRouteSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{TLSRoutes: classes})
@@ -570,14 +570,14 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayapi.ReferenceGrant{
+	grants := []*gwtypes.ReferenceGrant{
 		{
 			Name: "foo",
-			Spec: gatewayapi.ReferenceGrantSpec{},
+			Spec: gwtypes.ReferenceGrantSpec{},
 		},
 		{
 			Name: "bar",
-			Spec: gatewayapi.ReferenceGrantSpec{},
+			Spec: gwtypes.ReferenceGrantSpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{ReferenceGrants: grants})
@@ -592,14 +592,14 @@ func TestFakeStoreGateway(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	grants := []*gatewayapi.Gateway{
+	grants := []*gwtypes.Gateway{
 		{
 			Name: "foo",
-			Spec: gatewayapi.GatewaySpec{},
+			Spec: gwtypes.GatewaySpec{},
 		},
 		{
 			Name: "bar",
-			Spec: gatewayapi.GatewaySpec{},
+			Spec: gwtypes.GatewaySpec{},
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Gateways: grants})

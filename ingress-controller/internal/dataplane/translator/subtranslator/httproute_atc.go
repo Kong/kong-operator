@@ -11,11 +11,11 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func generateMatcherFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch, containReplacePrefixMatchURLRewriteFilter bool) atc.Matcher {
+func generateMatcherFromHTTPRouteMatch(match gwtypes.HTTPRouteMatch, containReplacePrefixMatchURLRewriteFilter bool) atc.Matcher {
 	matcher := atc.And()
 
 	if match.Path != nil {
@@ -48,16 +48,16 @@ func appendRegexBeginIfNotExist(regex string) string {
 	return regex
 }
 
-func pathMatcherFromHTTPPathMatch(pathMatch *gatewayapi.HTTPPathMatch, containReplacePrefixMatchURLRewriteFilter bool) atc.Matcher {
+func pathMatcherFromHTTPPathMatch(pathMatch *gwtypes.HTTPPathMatch, containReplacePrefixMatchURLRewriteFilter bool) atc.Matcher {
 	path := ""
 	if pathMatch.Value != nil {
 		path = *pathMatch.Value
 	}
 
 	switch *pathMatch.Type {
-	case gatewayapi.PathMatchExact:
+	case gwtypes.PathMatchExact:
 		return atc.NewPredicateHTTPPath(atc.OpEqual, path)
-	case gatewayapi.PathMatchPathPrefix:
+	case gwtypes.PathMatchPathPrefix:
 		// if path ends with /, we should remove the trailing / because it should be ignored.
 		// So we normalize the path when the path match type is prefix.
 		// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.PathMatchType
@@ -93,29 +93,29 @@ func pathMatcherFromHTTPPathMatch(pathMatch *gatewayapi.HTTPPathMatch, containRe
 			atc.NewPredicateHTTPPath(atc.OpEqual, path),
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, path+"/"),
 		)
-	case gatewayapi.PathMatchRegularExpression:
+	case gwtypes.PathMatchRegularExpression:
 		return atc.NewPredicateHTTPPath(atc.OpRegexMatch, appendRegexBeginIfNotExist(path))
 	}
 
 	return nil // should be unreachable
 }
 
-func headerMatcherFromHTTPHeaderMatch(headerMatch gatewayapi.HTTPHeaderMatch) atc.Matcher {
-	matchType := gatewayapi.HeaderMatchExact
+func headerMatcherFromHTTPHeaderMatch(headerMatch gwtypes.HTTPHeaderMatch) atc.Matcher {
+	matchType := gwtypes.HeaderMatchExact
 	if headerMatch.Type != nil {
 		matchType = *headerMatch.Type
 	}
 	headerKey := strings.ReplaceAll(strings.ToLower(string(headerMatch.Name)), "-", "_")
 	switch matchType {
-	case gatewayapi.HeaderMatchExact:
+	case gwtypes.HeaderMatchExact:
 		return atc.NewPredicateHTTPHeader(headerKey, atc.OpEqual, headerMatch.Value)
-	case gatewayapi.HeaderMatchRegularExpression:
+	case gwtypes.HeaderMatchRegularExpression:
 		return atc.NewPredicateHTTPHeader(headerKey, atc.OpRegexMatch, headerMatch.Value)
 	}
 	return nil // should be unreachable
 }
 
-func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayapi.HTTPHeaderMatch) atc.Matcher {
+func headerMatcherFromHTTPHeaderMatches(headerMatches []gwtypes.HTTPHeaderMatch) atc.Matcher {
 	// sort headerMatches by names to generate a stable output.
 	sort.Slice(headerMatches, func(i, j int) bool {
 		return string(headerMatches[i].Name) < string(headerMatches[j].Name)
@@ -128,21 +128,21 @@ func headerMatcherFromHTTPHeaderMatches(headerMatches []gatewayapi.HTTPHeaderMat
 	return atc.And(matchers...)
 }
 
-func queryParamMatcherFromHTTPQueryParamMatch(queryParamMatch gatewayapi.HTTPQueryParamMatch) atc.Matcher {
-	matchType := gatewayapi.QueryParamMatchExact
+func queryParamMatcherFromHTTPQueryParamMatch(queryParamMatch gwtypes.HTTPQueryParamMatch) atc.Matcher {
+	matchType := gwtypes.QueryParamMatchExact
 	if queryParamMatch.Type != nil {
 		matchType = *queryParamMatch.Type
 	}
 	switch matchType {
-	case gatewayapi.QueryParamMatchExact:
+	case gwtypes.QueryParamMatchExact:
 		return atc.NewPredicateHTTPQuery(string(queryParamMatch.Name), atc.OpEqual, queryParamMatch.Value)
-	case gatewayapi.QueryParamMatchRegularExpression:
+	case gwtypes.QueryParamMatchRegularExpression:
 		return atc.NewPredicateHTTPQuery(string(queryParamMatch.Name), atc.OpRegexMatch, queryParamMatch.Value)
 	}
 	return nil // should be unreachable
 }
 
-func queryParamMatcherFromHTTPQueryParamMatches(queryParamMatches []gatewayapi.HTTPQueryParamMatch) atc.Matcher {
+func queryParamMatcherFromHTTPQueryParamMatches(queryParamMatches []gwtypes.HTTPQueryParamMatch) atc.Matcher {
 	// Sort queryParamMatches by names to generate a stable output.
 	sort.Slice(queryParamMatches, func(i, j int) bool {
 		return string(queryParamMatches[i].Name) < string(queryParamMatches[j].Name)
@@ -173,9 +173,9 @@ func matchersFromParentHTTPRoute(hostnames []string, metaAnnotations map[string]
 }
 
 type SplitHTTPRouteMatch struct {
-	Source   *gatewayapi.HTTPRoute
+	Source   *gwtypes.HTTPRoute
 	Hostname string
-	Match    gatewayapi.HTTPRouteMatch
+	Match    gwtypes.HTTPRouteMatch
 	// OptionalNamedRouteRule represents RouteName - an optional name
 	// of the particular route that can be defined in the K8s HTTPRoute,
 	// https://gateway-api.sigs.k8s.io/geps/gep-995/#api.
@@ -187,7 +187,7 @@ type SplitHTTPRouteMatch struct {
 // SplitHTTPRoute splits HTTPRoutes into matches with at most one hostname, and one rule
 // with exactly one match. It will split one rule with multiple hostnames and multiple matches
 // to one hostname and one match per each HTTPRoute.
-func SplitHTTPRoute(httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
+func SplitHTTPRoute(httproute *gwtypes.HTTPRoute) []SplitHTTPRouteMatch {
 	splitHTTPRouteByMatch := func(hostname string) []SplitHTTPRouteMatch {
 		ret := []SplitHTTPRouteMatch{}
 		for ruleIndex, rule := range httproute.Spec.Rules {
@@ -196,7 +196,7 @@ func SplitHTTPRoute(httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
 				ret = append(ret, SplitHTTPRouteMatch{
 					Source:                 httproute,
 					Hostname:               hostname,
-					Match:                  gatewayapi.HTTPRouteMatch{},
+					Match:                  gwtypes.HTTPRouteMatch{},
 					OptionalNamedRouteRule: optionalNamedRouteRule,
 					RuleIndex:              ruleIndex,
 					MatchIndex:             0,
@@ -235,7 +235,7 @@ type SplitHTTPRouteMatchToKongRoutePriority struct {
 type HTTPRoutePriorityTraits struct {
 	PreciseHostname bool
 	HostnameLength  int
-	PathType        gatewayapi.PathMatchType
+	PathType        gwtypes.PathMatchType
 	PathLength      int
 	HeaderCount     int
 	HasMethodMatch  bool
@@ -302,7 +302,7 @@ func calculateHTTPRouteMatchPriorityTraits(match SplitHTTPRouteMatch) HTTPRouteP
 	return traits
 }
 
-func countEffectiveHTTPHeaderMatches(headers []gatewayapi.HTTPHeaderMatch) int {
+func countEffectiveHTTPHeaderMatches(headers []gwtypes.HTTPHeaderMatch) int {
 	seenHeaders := make(map[string]struct{}, len(headers))
 	for _, header := range headers {
 		name := strings.ToLower(string(header.Name))
@@ -314,7 +314,7 @@ func countEffectiveHTTPHeaderMatches(headers []gatewayapi.HTTPHeaderMatch) int {
 	return len(seenHeaders)
 }
 
-func countEffectiveHTTPQueryParamMatches(queryParams []gatewayapi.HTTPQueryParamMatch) int {
+func countEffectiveHTTPQueryParamMatches(queryParams []gwtypes.HTTPQueryParamMatch) int {
 	seenQueryParams := make(map[string]struct{}, len(queryParams))
 	for _, queryParam := range queryParams {
 		name := string(queryParam.Name)
@@ -373,10 +373,10 @@ func (t HTTPRoutePriorityTraits) EncodeToPriority() RoutePriorityType {
 	}
 	priority += RoutePriorityType(t.HostnameLength << HostnameLengthShiftBits)
 
-	if t.PathType == gatewayapi.PathMatchExact {
+	if t.PathType == gwtypes.PathMatchExact {
 		priority += (1 << ExactPathShiftBits)
 	}
-	if t.PathType == gatewayapi.PathMatchRegularExpression {
+	if t.PathType == gwtypes.PathMatchRegularExpression {
 		priority += (1 << RegularExpressionPathShiftBits)
 	}
 
@@ -513,10 +513,10 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	// For example, to replace `/prefix/*` to `/replace/*`, we should capture the part after `/prefix/` into group $1 and modify the path to `/replace/$1`.
 	containReplacePrefixMatchURLRewriteFilter := lo.ContainsBy(
 		httproute.Spec.Rules[match.RuleIndex].Filters,
-		func(filter gatewayapi.HTTPRouteFilter) bool {
-			return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
+		func(filter gwtypes.HTTPRouteFilter) bool {
+			return filter.Type == gwtypes.HTTPRouteFilterURLRewrite &&
 				filter.URLRewrite.Path != nil &&
-				filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier
+				filter.URLRewrite.Path.Type == gwtypes.PrefixMatchHTTPPathModifier
 		})
 
 	r := &kongstate.Route{
@@ -565,7 +565,7 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 
 // groupHTTPRouteMatchesWithPrioritiesByRule groups split HTTPRoute matches that has priorities assigned by the source HTTPRoute rule,.
 func groupHTTPRouteMatchesWithPrioritiesByRule(
-	logger logr.Logger, routes []*gatewayapi.HTTPRoute,
+	logger logr.Logger, routes []*gwtypes.HTTPRoute,
 ) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
 	splitHTTPRouteMatches := []SplitHTTPRouteMatch{}
 	for _, route := range routes {

@@ -26,10 +26,10 @@ import (
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // KongValidator validates Kong entities.
@@ -41,8 +41,8 @@ type KongValidator interface {
 	ValidateVault(ctx context.Context, vault configurationv1alpha1.KongVault) (bool, string, error)
 	ValidateCustomEntity(ctx context.Context, entity configurationv1alpha1.KongCustomEntity) (bool, string, error)
 	ValidateCredential(ctx context.Context, secret corev1.Secret) (bool, string)
-	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
-	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
+	ValidateGateway(ctx context.Context, gateway gwtypes.Gateway) (bool, string, error)
+	ValidateHTTPRoute(ctx context.Context, httproute gwtypes.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
 
 	IngressClassMatcher(obj *metav1.ObjectMeta) bool
@@ -460,10 +460,10 @@ func (validator KongHTTPValidator) ValidateClusterPlugin(
 }
 
 func (validator KongHTTPValidator) ValidateGateway(
-	ctx context.Context, gateway gatewayapi.Gateway,
+	ctx context.Context, gateway gwtypes.Gateway,
 ) (bool, string, error) {
 	// validate the gatewayclass reference
-	gwc := gatewayapi.GatewayClass{}
+	gwc := gwtypes.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, "", nil // not managed by this controller
@@ -481,7 +481,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 }
 
 func (validator KongHTTPValidator) ValidateHTTPRoute(
-	ctx context.Context, httproute gatewayapi.HTTPRoute,
+	ctx context.Context, httproute gwtypes.HTTPRoute,
 ) (bool, string, error) {
 	var routeValidator routeValidator = noOpRoutesValidator{}
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {

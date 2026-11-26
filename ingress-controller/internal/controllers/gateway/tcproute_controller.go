@@ -26,10 +26,10 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -70,7 +70,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// ensure that any route objects that may have been orphaned by that change get
 		// removed from data-plane configurations, and any routes that are now supported
 		// due to that change get added to data-plane configurations.
-		Watches(&gatewayapi.GatewayClass{},
+		Watches(&gwtypes.GatewayClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGatewayClass),
 			builder.WithPredicates(predicate.Funcs{
 				GenericFunc: func(_ event.GenericEvent) bool { return false }, // we don't need to enqueue from generic
@@ -83,7 +83,7 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// ensure that any route objects that may have been orphaned by that change get
 		// removed from data-plane configurations, and any routes that are now supported
 		// due to that change get added to data-plane configurations.
-		Watches(&gatewayapi.Gateway{},
+		Watches(&gwtypes.Gateway{},
 			handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 		)
 
@@ -111,9 +111,9 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// This allows us to drop the backend data-plane config for a route if
 	// it somehow becomes disconnected from a supported Gateway and GatewayClass.
 	return blder.
-		For(&gatewayapi.TCPRoute{},
+		For(&gwtypes.TCPRoute{},
 			builder.WithPredicates(
-				IsRouteAttachedToReconciledGatewayPredicate[*gatewayapi.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
+				IsRouteAttachedToReconciledGatewayPredicate[*gwtypes.TCPRoute](r.Client, mgr.GetLogger(), r.GatewayNN),
 			),
 		).
 		Complete(r)
@@ -131,14 +131,14 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // the cached manager client to avoid API overhead.
 func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a GatewayClass
-	gwc, ok := obj.(*gatewayapi.GatewayClass)
+	gwc, ok := obj.(*gwtypes.GatewayClass)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "GatewayClass", "found", reflect.TypeOf(obj))
 		return nil
 	}
 
 	// map all Gateway objects
-	gatewayList := gatewayapi.GatewayList{}
+	gatewayList := gwtypes.GatewayList{}
 	if err := r.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "Failed to list gateway objects from the cached client")
 		return nil
@@ -168,7 +168,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 	}
 
 	// map all TCPRoute objects
-	tcprouteList := gatewayapi.TCPRouteList{}
+	tcprouteList := gwtypes.TCPRouteList{}
 	if err := r.List(ctx, &tcprouteList); err != nil {
 		r.Log.Error(err, "Failed to list tcproute objects from the cached client")
 		return nil
@@ -220,7 +220,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGatewayClass(ctx context.Context, o
 // this kind of problem without having to enqueue extra objects.
 func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	// verify that the object is a Gateway
-	gw, ok := obj.(*gatewayapi.Gateway)
+	gw, ok := obj.(*gwtypes.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
@@ -233,7 +233,7 @@ func (r *TCPRouteReconciler) listTCPRoutesForGateway(ctx context.Context, obj cl
 	}
 
 	// map all TCPRoute objects
-	tcprouteList := gatewayapi.TCPRouteList{}
+	tcprouteList := gwtypes.TCPRouteList{}
 	if err := r.List(ctx, &tcprouteList); err != nil {
 		r.Log.Error(err, "Failed to list tcproute objects from the cached client")
 		return nil
@@ -267,11 +267,11 @@ func (r *TCPRouteReconciler) listTCPRoutesForReferenceGrant(ctx context.Context,
 		r.Log.Error(
 			errInvalidType,
 			"Referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
-	tcproutes := &gatewayapi.TCPRouteList{}
+	tcproutes := &gwtypes.TCPRouteList{}
 	if err := r.List(ctx, tcproutes); err != nil {
 		r.Log.Error(err, "Failed to list tcproutes in watch", "referencegrant", grant.Name)
 		return nil
@@ -317,7 +317,7 @@ func referenceGrantHasTCPRouteFrom(obj client.Object) bool {
 func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1TCPRoute", req.NamespacedName)
 
-	tcproute := new(gatewayapi.TCPRoute)
+	tcproute := new(gwtypes.TCPRoute)
 	if err := r.Get(ctx, req.NamespacedName, tcproute); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
@@ -490,7 +490,7 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 // the status update resulted in a conflict or because the status was updated.
 func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	ctx context.Context,
-	tcproute *gatewayapi.TCPRoute,
+	tcproute *gwtypes.TCPRoute,
 	gateways ...supportedGatewayWithCondition,
 ) (bool, ctrl.Result, error) {
 	parentStatuses, statusChangesWereMade := parentStatusesForRoute(
@@ -512,7 +512,7 @@ func (r *TCPRouteReconciler) ensureGatewayReferenceStatusAdded(
 	}
 
 	// update the tcproute status with the new status references
-	tcproute.Status.Parents = make([]gatewayapi.RouteParentStatus, 0, len(parentStatuses))
+	tcproute.Status.Parents = make([]gwtypes.RouteParentStatus, 0, len(parentStatuses))
 	for _, parent := range parentStatuses {
 		tcproute.Status.Parents = append(tcproute.Status.Parents, *parent)
 	}
@@ -538,23 +538,23 @@ func (r *TCPRouteReconciler) SetLogger(l logr.Logger) {
 // setRouteConditionResolvedRefsCondition sets a condition of type ResolvedRefs on the route status.
 func (r *TCPRouteReconciler) setRouteConditionResolvedRefsCondition(
 	ctx context.Context,
-	tcpRoute *gatewayapi.TCPRoute,
-	parentStatuses map[string]*gatewayapi.RouteParentStatus,
-) (map[string]*gatewayapi.RouteParentStatus, bool, error) {
+	tcpRoute *gwtypes.TCPRoute,
+	parentStatuses map[string]*gwtypes.RouteParentStatus,
+) (map[string]*gwtypes.RouteParentStatus, bool, error) {
 	var changed bool
 	resolvedRefsStatus := metav1.ConditionFalse
 	reason, msg, err := r.getTCPRouteRuleReason(ctx, *tcpRoute)
 	if err != nil {
 		return nil, false, err
 	}
-	if reason == gatewayapi.RouteReasonResolvedRefs {
+	if reason == gwtypes.RouteReasonResolvedRefs {
 		resolvedRefsStatus = metav1.ConditionTrue
 	}
 
 	// iterate over all the parentStatuses conditions, and if no RouteConditionResolvedRefs is found,
 	// or if the condition is found but has to be changed, update the status and mark it to be updated
 	resolvedRefsCondition := metav1.Condition{
-		Type:               string(gatewayapi.RouteConditionResolvedRefs),
+		Type:               string(gwtypes.RouteConditionResolvedRefs),
 		Status:             resolvedRefsStatus,
 		ObservedGeneration: tcpRoute.Generation,
 		LastTransitionTime: metav1.Now(),
@@ -567,7 +567,7 @@ func (r *TCPRouteReconciler) setRouteConditionResolvedRefsCondition(
 		}
 		var conditionFound bool
 		for i, cond := range parentStatus.Conditions {
-			if cond.Type == string(gatewayapi.RouteConditionResolvedRefs) {
+			if cond.Type == string(gwtypes.RouteConditionResolvedRefs) {
 				if cond.Status != resolvedRefsStatus ||
 					cond.Reason != string(reason) {
 					parentStatus.Conditions[i] = resolvedRefsCondition
@@ -588,8 +588,8 @@ func (r *TCPRouteReconciler) setRouteConditionResolvedRefsCondition(
 
 // getTCPRouteRuleReason validates the backendRefs of every rule in the TCPRoute
 // and returns the first failure encountered. When all backendRefs are valid it
-// returns gatewayapi.RouteReasonResolvedRefs.
-func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute gatewayapi.TCPRoute) (reason gatewayapi.RouteConditionReason, msg string, err error) {
+// returns gwtypes.RouteReasonResolvedRefs.
+func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute gwtypes.TCPRoute) (reason gwtypes.RouteConditionReason, msg string, err error) {
 	for _, rule := range tcpRoute.Spec.Rules {
 		for _, backendRef := range rule.BackendRefs {
 			backendNamespace := tcpRoute.Namespace
@@ -605,7 +605,7 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 
 			// Check if the BackendRef GroupKind is supported.
 			if !util.IsBackendRefGroupKindSupported(backendRef.Group, backendRef.Kind) {
-				return gatewayapi.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
+				return gwtypes.RouteReasonInvalidKind, fmt.Sprintf("target %s has unsupported type %s", targetNN, backendRefGK), nil
 			}
 
 			// If the object referenced is in another namespace,
@@ -620,7 +620,7 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 				referenceGrants := k8sutils.ReferenceGrantItems(referenceGrantList)
 				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
 				if len(referenceGrants) == 0 {
-					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+					return gwtypes.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 				var isGranted bool
 				for _, grant := range referenceGrants {
@@ -630,7 +630,7 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 					}
 				}
 				if !isGranted {
-					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
+					return gwtypes.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 			}
 
@@ -641,10 +641,10 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 				if !apierrors.IsNotFound(err) {
 					return "", "", err
 				}
-				return gatewayapi.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
+				return gwtypes.RouteReasonBackendNotFound, fmt.Sprintf("target %s of type %s does not exist", targetNN, backendRefGK), nil
 			}
 		}
 	}
 
-	return gatewayapi.RouteReasonResolvedRefs, "", nil
+	return gwtypes.RouteReasonResolvedRefs, "", nil
 }

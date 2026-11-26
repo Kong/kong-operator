@@ -22,8 +22,8 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -46,10 +46,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindUDPRoute).
 		WithSetup("deploy Gateway managed by Kong Operator", featureSetup(
 			withKongRouterFlavor(dpconf.RouterFlavorExpressions),
-			withGatewayListeners(gatewayapi.Listener{
+			withGatewayListeners(gwtypes.Listener{
 				Name:     gatewayUDPPortName,
-				Protocol: gatewayapi.UDPProtocolType,
-				Port:     gatewayapi.PortNumber(ktfkong.DefaultUDPServicePort),
+				Protocol: gwtypes.UDPProtocolType,
+				Port:     gwtypes.PortNumber(ktfkong.DefaultUDPServicePort),
 			}),
 		)).
 		WithSetup("configure UDP Deployments with Services and UDPRoutes", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
@@ -60,7 +60,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			cluster := GetClusterFromCtx(ctx)
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 
 			t.Log("creating a udpecho pod to test UDPRoute traffic routing")
 			container1 := generators.NewContainer(service1Name, test.EchoImage, test.EchoUDPPort)
@@ -121,19 +121,19 @@ func TestUDPRouteEssentials(t *testing.T) {
 			cleaner.Add(service2)
 
 			t.Logf("creating a UDPRoute to access deployment %s via kong", deployment1.Name)
-			udpRoute := &gatewayapi.UDPRoute{
+			udpRoute := &gwtypes.UDPRoute{
 				Name: uuid.NewString(),
-				Spec: gatewayapi.UDPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
-							Name:        gatewayapi.ObjectName(gateway.Name),
-							SectionName: new(gatewayapi.SectionName(gatewayUDPPortName)),
+				Spec: gwtypes.UDPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
+							Name:        gwtypes.ObjectName(gateway.Name),
+							SectionName: new(gwtypes.SectionName(gatewayUDPPortName)),
 						}},
 					},
-					Rules: []gatewayapi.UDPRouteRule{{
-						BackendRefs: []gatewayapi.BackendRef{{
-							Name: gatewayapi.ObjectName(service1.Name),
-							Port: new(gatewayapi.PortNumber(service1Port)),
+					Rules: []gwtypes.UDPRouteRule{{
+						BackendRefs: []gwtypes.BackendRef{{
+							Name: gwtypes.ObjectName(service1.Name),
+							Port: new(gwtypes.PortNumber(service1Port)),
 						}},
 					}},
 				},
@@ -148,13 +148,13 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Assess("basic test - route status and connectivity", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("verifying that the Gateway gets linked to the route via status")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
+			udpRoute := GetFromCtxForT[*gwtypes.UDPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 			t.Log("verifying that the udproute contains 'Programmed' condition")
 			assert.Eventually(t,
-				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name, metav1.ConditionTrue),
+				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name, metav1.ConditionTrue),
 				consts.IngressWait, consts.WaitTick,
 			)
 
@@ -167,7 +167,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Assess("verifying behavior when UDPRoute is modified", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			t.Log("removing the parentrefs from the UDPRoute")
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
+			udpRoute := GetFromCtxForT[*gwtypes.UDPRoute](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
 			udpGatewayURL := GetUDPURLFromCtx(ctx)
 
@@ -181,7 +181,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the Gateway gets unlinked from the route via status")
-			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the udpecho is no longer responding")
@@ -204,7 +204,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that putting the parentRefs back results in the routes becoming available again")
@@ -215,16 +215,16 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Assess("verifying behavior when Gateway is deleted and recreated", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
-			gatewayClass := GetFromCtxForT[*gatewayapi.GatewayClass](ctx, t)
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			udpRoute := GetFromCtxForT[*gwtypes.UDPRoute](ctx, t)
+			gatewayClass := GetFromCtxForT[*gwtypes.GatewayClass](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 			udpGatewayURL := GetUDPURLFromCtx(ctx)
 
 			t.Log("deleting the GatewayClass")
 			deleteGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("verifying that the Gateway gets unlinked from the route via status")
-			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that the data-plane configuration from the UDPRoute gets dropped with the GatewayClass now removed")
@@ -234,7 +234,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			recreateGatewayClass(ctx, t, gatewayClass)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the GatewayClass again triggers reconciliation of UDPRoutes and the route becomes available again")
@@ -250,7 +250,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			udpGatewayURL = GetUDPURLFromCtx(ctx)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
@@ -268,7 +268,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 			udpGatewayURL = GetUDPURLFromCtx(ctx)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.UDPProtocolType, namespace, udpRoute.Name)
+			callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.UDPProtocolType, namespace, udpRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 
 			t.Log("verifying that creating the Gateway again triggers reconciliation of UDPRoutes and the route becomes available again")
@@ -279,21 +279,21 @@ func TestUDPRouteEssentials(t *testing.T) {
 		Assess("verifying behavior with many backends", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			namespace := GetNamespaceForT(ctx, t)
-			udpRoute := GetFromCtxForT[*gatewayapi.UDPRoute](ctx, t)
+			udpRoute := GetFromCtxForT[*gwtypes.UDPRoute](ctx, t)
 			udpGatewayURL := GetUDPURLFromCtx(ctx)
 
 			t.Log("adding an additional backendRef to the UDPRoute")
 			assert.Eventually(t, func() bool {
 				udpRoute, err := gatewayClient.GatewayV1().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
 				assert.NoError(t, err)
-				udpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
+				udpRoute.Spec.Rules[0].BackendRefs = []gwtypes.BackendRef{
 					{
-						Name: gatewayapi.ObjectName(service1Name),
-						Port: new(gatewayapi.PortNumber(service1Port)),
+						Name: gwtypes.ObjectName(service1Name),
+						Port: new(gwtypes.PortNumber(service1Port)),
 					},
 					{
-						Name: gatewayapi.ObjectName(service2Name),
-						Port: new(gatewayapi.PortNumber(service2Port)),
+						Name: gwtypes.ObjectName(service2Name),
+						Port: new(gwtypes.PortNumber(service2Port)),
 					},
 				}
 
@@ -310,10 +310,10 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assertEventuallyResponseUDP(t, udpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
-			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().UDPRoutes(namespace), udpRoute.Name, func(r *gatewayapi.UDPRoute) {
-				notExistingPort := gatewayapi.PortNumber(81)
+			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().UDPRoutes(namespace), udpRoute.Name, func(r *gwtypes.UDPRoute) {
+				notExistingPort := gwtypes.PortNumber(81)
 				r.Spec.ParentRefs[0].Port = &notExistingPort
-				r.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
+				r.Spec.ParentRefs[0].Name = gwtypes.ObjectName(service1Name)
 			})
 			assert.NoError(t, err)
 

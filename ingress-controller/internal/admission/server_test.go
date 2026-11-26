@@ -21,7 +21,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -75,11 +75,11 @@ func (v KongFakeValidator) ValidateCredential(context.Context, corev1.Secret) (b
 	return v.Result, v.Message
 }
 
-func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gatewayapi.Gateway) (bool, string, error) {
+func (v KongFakeValidator) ValidateGateway(_ context.Context, _ gwtypes.Gateway) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 
-func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gatewayapi.HTTPRoute) (bool, string, error) {
+func (v KongFakeValidator) ValidateHTTPRoute(_ context.Context, _ gwtypes.HTTPRoute) (bool, string, error) {
 	return v.Result, v.Message, v.Error
 }
 

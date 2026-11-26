@@ -6,19 +6,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestSetGatewayClassCondtion(t *testing.T) {
 	testCases := []struct {
 		name            string
-		gwc             *gatewayapi.GatewayClass
+		gwc             *gwtypes.GatewayClass
 		condition       metav1.Condition
 		conditionLength int
 	}{
 		{
 			name: "no_such_condition_should_append_one",
-			gwc:  &gatewayapi.GatewayClass{},
+			gwc:  &gwtypes.GatewayClass{},
 			condition: metav1.Condition{
 				Type:               "fake1",
 				Status:             metav1.ConditionTrue,
@@ -30,8 +30,8 @@ func TestSetGatewayClassCondtion(t *testing.T) {
 		},
 		{
 			name: "have_condition_with_type_should_replace",
-			gwc: &gatewayapi.GatewayClass{
-				Status: gatewayapi.GatewayClassStatus{
+			gwc: &gwtypes.GatewayClass{
+				Status: gwtypes.GatewayClassStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",
@@ -54,8 +54,8 @@ func TestSetGatewayClassCondtion(t *testing.T) {
 		},
 		{
 			name: "multiple_conditions_with_type_should_preserve_one",
-			gwc: &gatewayapi.GatewayClass{
-				Status: gatewayapi.GatewayClassStatus{
+			gwc: &gwtypes.GatewayClass{
+				Status: gwtypes.GatewayClassStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:               "fake1",

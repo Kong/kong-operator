@@ -14,16 +14,16 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	testCases := []struct {
 		name                       string
-		filters                    []gatewayapi.HTTPRouteFilter
+		filters                    []gwtypes.HTTPRouteFilter
 		path                       string
 		expectedPlugins            []kong.Plugin
 		expectedRouteModifications kongstate.Route
@@ -31,22 +31,22 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 	}{
 		{
 			name:            "no filters",
-			filters:         []gatewayapi.HTTPRouteFilter{},
+			filters:         []gwtypes.HTTPRouteFilter{},
 			expectedPlugins: nil,
 		},
 		{
 			name: "request header modifier filter",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
-					RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{
-						Set: []gatewayapi.HTTPHeader{
+					Type: gwtypes.HTTPRouteFilterRequestHeaderModifier,
+					RequestHeaderModifier: &gwtypes.HTTPHeaderFilter{
+						Set: []gwtypes.HTTPHeader{
 							{
 								Name:  "header-to-set",
 								Value: "bar",
 							},
 						},
-						Add: []gatewayapi.HTTPHeader{
+						Add: []gwtypes.HTTPHeader{
 							{
 								Name:  "header-to-add",
 								Value: "foo",
@@ -86,11 +86,11 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "request redirect modifier filter",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterRequestRedirect,
-					RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
-						Hostname:   (*gatewayapi.PreciseHostname)(new("example.org")),
+					Type: gwtypes.HTTPRouteFilterRequestRedirect,
+					RequestRedirect: &gwtypes.HTTPRequestRedirectFilter{
+						Hostname:   (*gwtypes.PreciseHostname)(new("example.org")),
 						StatusCode: new(302),
 					},
 				},
@@ -117,17 +117,17 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "response header modifier filter",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterResponseHeaderModifier,
-					ResponseHeaderModifier: &gatewayapi.HTTPHeaderFilter{
-						Set: []gatewayapi.HTTPHeader{
+					Type: gwtypes.HTTPRouteFilterResponseHeaderModifier,
+					ResponseHeaderModifier: &gwtypes.HTTPHeaderFilter{
+						Set: []gwtypes.HTTPHeader{
 							{
 								Name:  "header-to-set",
 								Value: "bar",
 							},
 						},
-						Add: []gatewayapi.HTTPHeader{
+						Add: []gwtypes.HTTPHeader{
 							{
 								Name:  "header-to-add",
 								Value: "foo",
@@ -167,20 +167,20 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "valid extension refs filters",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com"),
-						Kind:  gatewayapi.Kind("KongPlugin"),
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
+						Group: gwtypes.Group("configuration.konghq.com"),
+						Kind:  gwtypes.Kind("KongPlugin"),
 						Name:  "plugin1",
 					},
 				},
 				{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com"),
-						Kind:  gatewayapi.Kind("KongPlugin"),
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
+						Group: gwtypes.Group("configuration.konghq.com"),
+						Kind:  gwtypes.Kind("KongPlugin"),
 						Name:  "plugin2",
 					},
 				},
@@ -196,12 +196,12 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "invalid extension refs filter group",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("wrong.group"),
-						Kind:  gatewayapi.Kind("KongPlugin"),
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
+						Group: gwtypes.Group("wrong.group"),
+						Kind:  gwtypes.Kind("KongPlugin"),
 						Name:  "plugin1",
 					},
 				},
@@ -210,12 +210,12 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "invalid extension refs filter kind",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com"),
-						Kind:  gatewayapi.Kind("WrongKind"),
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
+						Group: gwtypes.Group("configuration.konghq.com"),
+						Kind:  gwtypes.Kind("WrongKind"),
 						Name:  "plugin1",
 					},
 				},
@@ -224,11 +224,11 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 		},
 		{
 			name: "RequestHeaderModifier and PrefixMatchHTTPPathModifier",
-			filters: []gatewayapi.HTTPRouteFilter{
+			filters: []gwtypes.HTTPRouteFilter{
 				{
-					Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
-					RequestHeaderModifier: &gatewayapi.HTTPHeaderFilter{
-						Set: []gatewayapi.HTTPHeader{
+					Type: gwtypes.HTTPRouteFilterRequestHeaderModifier,
+					RequestHeaderModifier: &gwtypes.HTTPHeaderFilter{
+						Set: []gwtypes.HTTPHeader{
 							{
 								Name:  "header-to-set",
 								Value: "bar",
@@ -237,10 +237,10 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 					},
 				},
 				{
-					Type: gatewayapi.HTTPRouteFilterURLRewrite,
-					URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-						Path: &gatewayapi.HTTPPathModifier{
-							Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					Type: gwtypes.HTTPRouteFilterURLRewrite,
+					URLRewrite: &gwtypes.HTTPURLRewriteFilter{
+						Path: &gwtypes.HTTPPathModifier{
+							Type:               gwtypes.PrefixMatchHTTPPathModifier,
 							ReplacePrefixMatch: new("/new"),
 						},
 					},
@@ -295,7 +295,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 	testCases := []struct {
 		name                          string
-		modifier                      *gatewayapi.HTTPURLRewriteFilter
+		modifier                      *gwtypes.HTTPURLRewriteFilter
 		firstMatchPath                string
 		expectedKongRouteModification kongstate.Route
 		expected                      []transformerPlugin
@@ -303,9 +303,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 	}{
 		{
 			name: "valid URLRewriteFilter with ReplaceFullPath",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:            gatewayapi.FullPathHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:            gwtypes.FullPathHTTPPathModifier,
 					ReplaceFullPath: new("/new-path"),
 				},
 			},
@@ -319,9 +319,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with non-empty ReplacePrefixMatch",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/new"),
 				},
 			},
@@ -343,9 +343,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with empty ReplacePrefixMatch",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new(""),
 				},
 			},
@@ -367,9 +367,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with empty firstMatchPath",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/prefix"),
 				},
 			},
@@ -391,9 +391,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with '/' ReplacePrefixPatch",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/"),
 				},
 			},
@@ -415,9 +415,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with '/' firstMatchPath and '/' ReplacePrefixPatch",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/"),
 				},
 			},
@@ -439,9 +439,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with '/' firstMatchPath and non-empty ReplacePrefixPatch",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/new-prefix"),
 				},
 			},
@@ -463,9 +463,9 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with firstMatchPath with a trailing slash",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/new-prefix"),
 				},
 			},
@@ -487,8 +487,8 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with hostname",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Hostname: new(gatewayapi.PreciseHostname("replaced.host")),
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Hostname: new(gwtypes.PreciseHostname("replaced.host")),
 			},
 			expected: []transformerPlugin{{
 				Type: transformerPluginTypeRequest,
@@ -506,12 +506,12 @@ func TestGenerateRequestTransformerForURLRewrite(t *testing.T) {
 		},
 		{
 			name: "URLRewriteFilter with hostname and path",
-			modifier: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			modifier: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/new-prefix"),
 				},
-				Hostname: new(gatewayapi.PreciseHostname("replaced.host")),
+				Hostname: new(gwtypes.PreciseHostname("replaced.host")),
 			},
 			firstMatchPath: "/prefix",
 			expected: []transformerPlugin{
@@ -734,14 +734,14 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 	t.Log("generating several gateway header matches")
 	tests := []struct {
 		msg    string
-		input  []gatewayapi.HTTPHeaderMatch
+		input  []gwtypes.HTTPHeaderMatch
 		output map[string][]string
 		err    error
 	}{
 		{
 			msg: "regex header matches convert correctly",
-			input: []gatewayapi.HTTPHeaderMatch{{
-				Type:  new(gatewayapi.HeaderMatchRegularExpression),
+			input: []gwtypes.HTTPHeaderMatch{{
+				Type:  new(gwtypes.HeaderMatchRegularExpression),
 				Name:  "Content-Type",
 				Value: "^audio/*",
 			}},
@@ -751,7 +751,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "a single exact header match with no type defaults to exact type and converts properly",
-			input: []gatewayapi.HTTPHeaderMatch{{
+			input: []gwtypes.HTTPHeaderMatch{{
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -761,8 +761,8 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "a single exact header match with a single value converts properly",
-			input: []gatewayapi.HTTPHeaderMatch{{
-				Type:  new(gatewayapi.HeaderMatchExact),
+			input: []gwtypes.HTTPHeaderMatch{{
+				Type:  new(gwtypes.HeaderMatchExact),
 				Name:  "Content-Type",
 				Value: "audio/vorbis",
 			}},
@@ -772,7 +772,7 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple equivalent header names only use the first match",
-			input: []gatewayapi.HTTPHeaderMatch{
+			input: []gwtypes.HTTPHeaderMatch{
 				{
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
@@ -788,9 +788,9 @@ func TestConvertGatewayMatchHeadersToKongRouteMatchHeaders(t *testing.T) {
 		},
 		{
 			msg: "multiple header matches convert properly",
-			input: []gatewayapi.HTTPHeaderMatch{
+			input: []gwtypes.HTTPHeaderMatch{
 				{
-					Type:  new(gatewayapi.HeaderMatchExact),
+					Type:  new(gwtypes.HeaderMatchExact),
 					Name:  "Content-Type",
 					Value: "audio/vorbis",
 				},
@@ -842,39 +842,39 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 			Namespace: "default",
 		},
 	}
-	httpRoutes := []*gatewayapi.HTTPRoute{
+	httpRoutes := []*gwtypes.HTTPRoute{
 		{
 			TypeMeta:  httpRouteTypeMeta,
 			Namespace: "default",
 			Name:      "header-matching",
-			Spec: gatewayapi.HTTPRouteSpec{
+			Spec: gwtypes.HTTPRouteSpec{
 				CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-				Rules: []gatewayapi.HTTPRouteRule{
+				Rules: []gwtypes.HTTPRouteRule{
 					{
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/").WithHeader("version", "two").Build(),
 						},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							builder.NewHTTPBackendRef("infra-backend-v2").WithPort(80).Build(),
 						},
 					},
 					{
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().
 								WithPathPrefix("/").
 								WithHeader("Version", "two").
 								WithHeader("Color", "orange").
 								Build(),
 						},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							builder.NewHTTPBackendRef("infra-backend-v1").WithPort(80).Build(),
 						},
 					},
 					{
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							builder.NewHTTPRouteMatch().WithPathPrefix("/").WithHeader("Color", "blue").Build(),
 						},
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							builder.NewHTTPBackendRef("infra-backend-v1").WithPort(80).Build(),
 						},
 					},
@@ -938,11 +938,11 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 }
 
 func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrelatedRoutesWithExistingClasses(t *testing.T) {
-	stableHTTPRoute := &gatewayapi.HTTPRoute{
+	stableHTTPRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "stable",
 	}
-	unrelatedHTTPRoute := &gatewayapi.HTTPRoute{
+	unrelatedHTTPRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "unrelated",
 	}
@@ -999,7 +999,7 @@ func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrela
 }
 
 func TestGetKongServiceNameByBackendRefs(t *testing.T) {
-	testHTTPRoute := &gatewayapi.HTTPRoute{
+	testHTTPRoute := &gwtypes.HTTPRoute{
 		Name:      "test-httproute",
 		Namespace: "default",
 	}
@@ -1008,7 +1008,7 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		// hashStr is the SHA256 sum of the original generated service name for the test case where a long service name is generated and trimmed.
 		hashStr = "d39c14b023c01526d6d7a9b4aaf61dbd8daf53eb7241f933daec622ea59e2da9"
 	)
-	kindService := new(gatewayapi.Kind("Service"))
+	kindService := new(gwtypes.Kind("Service"))
 	testCases := []struct {
 		name                string
 		ruleMeta            httpRouteRuleMeta
@@ -1017,11 +1017,11 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		{
 			name: "single backend",
 			ruleMeta: httpRouteRuleMeta{
-				Rule: gatewayapi.HTTPRouteRule{
-					BackendRefs: []gatewayapi.HTTPBackendRef{
+				Rule: gwtypes.HTTPRouteRule{
+					BackendRefs: []gwtypes.HTTPBackendRef{
 						{
 							Kind: kindService,
-							Name: gatewayapi.ObjectName("service-1"),
+							Name: gwtypes.ObjectName("service-1"),
 						},
 					},
 				},
@@ -1033,23 +1033,23 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		{
 			name: "multiple backends",
 			ruleMeta: httpRouteRuleMeta{
-				Rule: gatewayapi.HTTPRouteRule{
-					BackendRefs: []gatewayapi.HTTPBackendRef{
+				Rule: gwtypes.HTTPRouteRule{
+					BackendRefs: []gwtypes.HTTPBackendRef{
 						{
 							Kind: kindService,
-							Name: gatewayapi.ObjectName("service-1"),
-							Port: new(gatewayapi.PortNumber(80)),
+							Name: gwtypes.ObjectName("service-1"),
+							Port: new(gwtypes.PortNumber(80)),
 						},
 						{
 							Kind: kindService,
-							Name: gatewayapi.ObjectName("service-2"),
-							Port: new(gatewayapi.PortNumber(8080)),
+							Name: gwtypes.ObjectName("service-2"),
+							Port: new(gwtypes.PortNumber(8080)),
 						},
 						{
 							Kind:      kindService,
-							Name:      gatewayapi.ObjectName("service-2"),
-							Namespace: new(gatewayapi.Namespace("another-namespace")),
-							Port:      new(gatewayapi.PortNumber(80)),
+							Name:      gwtypes.ObjectName("service-2"),
+							Namespace: new(gwtypes.Namespace("another-namespace")),
+							Port:      new(gwtypes.PortNumber(80)),
 						},
 					},
 				},
@@ -1061,7 +1061,7 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		{
 			name: "no backends",
 			ruleMeta: httpRouteRuleMeta{
-				Rule:        gatewayapi.HTTPRouteRule{},
+				Rule:        gwtypes.HTTPRouteRule{},
 				RuleNumber:  0,
 				parentRoute: testHTTPRoute,
 			},
@@ -1070,18 +1070,18 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		{
 			name: "multiple backends with weights",
 			ruleMeta: httpRouteRuleMeta{
-				Rule: gatewayapi.HTTPRouteRule{
-					BackendRefs: []gatewayapi.HTTPBackendRef{
+				Rule: gwtypes.HTTPRouteRule{
+					BackendRefs: []gwtypes.HTTPBackendRef{
 						{
 							Kind:   kindService,
-							Name:   gatewayapi.ObjectName("service-1"),
-							Port:   new(gatewayapi.PortNumber(80)),
+							Name:   gwtypes.ObjectName("service-1"),
+							Port:   new(gwtypes.PortNumber(80)),
 							Weight: new(int32(75)),
 						},
 						{
 							Kind:   kindService,
-							Name:   gatewayapi.ObjectName("service-1"),
-							Port:   new(gatewayapi.PortNumber(1080)),
+							Name:   gwtypes.ObjectName("service-1"),
+							Port:   new(gwtypes.PortNumber(1080)),
 							Weight: new(int32(25)),
 						},
 					},
@@ -1094,18 +1094,18 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 		{
 			name: "multiple backends that generates a name exceeding the length limit",
 			ruleMeta: httpRouteRuleMeta{
-				Rule: gatewayapi.HTTPRouteRule{
-					BackendRefs: []gatewayapi.HTTPBackendRef{
+				Rule: gwtypes.HTTPRouteRule{
+					BackendRefs: []gwtypes.HTTPBackendRef{
 						{
 							Kind:   kindService,
-							Name:   gatewayapi.ObjectName(longServiceName),
-							Port:   new(gatewayapi.PortNumber(80)),
+							Name:   gwtypes.ObjectName(longServiceName),
+							Port:   new(gwtypes.PortNumber(80)),
 							Weight: new(int32(75)),
 						},
 						{
 							Kind:   kindService,
-							Name:   gatewayapi.ObjectName(longServiceName),
-							Port:   new(gatewayapi.PortNumber(8080)),
+							Name:   gwtypes.ObjectName(longServiceName),
+							Port:   new(gwtypes.PortNumber(8080)),
 							Weight: new(int32(25)),
 						},
 					},
@@ -1161,8 +1161,8 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 	testCases := []struct {
 		name             string
 		k8sServices      []*corev1.Service
-		referenceGrants  []*gatewayapi.ReferenceGrant
-		httpRoutes       []*gatewayapi.HTTPRoute
+		referenceGrants  []*gwtypes.ReferenceGrant
+		httpRoutes       []*gwtypes.HTTPRoute
 		expectedServices map[string]kongstate.Service
 	}{
 		{
@@ -1174,21 +1174,21 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Namespace: "default",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
@@ -1233,16 +1233,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Namespace: "default",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 									builder.NewHTTPBackendRef("service-2").WithPort(80).Build(),
 								},
@@ -1295,16 +1295,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Name:      "httproute-1",
 					Namespace: "default",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
@@ -1315,11 +1315,11 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					TypeMeta:  httpRouteTypeMeta,
 					Name:      "httproute-2",
 					Namespace: "default",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
@@ -1359,20 +1359,20 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "default",
 					Name:      "grant-from-httproute-to-service",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Namespace: "another-namespace",
 								Kind:      "HTTPRoute",
-								Group:     gatewayapi.V1Group,
+								Group:     gwtypes.V1Group,
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: corev1.GroupName,
 								Kind:  "Service",
@@ -1381,16 +1381,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Name:      "httproute-1",
 					Namespace: "another-namespace",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
@@ -1401,11 +1401,11 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					TypeMeta:  httpRouteTypeMeta,
 					Name:      "httproute-2",
 					Namespace: "another-namespace",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
@@ -1445,16 +1445,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Name:      "httproute-1",
 					Namespace: "another-namespace",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
@@ -1465,11 +1465,11 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					TypeMeta:  httpRouteTypeMeta,
 					Name:      "httproute-2",
 					Namespace: "another-namespace",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
@@ -1501,21 +1501,21 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Namespace: "default",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-2").WithPort(80).Build(),
 								},
 							},
@@ -1575,20 +1575,20 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			referenceGrants: []*gatewayapi.ReferenceGrant{
+			referenceGrants: []*gwtypes.ReferenceGrant{
 				{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "default",
 					Name:      "grant-from-httproute-to-service",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{
 							{
 								Namespace: "another-namespace",
 								Kind:      "HTTPRoute",
-								Group:     gatewayapi.V1Group,
+								Group:     gwtypes.V1Group,
 							},
 						},
-						To: []gatewayapi.ReferenceGrantTo{
+						To: []gwtypes.ReferenceGrantTo{
 							{
 								Group: corev1.GroupName,
 								Kind:  "Service",
@@ -1597,16 +1597,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Namespace: "default",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
 							},
@@ -1617,11 +1617,11 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					TypeMeta:  httpRouteTypeMeta,
 					Namespace: "another-namespace",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithNamespace("default").WithPort(80).Build(),
 								},
 							},
@@ -1681,30 +1681,30 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					Namespace: "default",
 				},
 			},
-			httpRoutes: []*gatewayapi.HTTPRoute{
+			httpRoutes: []*gwtypes.HTTPRoute{
 				{
 					TypeMeta:  httpRouteTypeMeta,
 					Namespace: "default",
 					Name:      "httproute-1",
-					Spec: gatewayapi.HTTPRouteSpec{
+					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-						Rules: []gatewayapi.HTTPRouteRule{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									builder.NewHTTPBackendRef("service-1").WithPort(80).Build(),
 								},
-								Matches: []gatewayapi.HTTPRouteMatch{
+								Matches: []gwtypes.HTTPRouteMatch{
 									{
-										Path: &gatewayapi.HTTPPathMatch{
-											Type:  new(gatewayapi.PathMatchExact),
+										Path: &gwtypes.HTTPPathMatch{
+											Type:  new(gwtypes.PathMatchExact),
 											Value: new("/foo"),
 										},
 									},
 								},
-								Filters: []gatewayapi.HTTPRouteFilter{
+								Filters: []gwtypes.HTTPRouteFilter{
 									{
-										Type: gatewayapi.HTTPRouteFilterExtensionRef,
-										ExtensionRef: &gatewayapi.LocalObjectReference{
+										Type: gwtypes.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwtypes.LocalObjectReference{
 											Name:  "plugin-1",
 											Kind:  "KongPlugin",
 											Group: "configuration.konghq.com",
@@ -1750,7 +1750,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			oldHTTPRoutes := make([]*gatewayapi.HTTPRoute, 0, len(tc.httpRoutes))
+			oldHTTPRoutes := make([]*gwtypes.HTTPRoute, 0, len(tc.httpRoutes))
 			for _, r := range tc.httpRoutes {
 				oldHTTPRoutes = append(oldHTTPRoutes, r.DeepCopy())
 			}
@@ -1792,15 +1792,15 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 		APIVersion: "gateway.networking.k8s.io/v1",
 		Kind:       "HTTPRoute",
 	}
-	backendRefList := []gatewayapi.HTTPBackendRef{
+	backendRefList := []gwtypes.HTTPBackendRef{
 		{
-			Kind:      new(gatewayapi.Kind("Service")),
-			Name:      gatewayapi.ObjectName("service-1"),
-			Namespace: new(gatewayapi.Namespace("default")),
-			Port:      new(gatewayapi.PortNumber(80)),
+			Kind:      new(gwtypes.Kind("Service")),
+			Name:      gwtypes.ObjectName("service-1"),
+			Namespace: new(gwtypes.Namespace("default")),
+			Port:      new(gwtypes.PortNumber(80)),
 		},
 	}
-	httpRouteWithoutHost := &gatewayapi.HTTPRoute{
+	httpRouteWithoutHost := &gwtypes.HTTPRoute{
 		TypeMeta:  httpRouteTypeMeta,
 		Namespace: "default",
 		Name:      "httproute-1",
@@ -1816,18 +1816,18 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			name: "multiple rules with the same(empty) filter from the same HTTPRoute",
 			rulesMeta: []httpRouteRuleMeta{
 				{
-					Rule: gatewayapi.HTTPRouteRule{
+					Rule: gwtypes.HTTPRouteRule{
 						BackendRefs: backendRefList,
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/foo"),
 								},
 							},
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/bar"),
 								},
 							},
@@ -1837,12 +1837,12 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 					parentRoute: httpRouteWithoutHost,
 				},
 				{
-					Rule: gatewayapi.HTTPRouteRule{
+					Rule: gwtypes.HTTPRouteRule{
 						BackendRefs: backendRefList,
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/baz"),
 								},
 							},
@@ -1894,15 +1894,15 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 }
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxRegexPriority(t *testing.T) {
-	httpRoute := &gatewayapi.HTTPRoute{
+	httpRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "httproute-1",
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
-				Matches: []gatewayapi.HTTPRouteMatch{
+				Matches: []gwtypes.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathExact("/very-long").Build(),
 					builder.NewHTTPRouteMatch().WithPathPrefix("/bar").Build(),
 				},
@@ -1950,16 +1950,16 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxR
 }
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPathsSeparateWhenURLRewriteReplacePrefixMatchIsPresent(t *testing.T) {
-	httpRoute := &gatewayapi.HTTPRoute{
+	httpRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "httproute-1",
 	}
-	urlRewriteFilters := []gatewayapi.HTTPRouteFilter{
+	urlRewriteFilters := []gwtypes.HTTPRouteFilter{
 		{
-			Type: gatewayapi.HTTPRouteFilterURLRewrite,
-			URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+			Type: gwtypes.HTTPRouteFilterURLRewrite,
+			URLRewrite: &gwtypes.HTTPURLRewriteFilter{
+				Path: &gwtypes.HTTPPathModifier{
+					Type:               gwtypes.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: new("/anything"),
 				},
 			},
@@ -1971,10 +1971,10 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPa
 	// and the second 404'd.
 	rulesMeta := []httpRouteRuleMeta{
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
 				Filters:     urlRewriteFilters,
-				Matches: []gatewayapi.HTTPRouteMatch{
+				Matches: []gwtypes.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
 				},
 			},
@@ -1982,10 +1982,10 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPa
 			parentRoute: httpRoute,
 		},
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
 				Filters:     urlRewriteFilters,
-				Matches: []gatewayapi.HTTPRouteMatch{
+				Matches: []gwtypes.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").Build(),
 				},
 			},
@@ -2058,15 +2058,15 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPa
 // the Paths and Plugins of every match processed before it, and all shared the same Name (and thus
 // the same Kong route ID, since Route IDs are derived from Name).
 func TestGenerateKongRoutesFromHTTPRouteMatchesBuildsIndependentRoutesPerMatchForRequestRedirect(t *testing.T) {
-	matches := []gatewayapi.HTTPRouteMatch{
+	matches := []gwtypes.HTTPRouteMatch{
 		builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
 		builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").Build(),
 	}
-	filters := []gatewayapi.HTTPRouteFilter{
+	filters := []gwtypes.HTTPRouteFilter{
 		{
-			Type: gatewayapi.HTTPRouteFilterRequestRedirect,
-			RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
-				Hostname:   (*gatewayapi.PreciseHostname)(new("example.org")),
+			Type: gwtypes.HTTPRouteFilterRequestRedirect,
+			RequestRedirect: &gwtypes.HTTPRequestRedirectFilter{
+				Hostname:   (*gwtypes.PreciseHostname)(new("example.org")),
 				StatusCode: new(302),
 			},
 		},
@@ -2123,25 +2123,25 @@ func TestGenerateKongRoutesFromHTTPRouteMatchesBuildsIndependentRoutesPerMatchFo
 // this scenario is reachable both across rules (as tested here) and within a single rule's own
 // multiple matches - getUniqueKey's per-(rule,match) keying handles both the same way.
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesSeparateWhenRequestRedirectIsPresent(t *testing.T) {
-	httpRoute := &gatewayapi.HTTPRoute{
+	httpRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "httproute-1",
 	}
-	requestRedirectFilters := []gatewayapi.HTTPRouteFilter{
+	requestRedirectFilters := []gwtypes.HTTPRouteFilter{
 		{
-			Type: gatewayapi.HTTPRouteFilterRequestRedirect,
-			RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
-				Hostname:   (*gatewayapi.PreciseHostname)(new("example.org")),
+			Type: gwtypes.HTTPRouteFilterRequestRedirect,
+			RequestRedirect: &gwtypes.HTTPRequestRedirectFilter{
+				Hostname:   (*gwtypes.PreciseHostname)(new("example.org")),
 				StatusCode: new(302),
 			},
 		},
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
 				Filters:     requestRedirectFilters,
-				Matches: []gatewayapi.HTTPRouteMatch{
+				Matches: []gwtypes.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
 				},
 			},
@@ -2149,10 +2149,10 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesSeparateWhenReq
 			parentRoute: httpRoute,
 		},
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
 				Filters:     requestRedirectFilters,
-				Matches: []gatewayapi.HTTPRouteMatch{
+				Matches: []gwtypes.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").Build(),
 				},
 			},
@@ -2228,15 +2228,15 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesSeparateWhenReq
 }
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFromPathMatches(t *testing.T) {
-	httpRoute := &gatewayapi.HTTPRoute{
+	httpRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "httproute-1",
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
-				Matches: []gatewayapi.HTTPRouteMatch{
+				Matches: []gwtypes.HTTPRouteMatch{
 					builder.NewHTTPRouteMatch().WithPathExact("/long-admin").WithHeader("X-Test", "a").Build(),
 					builder.NewHTTPRouteMatch().WithHeader("X-Test", "a").Build(),
 				},
@@ -2289,16 +2289,16 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFrom
 }
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesDoesNotAddCatchAllPathForNoPathMatch(t *testing.T) {
-	httpRoute := &gatewayapi.HTTPRoute{
+	httpRoute := &gwtypes.HTTPRoute{
 		Namespace: "default",
 		Name:      "httproute-1",
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
-			Rule: gatewayapi.HTTPRouteRule{
+			Rule: gwtypes.HTTPRouteRule{
 				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
-				Matches: []gatewayapi.HTTPRouteMatch{
-					builder.NewHTTPRouteMatch().WithMethod(gatewayapi.HTTPMethodGet).Build(),
+				Matches: []gwtypes.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithMethod(gwtypes.HTTPMethodGet).Build(),
 				},
 			},
 			RuleNumber:  0,
@@ -2331,24 +2331,24 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesDoesNotAddCatchAllPathForNo
 func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {
 	testCases := []struct {
 		name             string
-		modifier         *gatewayapi.HTTPRequestRedirectFilter
+		modifier         *gwtypes.HTTPRequestRedirectFilter
 		expectedScheme   string
 		expectedHostPort string
 	}{
 		{
 			name: "Has scheme, host and port",
-			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+			modifier: &gwtypes.HTTPRequestRedirectFilter{
 				Scheme:   new("https"),
-				Hostname: new(gatewayapi.PreciseHostname("a.com")),
-				Port:     new(gatewayapi.PortNumber(8443)),
+				Hostname: new(gwtypes.PreciseHostname("a.com")),
+				Port:     new(gwtypes.PortNumber(8443)),
 			},
 			expectedScheme:   "https",
 			expectedHostPort: "a.com:8443",
 		},
 		{
 			name: "no scheme, http scheme should be returned",
-			modifier: &gatewayapi.HTTPRequestRedirectFilter{
-				Hostname: new(gatewayapi.PreciseHostname("a.com")),
+			modifier: &gwtypes.HTTPRequestRedirectFilter{
+				Hostname: new(gwtypes.PreciseHostname("a.com")),
 			},
 			expectedScheme:   "http",
 			expectedHostPort: "a.com",
@@ -2367,16 +2367,16 @@ func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {
 func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
 	testCases := []struct {
 		name               string
-		modifier           *gatewayapi.HTTPRequestRedirectFilter
+		modifier           *gwtypes.HTTPRequestRedirectFilter
 		expectedKongPlugin kong.Plugin
 	}{
 		{
 			name: "full path replace",
-			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+			modifier: &gwtypes.HTTPRequestRedirectFilter{
 				StatusCode: new(301),
-				Hostname:   new(gatewayapi.PreciseHostname("a.com")),
-				Path: &gatewayapi.HTTPPathModifier{
-					Type:            gatewayapi.FullPathHTTPPathModifier,
+				Hostname:   new(gwtypes.PreciseHostname("a.com")),
+				Path: &gwtypes.HTTPPathModifier{
+					Type:            gwtypes.FullPathHTTPPathModifier,
 					ReplaceFullPath: new("/foo"),
 				},
 			},
@@ -2391,9 +2391,9 @@ func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
 		},
 		{
 			name: "no path replace",
-			modifier: &gatewayapi.HTTPRequestRedirectFilter{
+			modifier: &gwtypes.HTTPRequestRedirectFilter{
 				StatusCode: new(301),
-				Hostname:   new(gatewayapi.PreciseHostname("a.com")),
+				Hostname:   new(gwtypes.PreciseHostname("a.com")),
 				Scheme:     new("http"),
 			},
 			expectedKongPlugin: kong.Plugin{
@@ -2417,21 +2417,21 @@ func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
 func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		gateways             []*gatewayapi.Gateway
-		parentRefSectionName *gatewayapi.SectionName
+		gateways             []*gwtypes.Gateway
+		parentRefSectionName *gwtypes.SectionName
 		expectedProtocols    []*string
 	}{
 		{
 			name: "gateway with only HTTP listener and no section name results in http protocol",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "test-gateway",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "http",
-								Protocol: gatewayapi.HTTPProtocolType,
+								Protocol: gwtypes.HTTPProtocolType,
 							},
 						},
 					},
@@ -2442,15 +2442,15 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 		},
 		{
 			name: "gateway with only HTTPS listener and no section name results in https protocol",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "test-gateway",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "https",
-								Protocol: gatewayapi.HTTPSProtocolType,
+								Protocol: gwtypes.HTTPSProtocolType,
 							},
 						},
 					},
@@ -2461,19 +2461,19 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 		},
 		{
 			name: "gateway with both HTTP and HTTPS listeners and no section name results in both protocols",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "test-gateway",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "http",
-								Protocol: gatewayapi.HTTPProtocolType,
+								Protocol: gwtypes.HTTPProtocolType,
 							},
 							{
 								Name:     "https",
-								Protocol: gatewayapi.HTTPSProtocolType,
+								Protocol: gwtypes.HTTPSProtocolType,
 							},
 						},
 					},
@@ -2484,25 +2484,25 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 		},
 		{
 			name: "gateway with both HTTP and HTTPS listeners and section name pointing to HTTP listener results in http protocol only",
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Name:      "test-gateway",
 					Namespace: "default",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "http",
-								Protocol: gatewayapi.HTTPProtocolType,
+								Protocol: gwtypes.HTTPProtocolType,
 							},
 							{
 								Name:     "https",
-								Protocol: gatewayapi.HTTPSProtocolType,
+								Protocol: gwtypes.HTTPSProtocolType,
 							},
 						},
 					},
 				},
 			},
-			parentRefSectionName: new(gatewayapi.SectionName("http")),
+			parentRefSectionName: new(gwtypes.SectionName("http")),
 			expectedProtocols:    kong.StringSlice("http"),
 		},
 		{
@@ -2520,12 +2520,12 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			route := &gatewayapi.HTTPRoute{
+			route := &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "test-gateway",
 								SectionName: tc.parentRefSectionName,
@@ -2535,7 +2535,7 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 				},
 			}
 
-			protocols := protocolsFromHTTPRoutesGatewayListeners(fakeStore, []*gatewayapi.HTTPRoute{route})
+			protocols := protocolsFromHTTPRoutesGatewayListeners(fakeStore, []*gwtypes.HTTPRoute{route})
 			require.Equal(t, tc.expectedProtocols, protocols)
 		})
 	}

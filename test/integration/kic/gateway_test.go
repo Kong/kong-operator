@@ -19,9 +19,9 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
-	gatewayapi "github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -40,7 +40,7 @@ const (
 func TestUnmanagedGatewayBasics(t *testing.T) {
 	ctx := t.Context()
 
-	var gw *gatewayapi.Gateway
+	var gw *gwtypes.Gateway
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -109,8 +109,8 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		require.NoError(t, err)
 		ready := util.CheckCondition(
 			gw.Status.Conditions,
-			util.ConditionType(gatewayapi.GatewayConditionProgrammed),
-			util.ConditionReason(gatewayapi.GatewayReasonProgrammed),
+			util.ConditionType(gwtypes.GatewayConditionProgrammed),
+			util.ConditionReason(gwtypes.GatewayReasonProgrammed),
 			metav1.ConditionTrue,
 			gw.Generation,
 		)
@@ -124,8 +124,8 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			if listenerReady := util.CheckCondition(
 				lstatus.Conditions,
-				util.ConditionType(gatewayapi.ListenerConditionProgrammed),
-				util.ConditionReason(gatewayapi.ListenerReasonProgrammed),
+				util.ConditionType(gwtypes.ListenerConditionProgrammed),
+				util.ConditionReason(gwtypes.ListenerReasonProgrammed),
 				metav1.ConditionTrue,
 				gw.Generation,
 			); !listenerReady {
@@ -139,7 +139,7 @@ func TestUnmanagedGatewayBasics(t *testing.T) {
 func TestGatewayListenerConflicts(t *testing.T) {
 	ctx := t.Context()
 
-	var gw *gatewayapi.Gateway
+	var gw *gwtypes.Gateway
 
 	ns, cleaner := helpers.Setup(ctx, t, env)
 
@@ -176,8 +176,8 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			ready := util.CheckCondition(
 				lstatus.Conditions,
-				util.ConditionType(gatewayapi.GatewayConditionProgrammed),
-				util.ConditionReason(gatewayapi.GatewayReasonProgrammed),
+				util.ConditionType(gwtypes.GatewayConditionProgrammed),
+				util.ConditionReason(gwtypes.GatewayReasonProgrammed),
 				metav1.ConditionTrue,
 				gw.Generation,
 			)
@@ -190,10 +190,10 @@ func TestGatewayListenerConflicts(t *testing.T) {
 
 	t.Log("adding conflicting listeners")
 	gw.Spec.Listeners = append(gw.Spec.Listeners,
-		gatewayapi.Listener{
+		gwtypes.Listener{
 			Name:     "badudp",
-			Protocol: gatewayapi.UDPProtocolType,
-			Port:     gatewayapi.PortNumber(80),
+			Protocol: gwtypes.UDPProtocolType,
+			Port:     gwtypes.PortNumber(80),
 		},
 	)
 
@@ -210,20 +210,20 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "badudp" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayapi.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
-						badudpConflicted = (condition.Reason == string(gatewayapi.ListenerReasonProtocolConflict))
+					if condition.Type == string(gwtypes.ListenerConditionConflicted) && condition.Status == metav1.ConditionTrue {
+						badudpConflicted = (condition.Reason == string(gwtypes.ListenerReasonProtocolConflict))
 					}
-					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+					if condition.Type == string(gwtypes.ListenerConditionProgrammed) {
 						badudpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "http" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayapi.ListenerConditionConflicted) {
+					if condition.Type == string(gwtypes.ListenerConditionConflicted) {
 						httpConflicted = (condition.Status == metav1.ConditionTrue)
 					}
-					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+					if condition.Type == string(gwtypes.ListenerConditionProgrammed) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -233,51 +233,51 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	}, gatewayUpdateWaitTime, time.Second)
 
 	t.Log("swapping out existing listeners with multiple compatible listeners")
-	tlsHost := gatewayapi.Hostname("tls.example")
-	httpsHost := gatewayapi.Hostname("https.example")
-	httphostHost := gatewayapi.Hostname("http.example")
+	tlsHost := gwtypes.Hostname("tls.example")
+	httpsHost := gwtypes.Hostname("https.example")
+	httphostHost := gwtypes.Hostname("http.example")
 
 	// This tests compatibility to the extent that we can with Kong listens. it does not support the full range
 	// of compatible Gateway Routes. Gateway permits TLS and HTTPS routes to coexist on the same port so long
 	// as all use unique hostnames. Kong, however, requires that TLS routes go through a TLS stream listen, so
 	// the binds are separate and we cannot combine them. attempting to do so (e.g. setting the tls port to 443 here)
 	// will result in ListenerReasonPortUnavailable.
-	gw.Spec.Listeners = []gatewayapi.Listener{
+	gw.Spec.Listeners = []gwtypes.Listener{
 		{
 			Name:     "http",
-			Protocol: gatewayapi.HTTPProtocolType,
-			Port:     gatewayapi.PortNumber(ktfkong.DefaultProxyHTTPPort),
+			Protocol: gwtypes.HTTPProtocolType,
+			Port:     gwtypes.PortNumber(ktfkong.DefaultProxyHTTPPort),
 		},
 		{
 			Name:     "tls",
-			Protocol: gatewayapi.TLSProtocolType,
-			Port:     gatewayapi.PortNumber(ktfkong.DefaultTLSServicePort),
+			Protocol: gwtypes.TLSProtocolType,
+			Port:     gwtypes.PortNumber(ktfkong.DefaultTLSServicePort),
 			Hostname: &tlsHost,
-			TLS: &gatewayapi.GatewayTLSConfig{
-				CertificateRefs: []gatewayapi.SecretObjectReference{
+			TLS: &gwtypes.GatewayTLSConfig{
+				CertificateRefs: []gwtypes.SecretObjectReference{
 					{
-						Name: gatewayapi.ObjectName(certName),
+						Name: gwtypes.ObjectName(certName),
 					},
 				},
 			},
 		},
 		{
 			Name:     "https",
-			Protocol: gatewayapi.HTTPSProtocolType,
-			Port:     gatewayapi.PortNumber(ktfkong.DefaultProxyTLSServicePort),
+			Protocol: gwtypes.HTTPSProtocolType,
+			Port:     gwtypes.PortNumber(ktfkong.DefaultProxyTLSServicePort),
 			Hostname: &httpsHost,
-			TLS: &gatewayapi.GatewayTLSConfig{
-				CertificateRefs: []gatewayapi.SecretObjectReference{
+			TLS: &gwtypes.GatewayTLSConfig{
+				CertificateRefs: []gwtypes.SecretObjectReference{
 					{
-						Name: gatewayapi.ObjectName(certName),
+						Name: gwtypes.ObjectName(certName),
 					},
 				},
 			},
 		},
 		{
 			Name:     "httphost",
-			Protocol: gatewayapi.HTTPProtocolType,
-			Port:     gatewayapi.PortNumber(ktfkong.DefaultProxyHTTPPort),
+			Protocol: gwtypes.HTTPProtocolType,
+			Port:     gwtypes.PortNumber(ktfkong.DefaultProxyHTTPPort),
 			Hostname: &httphostHost,
 		},
 	}
@@ -295,28 +295,28 @@ func TestGatewayListenerConflicts(t *testing.T) {
 		for _, lstatus := range gw.Status.Listeners {
 			if lstatus.Name == "http" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+					if condition.Type == string(gwtypes.ListenerConditionProgrammed) {
 						httpReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "tls" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+					if condition.Type == string(gwtypes.ListenerConditionProgrammed) {
 						tlsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "https" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+					if condition.Type == string(gwtypes.ListenerConditionProgrammed) {
 						httpsReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
 			}
 			if lstatus.Name == "httphost" {
 				for _, condition := range lstatus.Conditions {
-					if condition.Type == string(gatewayapi.ListenerConditionProgrammed) {
+					if condition.Type == string(gwtypes.ListenerConditionProgrammed) {
 						httphostReady = (condition.Status == metav1.ConditionTrue)
 					}
 				}
@@ -342,9 +342,9 @@ func TestGatewayFilters(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a gateway that allows routes in all namespaces")
-	gateway, err := helpers.DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gatewayapi.Gateway) {
+	gateway, err := helpers.DeployGateway(ctx, gwClientSet, ns.Name, unmanagedGatewayClassName, func(gw *gwtypes.Gateway) {
 		gw.Name = uuid.NewString()
-		gw.Spec.Listeners = []gatewayapi.Listener{
+		gw.Spec.Listeners = []gwtypes.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).
 				WithAllowedRoutes(builder.NewAllowedRoutesFromAllNamespaces()).Build(),
 		}
@@ -377,24 +377,24 @@ func TestGatewayFilters(t *testing.T) {
 	cleaner.Add(otherService)
 
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-	HTTPRoute := func() *gatewayapi.HTTPRoute {
-		return &gatewayapi.HTTPRoute{
+	HTTPRoute := func() *gwtypes.HTTPRoute {
+		return &gwtypes.HTTPRoute{
 			Name: uuid.NewString(),
 			Annotations: map[string]string{
 				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
-			Spec: gatewayapi.HTTPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{
-					ParentRefs: []gatewayapi.ParentReference{{
-						Name:      gatewayapi.ObjectName(gateway.Name),
-						Namespace: new(gatewayapi.Namespace(gateway.Namespace)),
+			Spec: gwtypes.HTTPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{
+					ParentRefs: []gwtypes.ParentReference{{
+						Name:      gwtypes.ObjectName(gateway.Name),
+						Namespace: new(gwtypes.Namespace(gateway.Namespace)),
 					}},
 				},
-				Rules: []gatewayapi.HTTPRouteRule{{
-					Matches: []gatewayapi.HTTPRouteMatch{
+				Rules: []gwtypes.HTTPRouteRule{{
+					Matches: []gwtypes.HTTPRouteMatch{
 						builder.NewHTTPRouteMatch().WithPathPrefix("/test_gateway_filters").Build(),
 					},
-					BackendRefs: []gatewayapi.HTTPBackendRef{
+					BackendRefs: []gwtypes.HTTPBackendRef{
 						builder.NewHTTPBackendRef(service.Name).WithPort(80).Build(),
 					},
 				}},
@@ -415,7 +415,7 @@ func TestGatewayFilters(t *testing.T) {
 	cleaner.Add(otherRoute)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
-	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
+	callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gwClientSet, gwtypes.HTTPProtocolType, ns.Name, httpRoute.Name)
 	require.Eventually(t, callback, ingressWait, waitTick)
 
 	t.Log("waiting for routes from HTTPRoute to become operational")
@@ -431,7 +431,7 @@ func TestGatewayFilters(t *testing.T) {
 			return false
 		}
 
-		gateway.Spec.Listeners = []gatewayapi.Listener{
+		gateway.Spec.Listeners = []gwtypes.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).
 				WithAllowedRoutes(builder.NewAllowedRoutesFromSameNamespaces()).Build(),
 		}
@@ -463,7 +463,7 @@ func TestGatewayFilters(t *testing.T) {
 				},
 			},
 		)
-		gateway.Spec.Listeners = []gatewayapi.Listener{
+		gateway.Spec.Listeners = []gwtypes.Listener{
 			builder.NewListener("http").HTTP().WithPort(80).WithAllowedRoutes(fromSelector).Build(),
 		}
 		_, err = gatewayClient.Gateways(ns.Name).Update(ctx, gateway, metav1.UpdateOptions{})

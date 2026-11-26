@@ -19,9 +19,9 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (
@@ -280,9 +280,9 @@ func (h *RequestHandler) handleValidation(ctx context.Context, request admission
 		return h.handleKongClusterPlugin(ctx, request, responseBuilder)
 	case secretGVResource:
 		return h.handleSecret(ctx, request, responseBuilder)
-	case gatewayapi.V1GatewayGVResource, gatewayapi.V1beta1GatewayGVResource:
+	case gwtypes.V1GatewayGVResource, gwtypes.V1beta1GatewayGVResource:
 		return h.handleGateway(ctx, request, responseBuilder)
-	case gatewayapi.V1HTTPRouteGVResource, gatewayapi.V1beta1HTTPRouteGVResource:
+	case gwtypes.V1HTTPRouteGVResource, gwtypes.V1beta1HTTPRouteGVResource:
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
 	case kongVaultGVResource:
 		return h.handleKongVault(ctx, request, responseBuilder)
@@ -526,7 +526,7 @@ func (h *RequestHandler) handleGateway(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	gateway := gatewayapi.Gateway{}
+	gateway := gwtypes.Gateway{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &gateway)
 	if err != nil {
 		return nil, err
@@ -549,7 +549,7 @@ func (h *RequestHandler) handleHTTPRoute(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	httproute := gatewayapi.HTTPRoute{}
+	httproute := gwtypes.HTTPRoute{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &httproute)
 	if err != nil {
 		return nil, err

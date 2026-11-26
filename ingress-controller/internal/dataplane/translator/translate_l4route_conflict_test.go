@@ -8,13 +8,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func mkGateway(ns, name, gatewayClassName string, listeners ...gatewayv1.Listener) *gatewayapi.Gateway {
-	return &gatewayapi.Gateway{
+func mkGateway(ns, name, gatewayClassName string, listeners ...gatewayv1.Listener) *gwtypes.Gateway {
+	return &gwtypes.Gateway{
 		Namespace: ns, Name: name,
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClassName),
@@ -23,8 +23,8 @@ func mkGateway(ns, name, gatewayClassName string, listeners ...gatewayv1.Listene
 	}
 }
 
-func mkGatewayClass(name string, controllerName gatewayv1.GatewayController) *gatewayapi.GatewayClass {
-	return &gatewayapi.GatewayClass{
+func mkGatewayClass(name string, controllerName gatewayv1.GatewayController) *gwtypes.GatewayClass {
+	return &gwtypes.GatewayClass{
 		Name: name,
 		Spec: gatewayv1.GatewayClassSpec{ControllerName: controllerName},
 	}
@@ -45,8 +45,8 @@ func TestCollectL4ListenersByGateway(t *testing.T) {
 	)
 
 	storer, err := store.NewFakeStore(store.FakeObjects{
-		GatewayClasses: []*gatewayapi.GatewayClass{ownedGWC, otherGWC},
-		Gateways:       []*gatewayapi.Gateway{ownedGW, unownedGW, missingGWClassGW},
+		GatewayClasses: []*gwtypes.GatewayClass{ownedGWC, otherGWC},
+		Gateways:       []*gwtypes.Gateway{ownedGW, unownedGW, missingGWClassGW},
 	})
 	require.NoError(t, err)
 
@@ -75,7 +75,7 @@ func TestCollectL4ListenersByGateway(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			route := mkUDPRouteWithParents("app", parentRef("gw-ns", tc.gatewayRef, "", 0))
-			got := collectL4ListenersByGateway(storer, []*gatewayapi.UDPRoute{route}, gatewayv1.UDPProtocolType)
+			got := collectL4ListenersByGateway(storer, []*gwtypes.UDPRoute{route}, gatewayv1.UDPProtocolType)
 			assert.Len(t, got, tc.wantCount)
 			if tc.wantCount > 0 {
 				assert.Contains(t, got, types.NamespacedName{Namespace: "gw-ns", Name: tc.gatewayRef})
