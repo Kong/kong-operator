@@ -1,0 +1,123 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-modelprovider-gemini-wif
+spec:
+  description: |
+    AIGatewayModelProvider - gemini with GCP workload identity federation
+    (aws_iam source). Checks, against the real Konnect API, that:
+
+    - the CR becomes Programmed;
+    - the Konnect entity stores source "aws_iam" and the federated AWS
+      settings under auth.workload_identity_federation.aws.
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: cr_api_version
+      value: aiconfiguration.konghq.com/v1alpha1
+    - name: cr_kind
+      value: AIGatewayModelProvider
+    - name: cr_resource
+      value: aigatewaymodelproviders.aiconfiguration.konghq.com
+    - name: collection_path_jq
+      value: '"/v1/ai-gateways/" + .status.gatewayID.id + "/model-providers"'
+    - name: cr_name
+      value: gemini-wif
+    - name: cr_spec
+      value:
+        aiGatewayRef:
+          namespacedRef:
+            name: ($aigw_cp_name)
+        apiSpec:
+          type: gemini
+          gemini:
+            name: gemini-wif
+            displayName: Gemini federated
+            config:
+              auth:
+                type: gcp
+                gcp:
+                  workloadIdentityFederation:
+                    source: awsIam
+                    awsIam:
+                      authJSON: '{"type":"external_account"}'
+                      aws:
+                        accessKeyID: chainsaw-access-key-id
+                        secretAccessKey: chainsaw-secret-access-key
+                        sessionToken: chainsaw-session-token
+                        region: us-east-1
+                        assumeRoleArn: arn:aws:iam::123456789012:role/chainsaw
+                        roleSessionName: chainsaw-session
+                        stsEndpointURL: https://sts.us-east-1.amazonaws.com
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+
+    - name: Create-provider
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-Konnect-entity
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($cr_resource)
+              - name: RESOURCE_NAME
+                value: ($cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: ($collection_path_jq)
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: entity
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($entity.entity_path)
+              - name: EXPECTED_JQ
+                value: >-
+                  .type == "gemini"
+                  and .config.auth.type == "gcp"
+                  and .config.auth.workload_identity_federation.source == "aws_iam"
+                  and .config.auth.workload_identity_federation.aws.access_key_id == "chainsaw-access-key-id"
+                  and .config.auth.workload_identity_federation.aws.region == "us-east-1"
+                  and .config.auth.workload_identity_federation.aws.assume_role_arn == "arn:aws:iam::123456789012:role/chainsaw"
+                  and .config.auth.workload_identity_federation.aws.role_session_name == "chainsaw-session"
+                  and .config.auth.workload_identity_federation.aws.sts_endpoint_url == "https://sts.us-east-1.amazonaws.com"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh

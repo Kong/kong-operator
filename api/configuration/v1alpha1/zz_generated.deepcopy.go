@@ -5623,6 +5623,11 @@ func (in *KongCACertificateStatus) DeepCopyInto(out *KongCACertificateStatus) {
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
@@ -5770,6 +5775,11 @@ func (in *KongCertificateStatus) DeepCopyInto(out *KongCertificateStatus) {
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
@@ -5896,6 +5906,11 @@ func (in *KongCredentialACLStatus) DeepCopyInto(out *KongCredentialACLStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -6026,6 +6041,11 @@ func (in *KongCredentialAPIKeyStatus) DeepCopyInto(out *KongCredentialAPIKeyStat
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
 		**out = **in
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
@@ -6152,6 +6172,11 @@ func (in *KongCredentialBasicAuthStatus) DeepCopyInto(out *KongCredentialBasicAu
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -6295,6 +6320,11 @@ func (in *KongCredentialHMACStatus) DeepCopyInto(out *KongCredentialHMACStatus) 
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -6443,6 +6473,11 @@ func (in *KongCredentialJWTStatus) DeepCopyInto(out *KongCredentialJWTStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -6900,6 +6935,11 @@ func (in *KongKeySetStatus) DeepCopyInto(out *KongKeySetStatus) {
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
@@ -6956,6 +6996,11 @@ func (in *KongKeyStatus) DeepCopyInto(out *KongKeyStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndKeySetRef)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -7181,6 +7226,11 @@ func (in *KongPluginBindingStatus) DeepCopyInto(out *KongPluginBindingStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -7540,6 +7590,11 @@ func (in *KongRouteStatus) DeepCopyInto(out *KongRouteStatus) {
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs)
 		**out = **in
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
@@ -7666,6 +7721,11 @@ func (in *KongSNIStatus) DeepCopyInto(out *KongSNIStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -7867,6 +7927,11 @@ func (in *KongServiceStatus) DeepCopyInto(out *KongServiceStatus) {
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
@@ -7993,6 +8058,11 @@ func (in *KongTargetStatus) DeepCopyInto(out *KongTargetStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndUpstreamRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -8220,6 +8290,11 @@ func (in *KongUpstreamStatus) DeepCopyInto(out *KongUpstreamStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs)
+		**out = **in
+	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -8759,6 +8834,21 @@ func (in *ServiceRef) DeepCopy() *ServiceRef {
 		return nil
 	}
 	out := new(ServiceRef)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto is an autogenerated deepcopy function, copying the receiver, writing into out. in must be non-nil.
+func (in *SyncStatus) DeepCopyInto(out *SyncStatus) {
+	*out = *in
+}
+
+// DeepCopy is an autogenerated deepcopy function, copying the receiver, creating a new SyncStatus.
+func (in *SyncStatus) DeepCopy() *SyncStatus {
+	if in == nil {
+		return nil
+	}
+	out := new(SyncStatus)
 	in.DeepCopyInto(out)
 	return out
 }

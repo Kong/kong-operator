@@ -69,3 +69,26 @@ func TestSetKonnectEntityProgrammedConditionFalseIsStableAcross5xx(t *testing.T)
 
 	assert.Equal(t, first.Message, second.Message)
 }
+
+func TestSetKonnectEntityAdoptedConditionFalseIsStableAcrossRequests(t *testing.T) {
+	t.Parallel()
+
+	var obj aiconfigurationv1alpha1.AIGatewayModelProvider
+
+	SetKonnectEntityAdoptedConditionFalse(&obj, "FetchFailed", KonnectEntityAdoptionFetchError{
+		KonnectID: "id",
+		Err:       &sdkkonnecterrs.NotFoundError{Status: 404, Title: "Not Found", Instance: "konnect:trace:aaa"},
+	})
+	first, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAdoptedConditionType, &obj)
+	require.True(t, ok)
+
+	SetKonnectEntityAdoptedConditionFalse(&obj, "FetchFailed", KonnectEntityAdoptionFetchError{
+		KonnectID: "id",
+		Err:       &sdkkonnecterrs.NotFoundError{Status: 404, Title: "Not Found", Instance: "konnect:trace:bbb"},
+	})
+	second, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAdoptedConditionType, &obj)
+	require.True(t, ok)
+
+	assert.Equal(t, first.Message, second.Message)
+	assert.NotContains(t, second.Message, "konnect:trace:")
+}

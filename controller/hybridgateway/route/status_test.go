@@ -691,6 +691,102 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 			wantReason: string(gwtypes.RouteReasonAccepted),
 		},
 		{
+			name: "accepted route with connection-error retries",
+			gateway: &gwtypes.Gateway{
+				Namespace: "default", Name: "gw",
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
+						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
+					},
+					GatewayClassName: "my-class",
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{"example.com"},
+					Rules: []gwtypes.HTTPRouteRule{{
+						Retry: &gwtypes.HTTPRouteRetry{Attempts: new(2)},
+					}},
+				},
+			},
+			pRef:       pRef,
+			client:     cl,
+			wantType:   string(gwtypes.RouteConditionAccepted),
+			wantStatus: metav1.ConditionTrue,
+			wantReason: string(gwtypes.RouteReasonAccepted),
+		},
+		{
+			name: "route with retry codes is rejected as unsupported",
+			gateway: &gwtypes.Gateway{
+				Namespace: "default", Name: "gw",
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
+						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
+					},
+					GatewayClassName: "my-class",
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{"example.com"},
+					Rules: []gwtypes.HTTPRouteRule{{
+						Retry: &gwtypes.HTTPRouteRetry{Codes: []gwtypes.HTTPRouteRetryStatusCode{500}},
+					}},
+				},
+			},
+			pRef:       pRef,
+			client:     cl,
+			wantType:   string(gwtypes.RouteConditionAccepted),
+			wantStatus: metav1.ConditionFalse,
+			wantReason: string(gwtypes.RouteReasonUnsupportedValue),
+		},
+		{
+			name: "route with retry backoff is rejected as unsupported",
+			gateway: &gwtypes.Gateway{
+				Namespace: "default", Name: "gw",
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
+						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
+					},
+					GatewayClassName: "my-class",
+				},
+				Status: gatewayv1.GatewayStatus{
+					Listeners: []gatewayv1.ListenerStatus{
+						{Name: "listener1", Conditions: []metav1.Condition{{Type: string(gatewayv1.ListenerConditionAccepted), Status: metav1.ConditionTrue}}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{"example.com"},
+					Rules: []gwtypes.HTTPRouteRule{{
+						Retry: &gwtypes.HTTPRouteRetry{Backoff: new(gwtypes.Duration("100ms"))},
+					}},
+				},
+			},
+			pRef:       pRef,
+			client:     cl,
+			wantType:   string(gwtypes.RouteConditionAccepted),
+			wantStatus: metav1.ConditionFalse,
+			wantReason: string(gwtypes.RouteReasonUnsupportedValue),
+		},
+		{
 			name: "accepted route through unresolved but accepted listener",
 			gateway: &gwtypes.Gateway{
 				Namespace: "default", Name: "gw",

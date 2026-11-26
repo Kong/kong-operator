@@ -95,6 +95,15 @@ type KongClusterPlugin struct {
 	// will create a rate limiting plugin that limits requests _before_ they are authenticated.
 	Ordering *kong.PluginOrdering `json:"ordering,omitempty"`
 
+	// Condition is an expression evaluated for every request right before the plugin's
+	// `access` phase. When it evaluates to false, the plugin is skipped for that request.
+	// When it evaluates to true or is unset, the plugin runs as usual.
+	// Requires Kong Gateway 3.14 or later. Kong Gateway 3.15 and later use CEL syntax.
+	// Kong Gateway 3.14 shipped the field as a beta using ATC syntax, which is not
+	// compatible with CEL: 3.14 expressions must be rewritten when upgrading to 3.15.
+	// +optional
+	Condition string `json:"condition,omitempty"`
+
 	// InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the
 	// same plugin in multiple contexts, for example, on multiple services.
 	InstanceName string `json:"instance_name,omitempty"`

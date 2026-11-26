@@ -433,8 +433,6 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
-                    required:
-                    - url
                     type: object
                   displayName:
                     maxLength: 256
@@ -663,9 +661,6 @@ spec:
                     properties:
                       config:
                         properties:
-                          anonymous:
-                            maxLength: 253
-                            type: string
                           hideCredentials:
                             enum:
                             - Enabled
@@ -708,6 +703,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -1525,6 +1521,7 @@ spec:
                             - Disabled
                             type: string
                           leeway:
+                            minimum: 0
                             type: number
                           loginAction:
                             enum:
@@ -1610,6 +1607,7 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -2146,6 +2144,7 @@ spec:
                             - Disabled
                             type: string
                           timeout:
+                            minimum: 0
                             type: number
                           tlsClientAuthCertID:
                             maxLength: 253
@@ -6339,7 +6338,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -7042,8 +7040,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                        required:
-                        - url
                         type: object
                       datastores:
                         items:
@@ -9492,7 +9488,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         items:
@@ -10457,7 +10452,6 @@ spec:
                         required:
                         - route
                         - toolsCacheTtlSeconds
-                        - url
                         type: object
                       datastores:
                         items:
@@ -43372,6 +43366,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -43634,6 +43640,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -43698,6 +43716,8 @@ spec:
       openAPIV3Schema:
         properties:
           apiVersion:
+            type: string
+          condition:
             type: string
           config:
             type: object
@@ -44053,6 +44073,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         type: object
         x-kubernetes-validations:
@@ -44265,6 +44297,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
           username:
             maxLength: 128
@@ -44447,6 +44491,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -44621,6 +44677,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -44802,6 +44870,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -44980,6 +45060,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45178,6 +45270,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -45762,6 +45866,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -45964,6 +46080,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -46422,6 +46550,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -46486,6 +46626,8 @@ spec:
       openAPIV3Schema:
         properties:
           apiVersion:
+            type: string
+          condition:
             type: string
           config:
             type: object
@@ -47036,6 +47178,18 @@ spec:
                   serviceID:
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -47317,6 +47471,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             type: object
         required:
         - spec
@@ -47501,6 +47667,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -47696,6 +47874,18 @@ spec:
                     maxLength: 512
                     type: string
                   upstreamID:
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -48447,6 +48637,18 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
@@ -66022,6 +66224,13 @@ spec:
                     type: object
                   theme:
                     properties:
+                      borderRadius:
+                        enum:
+                        - soft
+                        - sharp
+                        - round
+                        maxLength: 253
+                        type: string
                       colors:
                         properties:
                           primary:
@@ -66393,8 +66602,41 @@ spec:
                             minLength: 1
                             type: string
                           clientSecret:
-                            maxLength: 253
-                            type: string
+                            properties:
+                              secretRef:
+                                properties:
+                                  key:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           issuerURL:
                             maxLength: 253
                             minLength: 1
@@ -66405,6 +66647,7 @@ spec:
                             type: array
                         required:
                         - clientID
+                        - clientSecret
                         - issuerURL
                         type: object
                       saml:

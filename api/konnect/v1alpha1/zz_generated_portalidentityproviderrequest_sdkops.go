@@ -3,8 +3,12 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -115,6 +119,7 @@ func (s *PortalIdentityProviderRequestAPISpec) marshalSDKOpsPayload() ([]byte, e
 		return nil, fmt.Errorf("failed to decode PortalIdentityProviderRequestAPISpec: %w", err)
 	}
 	payload = flattenSDKUnions(payload)
+	payload = flattenSensitiveData(payload)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDK(payload)
@@ -160,4 +165,79 @@ func (s *PortalIdentityProviderRequestAPISpec) ToPortalUpdateIdentityProvider() 
 		return nil, fmt.Errorf("failed to unmarshal into PortalUpdateIdentityProvider: %w", err)
 	}
 	return &target, nil
+}
+
+func (obj *PortalIdentityProviderRequest) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*PortalIdentityProviderRequestAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("PortalIdentityProviderRequest is nil")
+	}
+
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
+	// Resolve spec.apiSpec.config.oidc.clientSecret
+	if apiSpec.Config != nil {
+		if apiSpec.Config.OIDC != nil {
+			{
+				src := apiSpec.Config.OIDC.ClientSecret
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.config.oidc.clientSecret")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.Config.OIDC.ClientSecret.Value = &resolved
+				}
+			}
+		}
+	}
+	return &apiSpec, nil
+}
+
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
+func (obj *PortalIdentityProviderRequest) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+	if obj.Spec.APISpec.Config != nil {
+		if obj.Spec.APISpec.Config.OIDC != nil {
+			if obj.Spec.APISpec.Config.OIDC.ClientSecret.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.Config.OIDC.ClientSecret.SecretRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.Config.OIDC.ClientSecret.SecretRef)
+			}
+		}
+	}
+	return refs
+}
+
+// ToPortalCreateIdentityProvider converts the PortalIdentityProviderRequest to the SDK type
+// sdkkonnectcomp.PortalCreateIdentityProvider, resolving referenced Secrets via the provided client.
+func (obj *PortalIdentityProviderRequest) ToPortalCreateIdentityProvider(ctx context.Context, cl client.Client) (*sdkkonnectcomp.PortalCreateIdentityProvider, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToPortalCreateIdentityProvider()
+}
+
+// ToPortalUpdateIdentityProvider converts the PortalIdentityProviderRequest to the SDK type
+// sdkkonnectcomp.PortalUpdateIdentityProvider, resolving referenced Secrets via the provided client.
+func (obj *PortalIdentityProviderRequest) ToPortalUpdateIdentityProvider(ctx context.Context, cl client.Client) (*sdkkonnectcomp.PortalUpdateIdentityProvider, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToPortalUpdateIdentityProvider()
 }

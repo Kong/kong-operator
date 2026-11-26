@@ -71,10 +71,10 @@ func TestAIGatewayAuthStrategy(t *testing.T) {
 							OpenIDConnect: &aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "oidc-with-redis",
 								DisplayName: "OIDC with Redis",
-								Config: aiconfigurationv1alpha1.AIGWOpenIDConnectGeneratedConfig{
+								Config: aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnectConfig{
 									Issuer:          "https://oidc.example.com/.well-known/openid-configuration",
 									CacheTokensSalt: "oidc-cache-salt",
-									Redis: aiconfigurationv1alpha1.AIGWOpenIDConnectGeneratedConfigRedis{
+									Redis: aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnectConfigRedis{
 										Password: aiconfigurationv1alpha1.SensitiveDataSource{
 											Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 											SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{

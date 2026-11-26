@@ -1269,6 +1269,11 @@ type FieldConfig struct {
 	// field's Go type. Use it for optional collections whose explicitly empty
 	// value must reach the API instead of being dropped by `omitempty`.
 	OmitZero bool `yaml:"_omitZero,omitempty"`
+	// AllowZero emits an optional scalar (string, integer or number) field as
+	// a pointer with `json:",omitempty"`. Use it when the zero value means
+	// something to the API, e.g. "0 for unlimited": a plain value with
+	// `omitzero` can't tell an explicit zero from an unset field and drops it.
+	AllowZero bool `yaml:"_allowZero,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.
 	Fields map[string]*FieldConfig `yaml:",inline"`

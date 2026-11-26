@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 )
 
 type routeValidator interface {
@@ -250,6 +251,13 @@ func validateWithKongGateway(
 	var errMsgs []string
 	for _, errors := range translationResult.HTTPRouteNameToTranslationErrors {
 		for _, err := range errors {
+			// Unsupported retry fields are reported on the HTTPRoute Accepted
+			// condition with reason UnsupportedValue. Do not also reject the
+			// resource at admission time, or the user could never observe that
+			// status.
+			if gatewayapipkg.IsHTTPRouteRetryUnsupported(err) {
+				continue
+			}
 			errMsgs = append(errMsgs, err.Error())
 		}
 	}

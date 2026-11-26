@@ -18,7 +18,7 @@ func TestAIGatewayAuthStrategyIdentityRealmsRequestJSON(t *testing.T) {
 	require.NoError(t, AddToScheme(scheme))
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	newStrategy := func(realms []AIGWKeyAuthGeneratedConfigIdentityRealms) *AIGatewayAuthStrategy {
+	newStrategy := func(realms []AIGatewayAuthStrategyKeyAuthConfigIdentityRealms) *AIGatewayAuthStrategy {
 		return &AIGatewayAuthStrategy{
 			Spec: AIGatewayAuthStrategySpec{
 				APISpec: AIGatewayAuthStrategyAPISpec{
@@ -27,10 +27,10 @@ func TestAIGatewayAuthStrategyIdentityRealmsRequestJSON(t *testing.T) {
 						KeyAuth: &AIGatewayAuthStrategyKeyAuth{
 							Name:        "api-key",
 							DisplayName: "API Key Authentication",
-							Config: AIGWKeyAuthGeneratedConfig{
+							Config: AIGatewayAuthStrategyKeyAuthConfig{
 								KeyNames:       []string{"apikey"},
 								IdentityRealms: realms,
-								Principals: AIGWKeyAuthGeneratedConfigPrincipals{
+								Principals: AIGatewayAuthStrategyKeyAuthConfigPrincipals{
 									Enabled: "Enabled",
 								},
 							},
@@ -52,15 +52,15 @@ func TestAIGatewayAuthStrategyIdentityRealmsRequestJSON(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		realms  []AIGWKeyAuthGeneratedConfigIdentityRealms
+		realms  []AIGatewayAuthStrategyKeyAuthConfigIdentityRealms
 		present bool
 		length  int
 	}{
 		{name: "omitted"},
-		{name: "empty", realms: []AIGWKeyAuthGeneratedConfigIdentityRealms{}, present: true},
+		{name: "empty", realms: []AIGatewayAuthStrategyKeyAuthConfigIdentityRealms{}, present: true},
 		{
 			name:    "populated",
-			realms:  []AIGWKeyAuthGeneratedConfigIdentityRealms{{Scope: "cp"}},
+			realms:  []AIGatewayAuthStrategyKeyAuthConfigIdentityRealms{{Scope: "cp"}},
 			present: true,
 			length:  1,
 		},

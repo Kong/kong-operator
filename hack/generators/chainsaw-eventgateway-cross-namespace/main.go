@@ -237,6 +237,7 @@ func (sc *scenarios) scenarioB(a axis) {
 	sc.grant(g1)
 	sc.restored("assert-"+tag+"-programmed", "The KongReferenceGrant, naming "+a.what+", lets the "+sc.res.kind+" reference it.", refT, b.referrer)
 	sc.assertGatewayPushes("assert-" + tag + "-gateway-pushes")
+	sc.assertCertificateSecret("assert-"+tag+"-certificate-secret", "The operator issued the client certificate Secret of the "+sc.res.kind+".", b.referrer, true)
 
 	sc.phase("D", a.what)
 	sc.revoke(g1, "revoke-"+g1.name, "Delete the KongReferenceGrant of the "+sc.res.kind+" to "+a.what+".")
@@ -246,12 +247,14 @@ func (sc *scenarios) scenarioB(a axis) {
 	}
 	sc.assertCond("assert-"+tag+"-not-permitted-again", again, b.referrer, denied)
 	sc.assertGateway("assert-"+tag+"-revoked", refT, b.referrer)
+	sc.assertCertificateSecret("assert-"+tag+"-certificate-secret-gone", "Revoked, the "+sc.res.kind+" no longer has the client certificate Secret the operator issued.", b.referrer, false)
 	for _, g := range wrong {
 		sc.deleteObject("delete-"+g.name, "Delete the near-miss KongReferenceGrant "+g.name+".", &object{Kind: "KongReferenceGrant", Name: g.name, NS: g.namespace, Group: groupConfiguration})
 	}
 	sc.restore(g1, "Create the KongReferenceGrant of the "+sc.res.kind+" to "+a.what+" again.")
 	sc.restored("assert-"+tag+"-programmed-again", "The "+sc.res.kind+" is restored.", refT, b.referrer)
 	sc.assertGatewayPushes("assert-" + tag + "-gateway-pushes-again")
+	sc.assertCertificateSecret("assert-"+tag+"-certificate-secret-again", "Restored, the "+sc.res.kind+" gets a client certificate Secret again.", b.referrer, true)
 
 	var switched []*object
 	if a.switchable {

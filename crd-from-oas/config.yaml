@@ -96,6 +96,18 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
+        cel:
+          spec:
+            apiSpec:
+              # 0 means unlimited, so an explicit 0 must reach the API.
+              api:
+                config:
+                  maxRequestBodySize:
+                    _allowZero: true
+              model:
+                config:
+                  maxRequestBodySize:
+                    _allowZero: true
         dataSources:
           # Vector DB credentials and the proxy's basic-auth password. The
           # balancer config repeats under both union variants (api and model),
@@ -369,6 +381,9 @@ apiGroupVersions:
           spec:
             apiSpec:
               config:
+                # 0 means unlimited, so an explicit 0 must reach the API.
+                maxRequestBodySize:
+                  _allowZero: true
                 # The OAS describes plain certificate names on the same AI
                 # Gateway; the CR takes in-cluster object references.
                 caCertificates:
@@ -797,6 +812,9 @@ apiGroupVersions:
               # are only on the variants that proxy to an upstream.
               conversion-only:
                 config:
+                  # 0 means unlimited, so an explicit 0 must reach the API.
+                  maxRequestBodySize: &aigwAllowZero
+                    _allowZero: true
                   caCertificates:
                     _description: &aigwMCPCACertificateDescription |-
                       The CA certificates used to verify the TLS certificate of the
@@ -831,6 +849,7 @@ apiGroupVersions:
                       Note that `$ref` is not supported.
               conversion-listener:
                 config:
+                  maxRequestBodySize: *aigwAllowZero
                   caCertificates:
                     _description: *aigwMCPCACertificateDescription
                   certificates:
@@ -852,12 +871,17 @@ apiGroupVersions:
                       Note that `$ref` is not supported.
               passthrough-listener:
                 config:
+                  maxRequestBodySize: *aigwAllowZero
                   caCertificates:
                     _description: *aigwMCPCACertificateDescription
                   certificates:
                     _description: *aigwMCPCertificateDescription
+              listener:
+                config:
+                  maxRequestBodySize: *aigwAllowZero
               upstream-server:
                 config:
+                  maxRequestBodySize: *aigwAllowZero
                   caCertificates:
                     _description: *aigwMCPCACertificateDescription
                   certificates:
@@ -2148,6 +2172,9 @@ apiGroupVersions:
           delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/identity-providers
+        dataSources:
+          - path: spec.apiSpec.config.oidc.clientSecret
+            type: Secret
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK
@@ -2168,7 +2195,7 @@ apiGroupVersions:
                 - typeValue: oidc
                   variantField: OIDC
                   responseTypeValue: oidc
-                  responseVariantField: PortalOIDCIdentityProviderConfigOutput
+                  responseVariantField: PortalOIDCIdentityProviderConfig
                   matchFields:
                     - objectField: IssuerURL
                       responseField: GetIssuerURL()

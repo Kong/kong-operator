@@ -22,7 +22,7 @@ require (
 	github.com/gohugoio/hashstructure v1.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
-	github.com/google/pprof v0.0.0-20261111200114-fac431ef4d26
+	github.com/google/pprof v0.0.0-20261118010117-084b33a85f63
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -355,10 +355,12 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.37.2
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.14
 	k8s.io/metrics => k8s.io/metrics v0.37.2
-	k8s.io/mount-utils => k8s.io/mount-utils v0.37.2
+	k8s.io/mount-utils => k8s.io/mount-utils v0.37.3
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.37.2
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.37.2
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.37.2
 	k8s.io/sample-controller => k8s.io/sample-controller v0.37.2
 	k8s.io/streaming => k8s.io/streaming v0.37.2
 )
+
+replace github.com/Kong/sdk-konnect-go => github.com/Kong/sdk-konnect-go-internal v0.8.1
