@@ -57,3 +57,25 @@ func TestGetSupportedFeaturesUnsupportedRouter(t *testing.T) {
 	require.ErrorContains(t, err, "unsupported router type")
 	require.Nil(t, supportedFeatures)
 }
+
+func TestGetSupportedFeaturesHTTPRouteRetries(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		routerFlavor consts.RouterFlavor
+		isHybrid     bool
+	}{
+		{"standard traditional-compatible", consts.RouterFlavorTraditionalCompatible, false},
+		{"hybrid traditional-compatible", consts.RouterFlavorTraditionalCompatible, true},
+		{"standard expressions", consts.RouterFlavorExpressions, false},
+		{"hybrid expressions", consts.RouterFlavorExpressions, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			supportedFeatures, err := GetSupportedFeatures(tc.routerFlavor, tc.isHybrid)
+			require.NoError(t, err)
+			require.Contains(t, supportedFeatures, features.SupportHTTPRouteRetryConnectionError)
+			// Kong Gateway does not retry on HTTP response status codes, so the
+			// codes feature must not be advertised.
+			require.NotContains(t, supportedFeatures, features.SupportHTTPRouteRetryCodes)
+		})
+	}
+}

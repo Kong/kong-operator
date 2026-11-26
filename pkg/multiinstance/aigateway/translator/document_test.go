@@ -2112,7 +2112,7 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 					OpenIDConnect: &aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnect{
 						Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier("auth-strategy-broken"),
 						DisplayName: "auth-strategy-broken",
-						Config: aiconfigurationv1alpha1.AIGWOpenIDConnectGeneratedConfig{
+						Config: aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnectConfig{
 							ClientSecret: []aiconfigurationv1alpha1.SensitiveDataSource{{
 								Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "oidc-secret", Key: "clientSecret", Namespace: new("other-ns")},

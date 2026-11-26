@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------
@@ -299,16 +300,32 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 				listenerName = string(*parentRef.SectionName)
 			}
 
+			condition := metav1.Condition{
+				Type:               string(gatewayapi.RouteConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayapi.RouteReasonAccepted),
+				ObservedGeneration: route.GetGeneration(),
+			}
+			// Kong Gateway cannot retry based on response codes and cannot apply a
+			// configurable backoff. Report such configuration on the Route instead of
+			// accepting it and silently ignoring those fields.
+			if httproute, ok := any(route).(*gatewayapi.HTTPRoute); ok {
+				if err := gatewayapipkg.ValidateHTTPRouteRetries(httproute.Spec.Rules); err != nil {
+					condition = metav1.Condition{
+						Type:               string(gatewayapi.RouteConditionAccepted),
+						Status:             metav1.ConditionFalse,
+						Reason:             string(gatewayapi.RouteReasonUnsupportedValue),
+						Message:            err.Error(),
+						ObservedGeneration: route.GetGeneration(),
+					}
+				}
+			}
+
 			gateways = append(gateways, supportedGatewayWithCondition{
 				gateway:               &gateway,
 				listenerName:          listenerName,
 				attachedListenerNames: attachedListenerNames,
-				condition: metav1.Condition{
-					Type:               string(gatewayapi.RouteConditionAccepted),
-					Status:             metav1.ConditionTrue,
-					Reason:             string(gatewayapi.RouteReasonAccepted),
-					ObservedGeneration: route.GetGeneration(),
-				},
+				condition:             condition,
 			})
 		} else {
 			// We failed to match a listener with this route

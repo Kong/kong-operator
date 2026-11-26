@@ -362,6 +362,21 @@ func (g *Generator) walkSensitiveLeafPath(
 		containerGoName := entityName + "Config"
 		containerObjectFieldPath := objectFieldPath + "." + containerGoName
 		containerAcc := acc.withUnionContainer(containerGoName)
+		if objectFieldPath != "Spec.APISpec" {
+			// A union reached through a nested $ref (e.g. the portal identity
+			// provider's config field): the walked field already holds the
+			// union wrapper, so the variant selectors hang off it directly —
+			// the walked field only gains a nil guard.
+			containerObjectFieldPath = objectFieldPath
+			if len(acc.parts) > 0 {
+				parts := make([]selectorPart, len(acc.parts))
+				copy(parts, acc.parts)
+				parts[len(parts)-1].isUnionContainer = true
+				containerAcc = selectorAccumulator{parts: parts}
+			} else {
+				containerAcc = acc
+			}
+		}
 
 		// "*" fans out across every variant instead of selecting one by name — used
 		// when a secret leaf lives at the same relative path in multiple (but not
@@ -395,6 +410,28 @@ func (g *Generator) walkSensitiveLeafPath(
 			if jsonName(k) == targetJSON || k == targetJSON {
 				variantRef = v
 				break
+			}
+		}
+		// Unions without an OAS discriminator derive their variant values from
+		// the member names (uniqueUnionDiscriminatorValues, e.g.
+		// CreateOIDCIdentityProviderConfig → oidc); match the segment against
+		// those so a dataSources path can reach into such a union.
+		if variantRef == "" && len(schema.OneOf) > 0 {
+			rawNames := make([]string, 0, len(schema.OneOf))
+			for _, v := range schema.OneOf {
+				name := v.Name
+				if v.RefName != "" {
+					name = v.RefName
+				}
+				rawNames = append(rawNames, name)
+			}
+			for i, dv := range uniqueUnionDiscriminatorValues(rawNames) {
+				if jsonName(dv) == targetJSON || dv == targetJSON {
+					if v := schema.OneOf[i]; v.RefName != "" {
+						variantRef = v.RefName
+						break
+					}
+				}
 			}
 		}
 		if variantRef == "" {
@@ -1305,13 +1342,13 @@ func fieldConfigsEqual(a, b *config.FieldConfig) bool {
 }
 
 // isEmptyFieldConfig reports whether a field config carries no validations,
-// no description, no omitZero override and no non-empty descendants, which
+// no description, no omitZero/allowZero override and no non-empty descendants, which
 // makes it equivalent to an absent cursor.
 func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	if fc == nil {
 		return true
 	}
-	if len(fc.Validations) > 0 || fc.Description != "" || fc.OmitZero {
+	if len(fc.Validations) > 0 || fc.Description != "" || fc.OmitZero || fc.AllowZero {
 		return false
 	}
 	for _, child := range fc.Fields {
@@ -1373,6 +1410,7 @@ func cloneFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
 	}
 	clone.Description = fc.Description
 	clone.OmitZero = fc.OmitZero
+	clone.AllowZero = fc.AllowZero
 	if len(fc.Fields) > 0 {
 		clone.Fields = cloneFieldConfigMap(fc.Fields)
 	}
@@ -1450,6 +1488,9 @@ func (g *Generator) collectSchemaCursors(
 		propPath := path + "." + jsonTag
 
 		if g.isSensitiveLeafAtLevel(entityName, schemaGoTypeName, jsonTag) {
+			if propCursor != nil && propCursor.AllowZero {
+				return fmt.Errorf("CEL config path %q: _allowZero is not supported on sensitive data source fields", propPath)
+			}
 			sensitiveCursor := childFieldConfig(propCursor)
 			if sensitiveCursor == nil {
 				continue
@@ -1637,7 +1678,41 @@ func (g *Generator) validateCursorAtLevel(path string, cursor *config.FieldConfi
 			return fmt.Errorf("CEL config path %q: segment %q does not match any field", path, tag)
 		}
 	}
+	for _, prop := range schema.Properties {
+		if skipProperty(prop) {
+			continue
+		}
+		tag := jsonTagForProperty(prop)
+		if err := validateAllowZero(path+"."+tag, prop, cursor.Sub(tag)); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// validateAllowZero rejects _allowZero on fields where a pointer wouldn't
+// express "explicit zero": required fields (the zero value is already sent),
+// non-scalar fields (collections and structs have their own emptiness rules),
+// references, unions and booleans (emitted as an Enabled/Disabled string enum).
+func validateAllowZero(path string, prop *parser.Property, fc *config.FieldConfig) error {
+	if fc == nil || !fc.AllowZero {
+		return nil
+	}
+	if fc.OmitZero {
+		return fmt.Errorf("CEL config path %q: _allowZero and _omitZero are mutually exclusive", path)
+	}
+	if prop.Required {
+		return fmt.Errorf("CEL config path %q: _allowZero is only supported on optional fields", path)
+	}
+	if prop.IsReference || len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 {
+		return fmt.Errorf("CEL config path %q: _allowZero is only supported on string, integer and number fields", path)
+	}
+	switch prop.Type {
+	case "string", "integer", "number":
+		return nil
+	default:
+		return fmt.Errorf("CEL config path %q: _allowZero is only supported on string, integer and number fields, got %q", path, prop.Type)
+	}
 }
 
 // generateEntityFiles produces all generated files for a single CRD entity:
@@ -2536,6 +2611,7 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		goType = g.inlineTypeName("", typeName, prop.Name)
 	}
 	fieldCfg := fieldCursor.Sub(jsonTagForProperty(prop))
+	goType = allowZeroGoType(goType, fieldCfg)
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType, fieldCfg != nil && fieldCfg.OmitZero))
 }
 
@@ -2909,7 +2985,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		if isInlineObjectWithProperties(prop) {
 			return g.inlineTypeName(entityName, entityName+"APISpec", prop.Name)
 		}
-		return g.goType(prop)
+		return allowZeroGoType(g.goType(prop), apiSpecCursor.Sub(jsonTagForProperty(prop)))
 	}
 
 	rc := g.config.ReconcilerConfig[entityName]
@@ -4737,7 +4813,7 @@ func cleanSingleVariantName(name string) string {
 	for _, suffix := range []string{"Config", "Configuration", "Provider", "Request", "IdentityProvider"} {
 		result = strings.TrimSuffix(result, suffix)
 	}
-	for _, prefix := range []string{"Configure", "Create", "Update"} {
+	for _, prefix := range []string{"Configure", "Create", "Update", "Portal"} {
 		result = strings.TrimPrefix(result, prefix)
 	}
 	return result
@@ -6731,7 +6807,20 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 					itemProps = prop.Items.Properties
 					itemOneOf, itemAnyOf = len(prop.Items.OneOf) > 0, len(prop.Items.AnyOf) > 0
 				}
-				if len(itemProps) == 1 && !itemOneOf && !itemAnyOf && jsonName(itemProps[0].Name) == ref.ResolvesTo {
+				// The item keeps its shape when it is not a union, the
+				// resolvesTo property is present, and every other property
+				// declares an OAS default: Konnect fills the defaulted ones
+				// in (e.g. the AIGatewayModelDatastoreRef purpose).
+				hasResolvesTo, othersDefaulted := false, len(itemProps) > 0
+				for _, p := range itemProps {
+					switch {
+					case jsonName(p.Name) == ref.ResolvesTo && p.Default == nil:
+						hasResolvesTo = true
+					case p.Default == nil:
+						othersDefaulted = false
+					}
+				}
+				if !itemOneOf && !itemAnyOf && hasResolvesTo && othersDefaulted {
 					itemObjectKey = ref.ResolvesTo
 				}
 			}
@@ -7814,7 +7903,7 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 			})
 			continue
 		}
-		goType := g.testFieldGoType(prop)
+		goType := allowZeroGoType(g.testFieldGoType(prop), g.getAPISpecCursor(entityName).Sub(jsonTagForProperty(prop)))
 		testValue, expectedValue := testValuesForProperty(prop, goType)
 		if testValue == "" || expectedValue == "" {
 			continue
@@ -8475,6 +8564,33 @@ func (g *Generator) collectSDKOpsConstFieldsFromProperty(
 	if prop.AdditionalProperties != nil {
 		g.collectSDKOpsConstFieldsFromProperty(prop.AdditionalProperties, append(append([]string(nil), path...), "{}"), discs, visited, seen, fields)
 	}
+	// The map-returning marshalSDKOpsPayload injects const fields before union
+	// flattening, so a union member's fields sit under its discriminator
+	// mapping key (see collectSDKOpsBoolFieldsFromProperty). The union is
+	// either inline or a $ref to a oneOf schema. The byte-returning
+	// marshalSDKOpsPayload flattens first, so these paths do not match there.
+	oneOf, mapping := prop.OneOf, prop.DiscriminatorMapping
+	if len(oneOf) == 0 && prop.RefName != "" {
+		if refSchema := g.parsed.Schemas[prop.RefName]; refSchema != nil {
+			oneOf, mapping = refSchema.OneOf, refSchema.DiscriminatorMapping
+		}
+	}
+	if len(oneOf) == 0 {
+		return
+	}
+	for memberKey, refName := range mapping {
+		memberSchema := g.parsed.Schemas[refName]
+		if memberSchema == nil {
+			continue
+		}
+		if _, done := visited[refName]; done {
+			continue
+		}
+		visited[refName] = struct{}{}
+		for _, memberProp := range memberSchema.Properties {
+			g.collectSDKOpsConstFieldsFromProperty(memberProp, append(append([]string(nil), path...), memberKey, memberProp.Name), discs, visited, seen, fields)
+		}
+	}
 }
 
 func findRootUnionUpdatePayloadProperty(properties []*parser.Property) (*parser.Property, error) {
@@ -8926,6 +9042,16 @@ func tagOmitSuffix(resolvedGoType string, forceOmitZero bool) string {
 // forceOmitZero selects omitzero even for a pointer, slice or map type.
 func jsonTag(prop *parser.Property, resolvedGoType string, forceOmitZero bool) string {
 	return jsonName(prop.Name) + tagOmitSuffix(resolvedGoType, forceOmitZero)
+}
+
+// allowZeroGoType returns goType as a pointer when fc sets _allowZero, so an
+// explicit zero value survives serialization (nil means unset). Validation in
+// validateCursorAtLevel restricts _allowZero to optional scalar fields.
+func allowZeroGoType(goType string, fc *config.FieldConfig) string {
+	if fc == nil || !fc.AllowZero || strings.HasPrefix(goType, "*") {
+		return goType
+	}
+	return "*" + goType
 }
 
 // isRefProperty checks if a property is a reference.

@@ -54,7 +54,7 @@ func RunWhenKongDBMode(t *testing.T, dbmode dpconf.DBMode, msg ...any) {
 func RunWhenKongEnterprise(t *testing.T) {
 	t.Helper()
 
-	if !testenv.KongEnterpriseImageUsed() {
+	if !testenv.KongEnterpriseEnabled() {
 		t.Skipf("skipping because Kong enterprise is not enabled")
 	}
 }

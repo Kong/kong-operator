@@ -760,8 +760,44 @@ func (ks *KongState) FillPlugins(
 	log logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
 ) {
 	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations(s, log, failuresCollector), ks.inheritedTagsForPlugins())
+	ks.dropPluginsWithUnsupportedCondition(failuresCollector, kongVersion)
+}
+
+// dropPluginsWithUnsupportedCondition removes the plugins that set a condition when the gateway does not
+// support it. The whole plugin is dropped rather than only its condition: a plugin without its condition
+// runs on every request, which is not the behavior the user asked for.
+func (ks *KongState) dropPluginsWithUnsupportedCondition(
+	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
+) {
+	if kongVersion.GTE(versions.KongPluginConditionCutoff) {
+		return
+	}
+
+	// A plugin is copied once per entity it is attached to; report each parent only once.
+	reported := sets.New[client.ObjectKey]()
+	ks.Plugins = lo.Filter(ks.Plugins, func(plugin Plugin, _ int) bool {
+		if plugin.Condition == nil {
+			return true
+		}
+		if plugin.K8sParent == nil {
+			return false
+		}
+		if key := client.ObjectKeyFromObject(plugin.K8sParent); !reported.Has(key) {
+			reported.Insert(key)
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf(
+					"plugin condition is not supported with Kong Gateway versions < %s",
+					versions.KongPluginConditionCutoff,
+				),
+				plugin.K8sParent,
+			)
+		}
+		return false
+	})
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity

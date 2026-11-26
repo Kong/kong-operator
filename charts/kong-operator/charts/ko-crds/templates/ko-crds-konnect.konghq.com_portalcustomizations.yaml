@@ -209,6 +209,13 @@ spec:
                     type: object
                   theme:
                     properties:
+                      borderRadius:
+                        enum:
+                        - soft
+                        - sharp
+                        - round
+                        maxLength: 253
+                        type: string
                       colors:
                         properties:
                           primary:

@@ -1934,7 +1934,8 @@ spec:
                         - route
                         type: object
                       datastores:
-                        description: Names of the Datastores this model references.
+                        description: The Datastores this model references, with the
+                          feature that uses each one.
                         items:
                           description: |-
                             AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
@@ -9105,7 +9106,8 @@ spec:
                         - route
                         type: object
                       datastores:
-                        description: Names of the Datastores this model references.
+                        description: The Datastores this model references, with the
+                          feature that uses each one.
                         items:
                           description: |-
                             AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced

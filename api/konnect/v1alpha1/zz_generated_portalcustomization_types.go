@@ -196,6 +196,12 @@ type SpecRenderer struct {
 
 // Theme The theme settings for this portal.
 type Theme struct {
+	// The corner roundness to apply to this portal's theme.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=soft;sharp;round
+	BorderRadius string `json:"borderRadius,omitzero"`
 	//
 	//
 	// +optional

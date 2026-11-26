@@ -930,6 +930,35 @@ func TestValidateHTTPRoute(t *testing.T) {
 			valid:         false,
 			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type RequestMirror is unsupported",
 		},
+		{
+			msg: "unsupported retry fields are left to Route status",
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "existing-managed-gateway",
+					Spec:      gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
+				},
+			},
+			route: &gatewayapi.HTTPRoute{
+				Namespace: corev1.NamespaceDefault,
+				Name:      "example-route",
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name:      "existing-managed-gateway",
+							Namespace: new(gatewayapi.Namespace(corev1.NamespaceDefault)),
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Retry: &gatewayapi.HTTPRouteRetry{
+							Codes: []gatewayapi.HTTPRouteRetryStatusCode{500},
+						},
+					}},
+				},
+			},
+			valid: true,
+		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
 			fakeClient := fakeclient.

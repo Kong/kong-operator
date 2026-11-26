@@ -1075,6 +1075,19 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 	{
 		Path: []string{
+			"gemini",
+			"config",
+			"auth",
+			"gcp",
+			"workload_identity_federation",
+			"aws_iam",
+			"aws",
+		},
+		Key:   "type",
+		Value: "aws",
+	},
+	{
+		Path: []string{
 			"huggingface",
 			"config",
 			"auth",

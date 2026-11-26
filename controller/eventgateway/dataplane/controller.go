@@ -101,6 +101,7 @@ func (r *Reconciler) config() shareddataplane.Config[
 	cfg.Certificate.Resolve = r.resolveCertificateSecret
 	cfg.Certificate.CleanupStale = r.cleanupStaleCertificates
 	cfg.Certificate.RequeueAfter = r.onPremCertificateRequeue
+	cfg.Deployment.ControlPlaneNotPermitted = r.revokeCertificates
 	return cfg
 }
 

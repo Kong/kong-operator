@@ -417,8 +417,6 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
-                    required:
-                    - url
                     type: object
                   displayName:
                     maxLength: 256

@@ -360,29 +360,6 @@ func (c onPremCertificate) renewalTime() time.Time {
 	return pki.RenewalTime(c.issuedAt, c.cert.NotAfter)
 }
 
-// onPremCertificateLabels returns the labels of the client certificate
-// Secrets of a data plane of an OnPremEventGateway.
-func (r *Reconciler) onPremCertificateLabels(egdp *eventgatewayv1alpha1.KegDataPlane) client.MatchingLabels {
-	labels := k8sresources.GetManagedLabelForOwner(egdp)
-	labels[consts.SecretProvisioningLabelKey] = consts.SecretProvisioningAutomaticLabelValue
-	labels[consts.SecretKEGDataPlaneCertificateLabel] = "true"
-	if r.SecretLabelSelector != "" {
-		labels[r.SecretLabelSelector] = "true"
-	}
-	return labels
-}
-
-// listOnPremCertificates lists the client certificate Secrets of a data
-// plane of an OnPremEventGateway: the current one, and those it replaced,
-// kept until the Deployment rolled out onto it.
-func (r *Reconciler) listOnPremCertificates(ctx context.Context, cl client.Reader, egdp *eventgatewayv1alpha1.KegDataPlane) ([]corev1.Secret, error) {
-	owned, err := k8sutils.ListSecretsForOwner(ctx, cl, egdp.GetUID(), client.InNamespace(egdp.Namespace), r.onPremCertificateLabels(egdp))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list the mTLS certificate Secrets of %s/%s: %w", egdp.Namespace, egdp.Name, err)
-	}
-	return owned, nil
-}
-
 // issuedOnPremCertificates returns the certificates of the Secrets that ca
 // issued for the subject, but those being deleted.
 func issuedOnPremCertificates(owned []corev1.Secret, subject string, ca *x509.Certificate) []onPremCertificate {
@@ -594,7 +571,7 @@ func (r *Reconciler) currentOnPremCertificateOf(
 	ca *x509.Certificate,
 	now time.Time,
 ) ([]corev1.Secret, onPremCertificate, bool, error) {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
 	if err != nil {
 		return nil, onPremCertificate{}, false, err
 	}
@@ -699,7 +676,7 @@ func (r *Reconciler) createOnPremCertificate(
 		return nil, errors.New("the certificate issued can't be parsed")
 	}
 	secret := k8sresources.GenerateNewTLSSecret(egdp, func(s *corev1.Secret) {
-		maps.Copy(s.Labels, r.onPremCertificateLabels(egdp))
+		maps.Copy(s.Labels, r.certificateSecretLabels(egdp))
 		s.Annotations = map[string]string{
 			onPremCertificateIssuedAtAnnotation: now.UTC().Format(time.RFC3339Nano),
 			consts.CertExpiresAtAnnotation:      certs[0].NotAfter.UTC().Format(time.RFC3339),
@@ -958,7 +935,7 @@ func (r *Reconciler) cleanupStaleOnPremCertificates(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	certChecksum string,
 ) error {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
 	if err != nil {
 		return err
 	}

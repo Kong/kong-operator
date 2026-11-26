@@ -167,6 +167,12 @@ func (b *KongPluginBuilder) WithOrdering(ordering *kong.PluginOrdering) *KongPlu
 	return b
 }
 
+// WithCondition sets the spec.Condition field for the KongPlugin being built.
+func (b *KongPluginBuilder) WithCondition(condition string) *KongPluginBuilder {
+	b.plugin.Condition = condition
+	return b
+}
+
 // WithPluginConfig sets the plugin config for the KongPlugin being built.
 func (b *KongPluginBuilder) WithPluginConfig(config json.RawMessage) *KongPluginBuilder {
 	b.plugin.Config.Raw = config

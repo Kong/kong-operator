@@ -229,6 +229,15 @@ func TestKongPluginBuilder_WithOrdering(t *testing.T) {
 	}
 }
 
+func TestKongPluginBuilder_WithCondition(t *testing.T) {
+	plugin, err := NewKongPlugin().
+		WithName("test-plugin").
+		WithCondition(`http.path.startsWith("/api")`).
+		Build()
+	require.NoError(t, err)
+	assert.Equal(t, `http.path.startsWith("/api")`, plugin.Condition)
+}
+
 func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
 		Name:      "test-route",

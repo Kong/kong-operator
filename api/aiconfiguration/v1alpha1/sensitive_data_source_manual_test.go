@@ -42,7 +42,7 @@ func TestSensitiveDataSource_UnmarshalJSON(t *testing.T) {
 	t.Run("legacy string inside a field decodes as inline", func(t *testing.T) {
 		t.Parallel()
 
-		var got AIGWOpenIDConnectGeneratedConfigRedis
+		var got AIGatewayAuthStrategyOpenIDConnectConfigRedis
 		require.NoError(t, json.Unmarshal([]byte(`{"password":"legacy-password"}`), &got))
 		require.Equal(t, "legacy-password", got.Password.GetValue())
 	})

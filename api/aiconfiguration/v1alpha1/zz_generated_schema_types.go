@@ -8,16 +8,282 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
-// AIGWKeyAuthGeneratedConfig is a type alias.
-type AIGWKeyAuthGeneratedConfig struct {
-	// An optional string (consumer UUID or username) value to use as an
-	// “anonymous” consumer if authentication fails.
-	// If empty (default null), the request will fail with an authentication
-	// failure `4xx`.
+// AIGatewayAgentAccess Access control configuration for an agent.
+type AIGatewayAgentAccess struct {
+	// Access control rules.
+	// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Anonymous string `json:"anonymous,omitzero"`
+	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
+	// List of auth strategies for granting access to the agent.
+	// At most 1 auth strategy of each auth strategy type can be referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
+	// List of identity providers for granting access to the agent.
+	// At most 1 identity provider of each identity provider type can be
+	// referenced.
+	//
+	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+}
+
+// AIGatewayAgentAccessAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+type AIGatewayAgentAccessAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
+	Type AIGatewayAgentAccessAclsType `json:"type,omitempty"`
+
+	// Allow configuration.
+	//
+	// +optional
+	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
+	// Deny configuration.
+	//
+	// +optional
+	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
+	// AllowWhen configuration.
+	//
+	// +optional
+	AllowWhen *AIGatewayAllowWhenACL `json:"allowWhen,omitempty"`
+	// DenyWhen configuration.
+	//
+	// +optional
+	DenyWhen *AIGatewayDenyWhenACL `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayAgentAccessAclsType represents the type of acls.
+type AIGatewayAgentAccessAclsType string
+
+// AIGatewayAgentAccessAclsType values.
+const (
+	AIGatewayAgentAccessAclsTypeAllow     AIGatewayAgentAccessAclsType = "allow"
+	AIGatewayAgentAccessAclsTypeDeny      AIGatewayAgentAccessAclsType = "deny"
+	AIGatewayAgentAccessAclsTypeAllowWhen AIGatewayAgentAccessAclsType = "allowWhen"
+	AIGatewayAgentAccessAclsTypeDenyWhen  AIGatewayAgentAccessAclsType = "denyWhen"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayAgentAccessAclsTypeAllow:
+		if u.Allow != nil {
+			raw, err := json.Marshal(u.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Allow: %w", err)
+			}
+			m["allow"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeDeny:
+		if u.Deny != nil {
+			raw, err := json.Marshal(u.Deny)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Deny: %w", err)
+			}
+			m["deny"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeAllowWhen:
+		if u.AllowWhen != nil {
+			raw, err := json.Marshal(u.AllowWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
+			}
+			m["allowWhen"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeDenyWhen:
+		if u.DenyWhen != nil {
+			raw, err := json.Marshal(u.DenyWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
+			}
+			m["denyWhen"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayAgentAccessAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Allow: %w", err)
+		}
+		u.Allow = &val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Deny: %w", err)
+		}
+		u.Deny = &val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = &val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: nil receiver")
+	}
+	type alias AIGatewayAgentAccess
+	aux := alias{}
+	aux.Acls = &AIGatewayAgentAccessAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayAgentAccess(aux)
+	return nil
+}
+
+// AIGatewayAllowACL is a type alias.
+type AIGatewayAllowACL struct {
+	// List of Consumer Groups Names, or Authenticated Groups Names that are
+	// permitted access.
+	//
+	// +required
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+}
+
+// AIGatewayAllowWhenACL is a type alias.
+type AIGatewayAllowWhenACL struct {
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context (consumer, principal, HTTP attributes,
+	// consumer groups, etc.).
+	// Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
+	// specified.
+	//
+	// **Requires a minimum runtime version of `2.2`**.
+	//
+	// +required
+	AllowWhen []string `json:"allowWhen,omitempty"`
+}
+
+// AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
+type AIGatewayAuthStrategyKeyAuth struct {
+	// Configuration for the key-auth auth strategy.
+	//
+	//
+	// +optional
+	Config AIGatewayAuthStrategyKeyAuthConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
+	// The display name for this auth strategy instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this auth strategy instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
+// strategy.
+type AIGatewayAuthStrategyKeyAuthConfig struct {
 	// An optional boolean value telling the plugin to show or hide the credential
 	// from the upstream service.
 	// If `true`, the plugin strips the credential from the request.
@@ -29,7 +295,7 @@ type AIGWKeyAuthGeneratedConfig struct {
 	// consumer from.
 	//
 	// +optional
-	IdentityRealms []AIGWKeyAuthGeneratedConfigIdentityRealms `json:"identityRealms,omitzero"`
+	IdentityRealms []AIGatewayAuthStrategyKeyAuthConfigIdentityRealms `json:"identityRealms,omitzero"`
 	// If enabled, the plugin reads the request body.
 	// Supported MIME types: `application/www-form-urlencoded`, `application/json`,
 	// and `multipart/form-data`.
@@ -58,7 +324,7 @@ type AIGWKeyAuthGeneratedConfig struct {
 	//
 	//
 	// +optional
-	Principals AIGWKeyAuthGeneratedConfigPrincipals `json:"principals,omitzero"`
+	Principals AIGatewayAuthStrategyKeyAuthConfigPrincipals `json:"principals,omitzero"`
 	// When authentication fails the plugin sends `WWW-Authenticate` header with
 	// `realm` attribute value.
 	//
@@ -74,9 +340,9 @@ type AIGWKeyAuthGeneratedConfig struct {
 	RunOnPreflight string `json:"runOnPreflight,omitzero"`
 }
 
-// AIGWKeyAuthGeneratedConfigIdentityRealms A configuration of Konnect Identity
-// Realms that indicate where to source a consumer from.
-type AIGWKeyAuthGeneratedConfigIdentityRealms struct {
+// AIGatewayAuthStrategyKeyAuthConfigIdentityRealms A configuration of Konnect
+// Identity Realms that indicate where to source a consumer from.
+type AIGatewayAuthStrategyKeyAuthConfigIdentityRealms struct {
 	//
 	//
 	// +optional
@@ -90,12 +356,13 @@ type AIGWKeyAuthGeneratedConfigIdentityRealms struct {
 	Scope string `json:"scope,omitzero"`
 }
 
-// AIGWKeyAuthGeneratedConfigPrincipals is a type alias.
-type AIGWKeyAuthGeneratedConfigPrincipals struct {
+// AIGatewayAuthStrategyKeyAuthConfigPrincipals is a type alias.
+type AIGatewayAuthStrategyKeyAuthConfigPrincipals struct {
 	// The Kong Identity directory instance to authenticate against.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
 	Directory string `json:"directory,omitzero"`
 	// When true, authenticate against Kong Identity instead of local credentials.
 	//
@@ -111,8 +378,96 @@ type AIGWKeyAuthGeneratedConfigPrincipals struct {
 	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfig is a type alias.
-type AIGWOpenIDConnectGeneratedConfig struct {
+// AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
+type AIGatewayAuthStrategyOpenIDConnect struct {
+	// Configuration for the OpenID Connect auth strategy.
+	//
+	//
+	// +optional
+	Config AIGatewayAuthStrategyOpenIDConnectConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
+	// The display name for this auth strategy instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this auth strategy instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Enables enrollment protection for the Token Vault datastore linked to this
+	// auth strategy.
+	// Users of the linked Token Vault will need to authenticate using this OIDC
+	// auth strategy
+	// before completing enrollment with upstream providers.
+	// Enrollment links always store upstream
+	// credentials in the Token Vault belonging to the principal who requested the
+	// link.
+	// Enrollment
+	// protection ensures that other principals cannot use an enrollment link to
+	// unknowingly
+	// authorize the storage of their upstream credentials in another principal's
+	// Token Vault.
+	//
+	// Note that the auth strategy used to protect upstream resources such as MCP
+	// servers need not
+	// be the same auth strategy used for enrollment protection.
+	// Omit `token_vault` entirely to
+	// enforce no such enrollment protection.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling
+	// enrollment protection
+	// without one is rejected.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
+}
+
+// AIGatewayAuthStrategyOpenIDConnectConfig Configuration for the OpenID Connect
+// auth strategy.
+type AIGatewayAuthStrategyOpenIDConnectConfig struct {
 	// An optional string (consumer UUID or username) value that functions as an
 	// “anonymous” consumer if authentication fails.
 	// If empty (default null), requests that fail authentication will return a
@@ -328,7 +683,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The JWK used for the private_key_jwt authentication.
 	//
 	// +optional
-	ClientJwk []AIGWOpenIDConnectGeneratedConfigClientJwk `json:"clientJwk,omitempty"`
+	ClientJwk []AIGatewayAuthStrategyOpenIDConnectConfigClientJwk `json:"clientJwk,omitempty"`
 	// The client secret.
 	//
 	// +optional
@@ -336,7 +691,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	//
 	//
 	// +optional
-	ClusterCacheRedis AIGWOpenIDConnectGeneratedConfigClusterCacheRedis `json:"clusterCacheRedis,omitzero"`
+	ClusterCacheRedis AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis `json:"clusterCacheRedis,omitzero"`
 	// The strategy to use for the cluster cache.
 	// If set, the plugin will share cache with nodes configured with the same
 	// strategy backend.
@@ -422,7 +777,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The downstream claim to header mappings.
 	//
 	// +optional
-	DownstreamHeaders []AIGWOpenIDConnectGeneratedConfigDownstreamHeaders `json:"downstreamHeaders,omitempty"`
+	DownstreamHeaders []AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders `json:"downstreamHeaders,omitempty"`
 	// The downstream header claims. Only top level claims are supported.
 	//
 	// +optional
@@ -705,6 +1060,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// claims
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	Leeway float64 `json:"leeway,omitzero"`
 	// What to do after successful login: - `upstream`: proxy request to upstream
 	// service - `response`: terminate request with a response - `redirect`:
@@ -829,7 +1185,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// verification.
 	//
 	// +optional
-	Principals AIGWOpenIDConnectGeneratedConfigPrincipals `json:"principals,omitzero"`
+	Principals AIGatewayAuthStrategyOpenIDConnectConfigPrincipals `json:"principals,omitzero"`
 	// If set to true, only the auth_methods that are compatible with Proof of
 	// Possession (PoP) can be configured when PoP is enabled.
 	// If set to false, all auth_methods will be configurable and PoP checks will
@@ -867,7 +1223,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	ProtectedResourceMetadata AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata `json:"protectedResourceMetadata,omitzero"`
+	ProtectedResourceMetadata AIGatewayAuthStrategyOpenIDConnectConfigProtectedResourceMetadata `json:"protectedResourceMetadata,omitzero"`
 	// The pushed authorization endpoint.
 	// If set it overrides the value in `pushed_authorization_request_endpoint`
 	// returned by the discovery endpoint.
@@ -891,7 +1247,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	//
 	//
 	// +optional
-	Redis AIGWOpenIDConnectGeneratedConfigRedis `json:"redis,omitzero"`
+	Redis AIGatewayAuthStrategyOpenIDConnectConfigRedis `json:"redis,omitzero"`
 	// Specifies how long (in seconds) the plugin waits between discovery attempts.
 	// Discovery is still triggered on an as-needed basis.
 	//
@@ -1214,6 +1570,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// Network IO timeout in milliseconds.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	Timeout float64 `json:"timeout,omitzero"`
 	// ID of the Certificate entity representing the client certificate to use for
 	// mTLS client authentication for connections between Kong and the Auth Server.
@@ -1252,7 +1609,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// Details on how to accept tokens from other identity providers.
 	//
 	// +optional
-	TokenExchange AIGWOpenIDConnectGeneratedConfigTokenExchange `json:"tokenExchange,omitzero"`
+	TokenExchange AIGatewayAuthStrategyOpenIDConnectConfigTokenExchange `json:"tokenExchange,omitzero"`
 	// Endpoint used to perform the legacy token exchange.
 	//
 	// +optional
@@ -1338,7 +1695,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The upstream claim to header mappings.
 	//
 	// +optional
-	UpstreamHeaders []AIGWOpenIDConnectGeneratedConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
+	UpstreamHeaders []AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
 	// The upstream header claims. Only top level claims are supported.
 	//
 	// +optional
@@ -1460,9 +1817,9 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	VerifySignature string `json:"verifySignature,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClientJwk The JWK used for the
+// AIGatewayAuthStrategyOpenIDConnectConfigClientJwk The JWK used for the
 // private_key_jwt authentication.
-type AIGWOpenIDConnectGeneratedConfigClientJwk struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigClientJwk struct {
 	//
 	//
 	// +optional
@@ -1588,13 +1945,13 @@ type AIGWOpenIDConnectGeneratedConfigClientJwk struct {
 	Y string `json:"y,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedis is a type alias.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis is a type alias.
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis struct {
 	// Cloud auth related configs for connecting to a Cloud Provider's Redis
 	// instance.
 	//
 	// +optional
-	CloudAuthentication AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	CloudAuthentication AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
 	// Maximum retry attempts for redirection.
 	//
 	// +optional
@@ -1605,7 +1962,7 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	ClusterNodes []AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes `json:"clusterNodes,omitempty"`
+	ClusterNodes []AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes `json:"clusterNodes,omitempty"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
@@ -1693,7 +2050,7 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	SentinelNodes []AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes `json:"sentinelNodes,omitempty"`
+	SentinelNodes []AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes `json:"sentinelNodes,omitempty"`
 	// Sentinel password to authenticate with a Redis Sentinel instance.
 	// If undefined, no AUTH commands are sent to Redis Sentinels.
 	//
@@ -1743,9 +2100,10 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	Username string `json:"username,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication Cloud
-// auth related configs for connecting to a Cloud Provider's Redis instance.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisCloudAuthentication
+// Cloud auth related configs for connecting to a Cloud Provider's Redis
+// instance.
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisCloudAuthentication struct {
 	// Auth providers to be used to authenticate to a Cloud Provider's Redis
 	// instance.
 	//
@@ -1820,11 +2178,11 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication struct
 	GcpServiceAccountJSON string `json:"gcpServiceAccountJSON,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes Cluster
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes Cluster
 // addresses to use for Redis connections when the `redis` strategy is defined.
 // Defining this field implies using a Redis Cluster.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -1838,11 +2196,12 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes Sentinel node
-// addresses to use for Redis connections when the `redis` strategy is defined.
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes
+// Sentinel node addresses to use for Redis connections when the `redis`
+// strategy is defined.
 // Defining this field implies using a Redis Sentinel.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -1856,9 +2215,9 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigDownstreamHeaders The downstream claim to
-// header mappings.
-type AIGWOpenIDConnectGeneratedConfigDownstreamHeaders struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders The downstream
+// claim to header mappings.
+type AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders struct {
 	// The name of the header.
 	//
 	// +required
@@ -1871,13 +2230,14 @@ type AIGWOpenIDConnectGeneratedConfigDownstreamHeaders struct {
 	Path []string `json:"path,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigPrincipals Configuration for Kong Identity
-// principal hydration after token verification.
-type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigPrincipals Configuration for Kong
+// Identity principal hydration after token verification.
+type AIGatewayAuthStrategyOpenIDConnectConfigPrincipals struct {
 	// The Kong Identity directory instance to look up against.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
 	Directory string `json:"directory,omitzero"`
 	// When true, query Kong Identity to map a Principal after token verification.
 	//
@@ -1901,7 +2261,7 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	Jit AIGWOpenIDConnectGeneratedConfigPrincipalsJit `json:"jit,omitzero"`
+	Jit AIGatewayAuthStrategyOpenIDConnectConfigPrincipalsJit `json:"jit,omitzero"`
 	// If a Consumer is attached to the matched Principal in Kong Identity, load it
 	// and set it in the request context, overriding consumer_by.
 	//
@@ -1934,8 +2294,8 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 	PrincipalClaim []string `json:"principalClaim,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigPrincipalsJit Token claims to share with the
-// Kong Identity principal lookup.
+// AIGatewayAuthStrategyOpenIDConnectConfigPrincipalsJit Token claims to share
+// with the Kong Identity principal lookup.
 // Kong Identity, not this plugin, decides whether the claims are used: a
 // trusted IdP with JIT provisioning enabled in Konnect maps them onto a
 // principal provisioned just in time.
@@ -1943,7 +2303,7 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 // 'sub') and no additional claims are shared.
 //
 // **Requires a minimum runtime version of `2.3`**.
-type AIGWOpenIDConnectGeneratedConfigPrincipalsJit struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigPrincipalsJit struct {
 	// Send the full set of verified token claims with the Kong Identity principal
 	// lookup.
 	//
@@ -1958,14 +2318,14 @@ type AIGWOpenIDConnectGeneratedConfigPrincipalsJit struct {
 	Claims []string `json:"claims,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata When configured,
-// the plugin advertises this API as an OAuth 2.0 protected resource per RFC
-// 9728.
+// AIGatewayAuthStrategyOpenIDConnectConfigProtectedResourceMetadata When
+// configured, the plugin advertises this API as an OAuth 2.0 protected resource
+// per RFC 9728.
 // It serves a discovery document at the well-known URI and includes
 // resource_metadata in WWW-Authenticate challenge headers.
 //
 // **Requires a minimum runtime version of `2.3`**.
-type AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigProtectedResourceMetadata struct {
 	// List of authorization server issuer URIs to advertise in the RFC 9728
 	// metadata document.
 	//
@@ -1994,13 +2354,13 @@ type AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata struct {
 	ScopesSupported []string `json:"scopesSupported,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedis is a type alias.
-type AIGWOpenIDConnectGeneratedConfigRedis struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigRedis is a type alias.
+type AIGatewayAuthStrategyOpenIDConnectConfigRedis struct {
 	// Cloud auth related configs for connecting to a Cloud Provider's Redis
 	// instance.
 	//
 	// +optional
-	CloudAuthentication AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	CloudAuthentication AIGatewayAuthStrategyOpenIDConnectConfigRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
 	// Maximum retry attempts for redirection.
 	//
 	// +optional
@@ -2011,7 +2371,7 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	ClusterNodes []AIGWOpenIDConnectGeneratedConfigRedisClusterNodes `json:"clusterNodes,omitempty"`
+	ClusterNodes []AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes `json:"clusterNodes,omitempty"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
@@ -2104,7 +2464,7 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	SentinelNodes []AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes `json:"sentinelNodes,omitempty"`
+	SentinelNodes []AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes `json:"sentinelNodes,omitempty"`
 	// Sentinel password to authenticate with a Redis Sentinel instance.
 	// If undefined, no AUTH commands are sent to Redis Sentinels.
 	//
@@ -2159,9 +2519,9 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	Username string `json:"username,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication Cloud auth related
-// configs for connecting to a Cloud Provider's Redis instance.
-type AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigRedisCloudAuthentication Cloud auth
+// related configs for connecting to a Cloud Provider's Redis instance.
+type AIGatewayAuthStrategyOpenIDConnectConfigRedisCloudAuthentication struct {
 	// Auth providers to be used to authenticate to a Cloud Provider's Redis
 	// instance.
 	//
@@ -2236,11 +2596,11 @@ type AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication struct {
 	GcpServiceAccountJSON string `json:"gcpServiceAccountJSON,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedisClusterNodes Cluster addresses to use
-// for Redis connections when the `redis` strategy is defined.
+// AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes Cluster addresses
+// to use for Redis connections when the `redis` strategy is defined.
 // Defining this field implies using a Redis Cluster.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigRedisClusterNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -2254,11 +2614,11 @@ type AIGWOpenIDConnectGeneratedConfigRedisClusterNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes Sentinel node addresses to
-// use for Redis connections when the `redis` strategy is defined.
+// AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes Sentinel node
+// addresses to use for Redis connections when the `redis` strategy is defined.
 // Defining this field implies using a Redis Sentinel.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -2272,13 +2632,13 @@ type AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchange Details on how to accept tokens
-// from other identity providers.
-type AIGWOpenIDConnectGeneratedConfigTokenExchange struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchange Details on how to
+// accept tokens from other identity providers.
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchange struct {
 	// Cache support for token exchange
 	//
 	// +optional
-	Cache AIGWOpenIDConnectGeneratedConfigTokenExchangeCache `json:"cache,omitzero"`
+	Cache AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeCache `json:"cache,omitzero"`
 	// The token exchange grant.
 	// `token_exchange` (default) uses the OAuth 2.0 Token Exchange grant (RFC
 	// 8693).
@@ -2320,19 +2680,19 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchange struct {
 	// Parameters used in the token exchange request.
 	//
 	// +optional
-	Request AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest `json:"request,omitzero"`
+	Request AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequest `json:"request,omitzero"`
 	// Trusted token issuers from which the upstream may accept tokens to be
 	// exchanged.
 	// If a JWT bearer matches all the conditions of a subject token issuer item,
 	// the token will be exchanged.
 	//
 	// +required
-	SubjectTokenIssuers []AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers `json:"subjectTokenIssuers,omitempty"`
+	SubjectTokenIssuers []AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers `json:"subjectTokenIssuers,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeCache Cache support for token
-// exchange
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeCache struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeCache Cache support for
+// token exchange
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeCache struct {
 	// Whether to enable caching.
 	//
 	// +optional
@@ -2346,16 +2706,16 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeCache struct {
 	Ttl int `json:"ttl,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest Parameters used in the
-// token exchange request.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequest Parameters used
+// in the token exchange request.
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequest struct {
 	// How to obtain the actor token to include in the token exchange request.
 	// Represents the identity of the party acting on behalf of the subject.
 	//
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	ActorToken AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken `json:"actorToken,omitzero"`
+	ActorToken AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequestActorToken `json:"actorToken,omitzero"`
 	// Audiences used in the token exchange request.
 	// Values defined here override those defined in `config.audience`.
 	//
@@ -2427,12 +2787,12 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
 	Scopes []string `json:"scopes,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken How to obtain
-// the actor token to include in the token exchange request.
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequestActorToken How to
+// obtain the actor token to include in the token exchange request.
 // Represents the identity of the party acting on behalf of the subject.
 //
 // **Requires a minimum runtime version of `2.3`**.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequestActorToken struct {
 	// Header name containing the actor token. Required when `source` is `header`.
 	//
 	// +optional
@@ -2460,11 +2820,12 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken struct {
 	Type string `json:"type,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers Trusted
-// token issuers from which the upstream may accept tokens to be exchanged.
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers
+// Trusted token issuers from which the upstream may accept tokens to be
+// exchanged.
 // If a JWT bearer matches all the conditions of a subject token issuer item,
 // the token will be exchanged.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers struct {
 	// A token will only be exchanged when it matches all these criteria.
 	// To exchange tokens issued by a different issuer, `conditions` must not be
 	// defined -- every token from that issuer is exchanged unconditionally, since
@@ -2474,7 +2835,7 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
 	// `conditions` must be defined.
 	//
 	// +optional
-	Conditions AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
+	Conditions AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
 	// When true, a token issued by `issuer` that fails to match `conditions` is
 	// denied instead of being passed through unexchanged.
 	// Evaluated independently for this item only, with no effect on other
@@ -2518,15 +2879,15 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
 	VerifySignature string `json:"verifySignature,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
-// token will only be exchanged when it matches all these criteria.
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuersConditions
+// A token will only be exchanged when it matches all these criteria.
 // To exchange tokens issued by a different issuer, `conditions` must not be
 // defined -- every token from that issuer is exchanged unconditionally, since a
 // foreign-issued token that isn't exchanged can never pass normal verification
 // against the target issuer anyway.
 // In contrast, to exchange tokens issued by the target issuer itself,
 // `conditions` must be defined.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuersConditions struct {
 	// Audience values that must all be present in the token, matched against
 	// `audience_claim`.
 	//
@@ -2549,9 +2910,9 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions 
 	MissingScopes []string `json:"missingScopes,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigUpstreamHeaders The upstream claim to header
-// mappings.
-type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders The upstream claim to
+// header mappings.
+type AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders struct {
 	// The name of the header.
 	//
 	// +required
@@ -2562,364 +2923,6 @@ type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
 	//
 	// +required
 	Path []string `json:"path,omitempty"`
-}
-
-// AIGatewayAgentAccess Access control configuration for an agent.
-type AIGatewayAgentAccess struct {
-	// Access control rules.
-	// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
-	//
-	// +optional
-	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
-	// List of auth strategies for granting access to the agent.
-	// At most 1 auth strategy of each auth strategy type can be referenced.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
-	// List of identity providers for granting access to the agent.
-	// At most 1 identity provider of each identity provider type can be
-	// referenced.
-	//
-	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
-}
-
-// AIGatewayAgentAccessAcls represents a union type for acls.
-// Only one of the fields should be set based on the Type.
-type AIGatewayAgentAccessAcls struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
-	Type AIGatewayAgentAccessAclsType `json:"type,omitempty"`
-
-	// Allow configuration.
-	//
-	// +optional
-	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
-	// Deny configuration.
-	//
-	// +optional
-	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
-	// AllowWhen configuration.
-	//
-	// +optional
-	AllowWhen *AIGatewayAllowWhenACL `json:"allowWhen,omitempty"`
-	// DenyWhen configuration.
-	//
-	// +optional
-	DenyWhen *AIGatewayDenyWhenACL `json:"denyWhen,omitempty"`
-}
-
-// AIGatewayAgentAccessAclsType represents the type of acls.
-type AIGatewayAgentAccessAclsType string
-
-// AIGatewayAgentAccessAclsType values.
-const (
-	AIGatewayAgentAccessAclsTypeAllow     AIGatewayAgentAccessAclsType = "allow"
-	AIGatewayAgentAccessAclsTypeDeny      AIGatewayAgentAccessAclsType = "deny"
-	AIGatewayAgentAccessAclsTypeAllowWhen AIGatewayAgentAccessAclsType = "allowWhen"
-	AIGatewayAgentAccessAclsTypeDenyWhen  AIGatewayAgentAccessAclsType = "denyWhen"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case AIGatewayAgentAccessAclsTypeAllow:
-		if u.Allow != nil {
-			raw, err := json.Marshal(u.Allow)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Allow: %w", err)
-			}
-			m["allow"] = raw
-		}
-	case AIGatewayAgentAccessAclsTypeDeny:
-		if u.Deny != nil {
-			raw, err := json.Marshal(u.Deny)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Deny: %w", err)
-			}
-			m["deny"] = raw
-		}
-	case AIGatewayAgentAccessAclsTypeAllowWhen:
-		if u.AllowWhen != nil {
-			raw, err := json.Marshal(u.AllowWhen)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
-			}
-			m["allowWhen"] = raw
-		}
-	case AIGatewayAgentAccessAclsTypeDenyWhen:
-		if u.DenyWhen != nil {
-			raw, err := json.Marshal(u.DenyWhen)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
-			}
-			m["denyWhen"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayAgentAccessAclsType(probe.Type)
-	switch probe.Type {
-	case "allow":
-		payload, ok := raw["allow"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayAllowACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Allow: %w", err)
-		}
-		u.Allow = &val
-	case "deny":
-		payload, ok := raw["deny"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDenyACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Deny: %w", err)
-		}
-		u.Deny = &val
-	case "allowWhen":
-		payload, ok := raw["allowWhen"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayAllowWhenACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
-		}
-		u.AllowWhen = &val
-	case "denyWhen":
-		payload, ok := raw["denyWhen"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDenyWhenACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
-		}
-		u.DenyWhen = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: nil receiver")
-	}
-	type alias AIGatewayAgentAccess
-	aux := alias{}
-	aux.Acls = &AIGatewayAgentAccessAcls{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: %w", err)
-	}
-	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
-		aux.Acls = nil
-	}
-	*s = AIGatewayAgentAccess(aux)
-	return nil
-}
-
-// AIGatewayAllowACL is a type alias.
-type AIGatewayAllowACL struct {
-	// List of Consumer Groups Names, or Authenticated Groups Names that are
-	// permitted access.
-	//
-	// +required
-	Allow []AIGatewayACLRef `json:"allow,omitempty"`
-}
-
-// AIGatewayAllowWhenACL is a type alias.
-type AIGatewayAllowWhenACL struct {
-	// Allow the request if it matches any of these CEL boolean expressions
-	// evaluated against the request context (consumer, principal, HTTP attributes,
-	// consumer groups, etc.).
-	// Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
-	// specified.
-	//
-	// **Requires a minimum runtime version of `2.2`**.
-	//
-	// +required
-	AllowWhen []string `json:"allowWhen,omitempty"`
-}
-
-// AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
-type AIGatewayAuthStrategyKeyAuth struct {
-	//
-	//
-	// +optional
-	Config AIGWKeyAuthGeneratedConfig `json:"config,omitzero"`
-	// The Token Vault Datastore holding this entity's credential storage: the
-	// directory credentials
-	// are written to, and the encryption keys that seal them.
-	// Required when `token_vault` is set
-	// (on an auth strategy, when its credential manager is enabled), and the
-	// referenced Datastore
-	// must have type `token-vault`. Only one Datastore can be referenced.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
-	// The display name for this auth strategy instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long, start and end with an alphanumeric
-	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
-	// Values must be 1–127 characters long and must not be empty.
-	// Keys and values must not contain spaces or control characters.
-	//
-	//
-	// +optional
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this auth strategy instance, used as a
-	// stable human-readable reference.
-	// This value is immutable after creation.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
-type AIGatewayAuthStrategyOpenIDConnect struct {
-	//
-	//
-	// +optional
-	Config AIGWOpenIDConnectGeneratedConfig `json:"config,omitzero"`
-	// The Token Vault Datastore holding this entity's credential storage: the
-	// directory credentials
-	// are written to, and the encryption keys that seal them.
-	// Required when `token_vault` is set
-	// (on an auth strategy, when its credential manager is enabled), and the
-	// referenced Datastore
-	// must have type `token-vault`. Only one Datastore can be referenced.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
-	// The display name for this auth strategy instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long, start and end with an alphanumeric
-	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
-	// Values must be 1–127 characters long and must not be empty.
-	// Keys and values must not contain spaces or control characters.
-	//
-	//
-	// +optional
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this auth strategy instance, used as a
-	// stable human-readable reference.
-	// This value is immutable after creation.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-	// Enables enrollment protection for the Token Vault datastore linked to this
-	// auth strategy.
-	// Users of the linked Token Vault will need to authenticate using this OIDC
-	// auth strategy
-	// before completing enrollment with upstream providers.
-	// Enrollment links always store upstream
-	// credentials in the Token Vault belonging to the principal who requested the
-	// link.
-	// Enrollment
-	// protection ensures that other principals cannot use an enrollment link to
-	// unknowingly
-	// authorize the storage of their upstream credentials in another principal's
-	// Token Vault.
-	//
-	// Note that the auth strategy used to protect upstream resources such as MCP
-	// servers need not
-	// be the same auth strategy used for enrollment protection.
-	// Omit `token_vault` entirely to
-	// enforce no such enrollment protection.
-	//
-	// Requires a `token-vault` Datastore reference in `datastores`; enabling
-	// enrollment protection
-	// without one is rejected.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayAzureEmbeddingsModelConfig Azure OpenAI-specific configuration for
@@ -3671,7 +3674,7 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -3696,7 +3699,7 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -4074,7 +4077,7 @@ type AIGatewayMCPServerListenerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -5371,7 +5374,7 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -5404,7 +5407,7 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -5869,7 +5872,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -5899,7 +5902,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -6025,7 +6028,7 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -6046,7 +6049,7 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -6272,7 +6275,7 @@ type AIGatewayModelAPI struct {
 	//
 	// +required
 	Config AIGatewayModelAPIConfig `json:"config,omitzero"`
-	// Names of the Datastores this model references.
+	// The Datastores this model references, with the feature that uses each one.
 	//
 	// +optional
 	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
@@ -6349,7 +6352,7 @@ type AIGatewayModelAPIConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -7888,7 +7891,7 @@ type AIGatewayModelModel struct {
 	//
 	// +required
 	Config AIGatewayModelModelConfig `json:"config,omitzero"`
-	// Names of the Datastores this model references.
+	// The Datastores this model references, with the feature that uses each one.
 	//
 	// +optional
 	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
@@ -7965,7 +7968,7 @@ type AIGatewayModelModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	//
 	//
 	// +optional

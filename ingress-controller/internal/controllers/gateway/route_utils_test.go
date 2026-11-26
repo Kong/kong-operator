@@ -678,6 +678,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 
 	type expected struct {
 		condition             metav1.Condition
+		message               string
 		listenerName          string
 		attachedListenerNames []gatewayapi.SectionName
 	}
@@ -1057,6 +1058,66 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "HTTPRoute with connection-error retries is accepted",
+				route: func() *gatewayapi.HTTPRoute {
+					r := basicHTTPRoute()
+					r.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{Attempts: new(2)}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithHTTP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					},
+				},
+			},
+			{
+				name: "HTTPRoute with retry codes is rejected as unsupported",
+				route: func() *gatewayapi.HTTPRoute {
+					r := basicHTTPRoute()
+					r.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{
+						Codes: []gatewayapi.HTTPRouteRetryStatusCode{500},
+					}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithHTTP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonUnsupportedValue),
+						message:   "rules[0].retry.codes is unsupported: Kong Gateway retries transport-level failures only and cannot retry on HTTP response status codes",
+					},
+				},
+			},
+			{
+				name: "HTTPRoute with retry backoff is rejected as unsupported",
+				route: func() *gatewayapi.HTTPRoute {
+					r := basicHTTPRoute()
+					r.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{
+						Backoff: new(gatewayapi.Duration("100ms")),
+					}
+					return r
+				}(),
+				objects: []client.Object{
+					gatewayWithHTTP80Ready(),
+					gatewayClass,
+					namespace,
+				},
+				expected: []expected{
+					{
+						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonUnsupportedValue),
+						message:   "rules[0].retry.backoff is unsupported: Kong Gateway retries immediately and has no configurable backoff",
+					},
+				},
+			},
 		}
 
 		for _, tt := range tests {
@@ -1078,7 +1139,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					if tt.expected[i].attachedListenerNames != nil {
 						assert.Equalf(t, tt.expected[i].attachedListenerNames, got[i].attachedListenerNames, "attachedListenerNames #%d", i)
 					}
-					assert.Equalf(t, tt.expected[i].condition, got[i].condition, "condition #%d", i)
+					expectedCondition := tt.expected[i].condition
+					expectedCondition.Message = tt.expected[i].message
+					assert.Equalf(t, expectedCondition, got[i].condition, "condition #%d", i)
 				}
 			})
 		}
