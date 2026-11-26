@@ -382,18 +382,64 @@ The structure varies depending on the agent type.
 
 | Field | Description |
 | --- | --- |
+| `balancer` _[AIGatewayAgentConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancer)_ | Load balancing configuration for `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream agent endpoint. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayAgent's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream agent endpoint. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayAgent's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayAgentConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `path` _string_ | The path prefix of requests sent to the `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `protocol` _[AIGatewayUpstreamProtocol](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamprotocol)_ | The protocol used to reach the `targets`. Only valid with `targets`. If unset, the gateway uses `https`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `targets` _[][AIGatewayUpstreamTarget](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamtarget)_ | List of targets the upstream load balances requests across. Replaces `url`: set exactly one of `url` or `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream A2A Agent using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
 
 - [AIGatewayAgentAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentapispec)
+
+#### AIGatewayAgentConfigBalancer
+
+
+AIGatewayAgentConfigBalancer represents a union type for balancer.
+Only one of the fields should be set based on the Algorithm.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _[AIGatewayAgentConfigBalancerType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancertype)_ | Algorithm designates the type of configuration. |
+| `consistent-hashing` _[AIGatewayUpstreamBalancerConsistentHashingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `least-connections` _[AIGatewayUpstreamBalancerLeastConnectionsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerleastconnectionsconfig)_ | LeastConnections configuration. |
+| `lowest-latency` _[AIGatewayUpstreamBalancerLowestLatencyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerlowestlatencyconfig)_ | LowestLatency configuration. |
+| `round-robin` _[AIGatewayUpstreamBalancerRoundRobinConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerroundrobinconfig)_ | RoundRobin configuration. |
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+
+#### AIGatewayAgentConfigBalancerType
+
+_Underlying type:_ `string`
+
+AIGatewayAgentConfigBalancerType represents the type of balancer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancer)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `round-robin` |  |
 
 #### AIGatewayAgentConfigLogging
 
@@ -582,7 +628,7 @@ Identity Realms that indicate where to source a consumer from.
 
 | Field | Description |
 | --- | --- |
-| `region` _string_ |  |
+| `region` _*string_ |  |
 | `scope` _string_ |  |
 
 _Appears in:_
@@ -1551,14 +1597,17 @@ _Appears in:_
 - [AIGatewayTargetDashscopeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdashscopeconfig)
 - [AIGatewayTargetDatabricksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdatabricksconfig)
 - [AIGatewayTargetDeepseekConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdeepseekconfig)
+- [AIGatewayTargetFireworksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetfireworksconfig)
 - [AIGatewayTargetGeminiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)
 - [AIGatewayTargetHuggingfaceConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargethuggingfaceconfig)
 - [AIGatewayTargetKimiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetkimiconfig)
 - [AIGatewayTargetLlama2Config](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetllama2config)
+- [AIGatewayTargetMetaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmetaconfig)
 - [AIGatewayTargetMistralConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmistralconfig)
 - [AIGatewayTargetOllamaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetollamaconfig)
 - [AIGatewayTargetOpenaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)
 - [AIGatewayTargetSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
+- [AIGatewayTargetTogetheraiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargettogetheraiconfig)
 - [AIGatewayTargetVercelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)
 - [AIGatewayTargetVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
@@ -1842,14 +1891,17 @@ _Appears in:_
 - [AIGatewayTargetDashscopeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdashscopeconfig)
 - [AIGatewayTargetDatabricksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdatabricksconfig)
 - [AIGatewayTargetDeepseekConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdeepseekconfig)
+- [AIGatewayTargetFireworksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetfireworksconfig)
 - [AIGatewayTargetGeminiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)
 - [AIGatewayTargetHuggingfaceConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargethuggingfaceconfig)
 - [AIGatewayTargetKimiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetkimiconfig)
 - [AIGatewayTargetLlama2Config](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetllama2config)
+- [AIGatewayTargetMetaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmetaconfig)
 - [AIGatewayTargetMistralConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmistralconfig)
 - [AIGatewayTargetOllamaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetollamaconfig)
 - [AIGatewayTargetOpenaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)
 - [AIGatewayTargetSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
+- [AIGatewayTargetTogetheraiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargettogetheraiconfig)
 - [AIGatewayTargetVercelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)
 - [AIGatewayTargetVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
@@ -2128,7 +2180,22 @@ _Appears in:_
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 
+#### AIGatewayDatastoreRef
 
+
+AIGatewayDatastoreRef A reference to an existing datastore
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | An immutable user-defined identifier for this resource. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)
+- [AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)
+- [AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)
 
 
 
@@ -2260,14 +2327,17 @@ _Appears in:_
 - [AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)
 - [AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)
 - [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+- [AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)
 - [AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)
 - [AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)
 - [AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)
 - [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+- [AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)
 - [AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+- [AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)
 - [AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)
 - [AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
@@ -2379,6 +2449,8 @@ Configure `allow`, `deny`, or both.
 
 _Appears in:_
 
+- [AIGatewayMCPPromptAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppromptaccess)
+- [AIGatewayMCPResourceAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpresourceaccess)
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
 - [AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)
@@ -2428,6 +2500,73 @@ AIGatewayMCPPassthroughTool A tool exposed by an MCP Server in
 _Appears in:_
 
 - [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+
+#### AIGatewayMCPPrompt
+
+
+AIGatewayMCPPrompt Access-control rules for a prompt advertised by the remote
+MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPPromptAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppromptaccess)_ | Access-control rules for a prompt. |
+| `name` _string_ | The MCP prompt name. Matches the prompt advertised by the remote MCP Server under the same name. Unique within an MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+
+#### AIGatewayMCPPromptAccess
+
+
+AIGatewayMCPPromptAccess Access-control rules for a prompt.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying callers access to this prompt (`prompts/get`), and whether it is listed to them (`prompts/list`). When configured, these override the MCP Server's `default_prompt_acls` for this prompt. |
+
+_Appears in:_
+
+- [AIGatewayMCPPrompt](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpprompt)
+
+#### AIGatewayMCPResource
+
+
+AIGatewayMCPResource Access-control rules for a resource or resource template
+advertised by the remote MCP Server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `access` _[AIGatewayMCPResourceAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpresourceaccess)_ | Access-control rules for a resource or resource template. |
+| `uri` _string_ | The MCP resource URI. Matches the resource advertised by the remote MCP Server under the same `uri`, or the resource template advertised under the same `uriTemplate`. A URI template (RFC 6570) also matches every concrete resource URI it expands to, so one entry can govern a whole template. Unique within an MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+
+#### AIGatewayMCPResourceAccess
+
+
+AIGatewayMCPResourceAccess Access-control rules for a resource or resource
+template.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying callers access to this resource (`resources/read`, `resources/subscribe`), and whether it is listed to them (`resources/list`, `resources/templates/list`). When configured, these override the MCP Server's `default_resource_acls` for this resource. |
+
+_Appears in:_
+
+- [AIGatewayMCPResource](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpresource)
 
 #### AIGatewayMCPServerAPISpec
 
@@ -2578,19 +2717,65 @@ to modes where Kong answers as the MCP server.
 | Field | Description |
 | --- | --- |
 | `allowedVersions` _[]string_ | The MCP protocol revisions this server accepts. Leave unset to accept every revision Kong implements, which is the default. When set, `server/discover` advertises exactly this list and a request declaring anything else is rejected. Listing only per-request revisions refuses handshake clients.<br /><br />**Requires a minimum runtime version of `2.1`**. |
+| `balancer` _[AIGatewayMCPServerConversionListenerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancer)_ | Load balancing configuration for `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `cache` _[AIGatewayMCPServerConversionListenerConfigCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigcache)_ | Cache hints Kong emits on the cacheable operations it serves. Only clients on a protocol revision that defines them receive them.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerConversionListenerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfiglogging)_ |  |
 | `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `path` _string_ | The path prefix of requests sent to the `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `protocol` _[AIGatewayUpstreamProtocol](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamprotocol)_ | The protocol used to reach the `targets`. Only valid with `targets`. If unset, the gateway uses `https`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
+| `targets` _[][AIGatewayUpstreamTarget](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamtarget)_ | List of targets the upstream load balances requests across. Replaces `url`: set exactly one of `url` or `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `upstream` _[AIGatewayMCPServerUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. Applies to `conversion-listener`, `conversion-only`, and `upstream-server` MCP Servers.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
 
 - [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+
+#### AIGatewayMCPServerConversionListenerConfigBalancer
+
+
+AIGatewayMCPServerConversionListenerConfigBalancer represents a union type for balancer.
+Only one of the fields should be set based on the Algorithm.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _[AIGatewayMCPServerConversionListenerConfigBalancerType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancertype)_ | Algorithm designates the type of configuration. |
+| `consistent-hashing` _[AIGatewayUpstreamBalancerConsistentHashingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `least-connections` _[AIGatewayUpstreamBalancerLeastConnectionsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerleastconnectionsconfig)_ | LeastConnections configuration. |
+| `lowest-latency` _[AIGatewayUpstreamBalancerLowestLatencyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerlowestlatencyconfig)_ | LowestLatency configuration. |
+| `round-robin` _[AIGatewayUpstreamBalancerRoundRobinConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerroundrobinconfig)_ | RoundRobin configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+
+#### AIGatewayMCPServerConversionListenerConfigBalancerType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerConversionListenerConfigBalancerType represents the type of balancer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListenerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancer)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `round-robin` |  |
 
 #### AIGatewayMCPServerConversionListenerConfigCache
 
@@ -2605,6 +2790,8 @@ revision that defines them receive them.<br /><br />**Requires a minimum runtime
 | Field | Description |
 | --- | --- |
 | `discover` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | A cache hint Kong emits on a cacheable operation it serves. |
+| `promptsList` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | Cache hint emitted on `prompts/list` results. `cache_scope: public` is rejected when `default_prompt_acls` or a prompt's own `access.acls` filters the list per subject.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `resourcesList` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | Cache hint emitted on `resources/list` and `resources/templates/list` results. `cache_scope: public` is rejected when `default_resource_acls` or a resource's own `access.acls` filters either list per subject.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `toolsList` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | A cache hint Kong emits on a cacheable operation it serves. |
 
 _Appears in:_
@@ -2748,6 +2935,8 @@ revision that defines them receive them.<br /><br />**Requires a minimum runtime
 | Field | Description |
 | --- | --- |
 | `discover` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | A cache hint Kong emits on a cacheable operation it serves. |
+| `promptsList` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | Cache hint emitted on `prompts/list` results. `cache_scope: public` is rejected when `default_prompt_acls` or a prompt's own `access.acls` filters the list per subject.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `resourcesList` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | Cache hint emitted on `resources/list` and `resources/templates/list` results. `cache_scope: public` is rejected when `default_resource_acls` or a resource's own `access.acls` filters either list per subject.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `toolsList` _[AIGatewayMCPServerCacheHint](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservercachehint)_ | A cache hint Kong emits on a cacheable operation it serves. |
 
 _Appears in:_
@@ -2783,6 +2972,8 @@ for granting access to an MCP server.
 | --- | --- |
 | `acls` _[AIGatewayMCPServerListenerConsumerAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumeracls)_ | Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `defaultPromptAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-prompt access control rules for allowing or denying consumer groups access to prompts. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every prompt exposed by this MCP Server unless a specific prompt overrides it via that prompt's own `access.acls`. Prompts a caller is denied are omitted from `prompts/list` and rejected on `prompts/get`. When unset, prompts are governed only by the server-level `acls`.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `defaultResourceAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-resource access control rules for allowing or denying consumer groups access to resources and resource templates. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every resource exposed by this MCP Server unless a specific resource overrides it via that resource's own `access.acls`. Resources a caller is denied are omitted from `resources/list` and `resources/templates/list` and rejected on `resources/read` and `resources/subscribe`. When unset, resources are governed only by the server-level `acls`.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying consumer groups access to tools. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
@@ -2849,6 +3040,8 @@ for granting access to an MCP server.
 | `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
 | `acls` _[AIGatewayMCPServerListenerOauthAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauthacls)_ | Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `defaultPromptAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-prompt access control rules for allowing or denying callers access to prompts, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every prompt exposed by this MCP Server unless a specific prompt overrides it via that prompt's own `access.acls`. Prompts a caller is denied are omitted from `prompts/list` and rejected on `prompts/get`. When unset, prompts are governed only by the server-level `acls`.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `defaultResourceAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-resource access control rules for allowing or denying callers access to resources and resource templates, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every resource exposed by this MCP Server unless a specific resource overrides it via that resource's own `access.acls`. Resources a caller is denied are omitted from `resources/list` and `resources/templates/list` and rejected on `resources/read` and `resources/subscribe`. When unset, resources are governed only by the server-level `acls`.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying callers access to tools, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
@@ -2919,7 +3112,9 @@ AIGatewayMCPServerPassthroughListener is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `prompts` _[][AIGatewayMCPPrompt](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpprompt)_ | Per-prompt access-control overrides for prompts advertised by the remote MCP Server. Each entry is matched to a remote prompt by `name`; only its access-control rules are applied. Prompts without an entry are governed by `access.default_prompt_acls`. Each `name` must be unique within this MCP Server.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `rateLimiting` _[AIGatewayMCPServerRateLimiting](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverratelimiting)_ | Rate limits applied to requests to this MCP Server, matched by MCP method or tool name. Each AI Gateway node counts and enforces the limits independently.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `resources` _[][AIGatewayMCPResource](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpresource)_ | Per-resource access-control overrides for resources and resource templates advertised by the remote MCP Server. Each entry is matched to a remote resource by `uri`; only its access-control rules are applied. Resources without an entry are governed by `access.default_resource_acls`. Each `uri` must be unique within this MCP Server.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPPassthroughTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppassthroughtool)_ | Per-tool access-control overrides for tools advertised by the remote MCP Server. Each entry is matched to a remote tool by `name`; only its access-control rules are applied. |
 
@@ -3171,6 +3366,62 @@ _Appears in:_
 
 - [AIGatewayMCPServer](#aiconfiguration-konghq-com-v1alpha1-aigatewaymcpserver)
 
+#### AIGatewayMCPServerUpstreamConfig
+
+
+AIGatewayMCPServerUpstreamConfig Configuration applied when proxying to the
+upstream service, including authentication.
+Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+MCP Servers.<br /><br />**Requires a minimum runtime version of `2.4`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayMCPServerUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfigauth)_ | Authentication to use when proxying to the upstream service. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
+
+#### AIGatewayMCPServerUpstreamConfigAuth
+
+
+AIGatewayMCPServerUpstreamConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayMCPServerUpstreamConfigAuthType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfigauthtype)_ | Type designates the type of configuration. |
+| `aws` _[AIGatewayUpstreamAuthAWS](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamauthaws)_ | AIGatewayUpstreamAuthAWS configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfig)
+
+#### AIGatewayMCPServerUpstreamConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerUpstreamConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+
 #### AIGatewayMCPServerUpstreamServer
 
 
@@ -3188,6 +3439,8 @@ AIGatewayMCPServerUpstreamServer is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `prompts` _[][AIGatewayMCPPrompt](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpprompt)_ | List of prompts exposed by this MCP Server.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `resources` _[][AIGatewayMCPResource](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpresource)_ | List of resources exposed by this MCP Server.<br /><br />**Requires a minimum runtime version of `2.5`**. |
 | `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)_ | List of tools exposed by this MCP Server. |
 
@@ -3205,19 +3458,65 @@ configuration for the MCP Server.
 
 | Field | Description |
 | --- | --- |
+| `balancer` _[AIGatewayMCPServerUpstreamServerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancer)_ | Load balancing configuration for `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `path` _string_ | The path prefix of requests sent to the `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `protocol` _[AIGatewayUpstreamProtocol](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamprotocol)_ | The protocol used to reach the `targets`. Only valid with `targets`. If unset, the gateway uses `https`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerUpstreamServerServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)_ | Server-side configuration specific to `upstream-server` mode. |
+| `targets` _[][AIGatewayUpstreamTarget](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamtarget)_ | List of targets the upstream load balances requests across. Replaces `url`: set exactly one of `url` or `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `toolsCacheTtlSeconds` _int_ | The time-to-live (TTL) for the upstream tools cache in seconds. Set to `0` to refresh on every client call. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
+| `upstream` _[AIGatewayMCPServerUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. Applies to `conversion-listener`, `conversion-only`, and `upstream-server` MCP Servers.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
 
 - [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+
+#### AIGatewayMCPServerUpstreamServerConfigBalancer
+
+
+AIGatewayMCPServerUpstreamServerConfigBalancer represents a union type for balancer.
+Only one of the fields should be set based on the Algorithm.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _[AIGatewayMCPServerUpstreamServerConfigBalancerType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancertype)_ | Algorithm designates the type of configuration. |
+| `consistent-hashing` _[AIGatewayUpstreamBalancerConsistentHashingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `least-connections` _[AIGatewayUpstreamBalancerLeastConnectionsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerleastconnectionsconfig)_ | LeastConnections configuration. |
+| `lowest-latency` _[AIGatewayUpstreamBalancerLowestLatencyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerlowestlatencyconfig)_ | LowestLatency configuration. |
+| `round-robin` _[AIGatewayUpstreamBalancerRoundRobinConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerroundrobinconfig)_ | RoundRobin configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+
+#### AIGatewayMCPServerUpstreamServerConfigBalancerType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerUpstreamServerConfigBalancerType represents the type of balancer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerUpstreamServerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancer)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `round-robin` |  |
 
 #### AIGatewayMCPServerUpstreamServerConfigLogging
 
@@ -3405,19 +3704,65 @@ configuration for the MCP Server.
 
 | Field | Description |
 | --- | --- |
+| `balancer` _[AIGatewayMCPServerWithUpstreamConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancer)_ | Load balancing configuration for `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `caCertificates` _[][AIGatewayCACertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateref)_ | The CA certificates used to verify the TLS certificate of the upstream MCP server. Each entry references an AIGatewayCACertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. |
 | `certificates` _[][AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server. Each entry references an AIGatewayCertificate in the cluster. When `namespace` differs from the AIGatewayMCPServer's namespace, a KongReferenceGrant in the target namespace must permit the reference. At most one certificate may be configured. |
 | `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `path` _string_ | The path prefix of requests sent to the `targets`. Only valid with `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `protocol` _[AIGatewayUpstreamProtocol](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamprotocol)_ | The protocol used to reach the `targets`. Only valid with `targets`. If unset, the gateway uses `https`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerWithUpstreamConfigServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserver)_ | Server-side configuration for the MCP Server. |
+| `targets` _[][AIGatewayUpstreamTarget](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamtarget)_ | List of targets the upstream load balances requests across. Replaces `url`: set exactly one of `url` or `targets`.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
 
 - [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+
+#### AIGatewayMCPServerWithUpstreamConfigBalancer
+
+
+AIGatewayMCPServerWithUpstreamConfigBalancer represents a union type for balancer.
+Only one of the fields should be set based on the Algorithm.
+
+
+
+| Field | Description |
+| --- | --- |
+| `algorithm` _[AIGatewayMCPServerWithUpstreamConfigBalancerType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancertype)_ | Algorithm designates the type of configuration. |
+| `consistent-hashing` _[AIGatewayUpstreamBalancerConsistentHashingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `least-connections` _[AIGatewayUpstreamBalancerLeastConnectionsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerleastconnectionsconfig)_ | LeastConnections configuration. |
+| `lowest-latency` _[AIGatewayUpstreamBalancerLowestLatencyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerlowestlatencyconfig)_ | LowestLatency configuration. |
+| `round-robin` _[AIGatewayUpstreamBalancerRoundRobinConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerroundrobinconfig)_ | RoundRobin configuration. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+
+#### AIGatewayMCPServerWithUpstreamConfigBalancerType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerWithUpstreamConfigBalancerType represents the type of balancer.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancer)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `round-robin` |  |
 
 #### AIGatewayMCPServerWithUpstreamConfigLogging
 
@@ -3508,7 +3853,7 @@ and request body size limits for the MCP Server.
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
+| `upstream` _[AIGatewayMCPServerUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. Applies to `conversion-listener`, `conversion-only`, and `upstream-server` MCP Servers.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -3684,7 +4029,7 @@ for the model.
 | --- | --- |
 | `balancer` _[AIGatewayModelAPIConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
 | `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | The maximum size, in bytes, of a request body that the gateway reads and sends to the model. A request with a larger body fails. Set to 0 for no limit. If you do not set a value, the gateway uses the request size limit that the model's providers publish, with defaults to 8 MB. If the targets use more than one provider, the gateway uses the highest of these limits. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
 | `route` _[AIGatewayModelRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | Configuration for an AI Gateway route. |
@@ -3705,6 +4050,7 @@ Only one of the fields should be set based on the Algorithm.
 | --- | --- |
 | `algorithm` _[AIGatewayModelAPIConfigBalancerType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancertype)_ | Algorithm designates the type of configuration. |
 | `consistent-hashing` _[AIGatewayModelBalancerConsistentHashingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `intelligent` _[AIGatewayModelBalancerIntelligentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfig)_ | Intelligent configuration. |
 | `least-connections` _[AIGatewayModelBalancerLeastConnectionsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerleastconnectionsconfig)_ | LeastConnections configuration. |
 | `lowest-latency` _[AIGatewayModelBalancerLowestLatencyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestlatencyconfig)_ | LowestLatency configuration. |
 | `lowest-usage` _[AIGatewayModelBalancerLowestUsageConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestusageconfig)_ | LowestUsage configuration. |
@@ -3734,6 +4080,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `consistent-hashing` |  |
+| `intelligent` |  |
 | `least-connections` |  |
 | `lowest-latency` |  |
 | `lowest-usage` |  |
@@ -3833,6 +4180,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `consistent-hashing` |  |
+| `intelligent` |  |
 | `least-connections` |  |
 | `lowest-latency` |  |
 | `lowest-usage` |  |
@@ -3864,6 +4212,194 @@ _Appears in:_
 - [AIGatewayModelAPIConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
 - [AIGatewayModelBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
 - [AIGatewayModelModelConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+
+
+
+
+#### AIGatewayModelBalancerIntelligentClassifierAuthBasic
+
+
+AIGatewayModelBalancerIntelligentClassifierAuthBasic Sends one header, such
+as an API key, with each request to the classifier service.<br /><br />**Requires a minimum runtime version of `2.5`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headers` _[][AIGatewayModelBalancerIntelligentClassifierAuthBasicHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifierauthbasicheaders)_ | The header sent with each request to the classifier service. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentClassifierAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifierauth)
+- [AIGatewayModelBalancerIntelligentClassifierCustomAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifiercustomauth)
+
+
+
+#### AIGatewayModelBalancerIntelligentClassifierAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerIntelligentClassifierAuthType represents the type of AIGatewayModelBalancerIntelligentClassifierAuth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentClassifierAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifierauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+
+#### AIGatewayModelBalancerIntelligentClassifierCustom
+
+
+AIGatewayModelBalancerIntelligentClassifierCustom A classifier service
+configured by hand, by its address, model name and credentials.<br /><br />**Requires a minimum runtime version of `2.5`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayModelBalancerIntelligentClassifierCustomAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifiercustomauth)_ | The credentials sent to the classifier service with each request.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `contextWindow` _int_ | The number of tokens the classifier model can read, from the model provider's documentation. The request text sent to the classifier is cut to fit. |
+| `format` _string_ | The endpoint path appended to `url`: the path of the System One decisions API. Some hosts serve it at another path. |
+| `name` _string_ | The name of the classifier model, sent in each request. |
+| `timeout` _int_ | The time in milliseconds to wait for the classifier's answer. |
+| `url` _string_ | The classifier service's base URL. The `format` path is appended to it. It has no query string, fragment or user info. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentClassifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifier)
+- [AIGatewayModelBalancerIntelligentConfigClassifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfigclassifier)
+
+#### AIGatewayModelBalancerIntelligentClassifierCustomAuth
+
+
+AIGatewayModelBalancerIntelligentClassifierCustomAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelBalancerIntelligentClassifierCustomAuthType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifiercustomauthtype)_ | Type designates the type of configuration. |
+| `basic` _[AIGatewayModelBalancerIntelligentClassifierAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifierauthbasic)_ | AIGatewayModelBalancerIntelligentClassifierAuthBasic configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentClassifierCustom](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifiercustom)
+
+#### AIGatewayModelBalancerIntelligentClassifierCustomAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerIntelligentClassifierCustomAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentClassifierCustomAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifiercustomauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `basic` |  |
+
+#### AIGatewayModelBalancerIntelligentClassifierType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerIntelligentClassifierType represents the type of AIGatewayModelBalancerIntelligentClassifier.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentClassifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifier)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `custom` |  |
+
+#### AIGatewayModelBalancerIntelligentConfig
+
+
+AIGatewayModelBalancerIntelligentConfig On the first request of a
+conversation, asks a classifier model what kind of work it is, then
+selects a target by the cost and quality tradeoff.
+Later requests in the conversation go to the
+same target through session affinity, which is always on for this algorithm:
+`ttl` and `storage`
+can be set, and `session_affinity.enabled: false` is rejected.<br /><br />**Requires a minimum runtime version of `2.5`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `classifier` _[AIGatewayModelBalancerIntelligentConfigClassifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfigclassifier)_ | The classifier model the intelligent balancer asks what kind of work a conversation is, before it selects a target. If the classifier does not answer in time or its answer cannot be used, the balancer selects a target for general work.<br /><br />**Requires a minimum runtime version of `2.5`**. |
+| `connectTimeout` _int_ |  |
+| `costQualityTradeoff` _string_ | How the balancer weighs cost versus quality when selecting a target. `cost` favors the cheapest available target, `quality` favors the highest-quality target, and `balanced` weighs both. |
+| `failTimeout` _int_ | The period of time (in milliseconds) the target will be considered unavailable after the number of unsuccessful attempts reaches `max_fails`. |
+| `failoverCriteria` _[]string_ | Specifies in which cases an upstream response should be failover to the next target. Each option in the array is equivalent to the function of https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream |
+| `maxFails` _int_ | Number of unsuccessful attempts to communicate with a target that should occur in the duration defined by `fail_timeout` before the target is considered unavailable. The zero value disables the circuit breaker. What is considered an unsuccessful attempt is defined by `failover_criteria`. Note the cases of `error`, `timeout` and `invalid_header` are always considered unsuccessful attempts, while the cases of `http_403` and `http_404` are never considered unsuccessful attempts. |
+| `readTimeout` _int_ |  |
+| `retries` _int_ | The number of retries to execute upon failure to proxy. |
+| `slots` _int_ | The number of slots in the load balancer algorithm. |
+| `version` _string_ | The version of the intelligent balancing algorithm. |
+| `writeTimeout` _int_ |  |
+
+_Appears in:_
+
+- [AIGatewayModelAPIConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)
+- [AIGatewayModelBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerconfig)
+- [AIGatewayModelModelConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)
+
+#### AIGatewayModelBalancerIntelligentConfigClassifier
+
+
+AIGatewayModelBalancerIntelligentConfigClassifier represents a union type for classifier.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayModelBalancerIntelligentConfigClassifierType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfigclassifiertype)_ | Type designates the type of configuration. |
+| `custom` _[AIGatewayModelBalancerIntelligentClassifierCustom](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentclassifiercustom)_ | AIGatewayModelBalancerIntelligentClassifierCustom configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfig)
+
+#### AIGatewayModelBalancerIntelligentConfigClassifierType
+
+_Underlying type:_ `string`
+
+AIGatewayModelBalancerIntelligentConfigClassifierType represents the type of classifier.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelBalancerIntelligentConfigClassifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfigclassifier)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `custom` |  |
 
 #### AIGatewayModelBalancerLeastConnectionsConfig
 
@@ -4211,7 +4747,7 @@ for the model.
 | --- | --- |
 | `balancer` _[AIGatewayModelModelConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
 | `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _*int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `maxRequestBodySize` _*int_ | The maximum size, in bytes, of a request body that the gateway reads and sends to the model. A request with a larger body fails. Set to 0 for no limit. If you do not set a value, the gateway uses the request size limit that the model's providers publish, with defaults to 8 MB. If the targets use more than one provider, the gateway uses the highest of these limits. |
 | `model` _[AIGatewayModelModelConfigModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigmodel)_ |  |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
@@ -4233,6 +4769,7 @@ Only one of the fields should be set based on the Algorithm.
 | --- | --- |
 | `algorithm` _[AIGatewayModelModelConfigBalancerType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancertype)_ | Algorithm designates the type of configuration. |
 | `consistent-hashing` _[AIGatewayModelBalancerConsistentHashingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerconsistenthashingconfig)_ | ConsistentHashing configuration. |
+| `intelligent` _[AIGatewayModelBalancerIntelligentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerintelligentconfig)_ | Intelligent configuration. |
 | `least-connections` _[AIGatewayModelBalancerLeastConnectionsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerleastconnectionsconfig)_ | LeastConnections configuration. |
 | `lowest-latency` _[AIGatewayModelBalancerLowestLatencyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestlatencyconfig)_ | LowestLatency configuration. |
 | `lowest-usage` _[AIGatewayModelBalancerLowestUsageConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancerlowestusageconfig)_ | LowestUsage configuration. |
@@ -4262,6 +4799,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `consistent-hashing` |  |
+| `intelligent` |  |
 | `least-connections` |  |
 | `lowest-latency` |  |
 | `lowest-usage` |  |
@@ -4630,14 +5168,17 @@ Only one of the fields should be set based on the Type.
 | `dashscope` _[AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)_ | Dashscope configuration. |
 | `databricks` _[AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)_ | Databricks configuration. |
 | `deepseek` _[AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)_ | Deepseek configuration. |
+| `fireworks` _[AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)_ | Fireworks configuration. |
 | `gemini` _[AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)_ | Gemini configuration. |
 | `huggingface` _[AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)_ | Huggingface configuration. |
 | `kimi` _[AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)_ | Kimi configuration. |
 | `llama2` _[AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)_ | Llama2 configuration. |
+| `meta` _[AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)_ | Meta configuration. |
 | `mistral` _[AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)_ | Mistral configuration. |
 | `ollama` _[AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)_ | Ollama configuration. |
 | `openai` _[AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)_ | Openai configuration. |
 | `sagemaker` _[AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)_ | Sagemaker configuration. |
+| `togetherai` _[AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)_ | Togetherai configuration. |
 | `typesafe` _[AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)_ | Typesafe configuration. |
 | `vercel` _[AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)_ | Vercel configuration. |
 | `vllm` _[AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)_ | Vllm configuration. |
@@ -4710,14 +5251,17 @@ _Appears in:_
 - [AIGatewayModelProviderDashscopeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscopeconfig)
 - [AIGatewayModelProviderDatabricksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricksconfig)
 - [AIGatewayModelProviderDeepseekConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseekconfig)
+- [AIGatewayModelProviderFireworksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworksconfig)
 - [AIGatewayModelProviderGeminiConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergeminiconfigauth)
 - [AIGatewayModelProviderHuggingfaceConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingfaceconfig)
 - [AIGatewayModelProviderKimiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimiconfig)
 - [AIGatewayModelProviderLlama2Config](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2config)
+- [AIGatewayModelProviderMetaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermetaconfig)
 - [AIGatewayModelProviderMistralConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistralconfig)
 - [AIGatewayModelProviderOllamaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollamaconfig)
 - [AIGatewayModelProviderOpenaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenaiconfig)
 - [AIGatewayModelProviderSagemakerConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauth)
+- [AIGatewayModelProviderTogetheraiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetheraiconfig)
 - [AIGatewayModelProviderTypesafeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafeconfig)
 - [AIGatewayModelProviderVercelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercelconfig)
 - [AIGatewayModelProviderVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllmconfig)
@@ -4870,14 +5414,17 @@ Allowed values:
 | `dashscope` |  |
 | `databricks` |  |
 | `deepseek` |  |
+| `fireworks` |  |
 | `gemini` |  |
 | `huggingface` |  |
 | `kimi` |  |
 | `llama2` |  |
+| `meta` |  |
 | `mistral` |  |
 | `ollama` |  |
 | `openai` |  |
 | `sagemaker` |  |
+| `togetherai` |  |
 | `typesafe` |  |
 | `vercel` |  |
 | `vllm` |  |
@@ -4991,6 +5538,42 @@ AIGatewayModelProviderDeepseekConfig Configuration for the model provider.
 _Appears in:_
 
 - [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+
+#### AIGatewayModelProviderFireworks
+
+
+AIGatewayModelProviderFireworks Configuration for an upstream model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayModelProviderFireworksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworksconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `displayName` _string_ | The display name for this model provider instance. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfig)
+
+#### AIGatewayModelProviderFireworksConfig
+
+
+AIGatewayModelProviderFireworksConfig Configuration for the model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)
 
 #### AIGatewayModelProviderGemini
 
@@ -5142,7 +5725,14 @@ _Appears in:_
 #### AIGatewayModelProviderLlama2
 
 
-AIGatewayModelProviderLlama2 Configuration for an upstream model provider.
+AIGatewayModelProviderLlama2 Configuration for an upstream `llama2` model
+provider.<br /><br />Deprecated: the `llama2` provider is deprecated and will be removed in 3.0.
+Migrate each
+target by its `format` value: `ollama` maps to the `ollama` provider,
+`openai` maps to the
+`openai` provider with `upstream_url` set on the target, or to the `vllm`
+provider; `raw`
+has no replacement provider.
 
 
 
@@ -5174,6 +5764,42 @@ AIGatewayModelProviderLlama2Config Configuration for the model provider.
 _Appears in:_
 
 - [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+
+#### AIGatewayModelProviderMeta
+
+
+AIGatewayModelProviderMeta Configuration for an upstream model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayModelProviderMetaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermetaconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `displayName` _string_ | The display name for this model provider instance. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfig)
+
+#### AIGatewayModelProviderMetaConfig
+
+
+AIGatewayModelProviderMetaConfig Configuration for the model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)
 
 #### AIGatewayModelProviderMistral
 
@@ -5423,6 +6049,43 @@ AIGatewayModelProviderStatus defines the observed state of AIGatewayModelProvide
 _Appears in:_
 
 - [AIGatewayModelProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodelprovider)
+
+#### AIGatewayModelProviderTogetherai
+
+
+AIGatewayModelProviderTogetherai Configuration for an upstream model
+provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayModelProviderTogetheraiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetheraiconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `displayName` _string_ | The display name for this model provider instance. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfig)
+
+#### AIGatewayModelProviderTogetheraiConfig
+
+
+AIGatewayModelProviderTogetheraiConfig Configuration for the model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)
 
 #### AIGatewayModelProviderTypesafe
 
@@ -6652,14 +7315,17 @@ _Appears in:_
 - [AIGatewayTargetDashscopeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdashscopeconfig)
 - [AIGatewayTargetDatabricksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdatabricksconfig)
 - [AIGatewayTargetDeepseekConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdeepseekconfig)
+- [AIGatewayTargetFireworksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetfireworksconfig)
 - [AIGatewayTargetGeminiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)
 - [AIGatewayTargetHuggingfaceConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargethuggingfaceconfig)
 - [AIGatewayTargetKimiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetkimiconfig)
 - [AIGatewayTargetLlama2Config](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetllama2config)
+- [AIGatewayTargetMetaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmetaconfig)
 - [AIGatewayTargetMistralConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmistralconfig)
 - [AIGatewayTargetOllamaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetollamaconfig)
 - [AIGatewayTargetOpenaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)
 - [AIGatewayTargetSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
+- [AIGatewayTargetTogetheraiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargettogetheraiconfig)
 - [AIGatewayTargetVercelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)
 - [AIGatewayTargetVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
@@ -6706,6 +7372,7 @@ AIGatewayTargetAnthropicConfig Anthropic-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `version` _string_ | The Anthropic API version to use. |
 
@@ -6737,6 +7404,7 @@ AIGatewayTargetAzureConfig Azure-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -6774,6 +7442,7 @@ or use passthrough format.<br /><br />**Requires a minimum runtime version of `2
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -6806,6 +7475,7 @@ AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
 | `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
@@ -6835,6 +7505,7 @@ AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -6864,6 +7535,7 @@ AIGatewayTargetCohereConfig Cohere-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `waitForModel` _string_ | Whether to wait for the model to be ready before sending the request. |
 
@@ -6891,14 +7563,17 @@ Only one of the fields should be set based on the Type.
 | `dashscope` _[AIGatewayTargetDashscopeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdashscopeconfig)_ | Dashscope configuration. |
 | `databricks` _[AIGatewayTargetDatabricksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdatabricksconfig)_ | Databricks configuration. |
 | `deepseek` _[AIGatewayTargetDeepseekConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetdeepseekconfig)_ | Deepseek configuration. |
+| `fireworks` _[AIGatewayTargetFireworksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetfireworksconfig)_ | Fireworks configuration. |
 | `gemini` _[AIGatewayTargetGeminiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)_ | Gemini configuration. |
 | `huggingface` _[AIGatewayTargetHuggingfaceConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargethuggingfaceconfig)_ | Huggingface configuration. |
 | `kimi` _[AIGatewayTargetKimiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetkimiconfig)_ | Kimi configuration. |
 | `llama2` _[AIGatewayTargetLlama2Config](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetllama2config)_ | Llama2 configuration. |
+| `meta` _[AIGatewayTargetMetaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmetaconfig)_ | Meta configuration. |
 | `mistral` _[AIGatewayTargetMistralConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetmistralconfig)_ | Mistral configuration. |
 | `ollama` _[AIGatewayTargetOllamaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetollamaconfig)_ | Ollama configuration. |
 | `openai` _[AIGatewayTargetOpenaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)_ | Openai configuration. |
 | `sagemaker` _[AIGatewayTargetSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)_ | Sagemaker configuration. |
+| `togetherai` _[AIGatewayTargetTogetheraiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargettogetheraiconfig)_ | Togetherai configuration. |
 | `typesafe` _[AIGatewayTargetTypesafeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargettypesafeconfig)_ | Typesafe configuration. |
 | `vercel` _[AIGatewayTargetVercelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)_ | Vercel configuration. |
 | `vllm` _[AIGatewayTargetVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)_ | Vllm configuration. |
@@ -6934,14 +7609,17 @@ Allowed values:
 | `dashscope` |  |
 | `databricks` |  |
 | `deepseek` |  |
+| `fireworks` |  |
 | `gemini` |  |
 | `huggingface` |  |
 | `kimi` |  |
 | `llama2` |  |
+| `meta` |  |
 | `mistral` |  |
 | `ollama` |  |
 | `openai` |  |
 | `sagemaker` |  |
+| `togetherai` |  |
 | `typesafe` |  |
 | `vercel` |  |
 | `vllm` |  |
@@ -6970,6 +7648,7 @@ model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -6998,6 +7677,7 @@ model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `workspaceInstanceID` _string_ | The Databricks workspace instance ID. |
 
@@ -7026,6 +7706,49 @@ AIGatewayTargetDeepseekConfig Deepseek-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetFireworksConfig
+
+
+AIGatewayTargetFireworksConfig Fireworks AI-specific configuration for a
+model.
+Requests are sent to the Fireworks
+inference API at `https://api.fireworks.ai/inference/v1` by default, and the
+target `name`
+is the Fireworks model ID, passed through as-is (for example,
+`accounts/fireworks/models/llama-v3p1-70b-instruct`).
+Use the `openai` format for the
+Chat Completions, Completions, Responses, Embeddings, Rerank, and Decisions
+APIs, and the
+`anthropic` format for the Messages API.
+To keep traffic in the US-only region, set
+`upstream_url` to `https://us.api.fireworks.ai/inference/v1`.
+Upstream errors, including
+`max_tokens` truncation behavior, are returned as produced by Fireworks.<br /><br />**Requires a minimum runtime version of `2.4`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
+| `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
+| `contextWindowFactor` _[][AIGatewayContextWindowFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
+| `serviceTierFactor` _[][AIGatewayServiceTierFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7054,6 +7777,7 @@ AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7082,6 +7806,7 @@ model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `useCache` _string_ | Whether to use the Hugging Face inference cache. |
 | `waitForModel` _string_ | Whether to wait for the model to load if it is not ready. |
@@ -7113,6 +7838,7 @@ model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7122,7 +7848,12 @@ _Appears in:_
 #### AIGatewayTargetLlama2Config
 
 
-AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
+AIGatewayTargetLlama2Config Llama2-specific configuration for a model.<br /><br />Deprecated: the `llama2` provider is deprecated and will be removed in 3.0.
+Migrate by the
+`format` value: `ollama` maps to the `ollama` provider, `openai` maps to the
+`openai` provider
+with `upstream_url` set, or to the `vllm` provider; `raw` has no replacement
+provider.
 
 
 
@@ -7141,6 +7872,50 @@ AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayTargetMetaConfig
+
+
+AIGatewayTargetMetaConfig Meta-specific configuration for a model served by
+Meta's hosted Model API.
+Requests are
+sent to `https://api.meta.ai/v1` by default, and the target `name` is the
+Meta model ID
+(for example, `muse-spark-1.3`).
+Model IDs are passed through as-is, including
+`-contributor` variants, which permit Meta to train on submitted prompts;
+choose them
+deliberately.
+Use the `openai` format for the Chat Completions and Responses APIs and the
+`anthropic` format for the Messages API.
+Self-hosted open-weight models (such as Muse Glimmer)
+should use the `ollama` provider, or the `openai` provider with
+`upstream_url` set on the
+target (or the `vllm` provider); the `llama2` provider is deprecated.<br /><br />**Requires a minimum runtime version of `2.4`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
+| `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
+| `contextWindowFactor` _[][AIGatewayContextWindowFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
+| `serviceTierFactor` _[][AIGatewayServiceTierFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7169,6 +7944,7 @@ AIGatewayTargetMistralConfig Mistral-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7196,6 +7972,7 @@ AIGatewayTargetOllamaConfig Ollama-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7223,6 +8000,7 @@ AIGatewayTargetOpenaiConfig Openai-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7253,6 +8031,7 @@ model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7294,6 +8073,42 @@ _Appears in:_
 
 - [AIGatewayTargetSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
 
+#### AIGatewayTargetTogetheraiConfig
+
+
+AIGatewayTargetTogetheraiConfig Together AI-specific configuration for a
+model.
+Together AI is fully OpenAI-compatible:
+requests are sent to `https://api.together.xyz/v1` by default using the
+`openai` format,
+and the target `name` is the Together model ID, passed through as-is (for
+example,
+`meta-llama/Llama-3.3-70B-Instruct-Turbo`).
+Override the base URL with `upstream_url`.<br /><br />**Requires a minimum runtime version of `2.4`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
+| `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
+| `contextWindowFactor` _[][AIGatewayContextWindowFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
+| `serviceTierFactor` _[][AIGatewayServiceTierFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
 #### AIGatewayTargetTypesafeConfig
 
 
@@ -7333,6 +8148,7 @@ model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7360,6 +8176,7 @@ AIGatewayTargetVllmConfig Vllm-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7387,6 +8204,7 @@ AIGatewayTargetXaiConfig Xai-specific configuration for a model.
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamBaseURL` _string_ | Base URL used instead of the provider's default upstream endpoint, for regional or private endpoints. It overrides only the scheme, host, and base path; the gateway appends the path of each capability the target serves, so a single target can serve several capabilities from the same base. Mutually exclusive with `upstream_url`, which replaces the full URL. Providers without a default upstream URL ignore it.<br /><br />**Requires a minimum runtime version of `2.4`**. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 
 _Appears in:_
@@ -7434,14 +8252,17 @@ _Appears in:_
 - [AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)
 - [AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)
 - [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+- [AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)
 - [AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)
 - [AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)
 - [AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)
 - [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+- [AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)
 - [AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+- [AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)
 - [AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)
 - [AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
@@ -7562,8 +8383,100 @@ service.
 
 _Appears in:_
 
+- [AIGatewayMCPServerUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamconfigauth)
 - [AIGatewayUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)
 - [AuthGCPWorkloadIdentityFederationAwsIam](#aiconfiguration-konghq-com-v1alpha1-types-authgcpworkloadidentityfederationawsiam)
+
+
+
+#### AIGatewayUpstreamBalancerConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayUpstreamBalancerConfigType represents the type of AIGatewayUpstreamBalancerConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayUpstreamBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `consistent-hashing` |  |
+| `least-connections` |  |
+| `lowest-latency` |  |
+| `round-robin` |  |
+
+#### AIGatewayUpstreamBalancerConsistentHashingConfig
+
+
+AIGatewayUpstreamBalancerConsistentHashingConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `hashOnHeader` _string_ | The request header whose value selects the target. Requests without the header all hash to the same target. |
+
+_Appears in:_
+
+- [AIGatewayAgentConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancer)
+- [AIGatewayMCPServerConversionListenerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancer)
+- [AIGatewayMCPServerUpstreamServerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancer)
+- [AIGatewayMCPServerWithUpstreamConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancer)
+- [AIGatewayUpstreamBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconfig)
+
+#### AIGatewayUpstreamBalancerLeastConnectionsConfig
+
+
+AIGatewayUpstreamBalancerLeastConnectionsConfig is a type alias.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancer)
+- [AIGatewayMCPServerConversionListenerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancer)
+- [AIGatewayMCPServerUpstreamServerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancer)
+- [AIGatewayMCPServerWithUpstreamConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancer)
+- [AIGatewayUpstreamBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconfig)
+
+#### AIGatewayUpstreamBalancerLowestLatencyConfig
+
+
+AIGatewayUpstreamBalancerLowestLatencyConfig is a type alias.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancer)
+- [AIGatewayMCPServerConversionListenerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancer)
+- [AIGatewayMCPServerUpstreamServerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancer)
+- [AIGatewayMCPServerWithUpstreamConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancer)
+- [AIGatewayUpstreamBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconfig)
+
+#### AIGatewayUpstreamBalancerRoundRobinConfig
+
+
+AIGatewayUpstreamBalancerRoundRobinConfig is a type alias.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfigbalancer)
+- [AIGatewayMCPServerConversionListenerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigbalancer)
+- [AIGatewayMCPServerUpstreamServerConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfigbalancer)
+- [AIGatewayMCPServerWithUpstreamConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigbalancer)
+- [AIGatewayUpstreamBalancerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreambalancerconfig)
 
 #### AIGatewayUpstreamConfig
 
@@ -7580,10 +8493,7 @@ service, including authentication.
 _Appears in:_
 
 - [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
-- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
-- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
-- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 #### AIGatewayUpstreamConfigAuth
 
@@ -7620,6 +8530,44 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `aws` |  |
+
+#### AIGatewayUpstreamProtocol
+
+_Underlying type:_ `string`
+
+AIGatewayUpstreamProtocol is a type alias.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+
+#### AIGatewayUpstreamTarget
+
+
+AIGatewayUpstreamTarget A target is an ip address/hostname with a port that
+identifies an instance of a backend service.
+Every agent can have many targets.
+
+
+
+| Field | Description |
+| --- | --- |
+| `address` _string_ | The target address (ip or hostname) and port. If the hostname resolves to an SRV record, the `port` value will be overridden by the value from the DNS record. Each address must be unique within the agent. |
+| `failover` _*string_ | Whether to use this target only as backup or not. A failover target receives traffic only when all other targets are unhealthy, or when a request has failed on all of them. The gateway checks the health of each target with active and passive health checks. Failover targets are not supported with the `consistent-hashing` algorithm, and at least one target must not be a failover target. |
+| `weight` _*int_ | The weight this target gets within the upstream loadbalancer (`0`-`65535`). If the hostname resolves to an SRV record, the `weight` value will be overridden by the value from the DNS record. |
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
 
 #### AIGatewayVaultAPISpec
 
@@ -8651,14 +9599,17 @@ _Appears in:_
 - [AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)
 - [AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)
 - [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+- [AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)
 - [AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)
 - [AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)
 - [AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)
 - [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+- [AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)
 - [AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+- [AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)
 - [AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)
 - [AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
@@ -8730,14 +9681,17 @@ _Appears in:_
 - [AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)
 - [AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)
 - [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+- [AIGatewayModelProviderFireworks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderfireworks)
 - [AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)
 - [AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)
 - [AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)
 - [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+- [AIGatewayModelProviderMeta](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermeta)
 - [AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
 - [AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
 - [AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+- [AIGatewayModelProviderTogetherai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertogetherai)
 - [AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)
 - [AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)

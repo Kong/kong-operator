@@ -309,6 +309,46 @@ spec:
                       Configuration for the agent.
                       The structure varies depending on the agent type.
                     properties:
+                      balancer:
+                        description: |-
+                          Load balancing configuration for `targets`. Only valid with `targets`.
+
+                          **Requires a minimum runtime version of `2.4`**.
+                        properties:
+                          algorithm:
+                            description: Algorithm designates the type of configuration.
+                            enum:
+                            - consistent-hashing
+                            - least-connections
+                            - lowest-latency
+                            - round-robin
+                            minLength: 1
+                            type: string
+                          consistent-hashing:
+                            description: ConsistentHashing configuration.
+                            properties:
+                              hashOnHeader:
+                                description: |-
+                                  The request header whose value selects the target.
+                                  Requests without the header all hash to the same target.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - hashOnHeader
+                            type: object
+                          least-connections:
+                            description: LeastConnections configuration.
+                            type: object
+                          lowest-latency:
+                            description: LowestLatency configuration.
+                            type: object
+                          round-robin:
+                            description: RoundRobin configuration.
+                            type: object
+                        required:
+                        - algorithm
+                        type: object
                       caCertificates:
                         description: |-
                           The CA certificates used to verify the TLS certificate of the
@@ -397,6 +437,24 @@ spec:
                         maximum: 2147483646
                         minimum: 0
                         type: integer
+                      path:
+                        description: |-
+                          The path prefix of requests sent to the `targets`.
+                          Only valid with `targets`.
+
+                          **Requires a minimum runtime version of `2.4`**.
+                        maxLength: 253
+                        pattern: ^/
+                        type: string
+                      protocol:
+                        description: |-
+                          The protocol used to reach the `targets`.
+                          Only valid with `targets`.
+                          If unset, the gateway uses `https`.
+
+                          **Requires a minimum runtime version of `2.4`**.
+                        maxLength: 253
+                        type: string
                       proxy:
                         description: |-
                           HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
@@ -627,6 +685,52 @@ spec:
                               type: string
                             type: array
                         type: object
+                      targets:
+                        description: |-
+                          List of targets the upstream load balances requests across.
+                          Replaces `url`: set exactly one of `url` or `targets`.
+
+                          **Requires a minimum runtime version of `2.4`**.
+                        items:
+                          description: |-
+                            AIGatewayUpstreamTarget A target is an ip address/hostname with a port that
+                            identifies an instance of a backend service.
+                            Every agent can have many targets.
+                          properties:
+                            address:
+                              description: |-
+                                The target address (ip or hostname) and port.
+                                If the hostname resolves to an SRV record, the `port` value will be
+                                overridden by the value from the DNS record.
+                                Each address must be unique within the agent.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            failover:
+                              description: |-
+                                Whether to use this target only as backup or not.
+                                A failover target receives traffic only when all other targets are
+                                unhealthy, or when a request has failed on all of them.
+                                The gateway checks the health of each target with active and passive health
+                                checks.
+                                Failover targets are not supported with the `consistent-hashing` algorithm,
+                                and at least one target must not be a failover target.
+                              enum:
+                              - Enabled
+                              - Disabled
+                              type: string
+                            weight:
+                              description: |-
+                                The weight this target gets within the upstream loadbalancer (`0`-`65535`).
+                                If the hostname resolves to an SRV record, the `weight` value will be
+                                overridden by the value from the DNS record.
+                              maximum: 65535
+                              minimum: 0
+                              type: integer
+                          required:
+                          - address
+                          type: object
+                        type: array
                       upstream:
                         description: |-
                           Configuration applied when proxying to the upstream service, including
