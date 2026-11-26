@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -31,6 +32,31 @@ func SetKonnectEntityProgrammedConditionTrue(
 		metav1.ConditionTrue,
 		konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 		"",
+		obj.GetGeneration(),
+	)
+	conditions := obj.GetConditions()
+	for i := range conditions {
+		if conditions[i].Type == condition.Type {
+			conditions[i] = condition
+			obj.SetConditions(conditions)
+			return
+		}
+	}
+	obj.SetConditions(append(conditions, condition))
+}
+
+// SetKonnectEntityProgrammedConditionParentNotFound sets the KonnectEntityProgrammed
+// condition to false with the ParentNotFound reason on the provided object.
+// It always sets a new LastTransitionTime, as shouldUpdate uses it as the time of the last attempt.
+func SetKonnectEntityProgrammedConditionParentNotFound(
+	obj entityType,
+	err ParentNotFoundInKonnectError,
+) {
+	condition := k8sutils.NewConditionWithGeneration(
+		konnectv1alpha1.KonnectEntityProgrammedConditionType,
+		metav1.ConditionFalse,
+		kcfgkonnect.KonnectEntitiesParentNotFoundReason,
+		err.Error(),
 		obj.GetGeneration(),
 	)
 	conditions := obj.GetConditions()
