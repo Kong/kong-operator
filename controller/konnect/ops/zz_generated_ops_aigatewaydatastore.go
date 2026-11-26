@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -75,6 +76,7 @@ func updateAIGatewayDatastore(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayDatastoresSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayDatastore,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -98,12 +100,28 @@ func updateAIGatewayDatastore(
 	if req.TokenVaultDatastore != nil {
 		req.TokenVaultDatastore.Labels = WithKubernetesMetadataLabels(obj, req.TokenVaultDatastore.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayDatastore(ctx, sdkkonnectops.UpdateAiGatewayDatastoreRequest{
-		GatewayID:                       parentID,
-		DatastoreIDOrName:               id,
-		UpdateAIGatewayDatastoreRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayDatastore, error) {
+			resp, err := sdk.GetAiGatewayDatastore(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayDatastore, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayDatastore, error) {
+			resp, err := sdk.UpdateAiGatewayDatastore(ctx, sdkkonnectops.UpdateAiGatewayDatastoreRequest{
+				GatewayID:                       parentID,
+				DatastoreIDOrName:               id,
+				UpdateAIGatewayDatastoreRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayDatastore, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayDatastore(ctx, cl, sdk, obj)

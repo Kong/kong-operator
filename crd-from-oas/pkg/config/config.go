@@ -296,6 +296,9 @@ type TypeConfig struct {
 	OpsResponseStatusFields []ResponseStatusFieldConfig `yaml:"-"`
 	// OpsTrackCreateInputs records a fingerprint of create-only entity inputs.
 	OpsTrackCreateInputs bool `yaml:"-"`
+	// OpsSkipUnchangedUpdates makes the generated update skip periodic updates
+	// of entities that did not change, like Kong Gateway entities do.
+	OpsSkipUnchangedUpdates bool `yaml:"-"`
 	// DataSources lists field paths whose values can be provided either inline
 	// or sourced from a Kubernetes Secret or ConfigMap. Each entry causes the
 	// OAS-derived field at Path to become a union struct supporting inline and
@@ -665,6 +668,11 @@ type ResponseStatusSubField struct {
 type typeOpsYAML struct {
 	// TrackCreateInputs generates status and helpers for detecting create-input drift.
 	TrackCreateInputs bool `yaml:"trackCreateInputs,omitempty"`
+	// SkipUnchangedUpdates makes the generated update skip periodic updates of
+	// entities whose update request did not change and that did not change in
+	// Konnect. Konnect changes are detected through the expected config version
+	// of the parent, so only children of a KonnectAIGateway support it.
+	SkipUnchangedUpdates bool `yaml:"skipUnchangedUpdates,omitempty"`
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
 	RequireClient bool `yaml:"requireClient,omitempty"`
@@ -743,6 +751,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.OpsSDK = raw.Ops.SDK
 		tc.OpsResponseStatusFields = raw.Ops.ResponseStatusFields
 		tc.OpsTrackCreateInputs = raw.Ops.TrackCreateInputs
+		tc.OpsSkipUnchangedUpdates = raw.Ops.SkipUnchangedUpdates
 	}
 
 	return nil
@@ -752,6 +761,9 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 type EntityOpsConfig struct {
 	// TrackCreateInputs enables fingerprints for create-only entities.
 	TrackCreateInputs bool
+	// SkipUnchangedUpdates makes the generated update skip periodic updates of
+	// unchanged entities through the Konnect sync guard.
+	SkipUnchangedUpdates bool
 	// Ops maps operation names (e.g. "create", "update") to their SDK type configs.
 	Ops map[string]*OpConfig
 	// RequireClient indicates that generated ops need a controller-runtime client
@@ -908,6 +920,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 			SDK:                         tc.OpsSDK,
 			ResponseStatusFields:        tc.OpsResponseStatusFields,
 			TrackCreateInputs:           tc.OpsTrackCreateInputs,
+			SkipUnchangedUpdates:        tc.OpsSkipUnchangedUpdates,
 		}
 	}
 	return result

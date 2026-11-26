@@ -123,7 +123,7 @@ func TestUpdateAIGatewayCACertificate_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayCaCertificateResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayCACertificate(ctx, cl, sdk, obj))
+	require.NoError(t, updateAIGatewayCACertificate(ctx, cl, sdk, nil, obj))
 }
 
 func TestUpdateAIGatewayCACertificate_PropagatesSDKError(t *testing.T) {
@@ -153,7 +153,7 @@ func TestUpdateAIGatewayCACertificate_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayCACertificate(ctx, cl, sdk, obj)
+	err = updateAIGatewayCACertificate(ctx, cl, sdk, nil, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

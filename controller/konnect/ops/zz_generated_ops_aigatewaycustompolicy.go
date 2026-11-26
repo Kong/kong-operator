@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -69,6 +70,7 @@ func updateAIGatewayCustomPolicy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayCustomPoliciesSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -86,12 +88,28 @@ func updateAIGatewayCustomPolicy(
 	if req.UpdateAIGatewayCustomPolicyStreamingRequest != nil {
 		req.UpdateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, req.UpdateAIGatewayCustomPolicyStreamingRequest.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayCustomPolicy(ctx, sdkkonnectops.UpdateAiGatewayCustomPolicyRequest{
-		GatewayID:                          parentID,
-		CustomPolicyIDOrName:               id,
-		UpdateAIGatewayCustomPolicyRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayCustomPolicy, error) {
+			resp, err := sdk.GetAiGatewayCustomPolicy(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayCustomPolicy, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayCustomPolicy, error) {
+			resp, err := sdk.UpdateAiGatewayCustomPolicy(ctx, sdkkonnectops.UpdateAiGatewayCustomPolicyRequest{
+				GatewayID:                          parentID,
+				CustomPolicyIDOrName:               id,
+				UpdateAIGatewayCustomPolicyRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayCustomPolicy, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayCustomPolicy(ctx, cl, sdk, obj)

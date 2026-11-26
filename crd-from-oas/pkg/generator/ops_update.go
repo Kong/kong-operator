@@ -20,6 +20,12 @@ type OpsUpdateFileInfo struct {
 	// SkipUpdate indicates the entity does not support update. The dispatcher
 	// emits a nil return for this entity instead of calling an update function.
 	SkipUpdate bool
+	// SkipUnchanged indicates the generated update takes the Konnect sync guard
+	// and skips periodic updates of unchanged entities.
+	SkipUnchanged bool
+	// ParentIDGetter is the method returning the Konnect ID of the parent that
+	// scopes the sync guard (e.g. "GetGatewayID"). Set when SkipUnchanged.
+	ParentIDGetter string
 }
 
 type updateOpCallShape struct {
@@ -106,6 +112,55 @@ type opsUpdateFuncData struct {
 	// HasNestedResponseStatusFields is true when at least one ResponseStatusFields
 	// entry generates a nested struct (i.e. has Fields, not a scalar RespPath).
 	HasNestedResponseStatusFields bool
+
+	// SkipUnchanged is true when the entity opted into ops.skipUnchangedUpdates:
+	// the update goes through upsertUnlessInSync with the sync guard passed by
+	// UpdateGeneratedOps, and is skipped or verified with a GET when unchanged.
+	SkipUnchanged bool
+	// GetSDKMethod is the SDK method reading the entity by ID, e.g.
+	// "GetAiGatewayConsumer". Set when SkipUnchanged.
+	GetSDKMethod string
+	// GetRespField is the field of the SDK get response wrapper holding the
+	// entity. Set when SkipUnchanged.
+	GetRespField string
+	// UpdateRespField is the field of the SDK update response wrapper holding
+	// the entity. Set when SkipUnchanged.
+	UpdateRespField string
+	// RespType is the SDK components type of the entity representation
+	// returned by both the get and the update operations. Set when SkipUnchanged.
+	RespType string
+}
+
+// skipUnchangedParentEntity is the only parent kind whose children support
+// ops.skipUnchangedUpdates: the sync guard detects Konnect changes through the
+// expected config version of the AI Gateway.
+const skipUnchangedParentEntity = "KonnectAIGateway"
+
+// resolveSkipUnchanged validates that an entity opting into
+// ops.skipUnchangedUpdates has the shape the guarded update template supports,
+// and fills the get fields of data.
+func resolveSkipUnchanged(entityName string, schema *parser.Schema, callShape *updateOpCallShape, data *opsUpdateFuncData) error {
+	switch {
+	case len(callShape.Parents) != 1 || callShape.Parents[0].EntityName != skipUnchangedParentEntity:
+		return fmt.Errorf("entity %q: ops.skipUnchangedUpdates requires a single %s parent", entityName, skipUnchangedParentEntity)
+	case !callShape.Wrapped || callShape.FullyWrapped || callShape.OmitsEntityID:
+		return fmt.Errorf("entity %q: ops.skipUnchangedUpdates requires an update request keyed by parent and entity ID", entityName)
+	case schema.GetOperationID == "" || len(schema.GetPathParams) != 2:
+		return fmt.Errorf("entity %q: ops.skipUnchangedUpdates requires a GET operation keyed by parent and entity ID", entityName)
+	case schema.UpdateSuccessResponseRef == "" || schema.GetSuccessResponseRef != schema.UpdateSuccessResponseRef:
+		return fmt.Errorf(
+			"entity %q: ops.skipUnchangedUpdates requires the GET and update operations to return the same schema, got %q and %q",
+			entityName, schema.GetSuccessResponseRef, schema.UpdateSuccessResponseRef,
+		)
+	case len(data.ResponseStatusFields) > 0:
+		return fmt.Errorf("entity %q: ops.skipUnchangedUpdates does not support ops.responseStatusFields", entityName)
+	}
+	data.SkipUnchanged = true
+	data.GetSDKMethod = pascalFromKebab(schema.GetOperationID)
+	data.GetRespField = schema.GetSuccessResponseRef
+	data.UpdateRespField = schema.UpdateSuccessResponseRef
+	data.RespType = schema.UpdateSuccessResponseRef
+	return nil
 }
 
 func qualifiedSDKTypeName(importPath, typeName string) string {
@@ -219,7 +274,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		return nil, err
 	}
 
-	return &opsUpdateFuncData{
+	data := &opsUpdateFuncData{
 		APIAlias:                      g.config.APIGroupPackageAlias,
 		Associations:                  associations,
 		Entity:                        entityName,
@@ -247,7 +302,13 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		UpdateSDKInterface:            callShape.SDKInterface,
 		UpdateSDKMethod:               callShape.SDKMethod,
 		UpdateWrapped:                 callShape.Wrapped,
-	}, nil
+	}
+	if opsConfig.SkipUnchangedUpdates {
+		if err := resolveSkipUnchanged(entityName, schema, callShape, data); err != nil {
+			return nil, err
+		}
+	}
+	return data, nil
 }
 
 // resolveUpdateLabelsFieldPath returns the dotted Go field path, relative to
@@ -421,6 +482,8 @@ func GenerateOpsUpdateDispatcher(infos []*OpsUpdateFileInfo) (*GeneratedFile, er
 			SDKGetter:      info.SDKGetter,
 			NeedsClient:    info.NeedsClient,
 			SkipUpdate:     info.SkipUpdate,
+			SkipUnchanged:  info.SkipUnchanged,
+			ParentIDGetter: info.ParentIDGetter,
 		})
 	}
 	return buildDispatcherFile("zz_generated_ops_update.go", opsUpdateDispatcherTemplate, "controller/konnect/ops", flat)

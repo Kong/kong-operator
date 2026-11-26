@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -78,6 +79,7 @@ func updateAIGatewayMCPServer(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayMCPServer,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -104,12 +106,28 @@ func updateAIGatewayMCPServer(
 	if req.AIGatewayMCPServerUpstreamServer != nil {
 		req.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerUpstreamServer.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayMcpServer(ctx, sdkkonnectops.UpdateAiGatewayMcpServerRequest{
-		GatewayID:                       parentID,
-		McpServerIDOrName:               id,
-		UpdateAIGatewayMCPServerRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayMCPServer, error) {
+			resp, err := sdk.GetAiGatewayMcpServer(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayMCPServer, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayMCPServer, error) {
+			resp, err := sdk.UpdateAiGatewayMcpServer(ctx, sdkkonnectops.UpdateAiGatewayMcpServerRequest{
+				GatewayID:                       parentID,
+				McpServerIDOrName:               id,
+				UpdateAIGatewayMCPServerRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayMCPServer, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayMCPServer(ctx, cl, sdk, obj)

@@ -209,7 +209,7 @@ func TestUpdateAIGatewayVault_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayVaultResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayVault(ctx, cl, sdk, obj))
+	require.NoError(t, updateAIGatewayVault(ctx, cl, sdk, nil, obj))
 }
 
 func TestUpdateAIGatewayVault_PropagatesSDKError(t *testing.T) {
@@ -259,7 +259,7 @@ func TestUpdateAIGatewayVault_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayVault(ctx, cl, sdk, obj)
+	err = updateAIGatewayVault(ctx, cl, sdk, nil, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

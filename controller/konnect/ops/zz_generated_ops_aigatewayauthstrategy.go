@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -69,6 +70,7 @@ func updateAIGatewayAuthStrategy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayAuthStrategiesSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayAuthStrategy,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -86,12 +88,28 @@ func updateAIGatewayAuthStrategy(
 	if req.AIGatewayAuthStrategyOpenIDConnect != nil {
 		req.AIGatewayAuthStrategyOpenIDConnect.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayAuthStrategyOpenIDConnect.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayAuthStrategy(ctx, sdkkonnectops.UpdateAiGatewayAuthStrategyRequest{
-		GatewayID:                          parentID,
-		AuthStrategyIDOrName:               id,
-		UpdateAIGatewayAuthStrategyRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayAuthStrategy, error) {
+			resp, err := sdk.GetAiGatewayAuthStrategy(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayAuthStrategy, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayAuthStrategy, error) {
+			resp, err := sdk.UpdateAiGatewayAuthStrategy(ctx, sdkkonnectops.UpdateAiGatewayAuthStrategyRequest{
+				GatewayID:                          parentID,
+				AuthStrategyIDOrName:               id,
+				UpdateAIGatewayAuthStrategyRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayAuthStrategy, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayAuthStrategy(ctx, cl, sdk, obj)

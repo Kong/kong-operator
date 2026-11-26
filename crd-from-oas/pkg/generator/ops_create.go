@@ -283,6 +283,8 @@ type flatInfo struct {
 	SDKGetter      string
 	NeedsClient    bool
 	SkipUpdate     bool
+	SkipUnchanged  bool
+	ParentIDGetter string
 }
 
 // GenerateOpsCreateDispatcher emits zz_generated_ops_create.go with

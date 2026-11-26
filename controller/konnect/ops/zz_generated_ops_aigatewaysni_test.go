@@ -137,7 +137,7 @@ func TestUpdateAIGatewaySNI_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewaySniResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewaySNI(ctx, cl, sdk, obj))
+	require.NoError(t, updateAIGatewaySNI(ctx, cl, sdk, nil, obj))
 }
 
 func TestUpdateAIGatewaySNI_PropagatesSDKError(t *testing.T) {
@@ -171,7 +171,7 @@ func TestUpdateAIGatewaySNI_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewaySNI(ctx, cl, sdk, obj)
+	err = updateAIGatewaySNI(ctx, cl, sdk, nil, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

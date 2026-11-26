@@ -140,7 +140,7 @@ func TestUpdateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayCustomPolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayCustomPolicy(ctx, cl, sdk, obj))
+	require.NoError(t, updateAIGatewayCustomPolicy(ctx, cl, sdk, nil, obj))
 }
 
 func TestUpdateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
@@ -175,7 +175,7 @@ func TestUpdateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayCustomPolicy(ctx, cl, sdk, obj)
+	err = updateAIGatewayCustomPolicy(ctx, cl, sdk, nil, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

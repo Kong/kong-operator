@@ -167,7 +167,7 @@ func TestUpdateAIGatewayMCPServer_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayMcpServerResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayMCPServer(ctx, cl, sdk, obj))
+	require.NoError(t, updateAIGatewayMCPServer(ctx, cl, sdk, nil, obj))
 }
 
 func TestUpdateAIGatewayMCPServer_PropagatesSDKError(t *testing.T) {
@@ -211,7 +211,7 @@ func TestUpdateAIGatewayMCPServer_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayMCPServer(ctx, cl, sdk, obj)
+	err = updateAIGatewayMCPServer(ctx, cl, sdk, nil, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

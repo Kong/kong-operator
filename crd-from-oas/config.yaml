@@ -77,6 +77,9 @@ apiGroupVersions:
                     # empty list must reach the request to clear that default.
                     _omitZero: true
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAuthStrategiesSDK
             fieldName: AIGatewayAuthStrategies
@@ -199,6 +202,9 @@ apiGroupVersions:
             resolvesTo: name
             reverseWatch: true
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK
             fieldName: AIGatewayModels
@@ -358,6 +364,9 @@ apiGroupVersions:
             resolvesTo: name
             reverseWatch: true
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
             fieldName: AIGatewayModelProviders
@@ -437,6 +446,9 @@ apiGroupVersions:
             resolvesTo: name
             supportCrossNamespaceReference: true
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAgentsSDK
             fieldName: AIGatewayAgents
@@ -469,6 +481,9 @@ apiGroupVersions:
             kinds: [AIGatewayPolicy]
             resolvesTo: name
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumersSDK
             fieldName: AIGatewayConsumers
@@ -493,6 +508,9 @@ apiGroupVersions:
             kinds: [AIGatewayPolicy]
             resolvesTo: name
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayConsumerGroupsSDK
             fieldName: AIGatewayConsumerGroups
@@ -887,6 +905,9 @@ apiGroupVersions:
                   certificates:
                     _description: *aigwMCPCertificateDescription
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK
             fieldName: AIGatewayMCPServers
@@ -972,6 +993,9 @@ apiGroupVersions:
             resolvesTo: name
             reverseWatch: true
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK
             fieldName: AIGatewayPolicies
@@ -1022,6 +1046,9 @@ apiGroupVersions:
                   _validations:
                     - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayCustomPoliciesSDK
             fieldName: AIGatewayCustomPolicies
@@ -1051,6 +1078,9 @@ apiGroupVersions:
           - path: spec.apiSpec.cert
             type: Secret
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayCACertificatesSDK
             fieldName: AIGatewayCACertificates
@@ -1080,6 +1110,9 @@ apiGroupVersions:
           - path: spec.apiSpec.keyAlt
             type: Secret
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayCertificatesSDK
             fieldName: AIGatewayCertificates
@@ -1110,6 +1143,9 @@ apiGroupVersions:
             resolvesTo: name
             supportCrossNamespaceReference: true
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewaySNIsSDK
             fieldName: AIGatewaySNIs
@@ -1159,6 +1195,9 @@ apiGroupVersions:
           - path: spec.apiSpec.hcv.config.aws_iam.secretAccessKey
             type: Secret
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayVaultsSDK
             fieldName: AIGatewayVaults
@@ -1230,6 +1269,9 @@ apiGroupVersions:
                   _validations:
                     - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
         ops:
+          # Skip periodic updates of unchanged entities, see
+          # docs/internal/konnect-sync-hashing.md.
+          skipUnchangedUpdates: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayDatastoresSDK
             fieldName: AIGatewayDatastores

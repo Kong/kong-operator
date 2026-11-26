@@ -675,6 +675,12 @@ func Update[
 		if isSecretBearingSyncEntity(e) {
 			g = g.withSecretBearingPayload()
 		}
+	} else if gatewayID, ok := generatedAIGatewaySyncScope(e); ok && tracker != nil {
+		// AI Gateway entities whose generated update skips unchanged periodic
+		// updates. Their sync state is tracked in memory only.
+		g = tracker.aiGatewayGuard(
+			sdk.GetAIGatewayNodesSDK(), e.GetUID(), gatewayID, isProgrammedForCurrentGeneration(e),
+		)
 	}
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
@@ -765,7 +771,7 @@ func Update[
 	// ---------------------------------------------------------------------
 	// TODO: add other manually maintained Konnect types here
 	default:
-		err = UpdateGeneratedOps(ctx, sdk, cl, e)
+		err = UpdateGeneratedOps(ctx, sdk, cl, g, e)
 	}
 
 	// Persist the sync state produced by a real PUT, or by a verification of

@@ -135,6 +135,12 @@
   operator verifies unchanged entities with a GET instead of sending one PUT
   per entity, while keeping the in-memory tracker as the fast path.
   [#6768](https://github.com/Kong/kong-operator/pull/6768)
+- Konnect: AI Gateway entities are no longer sent to Konnect on every sync
+  period. Like Kong Gateway entities, they are sent only when their desired
+  state, including the consumer group membership of `AIGatewayConsumer`s,
+  changes, or when the AI Gateway expected config version shows a change made
+  outside the operator.
+  [#6841](https://github.com/Kong/kong-operator/pull/6841)
 - Konnect: the sync state persisted in the status of `KongPluginBinding`s and
   `KongCertificate`s, whose payload can carry data read from `Secret`s, uses
   keyed HMAC-SHA256 hashes, so the status cannot be used to guess that data.
