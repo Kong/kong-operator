@@ -78,6 +78,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	Authentication []VirtualClusterAuthenticationScheme `json:"authentication,omitempty"`
 
 	// A human-readable description of the virtual cluster.

@@ -40,6 +40,7 @@ type Property struct {
 	// Validations
 	MinLength     *int64
 	MaxLength     *int64
+	MinItems      *int64
 	MaxItems      *int64
 	MaxProperties *int64
 	Minimum       *float64
@@ -79,6 +80,11 @@ type Schema struct {
 	OneOf        []*Property   // Root-level oneOf variants (for union type schemas)
 	AnyOf        []*Property   // Root-level anyOf variants (for union type schemas without discriminator)
 	Items        *Property     // For array-type schemas, the items type
+
+	// Constraints of the named schema itself.
+	Enum     []any  // For string schemas
+	MinItems *int64 // For array schemas
+	MaxItems *int64 // For array schemas
 
 	// Discriminator info from the OAS discriminator object.
 	Discriminator        string            // discriminator.propertyName (e.g. "type")
@@ -657,6 +663,13 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	// Handle array items
 	if schema.Type == "array" && schemaValue.Items != nil {
 		schema.Items = ParseProperty("items", schemaValue.Items, 0, p.visited)
+	}
+	if schema.Type == "array" {
+		schema.MinItems = minItems(schemaValue)
+		schema.MaxItems = maxItems(schemaValue)
+	}
+	if len(schemaValue.Enum) > 0 {
+		schema.Enum = schemaValue.Enum
 	}
 
 	// Handle additionalProperties (map value schema)

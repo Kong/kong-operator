@@ -31,7 +31,17 @@ type APIGroupVersionConfig struct {
 	// the marker.
 	Categories []string `yaml:"categories,omitempty"`
 
+	// Validation opts into OAS validations not emitted by default.
+	Validation ValidationConfig `yaml:"validation,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
+}
+
+// ValidationConfig selects OAS validations emitted on top of the default ones.
+type ValidationConfig struct {
+	// ArrayConstraints emits minItems, item constraints, and the enum and
+	// item counts of named types.
+	ArrayConstraints bool `yaml:"arrayConstraints,omitempty"`
 }
 
 // CommonTypesConfig holds configuration for common types that can be shared

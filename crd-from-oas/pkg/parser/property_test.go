@@ -803,3 +803,42 @@ func TestParseProperty_AllOfSingleRefWithNumericAndFormatOverride(t *testing.T) 
 	require.True(t, ok)
 	assert.InEpsilon(t, 8080.0, defaultFloat, 0.001)
 }
+
+func TestParseProperty_ArrayItemCounts(t *testing.T) {
+	t.Run("minItems and maxItems", func(t *testing.T) {
+		prop := ParseProperty("ports", &openapi3.SchemaRef{Value: &openapi3.Schema{
+			Type: &openapi3.Types{"array"}, MinItems: 1, MaxItems: new(uint64(50)),
+			Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+		}}, 0, make(map[string]bool))
+		require.NotNil(t, prop.MinItems)
+		assert.Equal(t, int64(1), *prop.MinItems)
+		require.NotNil(t, prop.MaxItems)
+		assert.Equal(t, int64(50), *prop.MaxItems)
+	})
+	t.Run("minItems 0 constrains nothing", func(t *testing.T) {
+		prop := ParseProperty("ports", &openapi3.SchemaRef{Value: &openapi3.Schema{
+			Type:  &openapi3.Types{"array"},
+			Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+		}}, 0, make(map[string]bool))
+		assert.Nil(t, prop.MinItems)
+		assert.Nil(t, prop.MaxItems)
+	})
+}
+
+func TestParseSchema_NamedTypeConstraints(t *testing.T) {
+	p := &Parser{visited: map[string]bool{}}
+	t.Run("string enum", func(t *testing.T) {
+		s := p.parseSchema("RecordPart", &openapi3.Schema{Type: &openapi3.Types{"string"}, Enum: []any{"key", "value"}})
+		assert.Equal(t, []any{"key", "value"}, s.Enum)
+	})
+	t.Run("array item counts", func(t *testing.T) {
+		s := p.parseSchema("Paths", &openapi3.Schema{
+			Type: &openapi3.Types{"array"}, MinItems: 1, MaxItems: new(uint64(50)),
+			Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+		})
+		require.NotNil(t, s.MinItems)
+		assert.Equal(t, int64(1), *s.MinItems)
+		require.NotNil(t, s.MaxItems)
+		assert.Equal(t, int64(50), *s.MaxItems)
+	})
+}

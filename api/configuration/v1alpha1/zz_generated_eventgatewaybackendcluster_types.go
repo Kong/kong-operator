@@ -81,6 +81,9 @@ type EventGatewayBackendClusterAPISpec struct {
 	// A list of cluster bootstrap servers in the format address:port.
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:MinLength=1
+	// +kubebuilder:validation:items:Pattern=`^(([a-zA-Z0-9\.\-]+)|\[([a-fA-F0-9:]+)\]):\d+$`
 	BootstrapServers []string `json:"bootstrapServers,omitempty"`
 
 	// A human-readable description of the backend cluster.

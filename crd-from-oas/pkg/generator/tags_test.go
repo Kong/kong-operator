@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -564,4 +565,97 @@ func TestKubebuilderTags_OverrideMaxLength(t *testing.T) {
 	result := KubebuilderTags(prop, cursor)
 	assert.Contains(t, result, "+kubebuilder:validation:MaxLength=1024", "user-provided MaxLength should be present")
 	assert.NotContains(t, result, "+kubebuilder:validation:MaxLength=253", "default MaxLength should be removed")
+}
+
+func TestKubebuilderTags_ArrayConstraints(t *testing.T) {
+	on := config.ValidationConfig{ArrayConstraints: true}
+	tests := []struct {
+		name       string
+		prop       *parser.Property
+		validation config.ValidationConfig
+		expected   []string
+	}{
+		{
+			name: "items of an inline string: minItems and the item constraints",
+			prop: &parser.Property{
+				Name: "bootstrap_servers", Type: "array", Required: true, MinItems: new(int64(1)),
+				Items: &parser.Property{Type: "string", MinLength: new(int64(1)), Pattern: "^[a-z]+:\\d+$"},
+			},
+			validation: on,
+			expected: []string{
+				"+required",
+				"+kubebuilder:validation:MinItems=1",
+				"+kubebuilder:validation:items:MinLength=1",
+				"+kubebuilder:validation:items:Pattern=`^[a-z]+:\\d+$`",
+			},
+		},
+		{
+			name: "items of an inline string enum",
+			prop: &parser.Property{
+				Name: "tls_versions", Type: "array",
+				Items: &parser.Property{Type: "string", Enum: []any{"tls12", "tls13"}},
+			},
+			validation: on,
+			expected:   []string{"+optional", "+kubebuilder:validation:items:Enum=tls12;tls13"},
+		},
+		{
+			name: "items of an inline integer: bounds",
+			prop: &parser.Property{
+				Name: "ids", Type: "array", MaxItems: new(int64(10)),
+				Items: &parser.Property{Type: "integer", Minimum: new(1.0), Maximum: new(65535.0)},
+			},
+			validation: on,
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:MaxItems=10",
+				"+kubebuilder:validation:items:Minimum=1",
+				"+kubebuilder:validation:items:Maximum=65535",
+			},
+		},
+		{
+			name: "items of a named type: only minItems, the type carries the rest",
+			prop: &parser.Property{
+				Name: "part_of_record", Type: "array", Required: true, MinItems: new(int64(1)),
+				Items: &parser.Property{Type: "string", RefName: "RecordPart", Enum: []any{"key", "value"}},
+			},
+			validation: on,
+			expected:   []string{"+required", "+kubebuilder:validation:MinItems=1"},
+		},
+		{
+			name: "not opted in: no new marker",
+			prop: &parser.Property{
+				Name: "bootstrap_servers", Type: "array", Required: true, MinItems: new(int64(1)), MaxItems: new(int64(5)),
+				Items: &parser.Property{Type: "string", MinLength: new(int64(1)), Pattern: "^x$"},
+			},
+			expected: []string{"+required", "+kubebuilder:validation:MaxItems=5"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, kubebuilderTagsWith(tt.prop, nil, tt.validation))
+		})
+	}
+	t.Run("KubebuilderTags never emits them", func(t *testing.T) {
+		assert.Equal(t, []string{"+required"}, KubebuilderTags(&parser.Property{
+			Name: "addresses", Type: "array", Required: true, MinItems: new(int64(1)),
+			Items: &parser.Property{Type: "string", MinLength: new(int64(1)), Pattern: "^x$", Enum: []any{"x"}},
+		}, nil))
+	})
+}
+
+func TestNamedTypeConstraintMarkers(t *testing.T) {
+	on := &Generator{config: Config{Validation: config.ValidationConfig{ArrayConstraints: true}}}
+	off := &Generator{}
+	enum := &parser.Schema{Type: "string", Enum: []any{"key", "value"}}
+	array := &parser.Schema{Type: "array", MinItems: new(int64(1)), MaxItems: new(int64(50))}
+
+	assert.Equal(t, []string{"+kubebuilder:validation:Enum=key;value"}, on.namedTypeConstraintMarkers(enum))
+	assert.Equal(t, []string{"+kubebuilder:validation:MinItems=1", "+kubebuilder:validation:MaxItems=50"}, on.namedTypeConstraintMarkers(array))
+	assert.Empty(t, on.namedTypeConstraintMarkers(&parser.Schema{Type: "string"}))
+	assert.Empty(t, off.namedTypeConstraintMarkers(enum))
+	assert.Empty(t, off.namedTypeConstraintMarkers(array))
+
+	var buf strings.Builder
+	on.writeNamedTypeConstraintMarkers(&buf, enum)
+	assert.Equal(t, "//\n// +kubebuilder:validation:Enum=key;value\n", buf.String())
 }

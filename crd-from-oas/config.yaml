@@ -1283,6 +1283,8 @@ apiGroupVersions:
   configuration.konghq.com/v1alpha1:
     categories:
       - kong
+    validation:
+      arrayConstraints: true
     # Don't generate groupversion_info.go for this API group — it is hand-written.
     # zz_generated_groupversion_info.go (addKnownTypesGenerated) is still emitted.
     generateGroupVersionInfo: false
@@ -1488,6 +1490,16 @@ apiGroupVersions:
             # A stored object keeping its reference can still be updated, e.g. its
             # finalizer removed.
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || self.spec.gatewayRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.gatewayRef) && oldSelf.value().spec.gatewayRef == self.spec.gatewayRef)",message="spec.gatewayRef must use namespacedRef",fieldPath=".spec.gatewayRef",optionalOldSelf=true'
+          spec:
+            apiSpec:
+              ports:
+                _validations:
+                  # controller-gen can't bound an integer-or-string item, so
+                  # the rule copies the OAS integer bounds. MaxItems is ours,
+                  # for the CEL cost budget. String ports aren't checked: a
+                  # pattern rule doesn't fit the budget.
+                  - "+kubebuilder:validation:MaxItems=64"
+                  - '+kubebuilder:validation:XValidation:rule="self.all(p, type(p) != int || (p >= 1 && p <= 65535))",message="an integer port must be between 1 and 65535"'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayListenersSDK
