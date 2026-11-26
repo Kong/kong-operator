@@ -74,6 +74,10 @@
   exponential backoff applies.
   [#6008](https://github.com/Kong/kong-operator/pull/6008)
   [#6813](https://github.com/Kong/kong-operator/pull/6813)
+- Konnect entities: a 4xx error that the Konnect SDK does not declare, no longer
+  puts the per-request trace ID in the `Programmed` condition.
+  [#6797](https://github.com/Kong/kong-operator/pull/6797)
+  [#6814](https://github.com/Kong/kong-operator/pull/6814)
 
 ## [v2.3.4]
 
