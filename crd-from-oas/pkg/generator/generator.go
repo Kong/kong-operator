@@ -2577,12 +2577,12 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	case isSensitive:
 		// Sensitive leaf: emit only required/optional; SensitiveDataSource carries
 		// the shared validation for its inline value representation.
+		requiredness := markerOptional()
 		if prop.Required && !prop.Nullable {
-			fmt.Fprintf(buf, "\t// %s\n", markerRequired())
-		} else {
-			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
+			requiredness = markerRequired()
 		}
-		for _, tag := range inlineSensitiveValueTags(prop, g.config.Validation) {
+		tags := append([]string{requiredness}, inlineSensitiveValueTags(prop, g.config.Validation)...)
+		for _, tag := range applyValidationOverrides(tags, fieldCursor.Sub(jsonTagForProperty(prop))) {
 			fmt.Fprintf(buf, "\t// %s\n", tag)
 		}
 	default:
@@ -2981,10 +2981,12 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 			return applyValidationOverrides(tags, apiSpecCursor.Sub(jsonName(prop.Name)))
 		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
+			requiredness := markerOptional()
 			if prop.Required && !prop.Nullable {
-				return append([]string{markerRequired()}, inlineSensitiveValueTags(prop, g.config.Validation)...)
+				requiredness = markerRequired()
 			}
-			return append([]string{markerOptional()}, inlineSensitiveValueTags(prop, g.config.Validation)...)
+			tags := append([]string{requiredness}, inlineSensitiveValueTags(prop, g.config.Validation)...)
+			return applyValidationOverrides(tags, apiSpecCursor.Sub(jsonName(prop.Name)))
 		}
 		return kubebuilderTagsWith(prop, apiSpecCursor, g.config.Validation)
 	}

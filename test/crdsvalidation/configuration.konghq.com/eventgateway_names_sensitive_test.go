@@ -131,7 +131,7 @@ func TestEventGatewayNamesAndSensitiveValues(t *testing.T) {
 		)
 	}
 
-	// The sensitive values with a minLength in the OAS.
+	// The sensitive values that must not be empty.
 	values := []struct {
 		base string
 		path []string
@@ -141,6 +141,7 @@ func TestEventGatewayNamesAndSensitiveValues(t *testing.T) {
 		{"schemaRegistry", []string{"apiSpec", "confluent", "config", "authentication", "basic", "password"}},
 		{"backendClusterTLS", []string{"apiSpec", "tls", "clientIdentity", "certificate"}},
 		{"backendClusterTLS", []string{"apiSpec", "tls", "clientIdentity", "key"}},
+		{"dataPlaneCertificate", []string{"apiSpec", "certificate"}},
 	}
 	for _, v := range values {
 		label := v.base + " " + v.path[len(v.path)-1]
