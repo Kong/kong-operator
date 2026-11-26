@@ -27,6 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- if .ReverseRefs}}
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -69,13 +72,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		{{- end}}
 		{{- range .ReverseRefs}}
 		// {{.Referrer}} objects reference {{$.EntityName}} (reverseWatch):
-		// re-reconcile the ones {{.Referrer}} objects use whenever they change or are deleted.
+		// re-reconcile the ones {{.Referrer}} objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&{{$.APIGroupPackageAlias}}.{{.Referrer}}{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueue{{$.EntityName}}For{{.Referrer}}(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		{{- end}}
@@ -319,7 +325,11 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	}
 	var out []string
 	{{- $cr := .}}
-	{{- if .ObjectRefField}}
+	{{- if .RefsToFunc}}
+	for _, key := range {{.RefsToFunc}}(ent) {
+		out = append(out, key.String())
+	}
+	{{- else if .ObjectRefField}}
 	{{- range .AccessorExprs}}
 	if ref := {{.Expr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
 		ns := ent.GetNamespace()
@@ -414,15 +424,19 @@ import (
 {{- if or .HasSecretRefs .HasConfigMapRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
-{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
+{{- if or .ParentRefSupportsOnPremAIGateway .SkipsKonnectReconciliation .ReverseRefs}}
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
+{{- if or .ParentRefSupportsOnPremAIGateway .SkipsKonnectReconciliation}}
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+{{- if .WatchSameParent}}
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+{{- end}}
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
 	{{- if .NeedsSeparateParentImport}}
@@ -441,7 +455,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-{{- if .ParentRefCustomTypeName}}
+{{- if .ParentRefSupportsOnPremAIGateway}}
 			// Entities whose AIGatewayRef targets an OnPremAIGateway are not
 			// managed by the Konnect reconciler and must never be enqueued into
 			// it: they are handled by the on-prem controllers where supported,
@@ -499,13 +513,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		{{- end}}
 		{{- range .ReverseRefs}}
 		// {{.Referrer}} objects reference {{$.EntityName}} (reverseWatch):
-		// re-reconcile the ones {{.Referrer}} objects use whenever they change or are deleted.
+		// re-reconcile the ones {{.Referrer}} objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&{{$.APIGroupPackageAlias}}.{{.Referrer}}{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueue{{$.EntityName}}For{{.Referrer}}(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		{{- end}}
@@ -572,14 +589,30 @@ func enqueue{{$.EntityName}}For{{.RefKind}}(
 		}); err != nil {
 			return nil
 		}
-{{- if .ReverseSelf}}
+{{- if or .ReverseSelf .WatchSameParent .LiteralTargets}}
 		reqs := objectListToReconcileRequests(l.Items)
+{{- if .ReverseSelf}}
 		for _, key := range {{$.APIGroupPackageAlias}}.{{$.EntityName}}RefsTo{{.RefKind}}(ref) {
 			reqs = append(reqs, reconcile.Request{NamespacedName: key})
 		}
-		return reqs
-{{- else if .LiteralTargets}}
-		reqs := objectListToReconcileRequests(l.Items)
+{{- end}}
+{{- if .WatchSameParent}}
+		parent := ref.GetParentRef()
+		if parent.Type == commonv1alpha1.ObjectRefTypeNamespacedRef && parent.NamespacedRef != nil && parent.NamespacedRef.Name != "" {
+			ns := ref.GetNamespace()
+			if parent.NamespacedRef.Namespace != nil && *parent.NamespacedRef.Namespace != "" {
+				ns = *parent.NamespacedRef.Namespace
+			}
+			var scoped {{$.APIGroupPackageAlias}}.{{$.EntityName}}List
+			if err := cl.List(ctx, &scoped, client.MatchingFields{
+				index.IndexField{{$.EntityName}}On{{$.ParentEntityName}}Ref: ns + "/" + parent.NamespacedRef.Name,
+			}); err != nil {
+				ctrllog.FromContext(ctx).Error(err, "listing declarations for changed policy scope")
+				return reqs
+			}
+			reqs = append(reqs, objectListToReconcileRequests(scoped.Items)...)
+		}
+{{- end}}
 {{- range .LiteralTargets}}
 		// {{$.EntityName}} objects can also set {{.GoField}} literally to the
 		// referenced object's Konnect key: find them through the index.
@@ -653,7 +686,7 @@ import (
 const (
 	// IndexField{{.EntityName}}On{{.ParentEntityName}}Ref is the index field for {{.EntityName}} -> {{.ParentEntityName}}.
 	IndexField{{.EntityName}}On{{.ParentEntityName}}Ref = "{{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref"
-	{{- if .ParentRefCustomTypeName}}
+	{{- if .ParentRefSupportsOnPremAIGateway}}
 	// IndexField{{.EntityName}}OnOnPremAIGatewayRef is the index field for {{.EntityName}} -> OnPremAIGateway.
 	IndexField{{.EntityName}}OnOnPremAIGatewayRef = "{{.EntityNameLowerCamel}}OnOnPremAIGatewayRef"
 	{{- end}}
@@ -688,7 +721,7 @@ func OptionsFor{{.EntityName}}() []Option {
 			Field:          IndexField{{.EntityName}}On{{.ParentEntityName}}Ref,
 			ExtractValueFn: {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref,
 		},
-		{{- if .ParentRefCustomTypeName}}
+		{{- if .ParentRefSupportsOnPremAIGateway}}
 		{
 			Object:         &{{.APIGroupPackageAlias}}.{{.EntityName}}{},
 			Field:          IndexField{{.EntityName}}OnOnPremAIGatewayRef,
@@ -729,13 +762,14 @@ func OptionsFor{{.EntityName}}() []Option {
 	}
 }
 
-{{- if .GatewayRef}}
+{{- if or .GatewayRef (and .ParentRefCustomTypeName (not .ParentRefSupportsOnPremAIGateway))}}
 
 func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) []string {
 	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
 	if !ok {
 		return nil
 	}
+{{- if .GatewayRef}}
 {{- if .GatewayRef.AdditionalKinds}}
 	// Only entities referencing a {{.GatewayRef.KonnectKind}} are visible to the Konnect
 	// reconciler: the others are indexed separately.
@@ -744,6 +778,7 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 	}
 {{- end}}
 	// The reference comes from spec.{{.GatewayRef.JSONFieldName}} or the deprecated spec.{{.GatewayRef.LegacyJSONFieldName}}.
+{{- end}}
 	ref := ent.GetParentRef()
 	if ref.NamespacedRef == nil {
 		return nil
@@ -756,6 +791,7 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 
 	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
 }
+{{- if .GatewayRef}}
 {{- range .GatewayRef.AdditionalKinds}}
 
 func {{$.EntityNameLowerCamel}}On{{.Kind}}Ref(object client.Object) []string {
@@ -775,6 +811,7 @@ func {{$.EntityNameLowerCamel}}On{{.Kind}}Ref(object client.Object) []string {
 
 	return []string{refNamespace + "/" + ref.Name}
 }
+{{- end}}
 {{- end}}
 {{- else}}
 
@@ -833,7 +870,11 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	}
 	var out []string
 	{{- $cr := .}}
-	{{- if .ObjectRefField}}
+	{{- if .RefsToFunc}}
+	for _, key := range {{.RefsToFunc}}(ent) {
+		out = append(out, key.String())
+	}
+	{{- else if .ObjectRefField}}
 	{{- range .AccessorExprs}}
 	if ref := {{.Expr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
 		ns := ent.GetNamespace()
@@ -957,6 +998,15 @@ type crossRefWatchData struct {
 	// ReverseSelf also enqueues this object's references for a same-kind
 	// reverse watch, without registering a duplicate watch/map function.
 	ReverseSelf bool
+	// RefsToFunc is the <Entity>RefsTo<Kind> accessor of the API package
+	// (e.g. "configurationv1alpha1.EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster")
+	// yielding the keys of exactly the refs the extractor scans, set when
+	// every contributing reference is a single-kind reverseWatch []<RefType>
+	// reference. The extractor then indexes those keys instead of scanning
+	// the refs itself.
+	RefsToFunc string
+	// WatchSameParent includes declarations sharing the referenced object's parent.
+	WatchSameParent bool
 }
 
 // crossRefLiteralTarget is an InjectInto target field an entity may set
@@ -1227,6 +1277,30 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 	}
 
 	crossRefs := g.buildCrossRefWatchData(metadata.EntityName)
+	watchSameParent := false
+	for _, ref := range g.config.References[metadata.EntityName] {
+		if !ref.WatchSameParent {
+			continue
+		}
+		if len(ref.Kinds) != 1 {
+			return "", fmt.Errorf("reference %q: watchSameParent requires exactly one kind", ref.Path)
+		}
+		target := g.config.ReconcilerConfig[ref.Kinds[0]]
+		if rc == nil || target == nil || rc.GetIsRoot() || target.GetIsRoot() ||
+			rc.ParentRef == nil || target.ParentRef == nil || rc.ParentRef.TypeName != "" || target.ParentRef.TypeName != "" ||
+			rc.GatewayRef != nil || target.GatewayRef != nil || rc.ParentEntityKind() == "" ||
+			rc.ParentEntityKind() != target.ParentEntityKind() ||
+			rc.ParentEntityGroup(g.config.APIGroup) != target.ParentEntityGroup(g.config.APIGroup) ||
+			rc.ParentEntityVersion(g.config.APIVersion) != target.ParentEntityVersion(g.config.APIVersion) {
+			return "", fmt.Errorf("reference %q: watchSameParent requires matching configured parent GVKs and ObjectRef parents", ref.Path)
+		}
+		for i := range crossRefs {
+			if crossRefs[i].RefKind == ref.Kinds[0] {
+				crossRefs[i].WatchSameParent = true
+			}
+		}
+		watchSameParent = true
+	}
 
 	// Referring entities whose reverseWatch references target this entity:
 	// its controller watches them (enqueue<Entity>For<Referrer>), which must
@@ -1259,7 +1333,10 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ParentEntityVersion     string
 		ParentRefFieldName      string
 		ParentRefCustomTypeName string
-		GatewayRef              *gatewayRefTemplateData
+		// ParentRefSupportsOnPremAIGateway is true when the custom parent ref
+		// type can also target an OnPremAIGateway.
+		ParentRefSupportsOnPremAIGateway bool
+		GatewayRef                       *gatewayRefTemplateData
 		// SkipsKonnectReconciliation is true when the entity's GatewayRef
 		// field can reference gateways the Konnect reconciler does not manage.
 		SkipsKonnectReconciliation bool
@@ -1274,6 +1351,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ReverseRefs                []reverseWatchReferrer
 		HasSecretRefs              bool
 		HasConfigMapRefs           bool
+		WatchSameParent            bool
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
@@ -1287,18 +1365,20 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 			}
 			return ""
 		}(),
-		SkipsKonnectReconciliation: metadata.GatewayRef != nil && len(metadata.GatewayRef.AdditionalKinds) > 0,
-		APIAuthPackageAlias:        apiAuthPackageAlias,
-		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
-		APIGroupPackagePath:        metadata.APIGroupPackagePath,
-		APIGroupPackageAlias:       metadata.APIGroupPackageAlias,
-		NeedsSeparateParentImport:  metadata.ParentAPIGroupPackagePath != metadata.APIGroupPackagePath,
-		ParentAPIGroupPackagePath:  metadata.ParentAPIGroupPackagePath,
-		ParentAPIGroupPackageAlias: metadata.ParentAPIGroupPackageAlias,
-		CrossRefs:                  crossRefs,
-		ReverseRefs:                reverseRefs,
-		HasSecretRefs:              metadata.HasSecretRefs,
-		HasConfigMapRefs:           metadata.HasConfigMapRefs,
+		ParentRefSupportsOnPremAIGateway: rc != nil && rc.ParentRef != nil && rc.ParentRef.SupportsOnPremAIGateway,
+		SkipsKonnectReconciliation:       metadata.GatewayRef != nil && len(metadata.GatewayRef.AdditionalKinds) > 0,
+		APIAuthPackageAlias:              apiAuthPackageAlias,
+		NeedsSeparateAPIAuthImport:       needsSeparateAPIAuthImport,
+		APIGroupPackagePath:              metadata.APIGroupPackagePath,
+		APIGroupPackageAlias:             metadata.APIGroupPackageAlias,
+		NeedsSeparateParentImport:        metadata.ParentAPIGroupPackagePath != metadata.APIGroupPackagePath,
+		ParentAPIGroupPackagePath:        metadata.ParentAPIGroupPackagePath,
+		ParentAPIGroupPackageAlias:       metadata.ParentAPIGroupPackageAlias,
+		CrossRefs:                        crossRefs,
+		ReverseRefs:                      reverseRefs,
+		HasSecretRefs:                    metadata.HasSecretRefs,
+		HasConfigMapRefs:                 metadata.HasConfigMapRefs,
+		WatchSameParent:                  watchSameParent,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1354,17 +1434,20 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		ParentEntityName        string
 		ParentRefFieldName      string
 		ParentRefCustomTypeName string
-		GatewayRef              *gatewayRefTemplateData
-		APIGroupPackagePath     string
-		APIGroupPackageAlias    string
-		CrossRefs               []crossRefWatchData
-		KonnectKeyIndexes       []konnectKeyIndex
-		LiteralTargetIndexes    []string
-		HasSecretRefs           bool
-		ObjectRefTypePrefix     string
-		NeedsObjectRefImport    bool
-		ObjectRefImportPath     string
-		ObjectRefImportAlias    string
+		// ParentRefSupportsOnPremAIGateway is true when the custom parent ref
+		// type can also target an OnPremAIGateway.
+		ParentRefSupportsOnPremAIGateway bool
+		GatewayRef                       *gatewayRefTemplateData
+		APIGroupPackagePath              string
+		APIGroupPackageAlias             string
+		CrossRefs                        []crossRefWatchData
+		KonnectKeyIndexes                []konnectKeyIndex
+		LiteralTargetIndexes             []string
+		HasSecretRefs                    bool
+		ObjectRefTypePrefix              string
+		NeedsObjectRefImport             bool
+		ObjectRefImportPath              string
+		ObjectRefImportAlias             string
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
@@ -1377,16 +1460,17 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 			}
 			return ""
 		}(),
-		APIGroupPackagePath:  metadata.APIGroupPackagePath,
-		APIGroupPackageAlias: metadata.APIGroupPackageAlias,
-		CrossRefs:            crossRefs,
-		KonnectKeyIndexes:    konnectKeyIndexes,
-		LiteralTargetIndexes: literalTargetIndexes,
-		HasSecretRefs:        g.hasSecretRefs(metadata.EntityName),
-		ObjectRefTypePrefix:  objectRefTypePrefix,
-		NeedsObjectRefImport: needsObjectRefImport,
-		ObjectRefImportPath:  objectRefImportPath,
-		ObjectRefImportAlias: objectRefImportAlias,
+		ParentRefSupportsOnPremAIGateway: rc != nil && rc.ParentRef != nil && rc.ParentRef.SupportsOnPremAIGateway,
+		APIGroupPackagePath:              metadata.APIGroupPackagePath,
+		APIGroupPackageAlias:             metadata.APIGroupPackageAlias,
+		CrossRefs:                        crossRefs,
+		KonnectKeyIndexes:                konnectKeyIndexes,
+		LiteralTargetIndexes:             literalTargetIndexes,
+		HasSecretRefs:                    g.hasSecretRefs(metadata.EntityName),
+		ObjectRefTypePrefix:              objectRefTypePrefix,
+		NeedsObjectRefImport:             needsObjectRefImport,
+		ObjectRefImportPath:              objectRefImportPath,
+		ObjectRefImportAlias:             objectRefImportAlias,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1405,6 +1489,9 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 		return nil
 	}
 	byKind := make(map[string]*crossRefWatchData)
+	// refsToKind is false for a kind one of whose references the
+	// <Entity>RefsTo<Kind> accessor doesn't cover (see RefsToFunc).
+	refsToKind := make(map[string]bool)
 	var order []string
 	for _, ref := range refs {
 		// The extractor scans a []<RefType> slice for each contributing
@@ -1430,6 +1517,10 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 				cr = &crossRefWatchData{RefKind: kind}
 				byKind[kind] = cr
 				order = append(order, kind)
+				refsToKind[kind] = true
+			}
+			if !ref.ReverseWatch || multiKind || ref.ObjectRefField || ref.NestedArrayList {
+				refsToKind[kind] = false
 			}
 			if multiKind {
 				cr.MultiKind = true
@@ -1451,6 +1542,9 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 	}
 	result := make([]crossRefWatchData, 0, len(order))
 	for _, kind := range order {
+		if refsToKind[kind] {
+			byKind[kind].RefsToFunc = fmt.Sprintf("%s.%sRefsTo%s", g.config.APIGroupPackageAlias, entityName, kind)
+		}
 		result = append(result, *byKind[kind])
 	}
 	return result

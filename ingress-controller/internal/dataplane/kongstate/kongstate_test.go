@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -166,7 +167,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			certificates := make([]Certificate, 0, count)
 			for i := range count {
 				certificates = append(certificates,
-					Certificate{kong.Certificate{ID: new(strconv.Itoa(i)), Key: new("secret")}},
+					Certificate{ID: new(strconv.Itoa(i)), Key: new("secret")},
 				)
 			}
 			return certificates
@@ -1109,6 +1110,206 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 	}
 }
 
+func TestFillConsumersAndCredentials_DuplicateIdentifiers(t *testing.T) {
+	now := metav1.Now()
+	earlier := metav1.NewTime(now.Add(-time.Hour))
+	earliest := metav1.NewTime(now.Add(-2 * time.Hour))
+
+	newConsumer := func(namespace, name string, created metav1.Time, username, customID string, credentials ...string) *configurationv1.KongConsumer {
+		return &configurationv1.KongConsumer{
+			TypeMeta:          kongConsumerTypeMeta,
+			Name:              name,
+			Namespace:         namespace,
+			CreationTimestamp: created,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
+			},
+			Username:    username,
+			CustomID:    customID,
+			Credentials: credentials,
+		}
+	}
+	newKeyAuthSecret := func(name, key string) *corev1.Secret {
+		return &corev1.Secret{
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Name:       name,
+			Namespace:  "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
+			},
+			Data: map[string][]byte{
+				"key": []byte(key),
+			},
+		}
+	}
+
+	testCases := []struct {
+		name      string
+		consumers []*configurationv1.KongConsumer
+		secrets   []*corev1.Secret
+		// expectedTranslated is the set of translated KongConsumers.
+		expectedTranslated []k8stypes.NamespacedName
+		// expectedFailures maps every object expected to have a translation failure to a substring of its message.
+		expectedFailures map[k8stypes.NamespacedName]string
+	}{
+		{
+			name: "same username, the earlier created one is translated",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "a-newer", now, "foo", ""),
+				newConsumer("default", "z-older", earlier, "foo", ""),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "default", Name: "z-older"},
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "a-newer"}: `username "foo" is already used by KongConsumer default/z-older`,
+			},
+		},
+		{
+			name: "same username and creation timestamp, the one with smaller name is translated",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "b", now, "foo", ""),
+				newConsumer("default", "a", now, "foo", ""),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "default", Name: "a"},
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "b"}: `username "foo" is already used by KongConsumer default/a`,
+			},
+		},
+		{
+			name: "same username and creation timestamp, namespace is compared before name",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("ns-b", "a", now, "foo", ""),
+				newConsumer("ns-a", "z", now, "foo", ""),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "ns-a", Name: "z"},
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "ns-b", Name: "a"}: `username "foo" is already used by KongConsumer ns-a/z`,
+			},
+		},
+		{
+			name: "same custom_id, the earlier created one is translated",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "newer", now, "bar", "id"),
+				newConsumer("default", "older", earlier, "foo", "id"),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "default", Name: "older"},
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "newer"}: `custom_id "id" is already used by KongConsumer default/older`,
+			},
+		},
+		{
+			name: "username of one consumer equal to custom_id of another is not a conflict",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "a", earlier, "foo", ""),
+				newConsumer("default", "b", now, "", "foo"),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "default", Name: "a"},
+				{Namespace: "default", Name: "b"},
+			},
+		},
+		{
+			name: "rejected consumer does not claim its identifiers",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "first", earliest, "foo", "id-1"),
+				newConsumer("default", "second", earlier, "bar", "id-1"),
+				newConsumer("default", "third", now, "bar", "id-2"),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "default", Name: "first"},
+				{Namespace: "default", Name: "third"},
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "second"}: `custom_id "id-1" is already used by KongConsumer default/first`,
+			},
+		},
+		{
+			name: "credentials of rejected consumer do not conflict with credentials of the translated one",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "newer", now, "foo", "", "newer-key"),
+				newConsumer("default", "older", earlier, "foo", "", "older-key"),
+			},
+			secrets: []*corev1.Secret{
+				newKeyAuthSecret("newer-key", "same-key"),
+				newKeyAuthSecret("older-key", "same-key"),
+			},
+			expectedTranslated: []k8stypes.NamespacedName{
+				{Namespace: "default", Name: "older"},
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "newer"}: `username "foo" is already used by KongConsumer default/older`,
+			},
+		},
+		{
+			name: "rejected duplicate is not translated when the owner of the username has conflicting credentials",
+			consumers: []*configurationv1.KongConsumer{
+				newConsumer("default", "a", earliest, "foo", "", "a-key"),
+				newConsumer("default", "b", earlier, "foo", ""),
+				newConsumer("default", "c", now, "bar", "", "c-key"),
+			},
+			secrets: []*corev1.Secret{
+				newKeyAuthSecret("a-key", "same-key"),
+				newKeyAuthSecret("c-key", "same-key"),
+			},
+			expectedFailures: map[k8stypes.NamespacedName]string{
+				{Namespace: "default", Name: "a"}:     "Consumer has conflicting credentials",
+				{Namespace: "default", Name: "b"}:     `username "foo" is already used by KongConsumer default/a`,
+				{Namespace: "default", Name: "c"}:     "Consumer has conflicting credentials",
+				{Namespace: "default", Name: "a-key"}: "Secret has conflicting credential",
+				{Namespace: "default", Name: "c-key"}: "Secret has conflicting credential",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		// The result must not depend on the order in which the store lists the consumers.
+		for _, reversed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/reversed=%t", tc.name, reversed), func(t *testing.T) {
+				consumers := slices.Clone(tc.consumers)
+				if reversed {
+					slices.Reverse(consumers)
+				}
+				s, err := store.NewFakeStore(store.FakeObjects{
+					Secrets:       tc.secrets,
+					KongConsumers: consumers,
+				})
+				require.NoError(t, err)
+				logger := testr.New(t)
+				failuresCollector := failures.NewResourceFailuresCollector(logger)
+
+				state := KongState{}
+				state.FillConsumersAndCredentials(logger, s, failuresCollector)
+
+				translated := lo.Map(state.Consumers, func(c Consumer, _ int) k8stypes.NamespacedName {
+					return client.ObjectKeyFromObject(&c.K8sKongConsumer)
+				})
+				require.ElementsMatch(t, tc.expectedTranslated, translated)
+
+				failureMessages := map[k8stypes.NamespacedName][]string{}
+				for _, f := range failuresCollector.PopResourceFailures() {
+					for _, obj := range f.CausingObjects() {
+						nn := client.ObjectKeyFromObject(obj)
+						failureMessages[nn] = append(failureMessages[nn], f.Message())
+					}
+				}
+				require.ElementsMatch(t, lo.Keys(tc.expectedFailures), lo.Keys(failureMessages))
+				for nn, expectedMessage := range tc.expectedFailures {
+					require.Len(t, failureMessages[nn], 1)
+					require.Contains(t, failureMessages[nn][0], expectedMessage)
+				}
+			})
+		}
+	}
+}
+
 func TestKongState_FillIDs(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -1234,10 +1435,11 @@ func TestKongState_FillIDs(t *testing.T) {
 
 func TestKongState_BuildPluginsCollisions(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		in         []*configurationv1.KongPlugin
-		pluginRels map[string]rels.ForeignRelations
-		want       []string
+		name          string
+		in            []*configurationv1.KongPlugin
+		pluginRels    map[string]rels.ForeignRelations
+		inheritedTags pluginInheritedTags
+		want          []string
 	}{
 		{
 			name: "collision test",
@@ -1331,13 +1533,80 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 				KongPlugins: tt.in,
 			})
 			// this is not testing the kongPluginFromK8SPlugin failure cases, so there is no failures collector
-			got := buildPlugins(log, store, nil, tt.pluginRels)
+			got := buildPlugins(log, store, nil, tt.pluginRels, tt.inheritedTags)
 			require.Len(t, got, len(tt.want))
 			gotInstanceNames := lo.Map(got, func(p Plugin, _ int) string { return *p.InstanceName })
 			require.Equal(t, tt.want, gotInstanceNames)
 
 			gotUniqueInstanceNames := lo.Uniq(gotInstanceNames)
 			require.Len(t, gotUniqueInstanceNames, len(tt.want), "should only return unique instance names")
+		})
+	}
+}
+
+func TestKongState_dropPluginsWithUnsupportedCondition(t *testing.T) {
+	condition := `http.path.startsWith("/api")`
+	plugin := func(cond *string) Plugin {
+		p := Plugin{
+			Name: new("correlation-id"),
+			K8sParent: &configurationv1.KongPlugin{
+				APIVersion: configurationv1.GroupVersion.String(),
+				Kind:       "KongPlugin",
+				Name:       "plugin", Namespace: "default",
+			},
+
+			Condition: cond}
+		return p
+	}
+
+	testCases := []struct {
+		name             string
+		kongVersion      semver.Version
+		plugins          []Plugin
+		expectedPlugins  []Plugin
+		expectedFailures int
+	}{
+		{
+			name:            "gateway supports condition",
+			kongVersion:     versions.KongPluginConditionCutoff,
+			plugins:         []Plugin{plugin(new(condition))},
+			expectedPlugins: []Plugin{plugin(new(condition))},
+		},
+		{
+			name:             "gateway below cutoff drops the plugin",
+			kongVersion:      semver.Version{Major: 3, Minor: 13, Patch: 5},
+			plugins:          []Plugin{plugin(new(condition))},
+			expectedPlugins:  []Plugin{},
+			expectedFailures: 1,
+		},
+		{
+			name:             "plugin attached to several entities is reported once",
+			kongVersion:      semver.Version{Major: 3, Minor: 13, Patch: 5},
+			plugins:          []Plugin{plugin(new(condition)), plugin(new(condition)), plugin(new(condition))},
+			expectedPlugins:  []Plugin{},
+			expectedFailures: 1,
+		},
+		{
+			name:            "plugin without condition on a gateway below cutoff is kept",
+			kongVersion:     semver.Version{Major: 3, Minor: 13, Patch: 5},
+			plugins:         []Plugin{plugin(nil)},
+			expectedPlugins: []Plugin{plugin(nil)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
+			ks := KongState{Plugins: tc.plugins}
+
+			ks.dropPluginsWithUnsupportedCondition(failuresCollector, tc.kongVersion)
+
+			require.Equal(t, tc.expectedPlugins, ks.Plugins)
+			resourceFailures := failuresCollector.PopResourceFailures()
+			require.Len(t, resourceFailures, tc.expectedFailures)
+			if tc.expectedFailures > 0 {
+				require.Contains(t, resourceFailures[0].Message(), versions.KongPluginConditionCutoff.String())
+			}
 		})
 	}
 }
@@ -1907,4 +2176,73 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKongState_BuildPluginsInheritedTags(t *testing.T) {
+	ks := KongState{
+		Services: []Service{
+			{
+				Name:          new("gateway-api-service"),
+				InheritedTags: util.InheritedTags{Gateway: []string{"svc-gw"}, GatewayClass: []string{"gwc"}},
+				Routes: []Route{
+					{Name: new("gateway-api-route"), InheritedTags: util.InheritedTags{Gateway: []string{"route-gw"}, GatewayClass: []string{"gwc"}}},
+					{Name: new("other-route")},
+				},
+			},
+			{
+				Name:   new("ingress-service"),
+				Routes: []Route{{Name: new("ingress-route")}},
+			},
+		},
+	}
+	inherited := ks.inheritedTagsForPlugins()
+	require.Equal(t, pluginInheritedTags{
+		routes:   map[string]util.InheritedTags{"gateway-api-route": {Gateway: []string{"route-gw"}, GatewayClass: []string{"gwc"}}},
+		services: map[string]util.InheritedTags{"gateway-api-service": {Gateway: []string{"svc-gw"}, GatewayClass: []string{"gwc"}}},
+	}, inherited)
+
+	s, err := store.NewFakeStore(store.FakeObjects{
+		KongPlugins: []*configurationv1.KongPlugin{
+			{
+				Name:       "foo-plugin",
+				Namespace:  "default",
+				PluginName: "correlation-id",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.UserTagKey: "plugin-tag,gwc",
+				},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	plugins := buildPlugins(logr.Discard(), s, nil, map[string]rels.ForeignRelations{
+		"default:foo-plugin": {
+			Route: []rels.FR{
+				{Identifier: "gateway-api-route"},
+				{Identifier: "ingress-route"},
+			},
+			Service: []rels.FR{{Identifier: "gateway-api-service"}},
+		},
+	}, inherited)
+
+	tagsByEntity := map[string][]string{}
+	for _, p := range plugins {
+		var key string
+		switch {
+		case p.Route != nil:
+			key = "route/" + *p.Route.ID
+		case p.Service != nil:
+			key = "service/" + *p.Service.ID
+		}
+		// Only the user-specified tags are relevant here, drop the k8s-* ones.
+		tagsByEntity[key] = lo.Reject(lo.FromSlicePtr(p.Tags), func(tag string, _ int) bool {
+			return strings.HasPrefix(tag, "k8s-")
+		})
+	}
+	require.Equal(t, map[string][]string{
+		// The KongPlugin's own tags come first and are deduplicated against the inherited ones.
+		"route/gateway-api-route":     {"plugin-tag", "gwc", "route-gw"},
+		"route/ingress-route":         {"plugin-tag", "gwc"},
+		"service/gateway-api-service": {"plugin-tag", "gwc", "svc-gw"},
+	}, tagsByEntity)
 }

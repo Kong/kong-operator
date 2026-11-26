@@ -1,0 +1,37 @@
+# Template for creating an EventGatewayBackendCluster of a KonnectEventGateway
+# through the deprecated spec.gatewayRef, rather than spec.parentRef.
+#
+# Required bindings:
+#   - backend_cluster_name, backend_cluster_namespace: The backend cluster.
+#   - gateway_name: The KonnectEventGateway.
+#   - gateway_ref_namespace: Its namespace, or null to leave it to default to
+#     the namespace of the object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-backend-cluster-gateway-ref
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayBackendCluster
+          metadata:
+            name: ($backend_cluster_name)
+            namespace: ($backend_cluster_namespace)
+          spec:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($gateway_name)
+                namespace: ($gateway_ref_namespace)
+            apiSpec:
+              name: ($backend_cluster_name)
+              bootstrapServers:
+                - kafka-bootstrap.kafka-shared.svc:9092
+              authentication:
+                type: anonymous
+                anonymous: {}
+              insecureAllowAnonymousVirtualClusterAuth: Enabled
+              tls:
+                enabled: Disabled

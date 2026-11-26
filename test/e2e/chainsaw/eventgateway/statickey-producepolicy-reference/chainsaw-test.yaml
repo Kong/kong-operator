@@ -5,7 +5,7 @@ metadata:
 spec:
   description: |
     EventGatewayStaticKey used by an encrypt EventGatewayVirtualClusterProducePolicy
-    through encryptionKey.static.key.namespacedRef, against the real Konnect
+    through encryptionKey.static.key, by object, against the real Konnect
     API:
 
     - the reference resolves to the static key's Konnect ID;
@@ -132,8 +132,7 @@ spec:
                         type: static
                         static:
                           key:
-                            namespacedRef:
-                              name: ($static_key_name)
+                            name: ($static_key_name)
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1

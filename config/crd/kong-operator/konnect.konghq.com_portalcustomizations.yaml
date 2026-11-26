@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalcustomizations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -284,6 +284,15 @@ spec:
                   theme:
                     description: The theme settings for this portal.
                     properties:
+                      borderRadius:
+                        description: The corner roundness to apply to this portal's
+                          theme.
+                        enum:
+                        - soft
+                        - sharp
+                        - round
+                        maxLength: 253
+                        type: string
                       colors:
                         description: Colors is a type alias.
                         properties:
@@ -467,9 +476,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef
-            == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:

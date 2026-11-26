@@ -1,0 +1,36 @@
+# NOTE: field-level deprecations via Kubebuilder annotations do not generate any warning to the
+# users when the deprecated field is used.
+# Until this is not fixed we need a ValidatingAdmissionPolicy to emit the warning.
+# Upstream issue: https://github.com/kubernetes/kubernetes/issues/131817
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "removed-settings.kegdataplane.eventgateway.konghq.com"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+        - eventgateway.konghq.com
+      apiVersions:
+        - v1alpha1
+      operations:
+        - CREATE
+        - UPDATE
+      resources:
+        - kegdataplanes
+  validations:
+  - expression: "!has(object.spec.config) || !has(object.spec.config.configPollIntervalSeconds)"
+    message: "spec.config.configPollIntervalSeconds is deprecated: keg 1.3.0 removed it, so it is passed only to a keg older than 1.3.0 and ignored otherwise."
+  - expression: "!has(object.spec.config) || !has(object.spec.config.enableDebugEndpoints)"
+    message: "spec.config.enableDebugEndpoints is deprecated: keg 1.3.0 removed it, so it is passed only to a keg older than 1.3.0 and ignored otherwise."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "binding-removed-settings.kegdataplane.eventgateway.konghq.com"
+spec:
+  policyName: "removed-settings.kegdataplane.eventgateway.konghq.com"
+  validationActions:
+    - Warn
+    - Audit

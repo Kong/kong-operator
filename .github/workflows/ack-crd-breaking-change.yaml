@@ -4,6 +4,9 @@ on:
   pull_request:
     types:
       - labeled
+      # The check reads the label while it runs, so removing the label must re-run it as well:
+      # otherwise an acknowledged check stays green after the acknowledgement is gone.
+      - unlabeled
 
 permissions:
   contents: read
@@ -14,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       # The rerun endpoint needs "Actions: write", which GITHUB_TOKEN is not granted here: the call
@@ -28,40 +31,73 @@ jobs:
           repositories: |
             kong-operator
           permission-actions: write
-      - name: Rerun failed CRD breaking-change check
+      - name: Rerun CRD breaking-change check
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
-          run_ids="$(gh run list \
-            --repo "${GITHUB_REPOSITORY}" \
-            --workflow tests.yaml \
-            --limit 50 \
-            --json conclusion,createdAt,databaseId,event,headSha,status \
-            --jq '[.[] | select(.headSha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "failure")] | sort_by(.createdAt) | reverse | .[].databaseId')"
+          # Returns "<id> <status> <conclusion>" of the CRD job of a run, or nothing when the run
+          # has no such job (a docs-only pull request skips the whole verify job).
+          crd_job_state() {
+            # Every page: a tests.yaml run holds far more jobs than the default 30, and a job
+            # off the first page would be invisible.
+            gh api --paginate \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/$1/jobs?filter=latest&per_page=100" \
+              --jq '.jobs[] | select(.name == "verify / crd-breaking-changes") | "\(.id) \(.status) \(.conclusion)"'
+          }
+
+          # Runs in any state, not only completed ones: a label event can arrive while the check
+          # is still running. That job read the label before the removal, so it must be waited
+          # for and then re-run, or the old acknowledgement stays in force. The head-SHA filter
+          # runs in the API: a bounded list of recent runs can hold no run of this pull request on
+          # a busy repository, and then the label change would be silently ignored.
+          run_refs="$(gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/tests.yaml/runs?head_sha=${HEAD_SHA}&event=pull_request&per_page=100" \
+            --jq '.workflow_runs[] | "\(.id) \(.status)"')"
 
           crd_job_id=""
-          for candidate_run_id in ${run_ids}; do
-            crd_job_id="$(gh api \
-              -H "Accept: application/vnd.github+json" \
-              "repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_run_id}/jobs?filter=latest" \
-              --jq '.jobs[] | select(.name == "verify / crd-breaking-changes" and .conclusion == "failure") | .id' | head -n 1)"
+          while read -r candidate_run_id run_status; do
+            if [[ -z "${candidate_run_id}" ]]; then
+              continue
+            fi
 
-            if [[ -n "${crd_job_id}" ]]; then
+            state="$(crd_job_state "${candidate_run_id}")"
+            read -r crd_job_id crd_status crd_conclusion <<< "${state}"
+
+            if [[ -z "${crd_job_id}" ]]; then
+              continue
+            fi
+
+            # A job can only be re-run once its run has finished, and a job that is still running
+            # read the label before this event, so its result cannot be trusted either way.
+            if [[ "${run_status}" != "completed" || "${crd_status}" != "completed" ]]; then
+              echo "Waiting for run ${candidate_run_id} to finish."
+              gh run watch "${candidate_run_id}" --repo "${GITHUB_REPOSITORY}" </dev/null >/dev/null
+              state="$(crd_job_state "${candidate_run_id}")"
+              read -r crd_job_id crd_status crd_conclusion <<< "${state}"
+            fi
+
+            # Any conclusion, not only failure: the label was just added or removed, so a green
+            # check can be the stale result of the opposite label state.
+            if [[ "${crd_conclusion}" == "success" || "${crd_conclusion}" == "failure" ]]; then
               break
             fi
-          done
+
+            crd_job_id=""
+          done <<< "${run_refs}"
 
           if [[ -z "${crd_job_id}" ]]; then
-            echo "No failed CRD breaking-change check found for ${HEAD_SHA}."
+            echo "No CRD breaking-change check found for ${HEAD_SHA}."
             exit 0
           fi
 
           # Re-running a job also re-runs dependent jobs, so the aggregate required
-          # `passed` job is recalculated after crd-breaking-changes succeeds.
-          echo "Rerunning failed CRD breaking-change job ${crd_job_id}."
+          # `passed` job is recalculated after crd-breaking-changes finishes.
+          echo "Rerunning CRD breaking-change job ${crd_job_id}."
           gh api \
             --method POST \
             -H "Accept: application/vnd.github+json" \

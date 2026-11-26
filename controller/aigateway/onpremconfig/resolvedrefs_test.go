@@ -39,8 +39,10 @@ func referenceGrant(namespace, fromNamespace, fromKind string, to configurationv
 }
 
 var (
-	toSecret          = configurationv1alpha1.ReferenceGrantTo{Group: "core", Kind: "Secret"}
-	toOnPremAIGateway = configurationv1alpha1.ReferenceGrantTo{Group: "aigateway.konghq.com", Kind: "OnPremAIGateway"}
+	toSecret            = configurationv1alpha1.ReferenceGrantTo{Group: "core", Kind: "Secret"}
+	toOnPremAIGateway   = configurationv1alpha1.ReferenceGrantTo{Group: "aigateway.konghq.com", Kind: "OnPremAIGateway"}
+	toAIGatewayConsumer = configurationv1alpha1.ReferenceGrantTo{Group: "aiconfiguration.konghq.com", Kind: "AIGatewayConsumer"}
+	toConsumerGroup     = configurationv1alpha1.ReferenceGrantTo{Group: "aiconfiguration.konghq.com", Kind: "AIGatewayConsumerGroup"}
 )
 
 // secretReferenceGrant returns a KongReferenceGrant in secretNamespace that allows
@@ -82,8 +84,95 @@ func authStrategyWithSecretRefNamespace(name string, ns *string) *aiconfiguratio
 	return strategy
 }
 
+// aclRefServer returns an on-prem AIGatewayMCPServer of the default namespace that
+// targets the gateway "gw" there and carries a consumer group ACL reference into
+// refNamespace.
+func aclRefServer(name, refNamespace string) *aiconfigurationv1alpha1.AIGatewayMCPServer {
+	return &aiconfigurationv1alpha1.AIGatewayMCPServer{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayMCPServerSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &aiconfigurationv1alpha1.AIGatewayMCPServerConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListener{
+						Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+						Access: &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccess{
+							AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
+							Consumer: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{
+								Acls: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAcls{
+									Type:  aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+									Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: refNamespace, Name: "group-other"}},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// aclRefModel returns an on-prem AIGatewayModel of the default namespace that
+// targets the gateway "gw" there and carries a consumer group ACL reference into
+// refNamespace.
+func aclRefModel(name, refNamespace string) *aiconfigurationv1alpha1.AIGatewayModel {
+	model := onPremModelFixture(name, 1)
+	model.Spec.APISpec.AIGatewayModelConfig = &aiconfigurationv1alpha1.AIGatewayModelConfig{
+		Type: aiconfigurationv1alpha1.AIGatewayModelConfigTypeAPI,
+		API: &aiconfigurationv1alpha1.AIGatewayModelAPI{
+			Access: aiconfigurationv1alpha1.AIGatewayModelAccess{
+				Acls: &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+					Type:  aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
+					Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: refNamespace, Name: "group-other"}}},
+				},
+			},
+		},
+	}
+	return model
+}
+
+// aclRefAgent returns an on-prem AIGatewayAgent of the default namespace that
+// targets the gateway "gw" there and carries a consumer group ACL reference into
+// refNamespace.
+func aclRefAgent(name, refNamespace string) *aiconfigurationv1alpha1.AIGatewayAgent {
+	return &aiconfigurationv1alpha1.AIGatewayAgent{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+				Type: "http",
+				Access: aiconfigurationv1alpha1.AIGatewayAgentAccess{
+					Acls: &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+						Type:  aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+						Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: refNamespace, Name: "group-other"}}},
+					},
+				},
+			},
+		},
+	}
+}
+
 func resolvedRefsCondition(conditions []metav1.Condition) *metav1.Condition {
 	return apimeta.FindStatusCondition(conditions, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+}
+
+// otherNamespaceCredential returns a credential of the "other" namespace referencing the
+// consumer consumer in the namespace ns.
+func otherNamespaceCredential(consumer string, ns *string) *aiconfigurationv1alpha1.AIGatewayConsumerCredential {
+	cred := consumerCredential("cred", consumer, "api-key")
+	cred.Namespace = "other"
+	cred.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = ns
+	return cred
 }
 
 func TestEnsureResolvedRefsCondition(t *testing.T) {
@@ -190,6 +279,82 @@ func TestEnsureResolvedRefsCondition(t *testing.T) {
 			wantStatus:  metav1.ConditionTrue,
 			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
 		},
+		{
+			name:        "same-namespace consumerRef removes a stale condition",
+			obj:         otherNamespaceCredential("consumer", new("other")),
+			conditions:  []metav1.Condition{staleCondition},
+			wantChanged: true,
+		},
+		{
+			name:        "cross-namespace consumerRef without grant is not permitted",
+			obj:         otherNamespaceCredential("consumer", new("consumers")),
+			wantChanged: true,
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+			wantMessage: "cross-namespace reference to AIGatewayConsumer consumer in namespace consumers",
+		},
+		{
+			name:        "cross-namespace consumerRef allowed by a grant is resolved",
+			obj:         otherNamespaceCredential("consumer", new("consumers")),
+			grants:      []client.Object{referenceGrant("consumers", "other", "AIGatewayConsumerCredential", toAIGatewayConsumer)},
+			wantChanged: true,
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+			wantMessage: "KongReferenceGrants allow the cross-namespace references",
+		},
+		{
+			name:        "same-namespace ACL ref sets no condition",
+			obj:         aclRefServer("mcp", "default"),
+			wantChanged: false,
+		},
+		{
+			name:        "cross-namespace ACL ref of a model without grant is not permitted",
+			obj:         aclRefModel("model", "other"),
+			wantChanged: true,
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+			wantMessage: "cross-namespace reference to AIGatewayConsumerGroup group-other in namespace other",
+		},
+		{
+			name:        "cross-namespace ACL ref of a model allowed by a grant is resolved",
+			obj:         aclRefModel("model", "other"),
+			grants:      []client.Object{referenceGrant("other", "default", "AIGatewayModel", toConsumerGroup)},
+			wantChanged: true,
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+		},
+		{
+			name:        "cross-namespace ACL ref of an agent without grant is not permitted",
+			obj:         aclRefAgent("agent", "other"),
+			wantChanged: true,
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+			wantMessage: "cross-namespace reference to AIGatewayConsumerGroup group-other in namespace other",
+		},
+		{
+			name:        "cross-namespace ACL ref of an agent allowed by a grant is resolved",
+			obj:         aclRefAgent("agent", "other"),
+			grants:      []client.Object{referenceGrant("other", "default", "AIGatewayAgent", toConsumerGroup)},
+			wantChanged: true,
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+		},
+		{
+			name:        "cross-namespace ACL ref without grant is not permitted",
+			obj:         aclRefServer("mcp", "other"),
+			wantChanged: true,
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
+			wantMessage: "cross-namespace reference to AIGatewayConsumerGroup group-other in namespace other",
+		},
+		{
+			name:        "cross-namespace ACL ref allowed by a grant is resolved",
+			obj:         aclRefServer("mcp", "other"),
+			grants:      []client.Object{referenceGrant("other", "default", "AIGatewayMCPServer", toConsumerGroup)},
+			wantChanged: true,
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -230,14 +395,20 @@ func TestMapKongReferenceGrantToEntities(t *testing.T) {
 	}
 	cred := consumerCredential("cred", "consumer", "api-key")
 	cred.Spec.APISpec.APIKey.SecretRef.Namespace = new("secrets")
+	crossNamespaceConsumerCred := otherNamespaceCredential("consumer", new("consumers"))
 	cl := newReconcilerClient(t,
 		authStrategyWithSecretRefNamespace("cross-ns-strat", new("secrets")),
 		authStrategyWithSecretRefNamespace("same-ns-strat", nil),
 		authStrategyWithSecretRefNamespace("other-ns-strat", new("elsewhere")),
 		konnectStrategy,
 		cred,
+		crossNamespaceConsumerCred,
 		otherNamespaceModel("cross-ns-model"),
 		onPremModelFixture("same-ns-model", 1),
+		aclRefServer("cross-ns-acl", "other"),
+		aclRefServer("same-ns-acl", "default"),
+		aclRefModel("cross-ns-acl-model", "other"),
+		aclRefAgent("cross-ns-acl-agent", "other"),
 	)
 	grant := secretReferenceGrant("secrets", "AIGatewayAuthStrategy")
 
@@ -248,6 +419,11 @@ func TestMapKongReferenceGrantToEntities(t *testing.T) {
 	creds := mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl)(t.Context(), grant)
 	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cred"}}, creds)
 
+	// A grant in the referenced consumer's namespace governs the credential referencing it.
+	consumerGrant := referenceGrant("consumers", "other", "AIGatewayConsumerCredential", toAIGatewayConsumer)
+	creds = mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl)(t.Context(), consumerGrant)
+	require.Equal(t, []reconcile.Request{{Namespace: "other", Name: "cred"}}, creds)
+
 	// A grant in the gateway's namespace governs the entities of another namespace
 	// that reference the gateway, not the ones of the gateway's namespace.
 	gatewayGrant := referenceGrant("default", "other", "AIGatewayModel", toOnPremAIGateway)
@@ -257,6 +433,20 @@ func TestMapKongReferenceGrantToEntities(t *testing.T) {
 
 	// Another object kind enqueues nothing.
 	require.Empty(t, mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](cl)(t.Context(), cred))
+
+	// A grant in the consumer group's namespace governs the cross-namespace ACL
+	// references into it, and only those.
+	aclGrant := referenceGrant("other", "default", "AIGatewayMCPServer", toConsumerGroup)
+	mcpServers := mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayMCPServerList](cl)(t.Context(), aclGrant)
+	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cross-ns-acl"}}, mcpServers)
+	require.Empty(t, mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayMCPServerList](cl)(t.Context(), grant))
+
+	// The model and the agent translations resolve these references across
+	// namespaces too, so the grant in the consumer group's namespace governs them.
+	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cross-ns-acl-model"}},
+		mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayModelList](cl)(t.Context(), aclGrant))
+	require.Equal(t, []reconcile.Request{{Namespace: "default", Name: "cross-ns-acl-agent"}},
+		mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayAgentList](cl)(t.Context(), aclGrant))
 }
 
 func TestReconcilerWritesResolvedRefsCondition(t *testing.T) {

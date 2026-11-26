@@ -1,0 +1,21 @@
+# Template for asserting an object has no condition of a type, e.g. no
+# ResolvedRefs condition for references within its namespace.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+#   - condition_type: The condition.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-condition-absent
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)
+          status:
+            (length(conditions[?type == $condition_type] || `[]`)): 0

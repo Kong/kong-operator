@@ -40,6 +40,7 @@ func testGeneratedPortalForSDKOps() *konnectv1alpha1.Portal {
 				NotificationsDeveloperPiiVisibilityEnabled: "Enabled",
 				RBACEnabled: "Enabled",
 				SiprEnabled: "Enabled",
+				ThemeName:   "test-value",
 			},
 		},
 	}

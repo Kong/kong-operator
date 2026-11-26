@@ -367,6 +367,71 @@ Allowed values:
 | `Enabled` | AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.<br /> |
 | `Disabled` | AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.<br /> |
 
+#### AISettings
+
+
+AISettings is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Is AI enabled? |
+| `features` _[AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)_ | AI features configuration. When top-level `enabled` is false, every feature toggle here is automatically reset to false. |
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### AISettingsFeatures
+
+
+AISettingsFeatures AI features configuration.
+When top-level `enabled` is false, every feature toggle here is automatically
+reset to false.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiSearch` _[AISettingsFeaturesAISearch](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesaisearch)_ | AI Search config |
+| `mcpServer` _[AISettingsFeaturesMcpServer](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesmcpserver)_ | AI Features config |
+
+_Appears in:_
+
+- [AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)
+
+#### AISettingsFeaturesAISearch
+
+
+AISettingsFeaturesAISearch AI Search config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether AI Search is enabled or not |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
+
+#### AISettingsFeaturesMcpServer
+
+
+AISettingsFeaturesMcpServer AI Features config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether the MCP Server is enabled or not |
+| `writeOperationsEnabled` _string_ | Whether write operations are enabled or not for the Portal MCP Server enabled |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
+
 
 
 #### AWSTransitGateway
@@ -473,6 +538,24 @@ _Appears in:_
 
 
 
+#### ConfigStoreControlPlaneRef
+
+
+ConfigStoreControlPlaneRef references the Konnect Control Plane that owns a
+KonnectConfigStore, using the same konnectNamespacedRef format as KongVault
+and KongCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type must be konnectNamespacedRef. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectGatewayControlPlane by name. An omitted namespace defaults to the KonnectConfigStore's namespace. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)
+
 #### ConfigurationDataPlaneGroupAutoscale
 
 
@@ -578,6 +661,41 @@ CreateControlPlaneRequest - The request schema for the create control plane requ
 _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+
+#### CreateOIDCIdentityProviderConfig
+
+
+CreateOIDCIdentityProviderConfig The configuration data for creating an OIDC
+authentication integration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
+| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
+| `clientSecret` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | The Client Secret assigned to your application by the identity provider. |
+| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
+| `scopes` _[CreateOIDCIdentityProviderScopes](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderscopes)_ | The scopes requested by your application when authenticating with the identity provider. Must include `openid`. |
+
+_Appears in:_
+
+- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
+
+#### CreateOIDCIdentityProviderScopes
+
+_Underlying type:_ `string array`
+
+CreateOIDCIdentityProviderScopes The scopes requested by your application
+when authenticating with the identity provider.
+Must include `openid`.
+
+
+
+
+_Appears in:_
+
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 
 
@@ -709,7 +827,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric character, and may contain dashes (`-`), underscores (`_`), and dots (`.`). Values must be 1–127 characters long and must not be empty. Keys and values must not contain spaces or control characters. |
 | `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.<br /><br />When runtime_auto_upgrade is enabled (the default), this value is raised automatically to track the minimum runtime version reported across connected data planes, so any value set here may be superseded as the fleet upgrades. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
@@ -995,7 +1113,7 @@ KonnectConfigStoreSpec defines the desired state of KonnectConfigStore.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | ControlPlaneRef is the reference to the parent ControlPlane object. |
+| `controlPlaneRef` _[ConfigStoreControlPlaneRef](#konnect-konghq-com-v1alpha1-types-configstorecontrolplaneref)_ | ControlPlaneRef is the reference to the parent KonnectGatewayControlPlane object. |
 | `apiSpec` _[KonnectConfigStoreAPISpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoreapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1074,7 +1192,7 @@ entry written by the sync.
 | `storeKey` _string_ | StoreKey is the resolved key of the Config Store entry. |
 | `sourceFields` _[]string_ | SourceFields are the Secret data keys whose values produced this entry. |
 | `hash` _string_ | Hash is the SHA-256 hash ("sha256:<hex>") of the value written to the store. The value itself is never exposed: status, logs and events must never contain Secret plaintext. |
-| `valueBytes` _int64_ | ValueBytes is the size in bytes of the decoded value last written, measured against the 5120-byte entry value cap. |
+| `valueBytes` _int64_ | ValueBytes is the size in bytes of the decoded value last written. The value cap is 8192 Unicode characters, so this may exceed 8192 bytes. |
 | `keyBytes` _int64_ | KeyBytes is the size in bytes of the resolved store key, measured against the 512-byte key cap. |
 | `notAfter` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | NotAfter is the expiry time of the certificate last written. It is only set when the entry holds a certificate. |
 | `lastPushTime` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | LastPushTime is the time the entry was last pushed to the Config Store. |
@@ -1652,7 +1770,10 @@ _Appears in:_
 _Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
 
 ManagedBy Stores information about what manages this entity, such as the tool
-or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
+or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long, start and end with an alphanumeric
+character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+Values must be 1–127 characters long and must not be empty.
+Keys and values must not contain spaces or control characters.
 
 
 
@@ -1756,7 +1877,7 @@ authentication.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### OIDCIdentityProviderClientID
 
@@ -1770,21 +1891,9 @@ the identity provider.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
-
-#### OIDCIdentityProviderClientSecret
-
-_Underlying type:_ `string`
-
-OIDCIdentityProviderClientSecret The Client Secret assigned to your
-application by the identity provider.
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 
-
-
-_Appears in:_
-
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
 
 #### OIDCIdentityProviderIssuer
 
@@ -1798,7 +1907,7 @@ This is the URL where the provider's metadata can be obtained.
 
 _Appears in:_
 
-- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
 
 #### PageContent
 
@@ -1870,6 +1979,7 @@ PortalAPISpec defines the API spec fields for Portal.
 
 | Field | Description |
 | --- | --- |
+| `ai` _[AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)_ |  |
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
@@ -1883,10 +1993,13 @@ PortalAPISpec defines the API spec fields for Portal.
 | `notificationsDeveloperPiiVisibilityEnabled` _string_ | When enabled, portal registration notifications include the registering developer's identifying information (such as name and email). |
 | `rbacEnabled` _string_ | Whether the portal resources are protected by Role Based Access Control (RBAC). If enabled, developers view or register for APIs until unless assigned to teams with access to view and consume specific APIs. Authentication must be enabled to use RBAC. |
 | `siprEnabled` _string_ | Whether ip allow list is enabled for the portal. |
+| `themeName` _string_ | Name of the theme to use for the default content created upon creation of this portal. Must match an available theme name; if omitted or unrecognized, the default theme is used. Only applies when `create_default_content` is true. |
 
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+
 
 #### PortalCustomDomainAPISpec
 
@@ -2128,7 +2241,7 @@ PortalIdentityProviderRequestAPISpec defines the API spec fields for PortalIdent
 
 | Field | Description |
 | --- | --- |
-| `config` _[PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)_ |  |
+| `config` _[PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)_ | The configuration data for creating an authentication integration. |
 | `enabled` _string_ | Indicates whether the identity provider is enabled. Only one identity provider can be active at a time, such as SAML or OIDC. |
 | `type` _[IdentityProviderType](#konnect-konghq-com-v1alpha1-types-identityprovidertype)_ | Specifies the type of identity provider. |
 
@@ -2147,8 +2260,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[PortalIdentityProviderRequestConfigType](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfigtype)_ | Type designates the type of configuration. |
-| `oIDC` _[PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)_ | OIDC configuration. |
-| `sAML` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
+| `oidc` _[CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)_ | OIDC configuration. |
+| `saml` _[PortalSAMLIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portalsamlidentityproviderconfig)_ | SAML configuration. |
 
 _Appears in:_
 
@@ -2171,8 +2284,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `oIDC` |  |
-| `sAML` |  |
+| `oidc` |  |
+| `saml` |  |
 
 
 
@@ -2227,26 +2340,6 @@ _Appears in:_
 
 - [Menu](#konnect-konghq-com-v1alpha1-types-menu)
 - [PortalFooterMenuSection](#konnect-konghq-com-v1alpha1-types-portalfootermenusection)
-
-#### PortalOIDCIdentityProviderConfig
-
-
-PortalOIDCIdentityProviderConfig The identity provider that contains
-configuration data for the OIDC authentication integration.
-
-
-
-| Field | Description |
-| --- | --- |
-| `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
-| `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
-| `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
-| `issuerURL` _[OIDCIdentityProviderIssuer](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderissuer)_ | The issuer URI of the identity provider. This is the URL where the provider's metadata can be obtained. |
-| `scopes` _[]string_ | The scopes requested by your application when authenticating with the identity provider. |
-
-_Appears in:_
-
-- [PortalIdentityProviderRequestConfig](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestconfig)
 
 #### PortalPageAPISpec
 
@@ -2518,6 +2611,64 @@ _Appears in:_
 - [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 - [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
 
+#### SensitiveDataSecretRef
+
+
+SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `key` _string_ | Key is the data key within the Secret. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+
+_Appears in:_
+
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
+
+#### SensitiveDataSource
+
+
+SensitiveDataSource holds a sensitive string value that can be provided
+either inline or sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[SensitiveDataSourceType](#konnect-konghq-com-v1alpha1-types-sensitivedatasourcetype)_ | Type indicates the source of the sensitive data: 'inline' or 'secretRef'. |
+| `value` _*string_ | Value contains the sensitive data provided inline. Required when type is 'inline'. |
+| `secretRef` _[SensitiveDataSecretRef](#konnect-konghq-com-v1alpha1-types-sensitivedatasecretref)_ | SecretRef is a reference to a Kubernetes Secret containing the sensitive data. Required when type is 'secretRef'. |
+
+_Appears in:_
+
+- [CreateOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-createoidcidentityproviderconfig)
+
+#### SensitiveDataSourceType
+
+_Underlying type:_ `string`
+
+SensitiveDataSourceType is the type of source for the sensitive data.
+
+
+
+
+_Appears in:_
+
+- [SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
+
 #### SpecRenderer
 
 
@@ -2549,6 +2700,7 @@ Theme The theme settings for this portal.
 
 | Field | Description |
 | --- | --- |
+| `borderRadius` _string_ | The corner roundness to apply to this portal's theme. |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
 | `name` _string_ | The theme name to apply to this portal. Supported names are 'mesa', 'grove', 'pebble', or 'ocean'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |

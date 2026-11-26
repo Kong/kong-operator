@@ -50,13 +50,16 @@ func EventGatewayTLSTrustBundleReconciliationWatchOptions(
 			)
 		},
 		// EventGatewayListenerPolicy objects reference EventGatewayTLSTrustBundle (reverseWatch):
-		// re-reconcile the ones EventGatewayListenerPolicy objects use whenever they change or are deleted.
+		// re-reconcile the ones EventGatewayListenerPolicy objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&configurationv1alpha1.EventGatewayListenerPolicy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayTLSTrustBundleForEventGatewayListenerPolicy(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {

@@ -740,10 +740,10 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+				ExpectedErrorMessage: new("cloud_gateway cannot be true for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
 			},
 			{
-				Name: "cannot set cloud_gateway to false for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
+				Name: "setting cloud_gateway to false for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER passes",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
@@ -759,7 +759,6 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
 			},
 			{
 				Name: "not setting cloud_gateway for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER passes",

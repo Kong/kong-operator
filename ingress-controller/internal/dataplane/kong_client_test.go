@@ -709,10 +709,14 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		}
 
 		updateStrategyResolver = mocks.NewUpdateStrategyResolver()
-		configChangeDetector   = mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
-		configBuilder          = newMockKongConfigBuilder()
-		kongRawStateGetter     = &mockKongLastValidConfigFetcher{}
-		kongClient             = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
+		targetConfigEmpty      bool
+		configChangeDetector   = mocks.ConfigurationChangeDetector{
+			ConfigurationChanged: true,
+			TargetConfigEmpty:    &targetConfigEmpty,
+		}
+		configBuilder      = newMockKongConfigBuilder()
+		kongRawStateGetter = &mockKongLastValidConfigFetcher{}
+		kongClient         = setupTestKongClient(t, updateStrategyResolver, clientsProvider, configChangeDetector, configBuilder, nil, kongRawStateGetter)
 	)
 
 	t.Run("dbless", func(t *testing.T) {
@@ -722,6 +726,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		kongClient.kongConfig.InMemory = true
 		err := kongClient.Update(ctx)
 		require.NoError(t, err)
+		assert.False(t, targetConfigEmpty, "dbless content carries the stub upstream before change detection")
 
 		gwContent, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
 		require.True(t, ok)
@@ -746,6 +751,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 		kongClient.kongConfig.InMemory = false
 		err := kongClient.Update(ctx)
 		require.NoError(t, err)
+		assert.True(t, targetConfigEmpty, "the detector must receive an empty-config signal")
 
 		gwContent, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
 		require.True(t, ok)

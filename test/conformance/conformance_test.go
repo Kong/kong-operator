@@ -81,8 +81,11 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
 
-	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType)
-	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
+	shard, err := test.ConformanceShardFromEnv()
+	require.NoError(t, err)
+
+	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType, supportedFeatures, shard)
+	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests, shard)
 }
 
 const conformanceLooserTimeout = 180 * time.Second
@@ -94,6 +97,7 @@ func runConformance(
 	supportedFeatures []features.FeatureName,
 	cleanupResources bool,
 	skipped []string,
+	shard test.ConformanceShard,
 ) {
 	t.Helper()
 	ensureConformanceNamespace(ctx, t)
@@ -122,6 +126,13 @@ func runConformance(
 	// (standard vs hybrid) so that reports for different topologies don't
 	// collide on the same mode value in the gateway-api conformance table.
 	mode := fmt.Sprintf("%s-%s", kongRouterFlavor, gwType)
+	if shard.Enabled() {
+		// Sharded runs only execute a subset of the suite, so give their
+		// reports a distinct mode (and file name) instead of letting them
+		// collide with the full-suite report for the same topology.
+		mode = fmt.Sprintf("%s-shard-%d-of-%d", mode, shard.Index, shard.Total)
+		t.Logf("running conformance test shard %s", shard)
+	}
 	md := metadata.Metadata()
 	reportFileName := fmt.Sprintf("experimental-%s-%s-report.yaml", md.Release, mode)
 
@@ -138,6 +149,8 @@ func runConformance(
 	timeoutConfig.DeleteTimeout = conformanceLooserTimeout
 	if gwType == hybridGateway {
 		timeoutConfig.MaxTimeToConsistency = conformanceLooserTimeout
+		// Allow stale Konnect configuration to drain from the data plane between tests.
+		timeoutConfig.TestIsolation = 30 * time.Second
 	}
 
 	opts := conformance.DefaultOptions(t)
@@ -389,6 +402,31 @@ func createGatewayConfiguration(
 
 	if gatewayType == hybridGateway {
 		t.Log("configuring GatewayConfiguration with Konnect access token - Hybrid Gateway")
+
+		// Konnect applies hybrid data plane configuration asynchronously, and
+		// Kong Gateway nginx workers can briefly disagree about the router
+		// state while a new config version is rolled out: one worker already
+		// serves a newly added route while another still serves the previous
+		// config without it. HTTPRouteWeight sends 500 concurrent requests with
+		// a fixed retry budget (10 rounds) right after the route converges on
+		// some workers, so the split shows up as a mix of 200s and 404s and
+		// exhausts the budget. Run the conformance data plane with a single
+		// worker so that once the response gate succeeds every request uses
+		// the same router.
+		// See https://github.com/Kong/kong-operator/issues/5859 and
+		// https://github.com/kubernetes-sigs/gateway-api/issues/5451.
+		//
+		// TODO: remove this override and restore the default worker count once
+		// the gateway-api fix for the HTTP/gRPC weight checks
+		// (https://github.com/kubernetes-sigs/gateway-api/pull/5456) is merged
+		// and backported to the v1.7.x line, and the gateway-api dependency
+		// used by this repository is upgraded to a release that includes it.
+		proxyContainer := &gwconf.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0]
+		proxyContainer.Env = append(proxyContainer.Env, corev1.EnvVar{
+			Name:  "KONG_NGINX_WORKER_PROCESSES",
+			Value: "1",
+		})
+
 		kapi := konnectv1alpha1.KonnectAPIAuthConfiguration{
 			GenerateName: "api-auth-config-",
 			Namespace:    conformanceInfraNamespace,

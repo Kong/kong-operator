@@ -200,7 +200,7 @@ func Test_resolveControlPlane(t *testing.T) {
 		aigwcp            *konnectv1alpha1.KonnectAIGateway
 		getErr            error
 		refKind           string
-		endpointCheck     func(cp ControlPlaneObject) error
+		endpointCheck     func(dp Object, cp ControlPlaneObject) error
 		wantCP            bool
 		wantErr           bool
 		wantErrContains   string
@@ -244,7 +244,7 @@ func Test_resolveControlPlane(t *testing.T) {
 		{
 			name:   "aigwcp programmed with unusable endpoints: sets EndpointMismatch condition and returns transient error",
 			aigwcp: newKonnectAIGW(ns, aigwcpNM, metav1.ConditionTrue),
-			endpointCheck: func(ControlPlaneObject) error {
+			endpointCheck: func(Object, ControlPlaneObject) error {
 				return errors.New(`endpoint "https://2cf352e764.us.cp.konghq.tech" is not private, server URL "https://us.svc.konghq.tech/api" is`)
 			},
 			wantCP:            true,

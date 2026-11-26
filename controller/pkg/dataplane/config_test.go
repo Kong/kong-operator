@@ -71,7 +71,7 @@ var testControlPlaneKind = ControlPlaneKindConfig{
 	NewObject:                 func() ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 	IsKonnect:                 true,
-	EndpointCheck:             func(ControlPlaneObject) error { return nil },
+	EndpointCheck:             func(Object, ControlPlaneObject) error { return nil },
 	Conditions: ControlPlaneConditions{
 		ResolvedType:           string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
 		ResolvedReason:         string(aigatewayv1alpha1.ControlPlaneResolvedReason),
@@ -605,7 +605,7 @@ func Test_validateConfig(t *testing.T) {
 			service: validService(),
 			controlPlanes: []ControlPlaneKindConfig{{
 				Kind:          "KonnectAIGateway",
-				EndpointCheck: func(ControlPlaneObject) error { return nil },
+				EndpointCheck: func(Object, ControlPlaneObject) error { return nil },
 			}},
 			wantErr: true,
 		},

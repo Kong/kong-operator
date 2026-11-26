@@ -347,7 +347,7 @@ func resolveAIGatewayPolicyDatastores(ctx context.Context, cl client.Client, obj
 func AIGatewayPolicyRefsToAIGatewayCustomPolicy(obj *AIGatewayPolicy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtAIGatewayPolicyCustomPolicyRef(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayCustomPolicy" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayCustomPolicy") {
 			continue
 		}
 		ns := ref.Namespace
@@ -364,7 +364,7 @@ func AIGatewayPolicyRefsToAIGatewayCustomPolicy(obj *AIGatewayPolicy) []client.O
 func AIGatewayPolicyRefsToAIGatewayDatastore(obj *AIGatewayPolicy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range obj.Spec.APISpec.Datastores {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace

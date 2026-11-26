@@ -2027,6 +2027,7 @@ func runGetSupportedKindsWithResolvedRefsConditionCases(
 				},
 				generation,
 				tc.listener,
+				nil,
 			)
 
 			require.NoError(t, err)
@@ -4008,7 +4009,7 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 
 			ctx := t.Context()
 			for i, listener := range tc.Gateway.Spec.Listeners {
-				routes, err := countAttachedRoutesForGatewayListener(ctx, &tc.Gateway, listener, client)
+				routes, err := countAttachedRoutesForGatewayListener(ctx, &tc.Gateway, listener, client, nil)
 				assert.Equal(t, tc.ExpectedRoutes[i], routes, "#%d", i)
 				assert.Equal(t, tc.ExpectedError[i], err, "#%d", i)
 			}
@@ -5266,7 +5267,7 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			// Mirror the reconcile order in controller.go.
 			gwAware.initListenersStatus()
 			gwAware.setConflicted()
-			require.NoError(t, gwAware.setAcceptedAndAttachedRoutes(t.Context(), cl))
+			require.NoError(t, gwAware.setAcceptedAndAttachedRoutes(t.Context(), cl, nil))
 
 			require.Len(t, gw.Status.Listeners, len(tc.expected))
 			for i, want := range tc.expected {
@@ -5459,7 +5460,7 @@ func TestSetResolvedRefsAndSupportedKindsDemotesProgrammed(t *testing.T) {
 
 	gwAware := gatewayConditionsAndListenersAware(gw)
 	require.NoError(t, gwAware.setResolvedRefsAndSupportedKinds(
-		t.Context(), fakeClient, schema.GroupVersion{Group: "policy.networking.k8s.io", Version: "v1"},
+		t.Context(), fakeClient, schema.GroupVersion{Group: "policy.networking.k8s.io", Version: "v1"}, nil,
 	))
 
 	programmed, ok := k8sutils.GetCondition(

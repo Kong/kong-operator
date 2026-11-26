@@ -89,7 +89,7 @@ spec:
     dnsLabel: virtual-cluster
 ---
 # A produce policy encrypting record values with the EventGatewayStaticKey
-# above, referenced through namespacedRef (resolved to its Konnect ID). While
+# above, referenced by object (resolved to its Konnect ID). While
 # the policy uses it, Konnect refuses to delete the static key: its deletion is
 # blocked until the policy is deleted or stops using it.
 kind: EventGatewayVirtualClusterProducePolicy
@@ -115,5 +115,4 @@ spec:
           static:
             key:
               # An EventGatewayStaticKey in the same namespace.
-              namespacedRef:
-                name: cp-event-1-encryption-key
+              name: cp-event-1-encryption-key

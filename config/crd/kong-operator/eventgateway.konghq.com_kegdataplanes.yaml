@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kegdataplanes.eventgateway.konghq.com
 spec:
   group: eventgateway.konghq.com
@@ -138,6 +138,13 @@ spec:
                     description: |-
                       ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
                       Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL.
+
+                      Deprecated: keg 1.3.0 removed this setting: it long-polls its configuration.
+                      It is passed only to a keg older than 1.3.0, read from the tag of its image,
+                      and ignored otherwise, with a Warning Event on the KegDataPlane.
+                      An image without a version tag, e.g. pinned by digest only or tagged main,
+                      counts as 1.3.0 or later; the tag of a custom image is read as the keg
+                      version.
                     format: int32
                     minimum: 1
                     type: integer
@@ -145,6 +152,14 @@ spec:
                     description: |-
                       EnableDebugEndpoints enables the /debug/pprof/allocs endpoint.
                       Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
+
+                      Deprecated: keg 1.3.0 removed this setting: it serves its debug endpoints on
+                      a listener of its own. It is passed only to a keg older than 1.3.0, read from
+                      the tag of its image, and ignored otherwise, with a Warning Event on the
+                      KegDataPlane.
+                      An image without a version tag, e.g. pinned by digest only or tagged main,
+                      counts as 1.3.0 or later; the tag of a custom image is read as the keg
+                      version.
                     enum:
                     - Enabled
                     - Disabled
@@ -262,13 +277,13 @@ spec:
                 description: |-
                   ControlPlaneRef references the control plane this KegDataPlane connects to.
                   The type field identifies which kind of control plane is being referenced:
-                  konnectNamespacedRef references a KonnectEventGateway resource in the
-                  same namespace, onpremNamespacedRef an OnPremEventGateway resource in
-                  the same namespace.
+                  konnectNamespacedRef references a KonnectEventGateway resource,
+                  onpremNamespacedRef an OnPremEventGateway resource. A gateway in another
+                  namespace needs a KongReferenceGrant in its namespace.
                 properties:
                   konnectNamespacedRef:
                     description: |-
-                      KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace.
+                      KonnectNamespacedRef references a KonnectEventGateway resource.
                       Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
                     properties:
                       name:
@@ -276,13 +291,22 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectEventGateway resource, by
+                          default the namespace of the DataPlane. Another namespace needs a
+                          KongReferenceGrant in that namespace allowing the KegDataPlane, and one
+                          allowing its EventGatewayDataPlaneCertificate, to reference it.
+                        maxLength: 63
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
                   onpremNamespacedRef:
                     description: |-
-                      OnPremNamespacedRef references an OnPremEventGateway resource in the
-                      same namespace. The data plane pulls its configuration from the gw-admin
+                      OnPremNamespacedRef references an OnPremEventGateway resource. The data
+                      plane pulls its configuration from the gw-admin
                       pods of the GWAdmin of that gateway, and authenticates with a client
                       certificate trusted by the cp client CA of the GWAdmin.
                       Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct.
@@ -290,6 +314,15 @@ spec:
                       name:
                         description: Name is the name of the OnPremEventGateway resource.
                         maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the OnPremEventGateway resource, by
+                          default the namespace of the DataPlane. Another namespace needs a
+                          KongReferenceGrant in that namespace allowing the KegDataPlane, and one
+                          allowing its EventGatewayDataPlaneCertificate, to reference it.
+                        maxLength: 63
                         minLength: 1
                         type: string
                     required:

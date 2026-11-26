@@ -53,6 +53,16 @@ func extraWatches(blder *builder.Builder, mgr ctrl.Manager, onPrem bool) *builde
 				"Secret",
 			)),
 		)
+	blder = blder.Watches(
+		&configurationv1alpha1.KongReferenceGrant{},
+		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			requests := kegDataPlanesGrantedBy(ctx, cl, obj)
+			if onPrem {
+				requests = append(requests, kegDataPlanesOfGrant(ctx, cl, obj)...)
+			}
+			return requests
+		}),
+	)
 	if !onPrem {
 		return blder
 	}
@@ -68,13 +78,32 @@ func extraWatches(blder *builder.Builder, mgr ctrl.Manager, onPrem bool) *builde
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 				return kegDataPlanesOfGWAdminSecret(ctx, cl, obj)
 			}),
-		).
-		Watches(
-			&configurationv1alpha1.KongReferenceGrant{},
-			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				return kegDataPlanesOfGrant(ctx, cl, obj)
-			}),
 		)
+}
+
+// kegDataPlanesGrantedBy returns a request for each KegDataPlane of the
+// namespaces the KongReferenceGrant allows to reference something of its
+// namespace: it decides whether they may use a gateway of that namespace.
+func kegDataPlanesGrantedBy(ctx context.Context, cl client.Client, obj client.Object) []reconcile.Request {
+	grant, ok := obj.(*configurationv1alpha1.KongReferenceGrant)
+	if !ok {
+		return nil
+	}
+	var requests []reconcile.Request
+	for _, from := range grant.Spec.From {
+		if string(from.Group) != eventgatewayv1alpha1.GroupName || from.Kind != "KegDataPlane" || string(from.Namespace) == grant.Namespace {
+			continue
+		}
+		var dataPlanes eventgatewayv1alpha1.KegDataPlaneList
+		if err := cl.List(ctx, &dataPlanes, client.InNamespace(string(from.Namespace))); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list the KegDataPlanes of a KongReferenceGrant", "grant", client.ObjectKeyFromObject(grant))
+			continue
+		}
+		for i := range dataPlanes.Items {
+			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&dataPlanes.Items[i])})
+		}
+	}
+	return requests
 }
 
 // kegDataPlanesOfGWAdminSecret returns a request for each KegDataPlane of the

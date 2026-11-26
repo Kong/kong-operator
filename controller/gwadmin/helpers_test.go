@@ -49,7 +49,31 @@ const (
 func newGWAdmin(tlsSpec *operatorv1alpha1.GWAdminTLS) *operatorv1alpha1.GWAdmin {
 	return &operatorv1alpha1.GWAdmin{
 		Name: "gw", Namespace: testNamespace, UID: "gw-uid", Generation: 1,
-		Spec: operatorv1alpha1.GWAdminSpec{TLS: tlsSpec},
+		Spec: operatorv1alpha1.GWAdminSpec{
+			License: operatorv1alpha1.GWAdminLicense{
+				SecretRef:    operatorv1alpha1.GWAdminLicenseSecretRef{Name: testLicenseSecretName, Key: testLicenseKey},
+				Entitlements: []operatorv1alpha1.GWAdminLicenseEntitlement{operatorv1alpha1.GWAdminLicenseEntitlementEventGateway},
+			},
+			TLS: tlsSpec,
+		},
+	}
+}
+
+const (
+	testLicenseSecretName = "license"
+	testLicenseKey        = "license.jwt"
+)
+
+// testLicenseToken is the license of the license Secret: Kong Operator
+// doesn't validate it, gw-admin does.
+var testLicenseToken = []byte("license-token")
+
+// licenseSecret returns the license Secret newGWAdmin references, holding
+// license.
+func licenseSecret(license []byte) *corev1.Secret {
+	return &corev1.Secret{
+		Name: testLicenseSecretName, Namespace: testNamespace,
+		Data: map[string][]byte{testLicenseKey: license},
 	}
 }
 
@@ -59,9 +83,17 @@ func newGWAdmin(tlsSpec *operatorv1alpha1.GWAdminTLS) *operatorv1alpha1.GWAdmin 
 // newReconcileClient for the tests that apply objects.
 func newFakeClientBuilder() *fake.ClientBuilder {
 	sm := managerscheme.Get()
-	return fake.NewClientBuilder().
+	return withIndexes(fake.NewClientBuilder().
 		WithScheme(sm).
-		WithObjectTracker(k8stesting.NewObjectTracker(sm, serializer.NewCodecFactory(sm).UniversalDecoder()))
+		WithObjectTracker(k8stesting.NewObjectTracker(sm, serializer.NewCodecFactory(sm).UniversalDecoder())))
+}
+
+// withIndexes registers the indexes of the controller, as the manager does.
+func withIndexes(b *fake.ClientBuilder) *fake.ClientBuilder {
+	for _, o := range IndexOptions() {
+		b = b.WithIndex(o.Object, o.Field, o.ExtractValueFn)
+	}
+	return b
 }
 
 func newReconciler(t *testing.T, now *time.Time, objs ...client.Object) *Reconciler {

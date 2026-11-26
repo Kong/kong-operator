@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -52,6 +52,15 @@ spec:
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          condition:
+            description: |-
+              Condition is an expression evaluated for every request right before the plugin's
+              `access` phase. When it evaluates to false, the plugin is skipped for that request.
+              When it evaluates to true or is unset, the plugin runs as usual.
+              Requires Kong Gateway 3.14 or later. Kong Gateway 3.15 and later use CEL syntax.
+              Kong Gateway 3.14 shipped the field as a beta using ATC syntax, which is not
+              compatible with CEL: 3.14 expressions must be rewritten when upgrading to 3.15.
             type: string
           config:
             description: |-
@@ -301,6 +310,13 @@ spec:
             x-kubernetes-validations:
             - message: tags entries must not be longer than 128 characters
               rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+            - message: 'tags entries must not start with reserved prefixes: k8s-group:,
+                k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:,
+                managed-by:'
+              rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:')
+                && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:')
+                && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') &&
+                !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
         required:
         - plugin
         type: object

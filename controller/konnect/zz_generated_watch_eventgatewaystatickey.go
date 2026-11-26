@@ -50,13 +50,16 @@ func EventGatewayStaticKeyReconciliationWatchOptions(
 			)
 		},
 		// EventGatewayVirtualClusterProducePolicy objects reference EventGatewayStaticKey (reverseWatch):
-		// re-reconcile the ones EventGatewayVirtualClusterProducePolicy objects use whenever they change or are deleted.
+		// re-reconcile the ones EventGatewayVirtualClusterProducePolicy objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayStaticKeyForEventGatewayVirtualClusterProducePolicy(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {

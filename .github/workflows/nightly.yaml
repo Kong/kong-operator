@@ -13,11 +13,13 @@ jobs:
   build-push-images:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
+      dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
+      dockerhub-pull-token: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}
       slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
     with:
-      username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+      push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+      pull-username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
       registry: docker.io
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO_NIGHTLY }}
       push: true
@@ -37,19 +39,19 @@ jobs:
       id-token: write # keyless cosign signing via the GitHub OIDC token
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: docker.io
           username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
           password: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       # Keyless: cosign trades this job's OIDC token for a Fulcio certificate; no key in the repo.
       # Bundle format publishes the signature as an OCI 1.1 referrer in the image's own repository,
@@ -111,7 +113,7 @@ jobs:
       contents: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -155,19 +157,19 @@ jobs:
       id-token: write # keyless attestation via the GitHub OIDC token
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: docker.io
           username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
           password: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       - name: Download the security report artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

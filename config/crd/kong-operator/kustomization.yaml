@@ -23,14 +23,17 @@ resources:
   - configuration.konghq.com_eventgatewaybackendclusters.yaml
   - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
+  - configuration.konghq.com_eventgatewaylistenerpolicychains.yaml
   - configuration.konghq.com_eventgatewaylisteners.yaml
   - configuration.konghq.com_eventgatewayschemaregistries.yaml
   - configuration.konghq.com_eventgatewaystatickeys.yaml
   - configuration.konghq.com_eventgatewaytlstrustbundles.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterconsumepolicychains.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterpolicies.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterpolicychains.yaml
   - configuration.konghq.com_eventgatewayvirtualclusterproducepolicies.yaml
+  - configuration.konghq.com_eventgatewayvirtualclusterproducepolicychains.yaml
   - configuration.konghq.com_eventgatewayvirtualclusters.yaml
   - configuration.konghq.com_ingressclassparameterses.yaml
   - configuration.konghq.com_kongcacertificates.yaml

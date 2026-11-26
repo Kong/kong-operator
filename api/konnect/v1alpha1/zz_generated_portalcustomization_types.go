@@ -18,7 +18,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.portalRef == self.spec.portalRef", message="spec.portalRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.portalRef == self.spec.portalRef", message="spec.portalRef is immutable when an entity is already Programmed"
 type PortalCustomization struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -196,6 +196,12 @@ type SpecRenderer struct {
 
 // Theme The theme settings for this portal.
 type Theme struct {
+	// The corner roundness to apply to this portal's theme.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=soft;sharp;round
+	BorderRadius string `json:"borderRadius,omitzero"`
 	//
 	//
 	// +optional

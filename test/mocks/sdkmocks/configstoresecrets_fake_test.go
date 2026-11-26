@@ -108,30 +108,59 @@ func TestFakeConfigStoreSecretsSizeCaps(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, sdkErrorStatusCode(t, err))
 
-	// Value at the cap is accepted, one byte over is rejected with 400.
-	createSecret(t, f, "value-at-cap", strings.Repeat("v", FakeConfigStoreSecretMaxValueBytes))
-	_, err = f.CreateConfigStoreSecret(context.Background(), sdkkonnectops.CreateConfigStoreSecretRequest{
-		ControlPlaneID: fakeTestCPID,
-		ConfigStoreID:  fakeTestStoreID,
-		CreateConfigStoreSecret: sdkkonnectcomp.CreateConfigStoreSecret{
-			Key:   "value-over-cap",
-			Value: strings.Repeat("v", FakeConfigStoreSecretMaxValueBytes+1),
-		},
-	})
-	require.Error(t, err)
-	assert.Equal(t, http.StatusBadRequest, sdkErrorStatusCode(t, err))
+	for _, tt := range []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{name: "above old cap", value: strings.Repeat("v", 5121)},
+		{name: "ASCII at cap", value: strings.Repeat("v", 8192)},
+		{name: "ASCII over cap", value: strings.Repeat("v", 8193), wantErr: true},
+		{name: "Unicode at cap", value: strings.Repeat("\u00e9", 8192)},
+		{name: "Unicode over cap", value: strings.Repeat("\u00e9", 8193), wantErr: true},
+		{name: "astral at cap", value: strings.Repeat("\U0001f600", 8192)},
+		{name: "astral over cap", value: strings.Repeat("\U0001f600", 8193), wantErr: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f := NewFakeConfigStoreSecrets()
+			_, err := f.CreateConfigStoreSecret(context.Background(), sdkkonnectops.CreateConfigStoreSecretRequest{
+				ControlPlaneID: fakeTestCPID,
+				ConfigStoreID:  fakeTestStoreID,
+				CreateConfigStoreSecret: sdkkonnectcomp.CreateConfigStoreSecret{
+					Key:   "create-entry",
+					Value: tt.value,
+				},
+			})
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Equal(t, http.StatusBadRequest, sdkErrorStatusCode(t, err))
+			} else {
+				require.NoError(t, err)
+			}
 
-	// Update over the value cap is rejected with 400 as well.
-	_, err = f.UpdateConfigStoreSecret(context.Background(), sdkkonnectops.UpdateConfigStoreSecretRequest{
-		ControlPlaneID: fakeTestCPID,
-		ConfigStoreID:  fakeTestStoreID,
-		Key:            "value-at-cap",
-		UpdateConfigStoreSecret: sdkkonnectcomp.UpdateConfigStoreSecret{
-			Value: strings.Repeat("v", FakeConfigStoreSecretMaxValueBytes+1),
-		},
-	})
-	require.Error(t, err)
-	assert.Equal(t, http.StatusBadRequest, sdkErrorStatusCode(t, err))
+			createSecret(t, f, "update-entry", "baseline")
+			_, err = f.UpdateConfigStoreSecret(context.Background(), sdkkonnectops.UpdateConfigStoreSecretRequest{
+				ControlPlaneID: fakeTestCPID,
+				ConfigStoreID:  fakeTestStoreID,
+				Key:            "update-entry",
+				UpdateConfigStoreSecret: sdkkonnectcomp.UpdateConfigStoreSecret{
+					Value: tt.value,
+				},
+			})
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Equal(t, http.StatusBadRequest, sdkErrorStatusCode(t, err))
+				value, ok := f.Value(fakeTestCPID, fakeTestStoreID, "update-entry")
+				require.True(t, ok)
+				assert.Equal(t, "baseline", value)
+			} else {
+				require.NoError(t, err)
+				value, ok := f.Value(fakeTestCPID, fakeTestStoreID, "update-entry")
+				require.True(t, ok)
+				assert.Equal(t, tt.value, value)
+			}
+		})
+	}
 }
 
 func TestFakeConfigStoreSecretsTrapCharactersAcceptedOnCreateFailOnRead(t *testing.T) {

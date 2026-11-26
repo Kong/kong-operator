@@ -2,11 +2,12 @@
 # Builder
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.27.3@sha256:c292963ad0e5f51e843c726edc204a4e4c26a859ba1e4d736d91028aa3633048 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.4@sha256:5e8afd493a7124a8586e134d9b532731161d4b9becf9dee5a5956b107426f93d AS builder
 
 WORKDIR /workspace
 ARG GOPATH
 ARG GOCACHE
+ARG PREBUILT=false
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
@@ -14,7 +15,9 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
+    if [ "${PREBUILT}" != "true" ]; then \
+        go mod download -x; \
+    fi
 
 COPY ingress-controller/ ingress-controller/
 COPY cmd/main.go cmd/main.go
@@ -31,6 +34,7 @@ ARG TARGETARCH
 ARG TAG
 ARG COMMIT
 ARG REPO_INFO
+ARG CGO_ENABLED=0
 
 RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
@@ -41,13 +45,17 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+RUN --mount=type=bind,source=.,target=/prebuilt \
+    --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
-    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
-    TAG="${TAG}" COMMIT="${COMMIT}" REPO_INFO="${REPO_INFO}" \
-    make build.operator
+    mkdir -p bin; \
+    if [ "${PREBUILT}" = "true" ]; then \
+        cp "/prebuilt/bin/manager-linux-${TARGETARCH}" bin/manager; \
+    else \
+        make build.operator; \
+    fi
 
 # ------------------------------------------------------------------------------
 # UBI (Red Hat certification)
@@ -56,7 +64,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 # UBI minimal is used instead of UBI micro because it ships the RHEL CA bundle
 # needed for outbound TLS (Konnect, Kubernetes API, OIDC, etc.). Keep this image
 # at the latest UBI 9.8 digest so certification does not detect unapplied errata.
-FROM registry.access.redhat.com/ubi9/ubi-minimal:9.8@sha256:4b79c93106c14ad1c234907f83441ff0e4f8d24e78426a36e159098e9f7e6fa5 AS ubi
+FROM registry.access.redhat.com/ubi9/ubi-minimal:1794467374@sha256:baafce2d34783a28b4a472779f304e97e00f9d35c99553bc53b068b14344d9a9 AS ubi
 
 ARG TAG
 ARG NAME="Kong Operator"
@@ -91,7 +99,7 @@ ENTRYPOINT ["/manager"]
 
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot@sha256:25ac8f0c3b2334a9eb05452266bd4697864a8c8ef0ef71e5e6480d7f92868329 AS distroless
+FROM gcr.io/distroless/static:nonroot@sha256:8ce6dd87e9823c5b48dcfb2c8604714ccb351ce59607327bcc4957448da279b5 AS distroless
 
 ARG TAG
 ARG NAME="Kong Operator"

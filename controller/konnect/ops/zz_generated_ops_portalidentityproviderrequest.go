@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,6 +15,7 @@ import (
 
 func createPortalIdentityProviderRequest(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.PortalAuthSettingsSDK,
 	obj *konnectv1alpha1.PortalIdentityProviderRequest,
 ) error {
@@ -21,7 +23,7 @@ func createPortalIdentityProviderRequest(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToPortalCreateIdentityProvider()
+	req, err := obj.ToPortalCreateIdentityProvider(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -40,6 +42,7 @@ func createPortalIdentityProviderRequest(
 
 func updatePortalIdentityProviderRequest(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.PortalAuthSettingsSDK,
 	obj *konnectv1alpha1.PortalIdentityProviderRequest,
 ) error {
@@ -48,7 +51,7 @@ func updatePortalIdentityProviderRequest(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToPortalUpdateIdentityProvider()
+	req, err := obj.ToPortalUpdateIdentityProvider(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -60,7 +63,7 @@ func updatePortalIdentityProviderRequest(
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createPortalIdentityProviderRequest(ctx, sdk, obj)
+			return createPortalIdentityProviderRequest(ctx, cl, sdk, obj)
 		})
 	}
 	return nil
@@ -107,7 +110,7 @@ func getPortalIdentityProviderRequestForUID(
 	}
 
 	switch unionField.Type {
-	case "oIDC":
+	case "oidc":
 		selected := unionField.OIDC
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
@@ -120,7 +123,7 @@ func getPortalIdentityProviderRequestForUID(
 			if entryContainer == nil {
 				continue
 			}
-			entryVariant := entryContainer.PortalOIDCIdentityProviderConfigOutput
+			entryVariant := entryContainer.PortalOIDCIdentityProviderConfig
 			if entryVariant == nil {
 				continue
 			}
@@ -143,7 +146,7 @@ func getPortalIdentityProviderRequestForUID(
 				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
 		}
-	case "sAML":
+	case "saml":
 		selected := unionField.SAML
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}

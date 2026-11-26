@@ -25,6 +25,9 @@ spec:
     - name: gateway_name
       value: gateway
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Push-the-gateway
       try:
         - apply:

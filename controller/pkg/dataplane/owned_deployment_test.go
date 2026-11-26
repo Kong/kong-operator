@@ -253,6 +253,7 @@ func Test_GenerateBaseDeployment_hardening(t *testing.T) {
 			Drop: []corev1.Capability{"ALL"},
 			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 		},
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 	}, container.SecurityContext)
 
 	assert.Equal(t, []corev1.VolumeMount{
@@ -931,4 +932,58 @@ func TestDeploymentRolledOut(t *testing.T) {
 	assert.False(t, DeploymentRolledOut(deployment(1, appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1})))
 	assert.False(t, DeploymentRolledOut(deployment(0, appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1})))
 	assert.False(t, DeploymentRolledOut(deployment(0, appsv1.DeploymentStatus{ObservedGeneration: 1, TerminatingReplicas: new(int32(1))})))
+}
+
+func Test_dropReassertedVolumes(t *testing.T) {
+	cfg := DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{ContainerName: "main", ReassertVolumes: []string{"license", "absent"}}
+	base := &corev1.PodSpec{
+		Containers: []corev1.Container{{Name: "main", VolumeMounts: []corev1.VolumeMount{{Name: "license", MountPath: "/etc/license"}}}},
+		Volumes:    []corev1.Volume{{Name: "license"}},
+	}
+	overlay := &corev1.PodSpec{
+		Containers: []corev1.Container{
+			{Name: "main", VolumeMounts: []corev1.VolumeMount{
+				{Name: "license", MountPath: "/elsewhere"},
+				{Name: "other", MountPath: "/etc/license"},
+				{Name: "absent", MountPath: "/absent"},
+				{Name: "kept", MountPath: "/kept"},
+			}},
+			{Name: "sidecar", VolumeMounts: []corev1.VolumeMount{{Name: "other", MountPath: "/etc/license"}}},
+		},
+		Volumes: []corev1.Volume{{Name: "license"}, {Name: "other"}, {Name: "absent"}, {Name: "kept"}},
+	}
+
+	dropReassertedVolumes(base, overlay, cfg)
+
+	assert.Equal(t, []corev1.Volume{{Name: "other"}, {Name: "absent"}, {Name: "kept"}}, overlay.Volumes,
+		"only the volume the operator added is dropped")
+	assert.Equal(t, []corev1.VolumeMount{{Name: "absent", MountPath: "/absent"}, {Name: "kept", MountPath: "/kept"}},
+		overlay.Containers[0].VolumeMounts, "mounts of it, and at its mount path, are dropped from the DataPlane container")
+	assert.Equal(t, []corev1.VolumeMount{{Name: "other", MountPath: "/etc/license"}}, overlay.Containers[1].VolumeMounts,
+		"other containers are left alone")
+}
+
+func Test_ensureDeployment_IgnoredSettings(t *testing.T) {
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{Namespace: "test-ns", Name: "my-dp"}
+	cfg := testConfig
+	var gotImage string
+	cfg.Deployment.IgnoredSettings = func(_ *aigatewayv1alpha1.AIGatewayDataPlane, image string) []string {
+		gotImage = image
+		return []string{"spec.first is ignored", "spec.second is ignored"}
+	}
+	recorder := events.NewFakeRecorder(10)
+	r := &testReconciler{
+		Config:        cfg,
+		Client:        fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build(),
+		TypeConverter: managedfields.NewDeducedTypeConverter(),
+		EventRecorder: recorder,
+	}
+	require.NoError(t, r.ensureDeployment(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(testKonnectAIGateway()), "cert-secret", "", ""))
+	assert.Equal(t, ResolveImage(aigwdp, cfg.Deployment), gotImage, "the settings are checked against the image the Deployment runs")
+	for _, want := range []string{"spec.first is ignored", "spec.second is ignored"} {
+		event := <-recorder.Events
+		assert.Contains(t, event, "Warning SettingIgnored")
+		assert.Contains(t, event, want)
+	}
+	assert.Contains(t, <-recorder.Events, "DeploymentCreated")
 }

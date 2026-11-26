@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
@@ -295,6 +296,104 @@ func TestDataPlanes_Grants(t *testing.T) {
 			}
 			sort.Strings(names)
 			assert.Equal(t, tc.want, nilIfEmpty(names))
+		})
+	}
+}
+
+// TestDataPlanes_KegDataPlaneGrants checks a data plane Deployment counts in
+// a namespace the KongReferenceGrants of the GWAdmin don't name when its
+// KegDataPlane is allowed to reference a gateway of the GWAdmin in another
+// namespace, and only then.
+func TestDataPlanes_KegDataPlaneGrants(t *testing.T) {
+	const team, tenant = "team", "tenant"
+	kegDataPlane := func(gatewayNamespace string) *eventgatewayv1alpha1.KegDataPlane {
+		return &eventgatewayv1alpha1.KegDataPlane{
+			Name: "keg", Namespace: team, UID: "keg-uid",
+			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+				Type:                eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+				OnPremNamespacedRef: &eventgatewayv1alpha1.OnPremNamespacedRef{Name: "gateway", Namespace: new(gatewayNamespace)},
+			}},
+		}
+	}
+	gateway := func(namespace, gwAdmin string) *eventgatewayv1alpha1.OnPremEventGateway {
+		return &eventgatewayv1alpha1.OnPremEventGateway{
+			Name: "gateway", Namespace: namespace,
+			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: gwAdmin, Namespace: new(testNamespace)}},
+		}
+	}
+	// deployment is the Deployment of the KegDataPlane keg of namespace team.
+	deployment := func(ownerUID types.UID) *appsv1.Deployment {
+		d := dataPlaneDeploymentWith(team, "keg", "", "", true)
+		d.OwnerReferences = []metav1.OwnerReference{{
+			APIVersion: eventgatewayv1alpha1.SchemeGroupVersion.String(), Kind: "KegDataPlane",
+			Name: "keg", UID: ownerUID, Controller: new(true),
+		}}
+		return d
+	}
+	// kegGrant lets the KegDataPlanes of namespace team reference the
+	// OnPremEventGateways of namespace.
+	kegGrant := func(namespace string) *configurationv1alpha1.KongReferenceGrant {
+		return &configurationv1alpha1.KongReferenceGrant{
+			Namespace: namespace, Name: "kegdataplanes",
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: eventgatewayv1alpha1.GroupName, Kind: "KegDataPlane", Namespace: team}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: eventgatewayv1alpha1.GroupName, Kind: "OnPremEventGateway"}},
+			},
+		}
+	}
+	gatewayGrant := tGrant(eventgatewayv1alpha1.GroupName, "OnPremEventGateway", tenant, nil)
+	for _, tc := range []struct {
+		name  string
+		objs  []client.Object
+		count bool
+	}{
+		{
+			name:  "a granted KegDataPlane of a gateway of the namespace of the GWAdmin counts",
+			objs:  []client.Object{deployment("keg-uid"), kegDataPlane(testNamespace), gateway(testNamespace, "gw"), kegGrant(testNamespace)},
+			count: true,
+		},
+		{
+			name:  "a granted KegDataPlane of a gateway of a namespace granted to the GWAdmin counts",
+			objs:  []client.Object{deployment("keg-uid"), kegDataPlane(tenant), gateway(tenant, "gw"), kegGrant(tenant), gatewayGrant},
+			count: true,
+		},
+		{
+			name: "a KegDataPlane no KongReferenceGrant lets reference the gateway is ignored",
+			objs: []client.Object{deployment("keg-uid"), kegDataPlane(testNamespace), gateway(testNamespace, "gw")},
+		},
+		{
+			name: "a KegDataPlane of a gateway not allowed to use the GWAdmin is ignored",
+			objs: []client.Object{deployment("keg-uid"), kegDataPlane(tenant), gateway(tenant, "gw"), kegGrant(tenant)},
+		},
+		{
+			name: "a KegDataPlane of a gateway of another GWAdmin is ignored",
+			objs: []client.Object{deployment("keg-uid"), kegDataPlane(testNamespace), gateway(testNamespace, "another"), kegGrant(testNamespace)},
+		},
+		{
+			name: "a KegDataPlane of a gateway that doesn't exist is ignored",
+			objs: []client.Object{deployment("keg-uid"), kegDataPlane(testNamespace), kegGrant(testNamespace)},
+		},
+		{
+			name: "a Deployment of another incarnation of the KegDataPlane is ignored",
+			objs: []client.Object{deployment("previous-uid"), kegDataPlane(testNamespace), gateway(testNamespace, "gw"), kegGrant(testNamespace)},
+		},
+		{
+			name: "a Deployment without a KegDataPlane is ignored",
+			objs: []client.Object{deployment("keg-uid"), gateway(testNamespace, "gw"), kegGrant(testNamespace)},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			now := time.Now()
+			gw := newGWAdmin(nil)
+			r := newReconciler(t, &now, append(tc.objs, gw)...)
+			dps, err := r.dataPlanes(t.Context(), gw)
+			require.NoError(t, err)
+			if tc.count {
+				require.Len(t, dps, 1)
+				assert.Equal(t, team+"/keg", dps[0].name)
+				return
+			}
+			assert.Empty(t, dps)
 		})
 	}
 }

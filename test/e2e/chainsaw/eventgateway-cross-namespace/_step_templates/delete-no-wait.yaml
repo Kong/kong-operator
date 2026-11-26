@@ -1,0 +1,29 @@
+# Template for deleting an object without waiting for it to be gone, e.g. one a
+# finalizer holds.
+#
+# Not common/delete-resource-non-blocking.yaml: its script is found relative to
+# a test two directories below the suites, while the tests of this suite are
+# three.
+#
+# Required bindings:
+#   - object_resource: The resource of the object, e.g.
+#     eventgatewaystatickeys.configuration.konghq.com.
+#   - object_name, object_namespace: The object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: delete-no-wait
+spec:
+  try:
+    - script:
+        env:
+          # Not NAMESPACE: chainsaw sets it to the namespace of the test,
+          # over the env of the script.
+          - name: OBJECT_RESOURCE
+            value: ($object_resource)
+          - name: OBJECT_NAME
+            value: ($object_name)
+          - name: OBJECT_NAMESPACE
+            value: ($object_namespace)
+        content: |
+          kubectl delete --wait=false -n "$OBJECT_NAMESPACE" "$OBJECT_RESOURCE" "$OBJECT_NAME"

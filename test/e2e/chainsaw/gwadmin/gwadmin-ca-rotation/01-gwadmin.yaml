@@ -3,11 +3,19 @@ kind: GWAdmin
 metadata:
   name: ($gwadmin_name)
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   # Readiness probed every second, so the pod turns Ready without waiting for
   # the default 10s period, and unready after 30s of failures, as by default.
   deployment:
     podTemplateSpec:
       spec:
+        # Set by the peers (see gwadmin-shared/peers.yaml): new pods only turn
+        # Ready while they run, so that stopping them stalls a rollout.
+        readinessGates:
+          - conditionType: e2e.konghq.com/peers
         containers:
           - name: gw-admin
             readinessProbe:

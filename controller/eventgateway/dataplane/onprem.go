@@ -75,15 +75,17 @@ const onPremRegion = "testing"
 // Dependencies is set per reconciler: it needs the operator namespace.
 var onPremEventGatewayKind = shareddataplane.ControlPlaneKindConfig{
 	Kind:                      "OnPremEventGateway",
+	GVK:                       metav1.GroupVersionKind(eventgatewayv1alpha1.SchemeGroupVersion.WithKind("OnPremEventGateway")),
 	NewObject:                 func() shareddataplane.ControlPlaneObject { return &eventgatewayv1alpha1.OnPremEventGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldKegDataPlaneOnOnPremEventGateway,
 	Conditions: shareddataplane.ControlPlaneConditions{
-		ResolvedType:    string(eventgatewayv1alpha1.OnPremEventGatewayResolvedType),
-		ResolvedReason:  string(eventgatewayv1alpha1.OnPremEventGatewayResolvedReason),
-		ResolvedMessage: eventgatewayv1alpha1.OnPremEventGatewayResolvedMessage,
-		NotFoundReason:  string(eventgatewayv1alpha1.OnPremEventGatewayNotFoundReason),
-		NotFoundMessage: eventgatewayv1alpha1.OnPremEventGatewayNotFoundMessage,
-		NotReadyReason:  string(eventgatewayv1alpha1.KegDataPlaneGWAdminNotReadyReason),
+		ResolvedType:       string(eventgatewayv1alpha1.OnPremEventGatewayResolvedType),
+		ResolvedReason:     string(eventgatewayv1alpha1.OnPremEventGatewayResolvedReason),
+		ResolvedMessage:    eventgatewayv1alpha1.OnPremEventGatewayResolvedMessage,
+		NotFoundReason:     string(eventgatewayv1alpha1.OnPremEventGatewayNotFoundReason),
+		NotFoundMessage:    eventgatewayv1alpha1.OnPremEventGatewayNotFoundMessage,
+		NotPermittedReason: string(eventgatewayv1alpha1.OnPremEventGatewayRefNotPermittedReason),
+		NotReadyReason:     string(eventgatewayv1alpha1.KegDataPlaneGWAdminNotReadyReason),
 	},
 	CertificateRegistration: &shareddataplane.CertificateRegistrationConditions{
 		Type:                     string(eventgatewayv1alpha1.GWAdminCertificateRegisteredType),
@@ -358,29 +360,6 @@ func (c onPremCertificate) renewalTime() time.Time {
 	return pki.RenewalTime(c.issuedAt, c.cert.NotAfter)
 }
 
-// onPremCertificateLabels returns the labels of the client certificate
-// Secrets of a data plane of an OnPremEventGateway.
-func (r *Reconciler) onPremCertificateLabels(egdp *eventgatewayv1alpha1.KegDataPlane) client.MatchingLabels {
-	labels := k8sresources.GetManagedLabelForOwner(egdp)
-	labels[consts.SecretProvisioningLabelKey] = consts.SecretProvisioningAutomaticLabelValue
-	labels[consts.SecretKEGDataPlaneCertificateLabel] = "true"
-	if r.SecretLabelSelector != "" {
-		labels[r.SecretLabelSelector] = "true"
-	}
-	return labels
-}
-
-// listOnPremCertificates lists the client certificate Secrets of a data
-// plane of an OnPremEventGateway: the current one, and those it replaced,
-// kept until the Deployment rolled out onto it.
-func (r *Reconciler) listOnPremCertificates(ctx context.Context, cl client.Reader, egdp *eventgatewayv1alpha1.KegDataPlane) ([]corev1.Secret, error) {
-	owned, err := k8sutils.ListSecretsForOwner(ctx, cl, egdp.GetUID(), client.InNamespace(egdp.Namespace), r.onPremCertificateLabels(egdp))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list the mTLS certificate Secrets of %s/%s: %w", egdp.Namespace, egdp.Name, err)
-	}
-	return owned, nil
-}
-
 // issuedOnPremCertificates returns the certificates of the Secrets that ca
 // issued for the subject, but those being deleted.
 func issuedOnPremCertificates(owned []corev1.Secret, subject string, ca *x509.Certificate) []onPremCertificate {
@@ -389,7 +368,7 @@ func issuedOnPremCertificates(owned []corev1.Secret, subject string, ca *x509.Ce
 		c, err := parseOnPremCertificate(&owned[i])
 		// CheckSignatureFrom ignores names: a CA replaced by one with the same
 		// key, under another subject, would pass, while a verifier refuses it.
-		if err != nil || c.cert.Subject.CommonName != subject || !bytes.Equal(c.cert.RawIssuer, ca.RawSubject) ||
+		if err != nil || !issuedForSubject(c.cert, subject) || !bytes.Equal(c.cert.RawIssuer, ca.RawSubject) ||
 			c.cert.CheckSignatureFrom(ca) != nil || !owned[i].DeletionTimestamp.IsZero() {
 			continue
 		}
@@ -419,9 +398,18 @@ func currentOnPremCertificate(owned []corev1.Secret, subject string, ca *x509.Ce
 }
 
 // onPremCertificateSubject returns the subject of the client certificate of a
-// data plane of an OnPremEventGateway.
+// data plane of an OnPremEventGateway: its DNS name, and its common name once
+// truncated (see pki.TruncateCommonName), as the subject can be longer than
+// a common name may be.
 func onPremCertificateSubject(egdp *eventgatewayv1alpha1.KegDataPlane) string {
 	return fmt.Sprintf("%s.%s", egdp.Name, egdp.Namespace)
+}
+
+// issuedForSubject reports whether cert was issued for the subject, by
+// createOnPremCertificate: its DNS name is the subject, and its common name
+// the subject truncated.
+func issuedForSubject(cert *x509.Certificate, subject string) bool {
+	return cert.Subject.CommonName == pki.TruncateCommonName(subject) && slices.Equal(cert.DNSNames, []string{subject})
 }
 
 // referencedOnPremCertificates returns the names of the client certificate
@@ -530,8 +518,8 @@ func (r *Reconciler) ensureOnPremCertificate(
 
 // ensureOnPremCertificateAt provisions the client certificate of a data
 // plane of an OnPremEventGateway at now. Once the certificate is due for
-// renewal, or the published CA didn't issue it, e.g. after a rotation of the
-// CA, a new one is issued in a new Secret, alongside the previous one: the
+// renewal, or the published CA didn't issue it for the data plane, e.g. after
+// a rotation of the CA, a new one is issued in a new Secret, alongside the previous one: the
 // Deployment rolls onto it once it is registered on gw-admin, and the
 // previous one is removed after the rollout (see cleanupStaleCertificates).
 func (r *Reconciler) ensureOnPremCertificateAt(
@@ -549,7 +537,7 @@ func (r *Reconciler) ensureOnPremCertificateAt(
 	reissue := ""
 	switch {
 	case !found && len(owned) > 0:
-		reissue = "the cp client CA of the GWAdmin didn't issue the current one"
+		reissue = "the cp client CA of the GWAdmin didn't issue any of the current ones for the data plane"
 	case found && !now.Before(current.renewalTime()):
 		reissue = "the current one is due for renewal"
 	case found:
@@ -583,7 +571,7 @@ func (r *Reconciler) currentOnPremCertificateOf(
 	ca *x509.Certificate,
 	now time.Time,
 ) ([]corev1.Secret, onPremCertificate, bool, error) {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
 	if err != nil {
 		return nil, onPremCertificate{}, false, err
 	}
@@ -674,7 +662,7 @@ func (r *Reconciler) createOnPremCertificate(
 ) (*corev1.Secret, error) {
 	subject := onPremCertificateSubject(egdp)
 	certPEM, keyPEM, err := pki.IssueCertificate(deps.clientCA, pki.CertRequest{
-		CommonName: subject,
+		CommonName: pki.TruncateCommonName(subject),
 		DNSNames:   []string{subject},
 		Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		TTL:        ttl,
@@ -688,7 +676,7 @@ func (r *Reconciler) createOnPremCertificate(
 		return nil, errors.New("the certificate issued can't be parsed")
 	}
 	secret := k8sresources.GenerateNewTLSSecret(egdp, func(s *corev1.Secret) {
-		maps.Copy(s.Labels, r.onPremCertificateLabels(egdp))
+		maps.Copy(s.Labels, r.certificateSecretLabels(egdp))
 		s.Annotations = map[string]string{
 			onPremCertificateIssuedAtAnnotation: now.UTC().Format(time.RFC3339Nano),
 			consts.CertExpiresAtAnnotation:      certs[0].NotAfter.UTC().Format(time.RFC3339),
@@ -947,7 +935,7 @@ func (r *Reconciler) cleanupStaleOnPremCertificates(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	certChecksum string,
 ) error {
-	owned, err := r.listOnPremCertificates(ctx, cl, egdp)
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
 	if err != nil {
 		return err
 	}
@@ -1340,11 +1328,12 @@ func cleanupServerBundleCopy(
 
 // onPremCertificateParentRef returns the parent reference of the
 // EventGatewayDataPlaneCertificate of a data plane of the OnPremEventGateway.
-func onPremCertificateParentRef(gateway *eventgatewayv1alpha1.OnPremEventGateway) *commonv1alpha1.GatewayRef {
+func onPremCertificateParentRef(egdp *eventgatewayv1alpha1.KegDataPlane, gateway *eventgatewayv1alpha1.OnPremEventGateway) *commonv1alpha1.GatewayRef {
 	return &commonv1alpha1.GatewayRef{
-		Group: eventgatewayv1alpha1.GroupName,
-		Kind:  "OnPremEventGateway",
-		Name:  gateway.Name,
+		Group:     eventgatewayv1alpha1.GroupName,
+		Kind:      "OnPremEventGateway",
+		Name:      gateway.Name,
+		Namespace: gatewayNamespaceRef(egdp, gateway),
 	}
 }
 
@@ -1363,7 +1352,7 @@ func buildOnPremCertificate(
 		Namespace:  egdp.Namespace,
 		Labels:     selectorLabelsForKegDataPlane(egdp),
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-			ParentRef: onPremCertificateParentRef(gateway),
+			ParentRef: onPremCertificateParentRef(egdp, gateway),
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
 					Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,

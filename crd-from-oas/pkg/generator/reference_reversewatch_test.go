@@ -2,6 +2,7 @@ package generator
 
 import (
 	"go/format"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -256,5 +257,70 @@ func TestGenerateWatch_InjectIntoForwardWatchFindsLiteralTargets(t *testing.T) {
 		content, err := newGenerator(ref).generateWatch(policyMetadata, rc)
 		require.NoError(t, err)
 		assert.NotContains(t, content, "IndexFieldAIGatewayPolicyOnType")
+	})
+}
+
+func TestGenerateWatch_ReverseWatchReferrerChangedPredicate(t *testing.T) {
+	ref := customPolicyRefConfig()
+	ref.ReverseWatch = true
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1",
+		APIGroupPackageAlias: "aiconfigurationv1alpha1",
+		References:           map[string][]config.ReferenceConfig{"AIGatewayPolicy": {ref}},
+	})
+	rc := &config.ReconcilerConfig{IsRoot: new(false), ParentEntityType: "KonnectAIGateway"}
+
+	content, err := g.generateWatch(aiGatewayCustomPolicyWatchMetadata(), rc)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	// The referrer's other status writes don't re-reconcile what it references.
+	require.Contains(t, content, "enqueueAIGatewayCustomPolicyForAIGatewayPolicy(cl),\n\t\t\t\t),\n\t\t\t\tbuilder.WithPredicates(referrerChanged()),")
+	require.Equal(t, 1, strings.Count(content, `"sigs.k8s.io/controller-runtime/pkg/builder"`), "builder is imported once")
+}
+
+func TestGenerateIndex_ReverseWatchRefsIndexedThroughRefsTo(t *testing.T) {
+	policyMetadata := aiGatewayCustomPolicyWatchMetadata()
+	policyMetadata.EntityName = "AIGatewayPolicy"
+	policyMetadata.EntityNameLowerCamel = "aiGatewayPolicy"
+	rc := &config.ReconcilerConfig{IsRoot: new(false), ParentEntityType: "KonnectAIGateway"}
+	generateIndex := func(t *testing.T, ref config.ReferenceConfig) string {
+		t.Helper()
+		g := NewGenerator(Config{
+			APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1",
+			APIGroupPackageAlias: "aiconfigurationv1alpha1",
+			References:           map[string][]config.ReferenceConfig{"AIGatewayPolicy": {ref}},
+		})
+		content, err := g.generateIndex(policyMetadata, rc)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+		return content
+	}
+
+	t.Run("reverseWatch references index the keys of their RefsTo accessor", func(t *testing.T) {
+		ref := config.ReferenceConfig{
+			Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayCustomPolicy"}, ResolvesTo: "name", ReverseWatch: true,
+		}
+		content := generateIndex(t, ref)
+		require.Contains(t, content, "for _, key := range aiconfigurationv1alpha1.AIGatewayPolicyRefsToAIGatewayCustomPolicy(ent) {\n\t\tout = append(out, key.String())")
+		require.NotContains(t, content, `out = append(out, ns+"/"+ref.Name)`)
+	})
+
+	t.Run("other references scan their refs", func(t *testing.T) {
+		ref := config.ReferenceConfig{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayCustomPolicy"}, ResolvesTo: "name"}
+		content := generateIndex(t, ref)
+		require.NotContains(t, content, "RefsTo")
+		require.Contains(t, content, `out = append(out, ns+"/"+ref.Name)`)
+	})
+
+	t.Run("multi-kind references scan their refs", func(t *testing.T) {
+		ref := config.ReferenceConfig{
+			Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayCustomPolicy", "AIGatewayModel"}, ResolvesTo: "name", ReverseWatch: true,
+		}
+		content := generateIndex(t, ref)
+		require.NotContains(t, content, "RefsTo")
+		require.Contains(t, content, `if ref.Kind != "AIGatewayCustomPolicy" {`)
 	})
 }

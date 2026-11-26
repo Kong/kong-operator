@@ -32,29 +32,19 @@ func handleRefResult(
 			}, nil
 		}
 
-		if _, ok := errors.AsType[ReferencedObjectDoesNotExistError](err); ok {
-			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-				if err := cl.Update(ctx, ent); err != nil {
-					if apierrors.IsConflict(err) {
-						return true, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-					}
-					if apierrors.IsNotFound(err) {
-						return true, ctrl.Result{}, nil
-					}
-					return true, ctrl.Result{}, fmt.Errorf(
-						"failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err,
-					)
-				}
-			}
-			return true, ctrl.Result{}, nil
-		}
-
-		// The referenced parent is not Konnect-managed, so the entity is not either:
-		// stop without error and without touching Konnect. The cleanup finalizer is
-		// removed defensively: a stale finalizer would block the entity's deletion.
-		// An entity that previously reconciled under a Konnect parent (objects that
-		// predate the AIGatewayRef kind field) leaves its Konnect entity orphaned.
-		if _, ok := errors.AsType[ReferencedObjectNotKonnectManagedError](err); ok {
+		// The cleanup finalizer is removed, without touching Konnect, when:
+		// - the referenced object doesn't exist;
+		// - the referenced parent is not Konnect-managed, so the entity is not
+		//   either: a stale finalizer would block the entity's deletion. An
+		//   entity that previously reconciled under a Konnect parent (objects
+		//   that predate the AIGatewayRef kind field) leaves its Konnect entity
+		//   orphaned;
+		// - the entity is being deleted, not in Konnect, and not granted its
+		//   parent.
+		_, doesNotExist := errors.AsType[ReferencedObjectDoesNotExistError](err)
+		_, notManaged := errors.AsType[ReferencedObjectNotKonnectManagedError](err)
+		_, notGranted := errors.AsType[ReferencedObjectNotGrantedOnDeletionError](err)
+		if doesNotExist || notManaged || notGranted {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := cl.Update(ctx, ent); err != nil {
 					if apierrors.IsConflict(err) {

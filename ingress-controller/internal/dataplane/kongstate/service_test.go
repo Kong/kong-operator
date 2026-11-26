@@ -562,6 +562,30 @@ func TestOverrideRetries(t *testing.T) {
 	}
 }
 
+// TestOverrideRetries_ServiceAnnotationTakesPrecedenceOverHTTPRoute pins the
+// documented precedence between HTTPRoute retry.attempts and the
+// konghq.com/retries Service annotation: the annotation wins when both are set.
+func TestOverrideRetries_ServiceAnnotationTakesPrecedenceOverHTTPRoute(t *testing.T) {
+	service := Service{
+		Retries: new(3),
+		K8sServices: map[string]*corev1.Service{
+			"default/backend": {
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "backend",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.RetriesKey: "7",
+					},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, service.override())
+	require.NotNil(t, service.Retries)
+	require.Equal(t, 7, *service.Retries)
+}
+
 func TestServiceOverride_DeterministicOrderWhenMoreThan1KubernetesService(t *testing.T) {
 	service := Service{
 		Service: kong.Service{},

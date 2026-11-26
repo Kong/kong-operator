@@ -86,6 +86,8 @@ traffic_acked_at_least() { [ "$(traffic_log "$1" | grep -c '^ok ')" -ge "$2" ]; 
 traffic_stopped() { traffic_log "$1" | grep -q '^stopped '; }
 
 PROBE_IMAGE=alpine/k8s:1.33.4
+OPERATOR_NAMESPACE=kong-system
+OPERATOR_SELECTOR=app.kubernetes.io/name=kong-operator
 
 # gwadmin_replaced gwadmin_ns gwadmin old_pods...: none of the old gw-admin
 # pods is left, and the Deployment has every replica Ready.
@@ -100,6 +102,32 @@ gwadmin_replaced() {
   ready=$(printf '%s' "$d" | jq '.status.readyReplicas // 0')
   [ "$ready" = "$want" ]
 }
+
+# no_operator_pod: no Kong Operator pod runs.
+no_operator_pod() {
+  [ -z "$(kubectl get pods -n "$OPERATOR_NAMESPACE" -l "$OPERATOR_SELECTOR" -o name)" ]
+}
+
+# pods_deleted ns pod...: none of the pods exists anymore.
+pods_deleted() {
+  local pod_ns=$1 p
+  shift
+  for p in "$@"; do
+    if kubectl get pod -n "$pod_ns" "$p" >/dev/null 2>&1; then return 1; fi
+  done
+}
+
+# keg_log_since dp since: prints the log of the data plane since the time.
+keg_log_since() { kubectl logs -n "$(ns)" "deploy/$1" --since-time="$2" 2>/dev/null; }
+
+# keg_refused_since dp since: the control plane refused the data plane since
+# the time, e.g. as the gw-admin pod it reached doesn't serve its gateway.
+keg_refused_since() { keg_log_since "$1" "$2" | grep -q '401 Unauthorized'; }
+
+# keg_dropped_since dp since: the data plane removed a listener or a virtual
+# cluster since the time, as when a control plane serves it an empty
+# configuration.
+keg_dropped_since() { keg_log_since "$1" "$2" | grep -qE '"removing (listener|virtual cluster)"'; }
 
 # cp_config_status cert_dir gateway: prints the HTTP status gw-admin answers
 # the request of the configuration of the gateway with the client
@@ -147,18 +175,23 @@ cp_config_status_is() {
 
 # operator_idle: the Kong Operator has reconciled at least once since it started
 # the data planes and the gateways, and nothing of those is queued or running.
-# Its first reconciles are all queued before its first worker starts. Other
-# tests running at once only delay this.
+# Its first reconciles are all queued before its first worker starts. A kind
+# without objects in the cluster gets no reconcile: only nothing queued or
+# running counts for it, e.g. KegDataPlanes for a test without a data plane,
+# running alone. Other tests running at once only delay this.
 operator_idle() {
-  local pod metrics controller
+  local pod metrics controller resource objects
   pod=$(kubectl get pods -n kong-system -l app.kubernetes.io/name=kong-operator -o json |
     jq -er '[.items[] | select(.metadata.deletionTimestamp == null and .status.phase == "Running")][0].metadata.name')
   metrics=$(kubectl get --raw "/api/v1/namespaces/kong-system/pods/$pod:8080/proxy/metrics")
   for controller in kegdataplane onpremeventgateway; do
-    printf '%s\n' "$metrics" | awk -v label="controller=\"$controller\"" '
+    resource="${controller}s.eventgateway.konghq.com"
+    objects=$(kubectl get "$resource" -A -o name) || return 1
+    objects=$(printf '%s' "$objects" | grep -c . || true)
+    printf '%s\n' "$metrics" | awk -v label="controller=\"$controller\"" -v objects="$objects" '
       /^(workqueue_depth|controller_runtime_active_workers)\{/ && index($0, label) { busy += $NF }
       /^controller_runtime_reconcile_total\{/ && index($0, label) { done += $NF }
-      END { exit !(busy == 0 && done > 0) }' || return 1
+      END { exit !(busy == 0 && (done > 0 || objects == 0)) }' || return 1
   done
 }
 
@@ -193,6 +226,27 @@ dp_certificates() {
     jq -r --arg dp "$1" '.items[] | select(any(.metadata.ownerReferences[]?; .kind == "KegDataPlane" and .name == $dp)) | .metadata.name'
 }
 
+# dp_revoked dp: the data plane holds no certificate material the operator
+# created: no EventGatewayDataPlaneCertificate, no Automatic client certificate
+# Secret and no copy of a Manual one it controls.
+dp_revoked() {
+  local certs secrets
+  certs=$(dp_certificates "$1")
+  secrets=$(kubectl get secrets -n "$(ns)" -o json | jq -r --arg dp "$1" '.items[]
+    | select(.metadata.labels["konghq.com/keg-dp-cert"] == "true" or .metadata.labels["gateway-operator.konghq.com/secret-copy"] == "manual-certificate")
+    | select(any(.metadata.ownerReferences[]?; .kind == "KegDataPlane" and .name == $dp))
+    | .metadata.name')
+  [ -z "$certs" ] && [ -z "$secrets" ] || { echo "$1 still holds certificates [$certs] and Secrets [$secrets]" >&2; return 1; }
+}
+
+# dp_cert_mounted dp: the Secret of the client certificate the Deployment of
+# the data plane mounts exists, e.g. once a revoked data plane got a new one.
+dp_cert_mounted() {
+  local secret
+  secret=$(kubectl get deployment -n "$(ns)" "$1" -o json | jq -er '.spec.template.spec.volumes[] | select(.name == "konnect-cert") | .secret.secretName') &&
+    kubectl get secret -n "$(ns)" "$secret" >/dev/null 2>&1
+}
+
 # dp_cert_fingerprint dp: prints the fingerprint of the client certificate of the
 # Secret the Deployment of the data plane mounts.
 dp_cert_fingerprint() {
@@ -225,6 +279,90 @@ manual_copies_are() {
   done
   [ "$(printf '%s' "$got" | sort)" = "$(printf '%s' "$want" | sort)" ] ||
     { echo "the certificates of $dp are registered from copies of [$got], not of [$want]" >&2; return 1; }
+}
+
+# gwadmin_entities gateway: prints the entities gw-admin serves for the gateway,
+# read from its API from a pod in the cluster, as Kong Operator reads them: under
+# the name of the API Service, with the operator client certificate.
+gwadmin_entities() {
+  local gateway uid gw gw_ns gwadmin svc port bundle ca client
+  gateway=$(kubectl get onpremeventgateway -n "$(ns)" "$1" -o json)
+  uid=$(printf '%s' "$gateway" | jq -er '.metadata.uid')
+  gw=$(printf '%s' "$gateway" | jq -er '.spec.gwAdminRef.name')
+  gw_ns=$(printf '%s' "$gateway" | jq -r --arg ns "$(ns)" '.spec.gwAdminRef.namespace // $ns')
+  gwadmin=$(kubectl get gwadmin -n "$gw_ns" "$gw" -o json)
+  svc=$(printf '%s' "$gwadmin" | jq -er '.status.api.serviceName')
+  port=$(printf '%s' "$gwadmin" | jq -er '.status.api.port')
+  bundle=$(printf '%s' "$gwadmin" | jq -er '.status.tls.apiCABundleSecretName')
+  ca=$(kubectl get secret -n "$gw_ns" "$bundle" -o json | jq -er '.data["ca.crt"]')
+  client=$(kubectl get secret -n "$OPERATOR_NAMESPACE" "gwadmin-$(printf '%s' "$gwadmin" | jq -er '.metadata.uid')-operator-client-tls" -o json)
+  # The TLS material goes through stdin, not the environment: the pod spec
+  # would show the operator client key.
+  printf '%s\n%s\n%s\n' "$ca" "$(printf '%s' "$client" | jq -er '.data["tls.crt"]')" "$(printf '%s' "$client" | jq -er '.data["tls.key"]')" |
+    bounded 60 env kubectl run -n "$(ns)" "gwadmin-read-$(date +%s)-$RANDOM" --image="$PROBE_IMAGE" --rm -i --restart=Never --quiet \
+      --env="URL=https://$svc.$gw_ns.svc:$port/v1/event-gateways/$uid/entities" \
+      --command -- sh -c 'read -r CA; read -r CRT; read -r KEY
+        echo "$CA" | base64 -d >/tmp/ca.crt; echo "$CRT" | base64 -d >/tmp/c.crt; echo "$KEY" | base64 -d >/tmp/c.key
+        curl -sS --fail --max-time 20 --cacert /tmp/ca.crt --cert /tmp/c.crt --key /tmp/c.key "$URL"' 2>/dev/null
+}
+
+# gwadmin_entities_match gateway filter: the jq filter holds on the entities
+# gw-admin serves for the gateway. kubectl run can print the output of the pod
+# twice: only the first document counts.
+gwadmin_entities_match() {
+  local got
+  got=$(gwadmin_entities "$1") || { echo "gw-admin can't be read for $1" >&2; return 1; }
+  printf '%s' "$got" | jq -se ".[0] | $2" >/dev/null || { echo "gw-admin serves $(printf '%s' "$got" | jq -sc '.[0].entities | map_values(length)'), not matching: $2" >&2; return 1; }
+}
+
+# kafka_headers topic: the records of the topic as Kafka holds them, encrypted,
+# with their headers, read straight from Kafka, not through a data plane.
+kafka_headers() {
+  local inner='cat >/tmp/k.yml <<EOF
+contexts:
+  kafka:
+    brokers: ["$KAFKA_DIRECT"]
+EOF
+kafkactl -C /tmp/k.yml --context kafka consume "$KAFKA_TOPIC" --from-beginning --exit --print-headers'
+  bounded 120 env kubectl run -n "$(ns)" "kafka-headers-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="KAFKA_DIRECT=kafka-bootstrap.kafka-shared.svc:9092" --env="KAFKA_TOPIC=$(ns)_$1" \
+    --command -- sh -c "$inner"
+}
+
+# record_key_id topic: the id of the static key the first record of the topic
+# names, in its kong/enc header.
+record_key_id() {
+  local records id
+  records=$(kafka_headers "$1") || return 1
+  id=$(grep -m 1 -aoE 'static://[0-9a-f-]{36}' <<<"$records" || true)
+  [ -n "$id" ] || { echo "the records of $1 name no static key: $records" >&2; return 1; }
+  # -o prints every match of the first matching line: the first counts.
+  id=${id%%$'\n'*}
+  echo "${id#static://}"
+}
+
+# saved_id file: the id saved in the file, failing when the file holds none.
+saved_id() {
+  local id
+  id=$(cat "$1" 2>/dev/null) || { echo "no id saved in $1" >&2; return 1; }
+  [[ "$id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]] || { echo "$1 holds no id: $id" >&2; return 1; }
+  echo "$id"
+}
+
+# record_refused dp topic error: consuming the topic through the data plane
+# fails with the error, e.g. as the data plane can't decrypt a record.
+record_refused() {
+  local got inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+EOF
+kafkactl -C /tmp/k.yml --context keg consume "$TOPIC" --from-beginning --exit 2>&1 || true'
+  got=$(bounded 60 env kubectl run -n "$(ns)" "record-refused-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" \
+    --command -- sh -c "$inner") || return 1
+  grep -qF "$3" <<<"$got" || { echo "consuming $2 doesn't fail with \"$3\", the data plane answers: $got" >&2; return 1; }
 }
 
 cmd=$1
@@ -283,6 +421,30 @@ gwadmin-replace-pods) # gwadmin_ns gwadmin one|all timeout: deletes one, or ever
   kubectl delete pod -n "$1" "${pods[@]}" --wait=false >/dev/null
   until_true "$4" "the gw-admin pods ${pods[*]} are replaced by Ready ones" gwadmin_replaced "$1" "$2" "${pods[@]}"
   until_result gwadmin "$2" replaced_pods "${pods[*]}"
+  ;;
+gwadmin-replace-pods-operator-stopped) # gwadmin_ns gwadmin dp timeout: with Kong Operator stopped, so that nothing of the gateways of the GWAdmin is remembered, deletes every gw-admin pod of the GWAdmin, then starts Kong Operator again and waits for the replacements to be Ready. The data plane dp, of a gateway with no configuration to push, must then be refused by the new pods, and keep the configuration it runs: it removes no listener nor virtual cluster
+  op=$(kubectl get deployment -n "$OPERATOR_NAMESPACE" -l "$OPERATOR_SELECTOR" -o jsonpath='{.items[0].metadata.name}')
+  replicas=$(kubectl get deployment -n "$OPERATOR_NAMESPACE" "$op" -o jsonpath='{.spec.replicas}')
+  # Kong Operator runs again whatever happens: other tests share it.
+  trap 'kubectl scale deployment -n "$OPERATOR_NAMESPACE" "$op" --replicas="$replicas" >/dev/null' EXIT
+  kubectl scale deployment -n "$OPERATOR_NAMESPACE" "$op" --replicas=0 >/dev/null
+  until_true "$4" "no Kong Operator pod runs" no_operator_pod
+  sel=$(kubectl get deployment -n "$1" "$2" -o json | jq -r '.spec.selector.matchLabels | to_entries | map("\(.key)=\(.value)") | join(",")')
+  pods=()
+  while IFS= read -r p; do pods+=("$p"); done < <(kubectl get pods -n "$1" -l "$sel" -o json | jq -r '.items[] | select(.metadata.deletionTimestamp == null) | .metadata.name')
+  [ "${#pods[@]}" -gt 0 ] || { echo "no gw-admin pod" >&2; exit 1; }
+  kubectl delete pod -n "$1" "${pods[@]}" --wait=false >/dev/null
+  until_true "$4" "the gw-admin pods ${pods[*]} are gone" pods_deleted "$1" "${pods[@]}"
+  since=$(date -u +%FT%TZ)
+  kubectl scale deployment -n "$OPERATOR_NAMESPACE" "$op" --replicas="$replicas" >/dev/null
+  trap - EXIT
+  until_true "$4" "the gw-admin pods ${pods[*]} are replaced by Ready ones" gwadmin_replaced "$1" "$2" "${pods[@]}"
+  until_true "$4" "the new gw-admin pods refuse the data plane $3 its gateway" keg_refused_since "$3" "$since"
+  if keg_dropped_since "$3" "$since"; then
+    echo "the data plane $3 dropped the configuration it ran: $(keg_log_since "$3" "$since" | grep -E '"removing (listener|virtual cluster)"' | head -2)" >&2
+    exit 1
+  fi
+  until_result gwadmin "$2" replaced_pods "${pods[*]}" data_plane "$3"
   ;;
 save-dp-cert) # dp dir: saves the client certificate the Deployment of the data plane mounts to dir/tls.crt and dir/tls.key, and the keg version it runs, which keg sends along, to dir/version
   d=$(kubectl get deployment -n "$(ns)" "$1" -o json)
@@ -482,6 +644,114 @@ echo "expected $EXPECT, got $ok accepted and $failed rejected: $(cat /tmp/out)" 
     --command -- sh -c "$inner")
   result data_plane "$1" expected "$4" kubectl_output "$output"
   ;;
+wait-gwadmin-entities) # gateway timeout filter: waits for the jq filter to hold on what gw-admin serves for the gateway, e.g. .entities.static_keys | length == 1
+  until_true "$2" "gw-admin serves for $1: $3" gwadmin_entities_match "$1" "$3"
+  until_result gateway "$1"
+  ;;
+record-produce) # dp topic value: produces a record through the data plane
+  inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+EOF
+i=0
+until kafkactl -C /tmp/k.yml --context keg create topic "$TOPIC" >/dev/null 2>&1 ||
+  kafkactl -C /tmp/k.yml --context keg describe topic "$TOPIC" >/dev/null 2>&1; do
+  i=$((i + 1)); [ "$i" -ge 60 ] && { echo "creating the topic through keg fails" >&2; exit 1; }; sleep 1
+done
+i=0
+until kafkactl -C /tmp/k.yml --context keg produce "$TOPIC" --value "$VALUE" >/tmp/out 2>&1; do
+  i=$((i + 1)); [ "$i" -ge 60 ] && { echo "producing through keg fails: $(cat /tmp/out)" >&2; exit 1; }; sleep 1
+done
+echo "ok: produced"'
+  output=$(bounded 180 env kubectl run -n "$(ns)" "record-produce-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" --env="VALUE=$3" \
+    --command -- sh -c "$inner")
+  result data_plane "$1" topic "$2" kubectl_output "$output"
+  ;;
+record-consumed) # dp topic value timeout: waits for the data plane to hand back the value, decrypted
+  inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+EOF
+start=$(date +%s)
+until got=$(kafkactl -C /tmp/k.yml --context keg consume "$TOPIC" --from-beginning --exit 2>&1) && echo "$got" | grep -qF "$VALUE"; do
+  [ $(($(date +%s) - start)) -ge "$LIMIT" ] && { echo "keg does not hand back $VALUE after ${LIMIT}s, it answers: $got" >&2; exit 1; }
+  sleep 2
+done
+echo "ok: keg hands back $VALUE"'
+  output=$(bounded "$(($4 + 60))" env kubectl run -n "$(ns)" "record-consume-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="TOPIC=$2" --env="VALUE=$3" --env="LIMIT=$4" \
+    --command -- sh -c "$inner")
+  result data_plane "$1" topic "$2" kubectl_output "$output"
+  ;;
+record-refused) # dp topic error timeout: waits for consuming the topic through the data plane to fail with the error, e.g. once the static key it decrypts with has another value
+  until_true "$4" "consuming $2 through $1 fails with \"$3\"" record_refused "$1" "$2" "$3"
+  until_result data_plane "$1" topic "$2" error "$3"
+  ;;
+wait-encrypts) # dp probe_topic timeout [file]: waits for a record produced through the data plane to the probe topic to reach Kafka encrypted with the static key of the id saved in the file, or any, e.g. once the data plane has a new configuration
+  id=""
+  pattern='[0-9a-f-]{36}'
+  [ -z "${4:-}" ] || { id=$(saved_id "$4"); pattern=$id; }
+  inner='cat >/tmp/k.yml <<EOF
+contexts:
+  keg:
+    brokers: ["$GATEWAY_ADDR"]
+    requestTimeout: 1s
+  kafka:
+    brokers: ["$KAFKA_DIRECT"]
+EOF
+start=$(date +%s)
+until kafkactl -C /tmp/k.yml --context keg create topic "$TOPIC" >/dev/null 2>&1; kafkactl -C /tmp/k.yml --context keg produce "$TOPIC" --value probe >/dev/null 2>&1 &&
+  kafkactl -C /tmp/k.yml --context kafka consume "$KAFKA_TOPIC" --from-beginning --exit --print-headers 2>/dev/null | grep -aqE "static://$ID"; do
+  [ $(($(date +%s) - start)) -ge "$LIMIT" ] && { echo "records keg produces to $TOPIC name no static key $ID after ${LIMIT}s" >&2; exit 1; }
+  sleep 2
+done
+echo "ok: encrypted with $ID"'
+  output=$(bounded "$(($3 + 60))" env kubectl run -n "$(ns)" "wait-encrypts-$(date +%s)" --image="$TRAFFIC_IMAGE" --rm -i --restart=Never --quiet \
+    --env="GATEWAY_ADDR=$1-kafka.$(ns).svc:19092" --env="KAFKA_DIRECT=kafka-bootstrap.kafka-shared.svc:9092" \
+    --env="TOPIC=$2" --env="KAFKA_TOPIC=$(ns)_$2" --env="ID=$pattern" --env="LIMIT=$3" \
+    --command -- sh -c "$inner")
+  result data_plane "$1" topic "$2" id "${id:-any}" kubectl_output "$output"
+  ;;
+remove-dir) # dir: removes the directory, e.g. the work dir of a test holding client keys
+  rm -rf "$1"
+  result removed "$1"
+  ;;
+save-record-key-id) # topic file: saves to the file the id of the static key the first record of the topic names, in its kong/enc header
+  id=$(record_key_id "$1")
+  mkdir -p "$(dirname "$2")"
+  echo "$id" >"$2"
+  result topic "$1" id "$id" file "$2"
+  ;;
+record-key-id-is) # topic file: the records of the topic in Kafka name the static key by the id saved in the file, in their kong/enc header
+  id=$(saved_id "$2")
+  records=$(kafka_headers "$1")
+  grep -aqF "static://$id" <<<"$records" || { echo "the records of $1 do not name the key $id: $records" >&2; exit 1; }
+  result topic "$1" id "$id"
+  ;;
+save-uid) # kind name file: saves the UID of the object to the file
+  uid=$(kubectl get "$1" -n "$(ns)" "$2" -o jsonpath='{.metadata.uid}')
+  [ -n "$uid" ] || { echo "$1 $2 has no UID" >&2; exit 1; }
+  mkdir -p "$(dirname "$3")"
+  echo "$uid" >"$3"
+  result kind "$1" name "$2" uid "$uid" file "$3"
+  ;;
+uid-changed) # kind name file: the UID of the object is not the one saved in the file, e.g. once it was created again
+  saved=$(saved_id "$3")
+  uid=$(kubectl get "$1" -n "$(ns)" "$2" -o jsonpath='{.metadata.uid}')
+  [ -n "$uid" ] && [ "$uid" != "$saved" ] || { echo "the UID of $1 $2 is still $saved" >&2; exit 1; }
+  result kind "$1" name "$2" saved_uid "$saved" uid "$uid"
+  ;;
+ids-differ) # file other_file: the ids saved in the files differ, e.g. the id of a static key and the UID of its object
+  a=$(saved_id "$1")
+  b=$(saved_id "$2")
+  [ "$a" != "$b" ] || { echo "$1 and $2 both hold $a" >&2; exit 1; }
+  result id "$a" other_id "$b"
+  ;;
 wait-operator-idle) # timeout: waits for the Kong Operator to finish what it has to do for data planes and gateways, e.g. after a change or a restart
   until_true "$1" "the Kong Operator is idle" operator_settled
   until_result
@@ -513,6 +783,22 @@ wait-dp-gateway-id) # dp gateway timeout: waits for the data plane to run keg wi
   until_true "$3" "$1 runs keg with the UID of $2" dp_gateway_id_is "$1" "$2"
   kubectl rollout status deployment -n "$(ns)" "$1" --timeout="$3s" >/dev/null
   until_result data_plane "$1" gateway "$2"
+  ;;
+wait-dp-revoked) # dp timeout: waits for the data plane to hold no certificate material the operator created, e.g. once it may no longer reference its gateway
+  until_true "$2" "$1 holds no certificate or certificate Secret" dp_revoked "$1"
+  until_result data_plane "$1"
+  ;;
+wait-dp-cert-mounted) # dp timeout: waits for the Deployment of the data plane to mount an existing client certificate Secret, rolled out, e.g. once a revoked data plane is granted again
+  until_true "$2" "the Deployment $1 mounts an existing client certificate Secret" dp_cert_mounted "$1"
+  kubectl rollout status deployment -n "$(ns)" "$1" --timeout="$2s" >/dev/null
+  until_result data_plane "$1"
+  ;;
+create-tls-secret) # name cert_dir: creates or replaces the TLS Secret of the certificate and key saved in cert_dir, e.g. a copy of the key of a data plane
+  # Labelled konghq.com/secret: the operator only sees the Secrets an entity
+  # reads that carry it.
+  kubectl create secret tls "$1" -n "$(ns)" --cert="$2/tls.crt" --key="$2/tls.key" --dry-run=client -o yaml |
+    kubectl label --local -f - konghq.com/secret=true -o yaml | kubectl apply -f - >/dev/null
+  result secret "$1" fingerprint "$(fingerprint "$2/tls.crt")"
   ;;
 wait-dp-unlabelled) # dp timeout: waits for the Deployment of the data plane not to be labelled for a GWAdmin
   until_true "$2" "the Deployment $1 is no longer labelled for its GWAdmin" dp_unlabelled "$1"

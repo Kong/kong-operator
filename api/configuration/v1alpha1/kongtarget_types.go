@@ -64,6 +64,8 @@ type KongTargetSpec struct {
 // KongTargetAPISpec are the attributes of the Kong Target itself.
 type KongTargetAPISpec struct {
 	// Target is the target address of the upstream.
+	// An IP address is valid unless the KongService sets spec.tls_verify; then the
+	// host must match the server certificate's CN or SAN, so use the service FQDN.
 	Target string `json:"target"`
 	// Weight is the weight this target gets within the upstream loadbalancer.
 	// +kubebuilder:validation:Minimum=0
@@ -79,6 +81,10 @@ type KongTargetStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndUpstreamRefs `json:"konnect,omitempty"`
+
+	// Sync contains the internal Konnect synchronization state of the entity.
+	// +optional
+	Sync *SyncStatus `json:"sync,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

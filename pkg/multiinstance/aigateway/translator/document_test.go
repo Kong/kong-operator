@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,6 +72,22 @@ func aiGatewayModelFixture(name string) *aiconfigurationv1alpha1.AIGatewayModel 
 			},
 		},
 	}
+}
+
+// withRoutedTarget gives the model a capability and a target on the
+// "provider-shared" provider. Without both, the converter renders no route
+// for the model, and no same-route alias conflict can occur.
+func withRoutedTarget(m *aiconfigurationv1alpha1.AIGatewayModel) *aiconfigurationv1alpha1.AIGatewayModel {
+	m.Spec.APISpec.Model.Capabilities = []string{"generate"}
+	m.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+		Name:     "t",
+		Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "provider-shared"},
+		Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+			Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+			Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+		},
+	}}
+	return m
 }
 
 func aiGatewayModelProviderFixture(name string) *aiconfigurationv1alpha1.AIGatewayModelProvider {
@@ -421,7 +438,7 @@ func TestBuildDocument(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Len(t, doc.Models, 2)
 	require.Equal(t, "model-a", doc.Models[0].Name)
@@ -601,7 +618,7 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Empty(t, statuses)
 	require.Empty(t, doc.Models)
@@ -643,7 +660,7 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Models, 1)
@@ -689,7 +706,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.CACertificates, 1)
@@ -730,7 +747,7 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Vaults, 1)
@@ -750,16 +767,22 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 }
 
 // TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector
-// alias: the converter renders one ai_models entity per alias, named after it,
-// so two identically named rows would make the data plane's declarative import
-// reject the whole payload (uniqueness violation). The earliest-created model
-// keeps the alias (ties fall back to namespace/name order); the later claimant
-// is excluded from the document and reported per-entity instead.
+// alias on one route: the converter renders one ai_models entity per alias,
+// named after it, and two models claiming one alias on one route group make
+// identically scoped ai-proxy plugins whose backend selection the data plane
+// decides internally. The earliest-created model keeps the alias (ties fall
+// back to namespace/name order); the later claimant is excluded from the
+// document and reported per-entity instead. Sharing an alias across DIFFERENT
+// routes is not a conflict: the converter renders one shared ai_models row and
+// both models stay.
 func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 	t.Parallel()
 
 	// buildClient assembles the fake client with the index every kind needs:
-	// BuildDocument lists every configuration-entity kind.
+	// BuildDocument lists every configuration-entity kind. It always includes
+	// the shared provider the alias fixtures' targets reference: a model
+	// without a target renders no route, and the same-route conflicts under
+	// test need rendered routes.
 	buildClient := func(t *testing.T, objects ...client.Object) client.Client {
 		t.Helper()
 		scheme := runtime.NewScheme()
@@ -769,6 +792,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		// The fake tracker stamps resource versions into the objects it is
 		// given, so parallel subtests must not share a fixture.
 		objs := make([]client.Object, 0, len(objects))
+		objs = append(objs, aiGatewayModelProviderFixture("provider-shared"))
 		for _, obj := range objects {
 			objs = append(objs, obj.DeepCopyObject().(client.Object))
 		}
@@ -780,13 +804,16 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		return builder.Build()
 	}
 
+	// withAlias gives the model the shared alias on the shared route path, so
+	// two of these models land on one route group and conflict.
 	withAlias := func(name string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
 		m := aiGatewayModelFixture(name)
 		m.CreationTimestamp = created
+		m.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"shared-alias"},
 		}
-		return m
+		return withRoutedTarget(m)
 	}
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
@@ -802,19 +829,19 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		scoped := withAlias("scoped-model", dayOne)
 
 		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 1)
 		require.Equal(t, "scoped-model", doc.Models[0].Name)
 
-		require.Len(t, statuses, 2)
+		require.Len(t, statuses, 3)
 		conflicts := 0
 		for _, s := range statuses {
 			if s.Err != nil {
 				conflicts++
 				require.Equal(t, "plain-model", s.Obj.GetName())
-				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias" on route "openai-chat" (paths /shared)`)
 				require.ErrorContains(t, s.Err, `"scoped-model"`)
 			}
 		}
@@ -830,13 +857,13 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		scoped := withAlias("scoped-model", dayOne)
 
 		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 1)
 		require.Equal(t, "plain-model", doc.Models[0].Name)
 
-		require.Len(t, statuses, 2)
+		require.Len(t, statuses, 3)
 		conflicts := 0
 		for _, s := range statuses {
 			if s.Err != nil {
@@ -853,24 +880,27 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		t.Parallel()
 
 		// middle loses "x" to oldest, so its claim on "y" must not exclude newest.
-		oldest := aiGatewayModelFixture("oldest")
+		oldest := withRoutedTarget(aiGatewayModelFixture("oldest"))
 		oldest.CreationTimestamp = dayOne
+		oldest.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		oldest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"x"},
 		}
-		middle := aiGatewayModelFixture("middle")
+		middle := withRoutedTarget(aiGatewayModelFixture("middle"))
 		middle.CreationTimestamp = dayTwo
+		middle.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		middle.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"x", "y"},
 		}
-		newest := aiGatewayModelFixture("newest")
+		newest := withRoutedTarget(aiGatewayModelFixture("newest"))
 		newest.CreationTimestamp = metav1.NewTime(dayTwo.Add(24 * time.Hour))
+		newest.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 		newest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 			Values: []string{"y"},
 		}
 
 		cl := buildClient(t, gw.DeepCopy(), oldest, middle, newest)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		names := make([]string, 0, len(doc.Models))
@@ -879,7 +909,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		}
 		require.ElementsMatch(t, []string{"oldest", "newest"}, names)
 
-		require.Len(t, statuses, 3)
+		require.Len(t, statuses, 4)
 		for _, s := range statuses {
 			if s.Obj.GetName() != "middle" {
 				require.NoError(t, s.Err)
@@ -900,11 +930,72 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		enabled := withAlias("enabled-model", dayTwo)
 
 		cl := buildClient(t, gw.DeepCopy(), disabled, enabled)
-		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 		require.NoError(t, err)
 
 		require.Len(t, doc.Models, 2)
-		require.Len(t, statuses, 2)
+		require.Len(t, statuses, 3)
+		for _, s := range statuses {
+			require.NoError(t, s.Err, s.Obj.GetName())
+		}
+	})
+
+	t.Run("a model on many routes keeps the alias on each route", func(t *testing.T) {
+		t.Parallel()
+
+		// Each capability renders its own route, so wide conflicts with each
+		// later model on a different route. All of them must lose.
+		wide := withAlias("wide", dayOne)
+		wide.Spec.APISpec.Model.Capabilities = []string{"generate", "agentic", "embeddings", "image"}
+		objs := []client.Object{gw.DeepCopy(), wide}
+		for i, capability := range []string{"generate", "agentic", "embeddings", "image"} {
+			m := withAlias("narrow-"+strings.ReplaceAll(capability, "/", "-"), metav1.NewTime(dayTwo.Add(time.Duration(i)*time.Hour)))
+			m.Spec.APISpec.Model.Capabilities = []string{capability}
+			objs = append(objs, m)
+		}
+
+		cl := buildClient(t, objs...)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 1)
+		require.Equal(t, "wide", doc.Models[0].Name)
+		_, issues, err := RenderDBLessYAML(doc, convert.Options{})
+		require.NoError(t, err)
+		require.Empty(t, collectAliasConflicts(issues))
+
+		require.Len(t, statuses, 6)
+		for _, s := range statuses {
+			if !strings.HasPrefix(s.Obj.GetName(), "narrow-") {
+				require.NoError(t, s.Err, s.Obj.GetName())
+				continue
+			}
+			require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+			require.ErrorContains(t, s.Err, `AIGatewayModel "wide"`)
+		}
+	})
+
+	t.Run("the same alias on different routes is not a conflict", func(t *testing.T) {
+		t.Parallel()
+
+		// Distinct route paths put the models on different route groups: the
+		// converter renders one shared ai_models row for the alias and both
+		// models keep their own route and plugin, so both stay Programmed.
+		left := withAlias("left-model", dayOne)
+		left.Spec.APISpec.Model.Config.Route.Paths = []string{"/left"}
+		right := withAlias("right-model", dayTwo)
+		right.Spec.APISpec.Model.Config.Route.Paths = []string{"/right"}
+
+		cl := buildClient(t, gw.DeepCopy(), left, right)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+		require.NoError(t, err)
+
+		names := make([]string, 0, len(doc.Models))
+		for _, m := range doc.Models {
+			names = append(names, m.Name)
+		}
+		require.ElementsMatch(t, []string{"left-model", "right-model"}, names)
+		require.Len(t, statuses, 3)
 		for _, s := range statuses {
 			require.NoError(t, s.Err, s.Obj.GetName())
 		}
@@ -912,9 +1003,10 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 }
 
 // TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision
-// shapes of modelAliases's fallback rule: a no-selector model's entity name is
-// itself an alias, and each value of a multi-value selector is claimed
-// separately.
+// shapes of the converter-derived alias rule: a no-selector model's entity name
+// is itself an alias, and each value of a multi-value selector is claimed
+// separately. All models share one route path, so a wrong alias rule makes a
+// same-route conflict and fails the test.
 func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	t.Parallel()
 
@@ -925,46 +1017,54 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
 	// No selector: the model's entity name is its alias. model-c's selector
 	// value collides with it.
-	modelA := aiGatewayModelFixture("model-a")
-	modelC := aiGatewayModelFixture("model-c")
+	modelA := withRoutedTarget(aiGatewayModelFixture("model-a"))
+	modelA.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
+	modelC := withRoutedTarget(aiGatewayModelFixture("model-c"))
+	modelC.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelC.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"model-a", "model-c-alias"},
 	}
 	// Multi-value selectors: model-d claims two aliases, model-e shares the
 	// second one (its first alias is unique).
-	modelD := aiGatewayModelFixture("model-d")
+	modelD := withRoutedTarget(aiGatewayModelFixture("model-d"))
+	modelD.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelD.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"d-alias-1", "d-alias-2"},
 	}
-	modelE := aiGatewayModelFixture("model-e")
+	modelE := withRoutedTarget(aiGatewayModelFixture("model-e"))
+	modelE.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelE.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"e-alias", "d-alias-2"},
 	}
 	// Duplicate values within one model collapse to their first occurrence
 	// (mirroring the converter's extractModelAliases): no conflict, one entity.
-	modelF := aiGatewayModelFixture("model-f")
+	modelF := withRoutedTarget(aiGatewayModelFixture("model-f"))
+	modelF.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelF.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"f-alias", "f-alias"},
 	}
 	// With a selector, the entity name is not an alias: model-h's value equal
 	// to model-g's name is no conflict.
-	modelG := aiGatewayModelFixture("model-g")
+	modelG := withRoutedTarget(aiGatewayModelFixture("model-g"))
+	modelG.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelG.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"g-alias"},
 	}
-	modelH := aiGatewayModelFixture("model-h")
+	modelH := withRoutedTarget(aiGatewayModelFixture("model-h"))
+	modelH.Spec.APISpec.Model.Config.Route.Paths = []string{"/shared"}
 	modelH.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"model-g"},
 	}
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, modelA, modelC, modelD, modelE, modelF, modelG, modelH)
+		WithObjects(gw, aiGatewayModelProviderFixture("provider-shared"),
+			modelA, modelC, modelD, modelE, modelF, modelG, modelH)
 	for _, opt := range index.OptionsForAIGatewayEntities() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	// Equal (zero) creation timestamps: the tie-break by name decides. model-c
@@ -979,7 +1079,7 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 		"model-c": {`duplicate model alias "model-a"`, `AIGatewayModel "model-a"`},
 		"model-e": {`duplicate model alias "d-alias-2"`, `AIGatewayModel "model-d"`},
 	}
-	require.Len(t, statuses, 7)
+	require.Len(t, statuses, 8)
 	for _, s := range statuses {
 		want, conflict := wantConflicts[s.Obj.GetName()]
 		if !conflict {
@@ -1023,7 +1123,7 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Certificates, 1)
@@ -1147,7 +1247,7 @@ func TestBuildDocument_CrossNamespaceEntityNeedsKongReferenceGrant(t *testing.T)
 				append([]client.Object{gw, crossNamespace, sameNamespace}, tt.grants...)...,
 			)
 
-			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 			require.NoError(t, err)
 
 			require.Empty(t, doc.Models)
@@ -1212,7 +1312,7 @@ func TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant(t *testing.
 
 	cl := newTranslatorTestClient(t, gw, consumer, credential)
 
-	_, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	_, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	var consumerStatus, credentialStatus *EntityStatus
@@ -1228,6 +1328,375 @@ func TestBuildDocument_CrossNamespaceConsumerNeedsKongReferenceGrant(t *testing.
 	require.ErrorContains(t, consumerStatus.Err, "KongReferenceGrant")
 	require.NotNil(t, credentialStatus)
 	require.ErrorContains(t, credentialStatus.Err, "KongReferenceGrant")
+}
+
+// TestBuildDocument_CrossNamespaceCredentialNeedsKongReferenceGrant pins that a credential
+// of another namespace renders inside its consumer's document only when a KongReferenceGrant
+// in the consumer's namespace allows the reference. A denied credential fails on itself and
+// the consumer still renders without it.
+func TestBuildDocument_CrossNamespaceCredentialNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumer := aiGatewayConsumerFixture("consumer-a")
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred", Namespace: "other",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name:      consumer.Name,
+					Namespace: new("default"),
+				},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Name:        "cred",
+				DisplayName: "cred",
+				Type:        "api-key",
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+						Name: "consumer-api-key",
+						Key:  "key",
+					},
+				},
+			},
+		},
+	}
+	secret := &corev1.Secret{
+		Name: "consumer-api-key", Namespace: "other",
+		Data: map[string][]byte{"key": []byte("s3cr3t")},
+	}
+	grant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cred", Namespace: "default",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      "AIGatewayConsumerCredential",
+				Namespace: "other",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aiconfiguration.konghq.com",
+				Kind:  "AIGatewayConsumer",
+			}},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		grants       []client.Object
+		wantRendered bool
+	}{
+		{
+			name: "no grant",
+		},
+		{
+			name:         "grant for the credential kind and the consumer kind",
+			grants:       []client.Object{grant},
+			wantRendered: true,
+		},
+		{
+			name: "grant for another kind",
+			grants: []client.Object{&configurationv1alpha1.KongReferenceGrant{
+				Name: "allow-other", Namespace: "default",
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: grant.Spec.From,
+					To: []configurationv1alpha1.ReferenceGrantTo{{
+						Group: "aiconfiguration.konghq.com",
+						Kind:  "AIGatewayConsumerGroup",
+					}},
+				},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			scheme := runtime.NewScheme()
+			require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+			require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+			require.NoError(t, corev1.AddToScheme(scheme))
+
+			objs := []client.Object{gw.DeepCopy(), consumer.DeepCopy(), credential.DeepCopy(), secret.DeepCopy()}
+			objs = append(objs, tt.grants...)
+			cl := newTestBuilder(scheme, objs...).Build()
+
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+			require.NoError(t, err)
+			require.NoError(t, findStatusByName(t, statuses, consumer.Name).Err)
+
+			credStatus := findStatusByName(t, statuses, credential.Name)
+			require.Len(t, doc.Consumers, 1)
+			if !tt.wantRendered {
+				require.ErrorContains(t, credStatus.Err, "KongReferenceGrant")
+				require.Empty(t, doc.Consumers[0].Credentials)
+				return
+			}
+			require.NoError(t, credStatus.Err)
+			require.Len(t, doc.Consumers[0].Credentials, 1)
+			require.Equal(t, "s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
+		})
+	}
+}
+
+// TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant pins the parity with the
+// Konnect path for the consumer group ACL references: an AIGatewayMCPServer in the
+// gateway's namespace may reference an AIGatewayConsumerGroup of another namespace only
+// when a KongReferenceGrant in the consumer group's namespace allows it. The consumer
+// group itself needs its own grant to reference the gateway, so both grants are needed.
+func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumerGroup := aiGatewayConsumerGroupFixture("group-other")
+	consumerGroup.Namespace = "other"
+	consumerGroup.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+	// A Konnect name unlike the Kubernetes name, so the assertion below tells a resolved
+	// reference apart from the raw reference name the payload carries.
+	const consumerGroupName = "group-other-name"
+	consumerGroup.Spec.APISpec.Name = consumerGroupName
+
+	mcpServer := aiGatewayMCPServerFixture("mcp-a")
+	mcpServer.Spec.APISpec.PassthroughListener.Policies = nil
+	mcpServer.Spec.APISpec.PassthroughListener.Access = &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccess{
+		AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
+		Consumer: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{
+			Acls: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAcls{
+				Type:  aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+				Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: "other", Name: consumerGroup.Name}},
+			},
+		},
+	}
+
+	// The consumer group references the gateway across namespaces, so it needs its own
+	// grant in the gateway's namespace.
+	gatewayGrant := crossNamespaceGrant("AIGatewayConsumerGroup", new("gw"))
+	// The MCP server references the consumer group across namespaces, so it needs a grant
+	// in the consumer group's namespace.
+	aclGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-cross-ns-acl", Namespace: "other",
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     "aiconfiguration.konghq.com",
+				Kind:      "AIGatewayMCPServer",
+				Namespace: "default",
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{{
+				Group: "aiconfiguration.konghq.com",
+				Kind:  "AIGatewayConsumerGroup",
+				Name:  new(configurationv1alpha1.ObjectName(consumerGroup.Name)),
+			}},
+		},
+	}
+
+	tests := []struct {
+		name         string
+		grants       []client.Object
+		wantIncluded bool
+	}{
+		{
+			name:   "no ACL grant",
+			grants: []client.Object{gatewayGrant},
+		},
+		{
+			name:         "ACL grant",
+			grants:       []client.Object{gatewayGrant, aclGrant},
+			wantIncluded: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cl := newTranslatorTestClient(t, append([]client.Object{gw, consumerGroup, mcpServer}, tt.grants...)...)
+
+			doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+			require.NoError(t, err)
+
+			mcpStatus := findStatusByName(t, statuses, mcpServer.Name)
+			if !tt.wantIncluded {
+				require.ErrorContains(t, mcpStatus.Err, "KongReferenceGrant")
+				require.Empty(t, doc.MCPServers)
+				return
+			}
+			require.NoError(t, mcpStatus.Err)
+			require.Len(t, doc.MCPServers, 1)
+			require.Equal(t, []string{consumerGroupName}, doc.MCPServers[0].Access.ACLs.Allow)
+		})
+	}
+}
+
+// TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel is the
+// AIGatewayAgent and AIGatewayModel counterpart of the test above: both translations
+// resolve a consumer group ACL reference across namespaces once a KongReferenceGrant in
+// the consumer group's namespace allows it, and refuse it otherwise.
+func TestBuildDocument_CrossNamespaceACLRefNeedsKongReferenceGrant_AgentAndModel(t *testing.T) {
+	t.Parallel()
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumerGroup := aiGatewayConsumerGroupFixture("group-other")
+	consumerGroup.Namespace = "other"
+	consumerGroup.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+	// A Konnect name unlike the Kubernetes name, so the assertions below tell a resolved
+	// reference apart from the raw reference name the payload carries.
+	const consumerGroupName = "group-other-name"
+	consumerGroup.Spec.APISpec.Name = consumerGroupName
+
+	aclRefs := []aiconfigurationv1alpha1.AIGatewayACLRef{{Namespace: "other", Name: consumerGroup.Name}}
+
+	agent := aiGatewayAgentFixture("agent-a")
+	agent.Spec.APISpec.Policies = nil
+	agent.Spec.APISpec.Access.AuthStrategies = nil
+	agent.Spec.APISpec.Access.Acls = &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+		Type:  aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+		Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+	}
+	agentDeny := agent.DeepCopy()
+	agentDeny.Name = "agent-deny"
+	agentDeny.Spec.APISpec.Name = "agent-deny"
+	agentDeny.Spec.APISpec.Access.Acls = &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+		Type: aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeDeny,
+		Deny: &aiconfigurationv1alpha1.AIGatewayDenyACL{Deny: aclRefs},
+	}
+
+	model := aiGatewayModelFixture("model-a")
+	model.Spec.APISpec.Model.Access.Acls = &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+		Type:  aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
+		Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+	}
+	modelDeny := model.DeepCopy()
+	modelDeny.Name = "model-deny"
+	modelDeny.Spec.APISpec.Model.Name = "model-deny"
+	modelDeny.Spec.APISpec.Model.Access.Acls = &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+		Type: aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeDeny,
+		Deny: &aiconfigurationv1alpha1.AIGatewayDenyACL{Deny: aclRefs},
+	}
+	// The api variant of the model union carries its own access and route configuration, so
+	// it takes its own fixture rather than a copy of the model variant.
+	modelAPI := &aiconfigurationv1alpha1.AIGatewayModel{
+		Name: "model-api", Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+			AIGatewayRef: agent.Spec.AIGatewayRef,
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelConfigTypeAPI,
+					API: &aiconfigurationv1alpha1.AIGatewayModelAPI{
+						Name:        "model-api",
+						DisplayName: "model-api",
+						Formats:     []aiconfigurationv1alpha1.AIGatewayModelFormat{{Type: "openai"}},
+						Config: aiconfigurationv1alpha1.AIGatewayModelAPIConfig{
+							Route: aiconfigurationv1alpha1.AIGatewayModelRouteConfig{Paths: []string{"/model-api"}},
+						},
+						Access: aiconfigurationv1alpha1.AIGatewayModelAccess{
+							Acls: &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+								Type:  aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
+								Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: aclRefs},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// The consumer group references the gateway across namespaces, so it needs its own
+	// grant in the gateway's namespace.
+	gatewayGrant := crossNamespaceGrant("AIGatewayConsumerGroup", new("gw"))
+
+	tests := []struct {
+		name   string
+		entity client.Object
+		kind   string
+		acls   func(doc *aigw.Document) []string
+	}{
+		{
+			name:   "agent allow",
+			entity: agent,
+			kind:   "AIGatewayAgent",
+			acls:   func(doc *aigw.Document) []string { return doc.Agents[0].Access.ACLs.Allow },
+		},
+		{
+			name:   "agent deny",
+			entity: agentDeny,
+			kind:   "AIGatewayAgent",
+			acls:   func(doc *aigw.Document) []string { return doc.Agents[0].Access.ACLs.Deny },
+		},
+		{
+			name:   "model allow",
+			entity: model,
+			kind:   "AIGatewayModel",
+			acls:   func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Allow },
+		},
+		{
+			name:   "model deny",
+			entity: modelDeny,
+			kind:   "AIGatewayModel",
+			acls:   func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Deny },
+		},
+		{
+			name:   "model api variant",
+			entity: modelAPI,
+			kind:   "AIGatewayModel",
+			acls:   func(doc *aigw.Document) []string { return doc.Models[0].Access.ACLs.Allow },
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// The entity references the consumer group across namespaces, so it needs a
+			// grant in the consumer group's namespace.
+			aclGrant := &configurationv1alpha1.KongReferenceGrant{
+				Name: "allow-cross-ns-acl", Namespace: "other",
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: []configurationv1alpha1.ReferenceGrantFrom{{
+						Group:     "aiconfiguration.konghq.com",
+						Kind:      configurationv1alpha1.Kind(tt.kind),
+						Namespace: "default",
+					}},
+					To: []configurationv1alpha1.ReferenceGrantTo{{
+						Group: "aiconfiguration.konghq.com",
+						Kind:  "AIGatewayConsumerGroup",
+						Name:  new(configurationv1alpha1.ObjectName(consumerGroup.Name)),
+					}},
+				},
+			}
+
+			for _, grants := range []struct {
+				name   string
+				list   []client.Object
+				wantOK bool
+			}{
+				{name: "no ACL grant", list: []client.Object{gatewayGrant}},
+				{name: "ACL grant", list: []client.Object{gatewayGrant, aclGrant}, wantOK: true},
+			} {
+				t.Run(grants.name, func(t *testing.T) {
+					t.Parallel()
+
+					cl := newTranslatorTestClient(t, append([]client.Object{gw, consumerGroup, tt.entity}, grants.list...)...)
+
+					doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+					require.NoError(t, err)
+
+					status := findStatusByName(t, statuses, tt.entity.GetName())
+					if !grants.wantOK {
+						require.ErrorContains(t, status.Err, "KongReferenceGrant")
+						return
+					}
+					require.NoError(t, status.Err)
+					require.Equal(t, []string{consumerGroupName}, tt.acls(doc))
+				})
+			}
+		})
+	}
 }
 
 // TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the
@@ -1277,7 +1746,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	// The consumer and the credential embedded in it: the credential has no document
 	// entity of its own, so the consumer's translation reports it.
@@ -1292,7 +1761,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 	secret.Data["key"] = []byte("n3w-s3cr3t")
 	require.NoError(t, cl.Update(t.Context(), secret))
 
-	doc, statuses, err = BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err = BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Len(t, statuses, 2)
 	require.NoError(t, findStatusByName(t, statuses, "cred-a").Err)
@@ -1352,7 +1821,7 @@ func TestBuildDocument_ReportsBrokenCredentialOnTheCredential(t *testing.T) {
 		healthySecret,
 	).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	// The consumer renders with the healthy credential only.
@@ -1433,7 +1902,7 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, brokenProvider, healthyProvider, modelBroken, modelHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.ModelProviders, 1)
@@ -1485,7 +1954,7 @@ func TestBuildDocument_ModelEmbeddingsProviderResolvedByCRName(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, provider, model).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Models, 1)
@@ -1546,7 +2015,7 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, consumerBroken, consumerHealthy, credentialOfBrokenConsumer).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Policies, 1)
@@ -1599,7 +2068,7 @@ func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T)
 
 	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, groupBroken, groupHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.Policies, 1)
@@ -1643,7 +2112,7 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 					OpenIDConnect: &aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnect{
 						Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier("auth-strategy-broken"),
 						DisplayName: "auth-strategy-broken",
-						Config: aiconfigurationv1alpha1.AIGWOpenIDConnectGeneratedConfig{
+						Config: aiconfigurationv1alpha1.AIGatewayAuthStrategyOpenIDConnectConfig{
 							ClientSecret: []aiconfigurationv1alpha1.SensitiveDataSource{{
 								Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
 								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "oidc-secret", Key: "clientSecret", Namespace: new("other-ns")},
@@ -1669,7 +2138,7 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, brokenAuthStrategy, healthyAuthStrategy, healthyPolicy, healthyGroup, agentBroken, agentHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.AuthStrategies, 1)
@@ -1681,6 +2150,87 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 	require.Contains(t, findStatusByName(t, statuses, "auth-strategy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "agent-broken").Err.Error(),
 		`referenced AIGatewayAuthStrategy "auth-strategy-broken" was excluded from the document`)
+	require.NoError(t, findStatusByName(t, statuses, "agent-healthy").Err)
+}
+
+// TestBuildDocument_AgentFailsWhenReferencedCertificateFails pins the translated-reference
+// check for the agent's upstream TLS certificate references: an agent referencing an
+// AIGatewayCACertificate or an AIGatewayCertificate that failed its own translation must be
+// excluded with that certificate's cause.
+func TestBuildDocument_AgentFailsWhenReferencedCertificateFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// A certificate whose cert comes from a Secret that does not exist fails its own
+	// translation while keeping its entity name intact; the healthy pair proves the agent
+	// failure stays per-entity.
+	missingSecret := aiconfigurationv1alpha1.SensitiveDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "missing-secret", Key: "tls.crt"},
+	}
+	brokenCACert := aiGatewayCACertificateFixture("ca-cert-broken", "")
+	brokenCACert.Spec.APISpec.Cert = missingSecret
+	healthyCACert := aiGatewayCACertificateFixture("ca-cert-healthy", genCACertPEM(t))
+	brokenCert := aiGatewayCertificateFixture("cert-broken")
+	brokenCert.Spec.APISpec.Cert = missingSecret
+	healthyCert := aiGatewayCertificateFixture("cert-healthy")
+
+	healthyPolicy := aiGatewayPolicyFixture("policy-healthy")
+	healthyGroup := aiGatewayConsumerGroupFixture("group-healthy")
+	// One agent per checked certificate kind: cmp.Or stops at the first failing check, so a
+	// single agent referencing both broken certificates would pin only the CA certificate.
+	newAgent := func(name string) *aiconfigurationv1alpha1.AIGatewayAgent {
+		agent := aiGatewayAgentFixture(name)
+		agent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
+		agent.Spec.APISpec.Access.Acls.Allow.Allow = []aiconfigurationv1alpha1.AIGatewayACLRef{{Name: "group-healthy"}}
+		agent.Spec.APISpec.Access.AuthStrategies = nil
+		return agent
+	}
+	agentBrokenCACert := newAgent("agent-broken-ca-cert")
+	agentBrokenCACert.Spec.APISpec.Config.CaCertificates = []aiconfigurationv1alpha1.AIGatewayCACertificateRef{{Name: "ca-cert-broken"}}
+	agentBrokenCert := newAgent("agent-broken-cert")
+	agentBrokenCert.Spec.APISpec.Config.Certificates = []aiconfigurationv1alpha1.AIGatewayCertificateRef{{Name: "cert-broken"}}
+	agentHealthy := newAgent("agent-healthy")
+	agentHealthy.Spec.APISpec.Config.CaCertificates = []aiconfigurationv1alpha1.AIGatewayCACertificateRef{{Name: "ca-cert-healthy"}}
+	agentHealthy.Spec.APISpec.Config.Certificates = []aiconfigurationv1alpha1.AIGatewayCertificateRef{{Name: "cert-healthy"}}
+
+	cl := newTestBuilder(
+		scheme,
+		gw, brokenCACert, healthyCACert, brokenCert, healthyCert,
+		healthyPolicy, healthyGroup, agentBrokenCACert, agentBrokenCert, agentHealthy,
+	).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+	require.NoError(t, err)
+
+	require.Len(t, doc.CACertificates, 1)
+	require.Equal(t, "ca-cert-healthy", doc.CACertificates[0].Name)
+	require.Len(t, doc.Certificates, 1)
+	require.Equal(t, "cert-healthy", doc.Certificates[0].Name)
+	require.Len(t, doc.Agents, 1)
+	require.Equal(t, "agent-healthy", doc.Agents[0].Name)
+	require.Equal(t, []string{"ca-cert-healthy"}, doc.Agents[0].Config.CACertificates)
+	require.Equal(t, []string{"cert-healthy"}, doc.Agents[0].Config.Certificates)
+
+	require.Len(t, statuses, 9)
+	require.Contains(t, findStatusByName(t, statuses, "ca-cert-broken").Err.Error(), "missing-secret")
+	require.Contains(t, findStatusByName(t, statuses, "cert-broken").Err.Error(), "missing-secret")
+
+	for agentName, want := range map[string]struct{ kind, name string }{
+		"agent-broken-ca-cert": {kind: "AIGatewayCACertificate", name: "ca-cert-broken"},
+		"agent-broken-cert":    {kind: "AIGatewayCertificate", name: "cert-broken"},
+	} {
+		err := findStatusByName(t, statuses, agentName).Err
+		require.ErrorContains(t, err, fmt.Sprintf(`referenced %s %q was excluded from the document`, want.kind, want.name))
+		var refErr *ReferencedEntityExcludedError
+		require.ErrorAs(t, err, &refErr)
+		require.ErrorContains(t, refErr.Cause, "missing-secret")
+	}
 	require.NoError(t, findStatusByName(t, statuses, "agent-healthy").Err)
 }
 
@@ -1724,7 +2274,7 @@ func TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails(t *testing
 
 	cl := newTestBuilder(scheme, gw, brokenGroup, healthyGroup, healthyPolicy, mcpBroken, mcpHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.ConsumerGroups, 1)
@@ -1737,6 +2287,49 @@ func TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails(t *testing
 	require.Contains(t, findStatusByName(t, statuses, "group-broken").Err.Error(), "does-not-exist")
 	require.Contains(t, findStatusByName(t, statuses, "mcp-broken").Err.Error(),
 		`referenced AIGatewayConsumerGroup "group-broken" was excluded from the document`)
+	require.NoError(t, findStatusByName(t, statuses, "mcp-healthy").Err)
+}
+
+// TestBuildDocument_MCPServerFailsWhenReferencedCertificateFails pins the translated-
+// reference check for the MCP server config certificate surface: an MCP server whose
+// config references an AIGatewayCACertificate that failed its own translation must be
+// excluded with a per-entity error, like the agent and SNI certificate references.
+func TestBuildDocument_MCPServerFailsWhenReferencedCertificateFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// An invalid PEM fails its own translation while keeping its entity name intact.
+	brokenCert := aiGatewayCACertificateFixture("ca-cert-broken", "not a certificate")
+	healthyCert := aiGatewayCACertificateFixture("ca-cert-healthy", genCACertPEM(t))
+	healthyPolicy := aiGatewayPolicyFixture("policy-healthy")
+
+	withCA := func(s *aiconfigurationv1alpha1.AIGatewayMCPServer, ca string) *aiconfigurationv1alpha1.AIGatewayMCPServer {
+		// The fixture auto-references policy-<last char of name>; point it at the healthy
+		// policy instead so only the CA certificate reference varies.
+		s.Spec.APISpec.PassthroughListener.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
+		s.Spec.APISpec.PassthroughListener.Config.CaCertificates = []aiconfigurationv1alpha1.AIGatewayCACertificateRef{{Name: ca}}
+		return s
+	}
+	mcpBroken := withCA(aiGatewayMCPServerFixture("mcp-broken"), "ca-cert-broken")
+	mcpHealthy := withCA(aiGatewayMCPServerFixture("mcp-healthy"), "ca-cert-healthy")
+
+	cl := newTestBuilder(scheme, gw, brokenCert, healthyCert, healthyPolicy, mcpBroken, mcpHealthy).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+	require.NoError(t, err)
+
+	require.Len(t, doc.CACertificates, 1)
+	require.Equal(t, "ca-cert-healthy", doc.CACertificates[0].Name)
+	require.Len(t, doc.MCPServers, 1)
+	require.Equal(t, "mcp-healthy", doc.MCPServers[0].Name)
+	require.Equal(t, []string{"ca-cert-healthy"}, doc.MCPServers[0].Config.CACertificates)
+
+	require.Contains(t, findStatusByName(t, statuses, "mcp-broken").Err.Error(),
+		`referenced AIGatewayCACertificate "ca-cert-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-healthy").Err)
 }
 
@@ -1822,7 +2415,7 @@ func TestBuildDocument_MCPServerListenerFailsWhenSourceFails(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, srcBroken, srcHealthy, listenerBroken, listenerCascade, listenerHealthy).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.MCPServers, 2)
@@ -1869,7 +2462,7 @@ func TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped(t *tes
 
 	cl := newTestBuilder(scheme, gw, deniedPolicy, src, listener, cascade).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Empty(t, doc.MCPServers)
 
@@ -1899,7 +2492,7 @@ func TestBuildDocument_MCPServerSourceSortedLater(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, listener, source).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.MCPServers, 2)
@@ -1933,7 +2526,7 @@ func TestBuildDocument_MCPServerDuplicateEntityNameRejected(t *testing.T) {
 
 	cl := newTestBuilder(scheme, gw, first, second).Build()
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	require.Len(t, doc.MCPServers, 1)
@@ -1952,7 +2545,7 @@ func TestIsEntityScopedFailure(t *testing.T) {
 		err  error
 		want bool
 	}{
-		{name: "model alias conflict", err: fmt.Errorf("converting: %w", &ModelAliasConflictError{Alias: "a", First: "m"}), want: true},
+		{name: "model alias conflict", err: fmt.Errorf("converting: %w", &ModelAliasConflictError{Alias: "a", Route: "openai-chat", First: "m"}), want: true},
 		{name: "cross-namespace reference not granted", err: fmt.Errorf("converting: %w", notGranted), want: true},
 		{
 			name: "reference to an entity excluded for a reference not granted",
@@ -2076,8 +2669,8 @@ func TestBuildDocument_DatastoreRefs(t *testing.T) {
 	objs := append([]client.Object{aiGatewayDatastoreFixture("datastore")},
 		datastoreRefsReferrers("datastore")...)
 
-	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
-		client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
+
 	require.NoError(t, err)
 
 	require.Len(t, doc.Datastores, 1)
@@ -2128,8 +2721,8 @@ func TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails(t *testing.T) 
 	}
 	objs := append([]client.Object{broken}, datastoreRefsReferrers("datastore")...)
 
-	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
-		client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
+
 	require.NoError(t, err)
 
 	require.Empty(t, doc.Datastores)
@@ -2169,7 +2762,7 @@ func TestBuildDocument_DatastoreReferrersOfGrantDeniedDatastoreAreEntityScoped(t
 	}
 	objs := append([]client.Object{gw, denied}, datastoreRefsReferrers("datastore")...)
 
-	_, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, objs...).Build(), client.ObjectKeyFromObject(gw))
+	_, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, objs...).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 
 	for _, name := range []string{"datastore", "policy", "model", "provider", "mcp-server-a", "auth-strategy"} {
@@ -2193,8 +2786,8 @@ func TestBuildDocument_DatastoreDuplicateEntityNameRejected(t *testing.T) {
 	first := aiGatewayDatastoreFixture("datastore-a")
 	second := aiGatewayDatastoreFixture("datastore-b")
 
-	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, gw, first, second).Build(),
-		client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, gw, first, second).Build(), client.ObjectKeyFromObject(gw), convert.Options{})
+
 	require.NoError(t, err)
 
 	require.Len(t, doc.Datastores, 1)
@@ -2230,7 +2823,7 @@ func TestBuildDocument_DependentOfGatewayRefDeniedEntityIsEntityScoped(t *testin
 	// Only the model's kind may reference the gateway from the other namespace.
 	cl := newTranslatorTestClient(t, gw, provider, model, crossNamespaceGrant("AIGatewayModel", nil))
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
 	require.NoError(t, err)
 	require.Empty(t, doc.ModelProviders)
 	require.Empty(t, doc.Models)
@@ -2242,4 +2835,253 @@ func TestBuildDocument_DependentOfGatewayRefDeniedEntityIsEntityScoped(t *testin
 	modelErr := findStatusByName(t, statuses, "model-granted").Err
 	require.ErrorContains(t, modelErr, `referenced AIGatewayModelProvider "provider-denied" was excluded`)
 	require.True(t, IsEntityScopedFailure(modelErr), "the model is excluded only because of the denied provider")
+}
+
+// TestBuildDocument_ModelDuplicateSpecName covers CRs that set the same spec
+// model name: the converter names models by entity name in its warnings, so
+// the resolution probe renames the duplicates. The attribution must stay
+// exact, also for models without a selector, whose name is their alias.
+func TestBuildDocument_ModelDuplicateSpecName(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	withNamed := func(crName, specName, path string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
+		m := withRoutedTarget(aiGatewayModelFixture(crName))
+		m.CreationTimestamp = created
+		m.Spec.APISpec.Model.Name = aiconfigurationv1alpha1.AIGatewayEntityIdentifier(specName)
+		m.Spec.APISpec.Model.Config.Route.Paths = []string{path}
+		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"shared-alias"},
+		}
+		return m
+	}
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	dayOne := metav1.NewTime(time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC))
+	// Two CRs declare the spec name "dup" on ONE route path: same-route
+	// conflict, the later-created cr-b loses. Two more declare it on distinct
+	// route paths: cross-route sharing, both stay.
+	sameA := withNamed("cr-a", "dup", "/same", dayOne)
+	sameB := withNamed("cr-b", "dup", "/same", metav1.NewTime(dayOne.Add(time.Hour)))
+	crossA := withNamed("cr-c", "dup", "/left", dayOne)
+	crossB := withNamed("cr-d", "dup", "/right", metav1.NewTime(dayOne.Add(time.Hour)))
+	// No selector: the spec name "nosel" is the alias. cr-f is created first,
+	// so cr-e loses although it sorts first by name.
+	noSelectorE := withNamed("cr-e", "nosel", "/nosel", metav1.NewTime(dayOne.Add(time.Hour)))
+	noSelectorE.Spec.APISpec.Model.Config.Route.Model.Values = nil
+	noSelectorF := withNamed("cr-f", "nosel", "/nosel", dayOne)
+	noSelectorF.Spec.APISpec.Model.Config.Route.Model.Values = nil
+
+	cl := newTestBuilder(scheme, gw, aiGatewayModelProviderFixture("provider-shared"),
+		sameA, sameB, crossA, crossB, noSelectorE, noSelectorF).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw), convert.Options{})
+	require.NoError(t, err)
+
+	names := make([]string, 0, len(doc.Models))
+	for _, m := range doc.Models {
+		names = append(names, m.Name)
+	}
+	require.ElementsMatch(t, []string{"dup", "dup", "dup", "nosel"}, names)
+
+	loser := findStatusByName(t, statuses, "cr-b")
+	require.ErrorContains(t, loser.Err, `duplicate model alias "shared-alias"`)
+	require.ErrorContains(t, loser.Err, `"cr-a"`)
+	loser = findStatusByName(t, statuses, "cr-e")
+	require.ErrorContains(t, loser.Err, `duplicate model alias "nosel"`)
+	require.ErrorContains(t, loser.Err, `"cr-f"`)
+	for _, name := range []string{"cr-a", "cr-c", "cr-d", "cr-f"} {
+		require.NoError(t, findStatusByName(t, statuses, name).Err, name)
+	}
+}
+
+// TestCollectAliasConflicts_ConverterContract pins the ai-deck-converter
+// warning the model-alias adjudication consumes. The conflict carries no
+// structured details, so collectAliasConflicts matches on the severity + code +
+// message triple agreed with the converter team; this test renders a real
+// same-route alias conflict and asserts the issue's exact shape, so a
+// converter bump that rewords the message (or moves the fields) fails here
+// before the adjudication silently degrades to a plain warning. It also pins
+// the negative: another ROUTING_CONFLICT emitter (the selector-shape conflict)
+// must not be collected as an alias conflict.
+func TestCollectAliasConflicts_ConverterContract(t *testing.T) {
+	t.Parallel()
+
+	withTarget := func(m aigw.Model) aigw.Model {
+		m.Capabilities = []string{"generate"}
+		m.Formats = []aigw.Format{{Type: "openai"}}
+		m.TargetModels = []aigw.TargetModel{{
+			Name:     "t",
+			Provider: "provider-shared",
+			Config: aigw.TargetModelConfig{
+				Type:    "openai",
+				Options: map[string]any{"upstream_url": "https://api.openai.com/v1"},
+			},
+		}}
+		return m
+	}
+	provider := aigw.Provider{
+		Type: "openai",
+		Name: "provider-shared",
+		Config: aigw.ProviderConfig{
+			Auth: aigw.ProviderAuth{
+				Type:    "basic",
+				Headers: []aigw.AuthHeader{{Name: "apikey", Value: "k"}},
+			},
+		},
+	}
+
+	t.Run("the same-route alias conflict is matched", func(t *testing.T) {
+		t.Parallel()
+
+		model := func(name string) aigw.Model {
+			return withTarget(aigw.Model{
+				Name: name,
+				Config: aigw.ModelConfig{
+					Route: aigw.ModelRouteConfig{
+						Paths: []string{"/chat"},
+						Model: aigw.ModelAliasConfig{Values: []string{"shared-alias"}},
+					},
+				},
+			})
+		}
+		doc := &aigw.Document{
+			ModelProviders: []aigw.Provider{provider},
+			Models:         []aigw.Model{model("model-a"), model("model-b")},
+		}
+		_, issues, err := RenderDBLessYAML(doc, convert.Options{})
+		require.NoError(t, err)
+
+		// The exact message the converter emits today. A converter bump that
+		// rewords it must update sameRouteAliasConflictRe here and now.
+		const wantReason = `model "model-b" uses the alias "shared-alias" on the route "openai-chat", ` +
+			`but model "model-a" already uses it there. Both models make plugins with the same route and ai_models scope.`
+		matched := 0
+		for _, issue := range issues {
+			if issue.Reason != wantReason {
+				continue
+			}
+			matched++
+			require.Equal(t, convert.Warning, issue.Severity)
+			require.Equal(t, convert.RoutingConflict, issue.Code)
+			require.Equal(t, "model", issue.Source.Kind)
+			require.Equal(t, "model-b", issue.Source.Name)
+			require.Equal(t, []string{"config.route.model.values"}, issue.Source.Fields)
+		}
+		require.Equal(t, 1, matched, "the converter's alias-conflict warning changed shape: update sameRouteAliasConflictRe")
+
+		conflicts := collectAliasConflicts(issues)
+		require.Len(t, conflicts, 1)
+		require.Equal(t, "openai-chat", conflicts[0].route)
+		require.Equal(t, "shared-alias", conflicts[0].alias)
+		require.Equal(t, "model-a", conflicts[0].owner)
+		require.Equal(t, "model-b", conflicts[0].claimer)
+	})
+
+	t.Run("the selector-shape conflict is not matched", func(t *testing.T) {
+		t.Parallel()
+
+		// Two models on one route reading the model name from different
+		// sources: the converter's other model-level ROUTING_CONFLICT emitter
+		// fires, and collectAliasConflicts must not treat it as an alias
+		// conflict. Built from YAML: the public aigw package does not export
+		// the header-selector config type.
+		doc := &aigw.Document{}
+		require.NoError(t, yaml.Unmarshal([]byte(`
+model_providers:
+  - name: provider-shared
+    type: openai
+    config:
+      auth:
+        type: basic
+        headers: [{name: apikey, value: k}]
+models:
+  - name: model-a
+    capabilities: [generate]
+    formats: [{type: openai}]
+    targets: [{name: t, provider: provider-shared, config: {type: openai, upstream_url: "https://api.openai.com/v1"}}]
+    config:
+      route:
+        paths: [/chat]
+        model:
+          values: [alias-a]
+  - name: model-b
+    capabilities: [generate]
+    formats: [{type: openai}]
+    targets: [{name: t, provider: provider-shared, config: {type: openai, upstream_url: "https://api.openai.com/v1"}}]
+    config:
+      route:
+        paths: [/chat]
+        model:
+          header:
+            header_param: X-Model
+`), doc))
+		_, issues, err := RenderDBLessYAML(doc, convert.Options{})
+		require.NoError(t, err)
+
+		selectorConflicts := 0
+		for _, issue := range issues {
+			if issue.Code == convert.RoutingConflict &&
+				strings.Contains(issue.Reason, "read the model name from different sources") {
+				selectorConflicts++
+			}
+		}
+		require.Positive(t, selectorConflicts, "expected the converter to emit a selector-shape conflict")
+
+		require.Empty(t, collectAliasConflicts(issues),
+			"the selector-shape conflict must not be collected as an alias conflict")
+	})
+}
+
+// TestCollectAliasConflicts_QuotedValues covers values that the converter
+// escapes with %q: they must parse back to the raw value.
+func TestCollectAliasConflicts_QuotedValues(t *testing.T) {
+	t.Parallel()
+
+	issues := []convert.ConversionIssue{{
+		Severity: convert.Warning,
+		Code:     convert.RoutingConflict,
+		Source:   convert.ConversionIssueSource{Kind: "model", Name: "model-b"},
+		Reason: fmt.Sprintf(
+			"model %q uses the alias %q on the route %q, but model %q already uses it there. "+
+				"Both models make plugins with the same route and ai_models scope.",
+			"model-b", `say "hi"`, "openai-chat", "model-a"),
+	}}
+	require.Equal(t, []aliasConflict{{
+		route: "openai-chat", alias: `say "hi"`, owner: "model-a", claimer: "model-b",
+	}}, collectAliasConflicts(issues))
+}
+
+// TestHasSharedAlias covers the check that skips the probe render: only an
+// alias on two enabled models can conflict.
+func TestHasSharedAlias(t *testing.T) {
+	t.Parallel()
+
+	model := func(name string, enabled *bool, values ...string) aigw.Model {
+		return aigw.Model{
+			Name:    name,
+			Enabled: enabled,
+			Config:  aigw.ModelConfig{Route: aigw.ModelRouteConfig{Model: aigw.ModelAliasConfig{Values: values}}},
+		}
+	}
+	tests := []struct {
+		name   string
+		models []aigw.Model
+		want   bool
+	}{
+		{name: "distinct aliases", models: []aigw.Model{model("a", nil, "x"), model("b", nil, "y")}},
+		{name: "repeated value in one model", models: []aigw.Model{model("a", nil, "x", "x"), model("b", nil, "y")}},
+		{name: "shared selector value", models: []aigw.Model{model("a", nil, "x"), model("b", nil, "y", "x")}, want: true},
+		{name: "entity name is the alias without a selector", models: []aigw.Model{model("x", nil), model("b", nil, "x")}, want: true},
+		{name: "a disabled model uses no alias", models: []aigw.Model{model("a", new(false), "x"), model("b", new(true), "x")}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, hasSharedAlias(tc.models))
+		})
+	}
 }

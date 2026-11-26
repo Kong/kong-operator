@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -95,42 +95,28 @@ spec:
                                 description: Static configuration.
                                 properties:
                                   key:
-                                    description: A static encryption key reference,
-                                      either by ID or by value.
-                                    maxProperties: 1
-                                    minProperties: 1
+                                    description: A reference to an EventGatewayStaticKey
+                                      holding the static encryption key.
                                     properties:
-                                      id:
+                                      kind:
+                                        default: EventGatewayStaticKey
+                                        description: Kind is the kind of the referenced
+                                          object.
+                                        enum:
+                                        - EventGatewayStaticKey
                                         type: string
                                       name:
+                                        description: Name is the name of the referenced
+                                          object.
+                                        minLength: 1
                                         type: string
-                                      namespacedRef:
+                                      namespace:
                                         description: |-
-                                          NamespacedRef references an in-cluster EventGatewayStaticKey object,
-                                          resolved to its Konnect id.
-                                          It is mutually exclusive with the other fields.
-                                        properties:
-                                          kind:
-                                            default: EventGatewayStaticKey
-                                            description: Kind is the kind of the referenced
-                                              object.
-                                            enum:
-                                            - EventGatewayStaticKey
-                                            type: string
-                                          name:
-                                            description: Name is the name of the referenced
-                                              object.
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            description: |-
-                                              Namespace defaults to the referrer's namespace. If set, it must be
-                                              the same as the referrer's namespace; cross-namespace references are
-                                              not supported.
-                                            type: string
-                                        required:
-                                        - name
-                                        type: object
+                                          Namespace, if set to a namespace other than the referrer's, must be
+                                          permitted by a KongReferenceGrant in that namespace.
+                                        type: string
+                                    required:
+                                    - name
                                     type: object
                                 required:
                                 - key
@@ -252,42 +238,28 @@ spec:
                                       description: Static configuration.
                                       properties:
                                         key:
-                                          description: A static encryption key reference,
-                                            either by ID or by value.
-                                          maxProperties: 1
-                                          minProperties: 1
+                                          description: A reference to an EventGatewayStaticKey
+                                            holding the static encryption key.
                                           properties:
-                                            id:
+                                            kind:
+                                              default: EventGatewayStaticKey
+                                              description: Kind is the kind of the
+                                                referenced object.
+                                              enum:
+                                              - EventGatewayStaticKey
                                               type: string
                                             name:
+                                              description: Name is the name of the
+                                                referenced object.
+                                              minLength: 1
                                               type: string
-                                            namespacedRef:
+                                            namespace:
                                               description: |-
-                                                NamespacedRef references an in-cluster EventGatewayStaticKey object,
-                                                resolved to its Konnect id.
-                                                It is mutually exclusive with the other fields.
-                                              properties:
-                                                kind:
-                                                  default: EventGatewayStaticKey
-                                                  description: Kind is the kind of
-                                                    the referenced object.
-                                                  enum:
-                                                  - EventGatewayStaticKey
-                                                  type: string
-                                                name:
-                                                  description: Name is the name of
-                                                    the referenced object.
-                                                  minLength: 1
-                                                  type: string
-                                                namespace:
-                                                  description: |-
-                                                    Namespace defaults to the referrer's namespace. If set, it must be
-                                                    the same as the referrer's namespace; cross-namespace references are
-                                                    not supported.
-                                                  type: string
-                                              required:
-                                              - name
-                                              type: object
+                                                Namespace, if set to a namespace other than the referrer's, must be
+                                                permitted by a KongReferenceGrant in that namespace.
+                                              type: string
+                                          required:
+                                          - name
                                           type: object
                                       required:
                                       - key
@@ -353,6 +325,16 @@ spec:
                               * `mark` - passes the record to the backend cluster but marks it with a
                               `kong/policy-failure-<id>` header whose value is the reason for the policy
                               failure (truncated to 512 characters).
+                              The header is stored with the record in the backend cluster, so every
+                              consumer of the topic sees it, including systems that never pass through the
+                              Event Gateway.
+                              The failure reason can contain runtime-specific configuration details, such
+                              as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                              text, JWT issuer and audience data, or expression snippets, and a producer
+                              with access to the topic can trigger policy failures on purpose to expose
+                              it.
+                              If you don't want to share this information, remove the header with a Modify
+                              Headers produce policy, or use a different failure mode.
 
                               **Requires a minimum runtime version of `1.2`**.
                             enum:
@@ -423,6 +405,16 @@ spec:
                               * `mark` - passes the record to the backend cluster but marks it with a
                               `kong/policy-failure-<id>` header whose value is the reason for the policy
                               failure (truncated to 512 characters).
+                              The header is stored with the record in the backend cluster, so every
+                              consumer of the topic sees it, including systems that never pass through the
+                              Event Gateway.
+                              The failure reason can contain runtime-specific configuration details, such
+                              as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                              text, JWT issuer and audience data, or expression snippets, and a producer
+                              with access to the topic can trigger policy failures on purpose to expose
+                              it.
+                              If you don't want to share this information, remove the header with a Modify
+                              Headers produce policy, or use a different failure mode.
 
                               **Requires a minimum runtime version of `1.2`**.
                             enum:
@@ -774,9 +766,11 @@ spec:
                     type: object
                   parentPolicyRef:
                     description: |-
-                      ParentPolicyRef references a schemaValidation produce policy in the same
-                      namespace and virtual cluster. Required for encryptFields and optional
-                      for modifyHeaders. It is immutable once this policy exists in Konnect.
+                      ParentPolicyRef references a schemaValidation produce policy of the same
+                      virtual cluster. One in another namespace needs a KongReferenceGrant in
+                      its namespace. Required for encryptFields, maskFields and transcode, and
+                      optional for modifyHeaders.
+                      It is immutable once this policy exists in Konnect.
                       Deleting a parent is blocked while child policy objects reference it.
                     properties:
                       kind:
@@ -791,9 +785,8 @@ spec:
                         type: string
                       namespace:
                         description: |-
-                          Namespace defaults to the referrer's namespace. If set, it must be
-                          the same as the referrer's namespace; cross-namespace references are
-                          not supported.
+                          Namespace, if set to a namespace other than the referrer's, must be
+                          permitted by a KongReferenceGrant in that namespace.
                         type: string
                     required:
                     - name
@@ -822,6 +815,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -835,7 +838,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -845,30 +847,25 @@ spec:
                               schemaRegistry:
                                 description: A reference to a schema Registry.
                                 properties:
-                                  id:
-                                    description: ID configuration.
-                                    type: object
-                                  name:
-                                    description: Name configuration.
-                                    properties:
-                                      name:
-                                        description: The unique name of the schema
-                                          registry.
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    description: Type designates the type of configuration.
+                                  kind:
+                                    default: EventGatewaySchemaRegistry
+                                    description: Kind is the kind of the referenced
+                                      object.
                                     enum:
-                                    - id
-                                    - name
+                                    - EventGatewaySchemaRegistry
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referenced
+                                      object.
                                     minLength: 1
                                     type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace, if set to a namespace other than the referrer's, must be
+                                      permitted by a KongReferenceGrant in that namespace.
+                                    type: string
                                 required:
-                                - type
+                                - name
                                 type: object
                               validateKey:
                                 description: |-
@@ -893,7 +890,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -913,6 +909,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -967,7 +973,6 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1038,7 +1043,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1058,6 +1062,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -1071,41 +1085,12 @@ spec:
                                   Defines a behavior when record key is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
                                 - mark
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                description: A reference to a schema Registry.
-                                properties:
-                                  id:
-                                    description: ID configuration.
-                                    type: object
-                                  name:
-                                    description: Name configuration.
-                                    properties:
-                                      name:
-                                        description: The unique name of the schema
-                                          registry.
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    description: Type designates the type of configuration.
-                                    enum:
-                                    - id
-                                    - name
-                                    minLength: 1
-                                    type: string
-                                required:
-                                - type
-                                type: object
                               validateKey:
                                 description: |-
                                   If true, validate the record key.
@@ -1129,7 +1114,6 @@ spec:
                                   Defines a behavior when record value is not valid.
                                   * reject - rejects a batch for topic partition. Only available for produce.
                                   * mark - marks a record with kong/server header and client ID value
-
                                   to help to identify the clients violating schema.
                                 enum:
                                 - reject
@@ -1209,6 +1193,16 @@ spec:
                                   * `mark` - passes the record to the backend cluster but marks it with a
                                   `kong/policy-failure-<id>` header whose value is the reason for the policy
                                   failure (truncated to 512 characters).
+                                  The header is stored with the record in the backend cluster, so every
+                                  consumer of the topic sees it, including systems that never pass through the
+                                  Event Gateway.
+                                  The failure reason can contain runtime-specific configuration details, such
+                                  as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+                                  text, JWT issuer and audience data, or expression snippets, and a producer
+                                  with access to the topic can trigger policy failures on purpose to expose
+                                  it.
+                                  If you don't want to share this information, remove the header with a Modify
+                                  Headers produce policy, or use a different failure mode.
 
                                   **Requires a minimum runtime version of `1.2`**.
                                 enum:
@@ -1292,31 +1286,25 @@ spec:
                                       schemaRegistry:
                                         description: A reference to a schema Registry.
                                         properties:
-                                          id:
-                                            description: ID configuration.
-                                            type: object
-                                          name:
-                                            description: Name configuration.
-                                            properties:
-                                              name:
-                                                description: The unique name of the
-                                                  schema registry.
-                                                maxLength: 255
-                                                minLength: 1
-                                                type: string
-                                            required:
-                                            - name
-                                            type: object
-                                          type:
-                                            description: Type designates the type
-                                              of configuration.
+                                          kind:
+                                            default: EventGatewaySchemaRegistry
+                                            description: Kind is the kind of the referenced
+                                              object.
                                             enum:
-                                            - id
-                                            - name
+                                            - EventGatewaySchemaRegistry
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
                                             minLength: 1
                                             type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
                                         required:
-                                        - type
+                                        - name
                                         type: object
                                       subject:
                                         description: |-
@@ -1574,9 +1562,16 @@ spec:
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
             is already Programmed
-          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
-            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
-            == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef
+            == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          optionalOldSelf: true
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type
+            == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef)
+            && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity
             has been created in Konnect
@@ -1591,17 +1586,18 @@ spec:
             == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) ||
             !has(oldSelf.spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is required for encryptFields
+          message: parentPolicyRef is required for encryptFields, maskFields and transcode
           optionalOldSelf: true
-          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type
-            != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue()
-            && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
-            && oldSelf.value().spec.apiSpec.type == ''encryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || !(self.spec.apiSpec.type
+            in [''encryptFields'', ''maskFields'', ''transcode'']) || has(self.spec.apiSpec.parentPolicyRef)
+            || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
+            && oldSelf.value().spec.apiSpec.type == self.spec.apiSpec.type && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
-          message: parentPolicyRef is only supported for encryptFields and modifyHeaders
+          message: parentPolicyRef is only supported for encryptFields, modifyHeaders,
+            maskFields and transcode
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
             || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'',
-            ''modifyHeaders''])'
+            ''modifyHeaders'', ''maskFields'', ''transcode''])'
         - message: parentPolicyRef must not reference the EventGatewayVirtualClusterProducePolicy
             itself
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)

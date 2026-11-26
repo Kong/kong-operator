@@ -1,0 +1,18 @@
+# Template for asserting an object is gone, e.g. once a finalizer holding it is
+# removed.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-gone
+spec:
+  try:
+    - error:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)

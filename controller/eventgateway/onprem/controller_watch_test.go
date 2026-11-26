@@ -24,21 +24,178 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 const ns = "default"
+
+func TestClusterPolicyChainNotifications(t *testing.T) {
+	backend := backendCluster(ns, "backend", onPremGatewayRef("gateway"))
+	parent := virtualCluster("vc", backend.Name)
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicyChainSpec{
+			EventGatewayVirtualClusterRef: namespacedRef(parent.Name),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterPolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterPolicyRef{{Name: "policy"}},
+			},
+		},
+	}
+	cl := newFakeClient(t, backend, parent, chain)
+	policy := &configurationv1alpha1.EventGatewayVirtualClusterPolicy{
+		Name: "policy", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicySpec{EventGatewayVirtualClusterRef: namespacedRef("other-vc")},
+	}
+	require.Equal(t, requestsFor(&eventgatewayv1alpha1.OnPremEventGateway{Namespace: ns, Name: "gateway"}),
+		mapPolicyToChainGateways(cl)(t.Context(), policy),
+		"references must trigger the chain gateway even when the policy has the wrong parent")
+
+	pred := entityChanged()
+	newPolicy := policy.DeepCopy()
+	newPolicy.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newPolicy.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}), "deletion cannot wait for finalizer removal")
+	newParent := parent.DeepCopy()
+	newParent.Annotations = map[string]string{policychain.OwnerAnnotation: "chain/uid"}
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}), "claims are metadata-only updates")
+}
+
+func TestListenerPolicyChainNotifications(t *testing.T) {
+	parent := &configurationv1alpha1.EventGatewayListener{
+		Name: "listener", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayListenerSpec{ParentRef: onPremGatewayRef("gateway")},
+	}
+	chain := &configurationv1alpha1.EventGatewayListenerPolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayListenerPolicyChainSpec{
+			EventGatewayListenerRef: namespacedRef(parent.Name),
+			APISpec: configurationv1alpha1.EventGatewayListenerPolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayListenerPolicyRef{{Name: "policy"}},
+			},
+		},
+	}
+	cl := newFakeClient(t, parent, chain)
+	policy := &configurationv1alpha1.EventGatewayListenerPolicy{
+		Name: "policy", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{EventGatewayListenerRef: namespacedRef("other-listener")},
+	}
+	require.Equal(t, requestsFor(&eventgatewayv1alpha1.OnPremEventGateway{Namespace: ns, Name: "gateway"}),
+		mapPolicyToChainGateways(cl)(t.Context(), policy),
+		"references must trigger the chain gateway even when the policy has the wrong parent")
+	unreferenced := policy.DeepCopy()
+	unreferenced.Name = "unreferenced"
+	require.Empty(t, mapPolicyToChainGateways(cl)(t.Context(), unreferenced))
+
+	pred := entityChanged()
+	newPolicy := policy.DeepCopy()
+	newPolicy.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newPolicy.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}), "deletion cannot wait for finalizer removal")
+	newChain := chain.DeepCopy()
+	newChain.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}), "a terminating chain releases its claim")
+}
+
+func TestProducePolicyChainNotifications(t *testing.T) {
+	backend := backendCluster(ns, "backend", onPremGatewayRef("gateway"))
+	parent := &configurationv1alpha1.EventGatewayVirtualCluster{
+		Name: "vc", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
+			EventGatewayBackendClusterRef: namespacedRef("backend"),
+		},
+	}
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainSpec{
+			EventGatewayVirtualClusterRef: namespacedRef(parent.Name),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{{Name: "policy"}},
+			},
+		},
+	}
+	cl := newFakeClient(t, backend, parent, chain)
+	policy := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
+		Name: "policy", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
+			EventGatewayVirtualClusterRef: namespacedRef("other-vc"),
+		},
+	}
+	require.Equal(t, requestsFor(&eventgatewayv1alpha1.OnPremEventGateway{Namespace: ns, Name: "gateway"}),
+		mapPolicyToChainGateways(cl)(t.Context(), policy),
+		"references must trigger the chain gateway even when the policy has the wrong parent")
+	unreferenced := policy.DeepCopy()
+	unreferenced.Name = "unreferenced"
+	require.Empty(t, mapPolicyToChainGateways(cl)(t.Context(), unreferenced))
+
+	pred := entityChanged()
+	newPolicy := policy.DeepCopy()
+	newPolicy.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newPolicy.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}), "deletion cannot wait for finalizer removal")
+	newChain := chain.DeepCopy()
+	newChain.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}), "a terminating chain releases its claim")
+
+	newParent := parent.DeepCopy()
+	newParent.Annotations = map[string]string{policychain.ProduceOwnerAnnotation: "chain/uid"}
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}),
+		"a produce claim is metadata-only, and independent of the cluster chain claim")
+}
+
+func TestConsumePolicyChainNotifications(t *testing.T) {
+	backend := backendCluster(ns, "backend", onPremGatewayRef("gateway"))
+	parent := virtualCluster("vc", backend.Name)
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain{
+		Name: "chain", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainSpec{
+			EventGatewayVirtualClusterRef: namespacedRef(parent.Name),
+			APISpec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChainAPISpec{
+				Policies: []configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{{Name: "policy"}},
+			},
+		},
+	}
+	cl := newFakeClient(t, backend, parent, chain)
+	policy := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
+		Name: "policy", Namespace: ns,
+		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+			EventGatewayVirtualClusterRef: namespacedRef("other-vc"),
+		},
+	}
+	require.Equal(t, requestsFor(&eventgatewayv1alpha1.OnPremEventGateway{Namespace: ns, Name: "gateway"}),
+		mapPolicyToChainGateways(cl)(t.Context(), policy), "wrong-parent and recreated references still trigger the owning chain's gateway")
+	unreferenced := policy.DeepCopy()
+	unreferenced.Name = "unreferenced"
+	require.Empty(t, mapPolicyToChainGateways(cl)(t.Context(), unreferenced))
+	pred := entityChanged()
+	newPolicy := policy.DeepCopy()
+	newPolicy.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newPolicy.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: policy, ObjectNew: newPolicy}))
+	newChain := chain.DeepCopy()
+	newChain.DeletionTimestamp = new(metav1.Now())
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: chain, ObjectNew: newChain}))
+	newParent := parent.DeepCopy()
+	newParent.Annotations = map[string]string{policychain.ConsumeOwnerAnnotation: "chain/uid"}
+	assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: parent, ObjectNew: newParent}), "consume claims are metadata-only updates")
+}
 
 func onPremGatewayRef(name string) *commonv1alpha1.GatewayRef {
 	return &commonv1alpha1.GatewayRef{
@@ -184,6 +341,14 @@ func TestMapEntityToOnPremEventGateway(t *testing.T) {
 			want: &onPremGateway,
 		},
 		{
+			name: "virtual cluster policy chain",
+			obj: &configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{
+				Name: "chain", Namespace: ns,
+				Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicyChainSpec{EventGatewayVirtualClusterRef: namespacedRef(onPremVirtualCluster.Name)},
+			},
+			want: &onPremGateway,
+		},
+		{
 			name: "virtual cluster consume policy",
 			obj: &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
 				Name: "consume-policy", Namespace: ns,
@@ -302,11 +467,6 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 	for gvk := range s.AllKnownTypes() {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
-		// TODO(#6158): Include policy chains when controller support is implemented.
-		if _, apiOnly := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); apiOnly {
-			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
-			continue
-		}
 		entity, ok := obj.(entityWithParent)
 		if !ok {
 			continue
@@ -367,27 +527,50 @@ func TestMapEntityToOnPremEventGateway_ParentReadError(t *testing.T) {
 	}, got)
 }
 
-func TestMapKongReferenceGrantToOnPremEventGatewaysForSecrets(t *testing.T) {
-	grant := func(fromKind string, toKind configurationv1alpha1.Kind) *configurationv1alpha1.KongReferenceGrant {
+func TestMapKongReferenceGrantToOnPremEventGatewaysForEntities(t *testing.T) {
+	grant := func(group, kind string) *configurationv1alpha1.KongReferenceGrant {
 		return &configurationv1alpha1.KongReferenceGrant{
-			Name: "grant", Namespace: "secrets",
+			Name: "grant", Namespace: "targets",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
-				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(fromKind), Namespace: ns}},
-				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "core", Kind: toKind}},
+				From: []configurationv1alpha1.ReferenceGrantFrom{{
+					Group: configurationv1alpha1.Group(group), Kind: configurationv1alpha1.Kind(kind), Namespace: "entities",
+				}},
+				To: []configurationv1alpha1.ReferenceGrantTo{
+					{Group: "core", Kind: "Secret"},
+					{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway"},
+				},
 			},
 		}
 	}
-	gateway := newTestGateway("gateway")
-	other := newTestGateway("other")
-	other.Namespace = "other"
-	mapFn := mapKongReferenceGrantToOnPremEventGateways(newFakeClient(t, gateway, other))
+	readingSecretOfTargets := func(name string, gatewayRef *commonv1alpha1.GatewayRef) *configurationv1alpha1.EventGatewayBackendCluster {
+		bc := backendCluster("entities", name, gatewayRef)
+		bc.Spec.APISpec.TLS.ClientIdentity.Certificate = configurationv1alpha1.SensitiveDataSource{
+			Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+			SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls", Namespace: new("targets"), Key: "tls.crt"},
+		}
+		return bc
+	}
+	// The gateway of an entity may be in another namespace than the entity.
+	readingSecret := readingSecretOfTargets("a", onPremGatewayRef("local"))
+	sameGateway := readingSecretOfTargets("c", onPremGatewayRef("local"))
+	ofGatewayInTargets := backendCluster("entities", "b", onPremGatewayRef("remote"))
+	ofGatewayInTargets.Spec.ParentRef.Namespace = new("targets")
+	notReferencingTargets := backendCluster("entities", "unconcerned", onPremGatewayRef("unconcerned"))
+	ofKonnect := readingSecretOfTargets("konnect", konnectGatewayRef("konnect"))
+	otherNamespace := backendCluster("unrelated", "d", onPremGatewayRef("unrelated"))
+	mapFn := mapKongReferenceGrantToOnPremEventGateways(newFakeClient(t,
+		readingSecret, sameGateway, ofGatewayInTargets, notReferencingTargets, ofKonnect, otherNamespace))
 
-	assert.Equal(t,
-		[]reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(gateway)}},
-		mapFn(t.Context(), grant("EventGatewayBackendCluster", "Secret")),
-		"the gateways of the namespace whose entities may read the Secrets")
-	assert.Empty(t, mapFn(t.Context(), grant("EventGatewayBackendCluster", "ConfigMap")), "not a grant to Secrets")
-	assert.Empty(t, mapFn(t.Context(), grant("KongService", "Secret")), "not a grant to entities of an OnPremEventGateway")
+	assert.ElementsMatch(t,
+		[]reconcile.Request{
+			{Namespace: "entities", Name: "local"},
+			{Namespace: "targets", Name: "remote"},
+		},
+		mapFn(t.Context(), grant("configuration.konghq.com", "EventGatewayBackendCluster")),
+		"the gateways of the entities of the kind and namespace it allows referencing its namespace, once each")
+	assert.Empty(t, mapFn(t.Context(), grant("configuration.konghq.com", "EventGatewayListener")), "no entity of the kind")
+	assert.Empty(t, mapFn(t.Context(), grant("konnect.konghq.com", "EventGatewayBackendCluster")), "not the group of the kind")
+	assert.Empty(t, mapFn(t.Context(), grant("configuration.konghq.com", "KongService")), "not an entity of an OnPremEventGateway")
 }
 
 func TestMapSecretToOnPremEventGateways(t *testing.T) {

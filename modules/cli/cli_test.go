@@ -16,12 +16,14 @@ import (
 
 	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/platform"
 )
 
 func TestSetFlagFromEnvVar(t *testing.T) {
@@ -251,6 +253,42 @@ func TestParse(t *testing.T) {
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.MetricsAccessFilter = "rbac"
+				return cfg
+			},
+		},
+		{
+			name: "validating webhook cert dir: cli argument takes precedence over environment variable",
+			args: []string{
+				"--validating-webhook-cert-dir=/tmp/arg-dir",
+			},
+			envVars: map[string]string{
+				"KONG_OPERATOR_VALIDATING_WEBHOOK_CERT_DIR": "/tmp/env-dir",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.ValidatingWebhookCertDir = "/tmp/arg-dir"
+				return cfg
+			},
+		},
+		{
+			name: "validating webhook cert dir: empty environment variable falls back to the default",
+			args: []string{},
+			envVars: map[string]string{
+				"KONG_OPERATOR_VALIDATING_WEBHOOK_CERT_DIR": "",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				return cfg
+			},
+		},
+		{
+			name: "platform argument is set to openshift",
+			args: []string{
+				"--platform=openshift",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.Platform = platform.Openshift
 				return cfg
 			},
 		},
@@ -486,6 +524,8 @@ func expectedDefaultCfg() manager.Config {
 		IPFamily:                                 ipfamily.Auto,
 		ConversionWebhookEnabled:                 true,
 		ValidatingWebhookEnabled:                 true,
+		ValidatingWebhookCertDir:                 validationconsts.DefaultAdmissionWebhookCertDir,
+		Platform:                                 platform.Auto,
 		FQDNModeEnabled:                          false,
 		CertTTL:                                  consts.DefaultCertTTL,
 		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,

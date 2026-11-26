@@ -19,8 +19,6 @@ package onprem
 import (
 	"context"
 	"fmt"
-	"maps"
-	"slices"
 
 	"github.com/google/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,46 +32,44 @@ import (
 // registry or static key of a policy of a virtual cluster, the TLS trust
 // bundles of a listener policy. The conversions, written for
 // Konnect, resolve such a reference to the Konnect ID or to the name of the
-// entity. Converted through uidResolver, both are the UID of its object, which
-// is its id in the configuration, and the reference is then checked to be to
-// an entity of the configuration of the gateway (see resolveReferences). The
-// virtual cluster a listener policy forwards to is the exception: the
-// conversion leaves it named, and resolveReferences sends it by its id (see
-// virtualClusterAt).
+// entity. Converted through uidResolver, both are the id of the entity in the
+// configuration, the UID of its object but for a static key (see entityIDOf),
+// and the reference is then checked to be to an entity of the configuration of
+// the gateway (see resolveReferences).
 
-// uidResolver reads the entities the policies reference with their UID as
-// their Konnect ID and as their name. It records the objects it reads by UID,
-// to name them in messages.
+// uidResolver reads the entities the policies reference with their id in the
+// configuration as their Konnect ID and as their name. It records the objects
+// it reads by id, to name them in messages.
 type uidResolver struct {
 	client.Client
 
 	read map[uuid.UUID]client.ObjectKey
 }
 
-// Get reads the object, with its UID as its Konnect ID and as its name, when
-// it has them. The parent reference of an entity attached to an
+// Get reads the object, with its id in the configuration as its Konnect ID and
+// as its name, when it has them. The parent reference of an entity attached to an
 // OnPremEventGateway is hidden: the conversions refuse a reference to such an
 // entity.
 func (r uidResolver) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	if err := r.Client.Get(ctx, key, obj, opts...); err != nil {
 		return err
 	}
-	uid := string(obj.GetUID())
-	if id, err := uuid.Parse(uid); err == nil {
-		r.read[id] = key
+	id := entityIDKey(obj)
+	if parsed, err := uuid.Parse(id); err == nil {
+		r.read[parsed] = key
 	}
 	if e, ok := obj.(interface{ SetKonnectID(string) }); ok {
-		e.SetKonnectID(uid)
+		e.SetKonnectID(id)
 	}
 	switch e := obj.(type) {
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		e.Spec.ParentRef = withoutOnPremParent(e.Spec.ParentRef)
 		if config := e.Spec.APISpec.EventGatewaySchemaRegistryConfig; config != nil && config.SchemaRegistryConfluent != nil {
-			config.SchemaRegistryConfluent.Name = uid
+			config.SchemaRegistryConfluent.Name = id
 		}
 	case *configurationv1alpha1.EventGatewayStaticKey:
 		e.Spec.ParentRef = withoutOnPremParent(e.Spec.ParentRef)
-		e.Spec.APISpec.Name = uid
+		e.Spec.APISpec.Name = id
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		e.Spec.ParentRef = withoutOnPremParent(e.Spec.ParentRef)
 	}
@@ -105,10 +101,8 @@ type referenceTargets struct {
 	schemaRegistries entityIDs
 	staticKeys       entityIDs
 	tlsTrustBundles  entityIDs
-	// virtualClusters are the virtual clusters of the configuration, by name:
-	// a listener policy forwards to one by its name.
-	virtualClusters map[string]uuid.UUID
-	// read names the objects uidResolver read, by UID.
+	virtualClusters  entityIDs
+	// read names the objects uidResolver read, by id.
 	read map[uuid.UUID]client.ObjectKey
 }
 
@@ -119,7 +113,7 @@ func referenceTargetsOf(c *configuration, read map[uuid.UUID]client.ObjectKey) r
 		schemaRegistries: entityIDs{kind: "EventGatewaySchemaRegistry", names: map[uuid.UUID]string{}},
 		staticKeys:       entityIDs{kind: "EventGatewayStaticKey", names: map[uuid.UUID]string{}, withName: true},
 		tlsTrustBundles:  entityIDs{kind: "EventGatewayTLSTrustBundle", names: map[uuid.UUID]string{}},
-		virtualClusters:  map[string]uuid.UUID{},
+		virtualClusters:  entityIDs{kind: "EventGatewayVirtualCluster", names: map[uuid.UUID]string{}},
 		read:             read,
 	}
 	for _, e := range c.entities.SchemaRegistries {
@@ -132,15 +126,15 @@ func referenceTargetsOf(c *configuration, read map[uuid.UUID]client.ObjectKey) r
 		t.tlsTrustBundles.names[e.Id] = e.Name
 	}
 	for _, e := range c.entities.VirtualClusters {
-		t.virtualClusters[e.Name] = e.Id
+		t.virtualClusters.names[e.Id] = e.Name
 	}
 	return t
 }
 
 // resolve replaces a reference with a reference by id to an entity of the
 // configuration, with its name when withName is set. The reference holds the
-// UID of the object of the entity, as its id or as its name (see
-// uidResolver).
+// id of the entity, the UID of its object but for a static key, as its id or as
+// its name (see uidResolver).
 func (t referenceTargets) resolve(ids entityIDs, ref map[string]any) error {
 	s, _ := ref["id"].(string)
 	if s == "" {
@@ -204,32 +198,12 @@ func tlsTrustBundleAt(path ...string) entityReference {
 	}}
 }
 
-// virtualClusterAt is the virtual cluster a destination at the path names,
-// by the name of its entity: it is sent by its id instead, as gw-admin keeps
-// the name but gives the data planes an empty id for it. A destination by id
-// is refused, a Konnect id meaning nothing to gw-admin, unless it is the id
-// of a virtual cluster of the configuration, as in a policy kept from the
-// last configuration.
+// virtualClusterAt is the virtual cluster a destination at the path names. It
+// is sent by its id: gw-admin keeps a destination by name, but gives the data
+// planes an empty id for it.
 func virtualClusterAt(path ...string) entityReference {
 	return entityReference{path: path, resolve: func(t referenceTargets, destination map[string]any) error {
-		if v, ok := destination["id"]; ok {
-			s, _ := v.(string)
-			if id, err := uuid.Parse(s); err == nil && slices.Contains(slices.Collect(maps.Values(t.virtualClusters)), id) {
-				return nil
-			}
-			return fmt.Errorf("it forwards to a virtual cluster by id: name a virtual cluster of the gateway instead")
-		}
-		name, ok := destination["name"].(string)
-		if !ok {
-			return nil
-		}
-		id, ok := t.virtualClusters[name]
-		if !ok {
-			return fmt.Errorf("it forwards to the virtual cluster %q, which isn't in the configuration of the gateway", name)
-		}
-		clear(destination)
-		destination["id"] = id.String()
-		return nil
+		return t.resolve(t.virtualClusters, destination)
 	}}
 }
 
@@ -267,6 +241,13 @@ var (
 		virtualClusterAt("config", "destination"),
 	}
 )
+
+// checkPolicyReferences returns why a policy can't reference what it does, on
+// prem: see noNewUserOfDeletedEntities. Policies reference other entities by
+// object only, so every reference names an object of the cluster.
+func checkPolicyReferences(ctx context.Context, cl client.Client, policy entityObject) error {
+	return noNewUserOfDeletedEntities(ctx, cl, policy)
+}
 
 // resolveReferences returns an adjustment of the payload of a policy that
 // rewrites its references, at the paths of its kind, in order: the first

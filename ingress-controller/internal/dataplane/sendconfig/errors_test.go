@@ -10,12 +10,21 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
+	dataplanepush "github.com/kong/kong-operator/v2/ingress-controller/pkg/dataplane/push"
 )
 
 type testError struct{}
 
 func (t testError) Error() string {
 	return "test error"
+}
+
+func TestResponseParsingErrorAlias(t *testing.T) {
+	err := error(dataplanepush.NewResponseParsingError([]byte("body")))
+
+	var publicErr dataplanepush.ResponseParsingError
+	require.ErrorAs(t, err, &publicErr)
+	require.Equal(t, []byte("body"), publicErr.ResponseBody())
 }
 
 func TestUpdateError(t *testing.T) {

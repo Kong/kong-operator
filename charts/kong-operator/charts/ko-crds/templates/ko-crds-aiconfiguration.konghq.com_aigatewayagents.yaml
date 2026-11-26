@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayagents.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -198,11 +198,37 @@ spec:
                     properties:
                       caCertificates:
                         items:
-                          type: string
+                          properties:
+                            kind:
+                              default: AIGatewayCACertificate
+                              enum:
+                              - AIGatewayCACertificate
+                              type: string
+                            name:
+                              minLength: 1
+                              type: string
+                            namespace:
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                       certificates:
                         items:
-                          type: string
+                          properties:
+                            kind:
+                              default: AIGatewayCertificate
+                              enum:
+                              - AIGatewayCertificate
+                              type: string
+                            name:
+                              minLength: 1
+                              type: string
+                            namespace:
+                              type: string
+                          required:
+                          - name
+                          type: object
                         maxItems: 1
                         type: array
                       logging:
@@ -391,8 +417,6 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
-                    required:
-                    - url
                     type: object
                   displayName:
                     maxLength: 256
@@ -413,9 +437,9 @@ spec:
                     type: object
                   managedBy:
                     additionalProperties:
-                      maxLength: 63
+                      maxLength: 127
                       minLength: 1
-                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      pattern: ^[^\s\x00-\x1F\x7F-\x9F]+$
                       type: string
                     maxProperties: 5
                     type: object

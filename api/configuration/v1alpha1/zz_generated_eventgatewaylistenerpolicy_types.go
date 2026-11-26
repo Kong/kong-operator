@@ -21,7 +21,8 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef", message="spec.eventGatewayListenerRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef", message="spec.eventGatewayListenerRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayListenerRef) || self.spec.eventGatewayListenerRef.type == 'namespacedRef' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayListenerRef) && oldSelf.value().spec.eventGatewayListenerRef == self.spec.eventGatewayListenerRef)",message="spec.eventGatewayListenerRef must use namespacedRef",fieldPath=".spec.eventGatewayListenerRef",optionalOldSelf=true
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef",message="spec.eventGatewayListenerRef is immutable once the entity has been created in Konnect",fieldPath=".spec.eventGatewayListenerRef"
 type EventGatewayListenerPolicy struct {
 	metav1.TypeMeta   `json:",inline"`

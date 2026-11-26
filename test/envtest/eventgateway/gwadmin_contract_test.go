@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -178,6 +179,76 @@ func TestGWAdminContract(t *testing.T) {
 		second := contractBackendCluster(t, "second")
 		require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntities(ctx, id, contractEntities(second))), 300)
 		assert.Equal(t, []string{"second"}, contractBackendClusterNames(t, gwAdmin, id))
+	})
+
+	t.Run("cluster-level policy order survives an entities round trip", func(t *testing.T) {
+		gwAdmin := contractGWAdmin(t)
+		ctx := t.Context()
+		id := registerContractGateway(t, gwAdmin)
+		backend := contractBackendCluster(t, "bc")
+		backend.InsecureAllowAnonymousVirtualClusterAuth = new(true)
+		doc := contractEntities(backend)
+		var vc gwadminapi.EventGatewayVirtualClusterOnPrem
+		require.NoError(t, json.Unmarshal(fmt.Appendf(nil, `{
+			"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+			"destination": {"id": %q}, "acl_mode": "enforce_on_gateway", "authentication": [{"type": "anonymous"}],
+			"cluster_policies": [], "consume_policies": [], "produce_policies": []
+		}`, uuid.NewString(), backend.Id), &vc))
+		doc.Entities.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{vc}
+
+		policies := make([]gwadminapi.EventGatewayClusterPolicyOnPrem, 2)
+		for i, name := range []string{"z-first", "a-second"} {
+			// IDs and creation times sort opposite to names; neither may
+			// override the order of the submitted array.
+			require.NoError(t, json.Unmarshal(fmt.Appendf(nil, `{
+				"id": "00000000-0000-4000-8000-00000000001%d",
+				"created_at": "2026-10-19T10:0%d:00Z",
+				"type": "acls", "name": %q,
+				"config": {"rules": [{
+					"action": "allow", "resource_type": "topic",
+					"operations": [{"name": "read"}], "resource_names": [{"match": "orders"}]
+				}]}
+			}`, i+1, i, name), &policies[i]))
+		}
+		expectedPolicies := slices.Clone(policies)
+		for i := range expectedPolicies {
+			policy, err := expectedPolicies[i].AsEventGatewayACLsPolicy()
+			require.NoError(t, err)
+			policy.Condition = new("")
+			policy.Description = new("")
+			policy.Enabled = new(true)
+			require.NoError(t, expectedPolicies[i].FromEventGatewayACLsPolicy(policy))
+		}
+
+		read := func() gwadminapi.GatewayEntities {
+			t.Helper()
+			resp, err := gwAdmin.GetEventGatewayEntities(ctx, id)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+			require.NoError(t, err)
+			require.NotNil(t, parsed.JSON200, "%s: %s", resp.Status, parsed.Body)
+			return *parsed.JSON200
+		}
+		for revision := range 3 {
+			slices.Reverse(policies)
+			slices.Reverse(expectedPolicies)
+			doc.Entities.VirtualClusters[0].ClusterPolicies = policies
+			doc.ConfigVersion.DataVersion = revision + 1
+			require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntities(ctx, id, doc)), 300)
+			want, err := json.Marshal(expectedPolicies)
+			require.NoError(t, err)
+			for range 3 {
+				got := read()
+				require.Equal(t, doc.ConfigVersion, got.ConfigVersion)
+				require.Len(t, got.Entities.VirtualClusters, 1)
+				require.Equal(t, vc.Id, got.Entities.VirtualClusters[0].Id)
+				actual, err := json.Marshal(got.Entities.VirtualClusters[0].ClusterPolicies)
+				require.NoError(t, err)
+				require.JSONEq(t, string(want), string(actual),
+					"cluster policies must retain their submitted order and payload with the known defaults on every read")
+			}
+		}
 	})
 
 	t.Run("rejected entities name the field at fault and keep the previous ones", func(t *testing.T) {
@@ -353,6 +424,201 @@ func TestGWAdminContract(t *testing.T) {
 		destination := got.Entities.Listeners[0].Policies[0].Config.Destination
 		assert.Equal(t, "vc", destination["name"], "the destination is kept by name")
 		assert.Equal(t, vcID, destination["id"], "the name is resolved to the id of the virtual cluster")
+	})
+
+	t.Run("listener policy order survives an entities round trip", func(t *testing.T) {
+		gwAdmin := contractGWAdmin(t)
+		ctx := t.Context()
+		id := registerContractGateway(t, gwAdmin)
+		bcID, vcID, listenerID := uuid.NewString(), uuid.NewString(), uuid.NewString()
+		// Creation times sort opposite to the submitted order, and the IDs
+		// opposite to it on one revision out of two: neither may override it.
+		policyIDs := []string{"00000000-0000-4000-8000-000000000012", "00000000-0000-4000-8000-000000000011"}
+		doc := func(revision int, ids []string) string {
+			policies := make([]string, 0, len(ids))
+			for i, policyID := range ids {
+				policies = append(policies, fmt.Sprintf(`{
+					"id": %q, "created_at": "2026-10-19T10:0%d:00Z", "type": "forward_to_virtual_cluster", "name": "forward-%d",
+					"config": {"type": "port_mapping", "advertised_host": "localhost", "bootstrap_port": "at_start", "destination": {"id": %q}}
+				}`, policyID, len(ids)-i, i, vcID))
+			}
+			return fmt.Sprintf(`{"config_version": {"data_version": %d, "operator_version": "1.0.0", "feature_bitmap": 0}, "entities": {
+				"backend_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "bc",
+					"bootstrap_servers": ["kafka:9092"], "authentication": {"type": "anonymous"}, "tls": {"enabled": false},
+					"insecure_allow_anonymous_virtual_cluster_auth": true
+				}],
+				"virtual_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+					"destination": {"id": %q}, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+					"cluster_policies": [], "consume_policies": [], "produce_policies": []
+				}],
+				"listeners": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "listener",
+					"addresses": ["0.0.0.0"], "ports": ["19092-19095"], "policies": [%s]
+				}],
+				"schema_registries": [], "static_keys": [], "tls_trust_bundles": []
+			}}`, revision, bcID, vcID, bcID, listenerID, strings.Join(policies, ","))
+		}
+		read := func() []string {
+			t.Helper()
+			resp, err := gwAdmin.GetEventGatewayEntities(ctx, id)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+			require.NoError(t, err)
+			require.NotNil(t, parsed.JSON200, "%s: %s", resp.Status, parsed.Body)
+			require.Len(t, parsed.JSON200.Entities.Listeners, 1)
+			got := make([]string, 0, 2)
+			for _, p := range parsed.JSON200.Entities.Listeners[0].Policies {
+				got = append(got, p.Id.String())
+			}
+			return got
+		}
+		for revision := range 3 {
+			slices.Reverse(policyIDs)
+			require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntitiesWithBody(ctx, id, "application/json", strings.NewReader(doc(revision+1, policyIDs)))), 300)
+			for range 3 {
+				require.Equal(t, policyIDs, read(), "listener policies must retain their submitted order on every read")
+			}
+		}
+	})
+
+	t.Run("produce policy order survives an entities round trip", func(t *testing.T) {
+		gwAdmin := contractGWAdmin(t)
+		ctx := t.Context()
+		id := registerContractGateway(t, gwAdmin)
+		bcID, vcID := uuid.NewString(), uuid.NewString()
+		// Creation times sort opposite to the submitted order, and the IDs
+		// opposite to it on one revision out of two: neither may override it.
+		parentID := "00000000-0000-4000-8000-000000000022"
+		childIDs := []string{"00000000-0000-4000-8000-000000000023", "00000000-0000-4000-8000-000000000021"}
+		rootID := "00000000-0000-4000-8000-000000000024"
+		doc := func(revision int, siblings []string) string {
+			policies := fmt.Sprintf(`{
+				"id": %q, "created_at": "2026-10-19T10:00:00Z", "type": "schema_validation", "name": "parent",
+				"config": {"type": "json", "value_validation_action": "reject"}
+			}`, parentID)
+			for i, sibling := range siblings {
+				policies += fmt.Sprintf(`, {
+					"id": %q, "created_at": "2026-10-19T10:0%d:00Z", "type": "modify_headers", "name": "child-%d",
+					"parent_policy_id": %q,
+					"config": {"actions": [{"op": "remove", "key": "x-child-%d"}]}
+				}`, sibling, len(siblings)-i, i, parentID, i)
+			}
+			policies += fmt.Sprintf(`, {
+				"id": %q, "created_at": "2026-10-19T10:00:00Z", "type": "modify_headers", "name": "root",
+				"config": {"actions": [{"op": "remove", "key": "x-root"}]}
+			}`, rootID)
+			return fmt.Sprintf(`{"config_version": {"data_version": %d, "operator_version": "1.0.0", "feature_bitmap": 0}, "entities": {
+				"backend_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "bc",
+					"bootstrap_servers": ["kafka:9092"], "authentication": {"type": "anonymous"}, "tls": {"enabled": false},
+					"insecure_allow_anonymous_virtual_cluster_auth": true
+				}],
+				"virtual_clusters": [{
+					"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+					"destination": {"id": %q}, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+					"cluster_policies": [], "consume_policies": [], "produce_policies": [%s]
+				}],
+				"listeners": [], "schema_registries": [], "static_keys": [], "tls_trust_bundles": []
+			}}`, revision, bcID, vcID, bcID, policies)
+		}
+		read := func() (ids []string, parents []string) {
+			t.Helper()
+			resp, err := gwAdmin.GetEventGatewayEntities(ctx, id)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+			require.NoError(t, err)
+			require.NotNil(t, parsed.JSON200, "%s: %s", resp.Status, parsed.Body)
+			require.Len(t, parsed.JSON200.Entities.VirtualClusters, 1)
+			for _, p := range parsed.JSON200.Entities.VirtualClusters[0].ProducePolicies {
+				ids = append(ids, p.Id.String())
+				parent := ""
+				if child, err := p.AsEventGatewayModifyHeadersPolicyCreate(); err == nil && child.ParentPolicyId != nil {
+					parent = child.ParentPolicyId.String()
+				}
+				parents = append(parents, parent)
+			}
+			return ids, parents
+		}
+		for revision := range 3 {
+			slices.Reverse(childIDs)
+			require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntitiesWithBody(ctx, id, "application/json", strings.NewReader(doc(revision+1, childIDs)))), 300)
+			want := append([]string{parentID}, childIDs...)
+			want = append(want, rootID)
+			for range 3 {
+				ids, parents := read()
+				require.Equal(t, want, ids, "produce policies must retain their submitted root/child order on every read")
+				require.Equal(t, parentID, parents[1], "ordering must not change parent_policy_id")
+				require.Equal(t, parentID, parents[2])
+				require.Empty(t, parents[0], "the schemaValidation parent is a root policy")
+				require.Empty(t, parents[3], "a root policy has no parent_policy_id")
+			}
+		}
+	})
+
+	t.Run("consume roots groups and siblings survive an entities round trip", func(t *testing.T) {
+		gwAdmin := contractGWAdmin(t)
+		ctx := t.Context()
+		id := registerContractGateway(t, gwAdmin)
+		backend := contractBackendCluster(t, "bc")
+		backend.InsecureAllowAnonymousVirtualClusterAuth = new(true)
+		doc := contractEntities(backend)
+		var vc gwadminapi.EventGatewayVirtualClusterOnPrem
+		require.NoError(t, json.Unmarshal(fmt.Appendf(nil, `{
+			"id": %q, "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+			"destination": {"id": %q}, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+			"cluster_policies": [], "consume_policies": [], "produce_policies": []
+		}`, uuid.NewString(), backend.Id), &vc))
+		doc.Entities.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{vc}
+		payloads := []string{
+			`"type": "schema_validation", "name": "z-parse", "config": {"type": "json", "json": {"value_validation_action": "skip"}}`,
+			`"type": "modify_headers", "name": "z-child", "parent_policy_id": "00000000-0000-4000-8000-000000000030",
+			 "config": {"actions": [{"op": "remove", "key": "x-child"}]}`,
+			`"type": "modify_headers", "name": "a-child", "parent_policy_id": "00000000-0000-4000-8000-000000000030",
+			 "config": {"actions": [{"op": "remove", "key": "x-other-child"}]}`,
+			`"type": "schema_validation", "name": "a-parse", "config": {"type": "json", "json": {"value_validation_action": "skip"}}`,
+			`"type": "skip_record", "name": "skip", "condition": "true", "parent_policy_id": "00000000-0000-4000-8000-000000000033", "config": null`,
+			`"type": "modify_headers", "name": "root", "parent_policy_id": null, "config": {"actions": [{"op": "remove", "key": "x-root"}]}`,
+		}
+		policies := make([]gwadminapi.EventGatewayConsumePolicyOnPrem, len(payloads))
+		for i, payload := range payloads {
+			require.NoError(t, json.Unmarshal(fmt.Appendf(nil, `{
+				"id": "00000000-0000-4000-8000-00000000003%d",
+				"created_at": "2026-10-19T10:0%d:00Z", %s
+			}`, i, len(payloads)-i, payload), &policies[i]))
+		}
+		for revision, order := range [][]int{{0, 2, 1, 3, 4, 5}, {5, 3, 4, 0, 1, 2}, {3, 4, 0, 2, 1, 5}} {
+			want := make([]gwadminapi.EventGatewayConsumePolicyOnPrem, 0, len(order))
+			for _, i := range order {
+				want = append(want, policies[i])
+			}
+			doc.Entities.VirtualClusters[0].ConsumePolicies = want
+			doc.ConfigVersion.DataVersion = revision + 1
+			require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntities(ctx, id, doc)), 300)
+			expected, err := json.Marshal(want)
+			require.NoError(t, err)
+			for range 3 {
+				resp, err := gwAdmin.GetEventGatewayEntities(ctx, id)
+				require.NoError(t, err)
+				parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+				require.NoError(t, resp.Body.Close())
+				require.NoError(t, err)
+				require.NotNil(t, parsed.JSON200, "%s: %s", resp.Status, parsed.Body)
+				require.Equal(t, doc.ConfigVersion, parsed.JSON200.ConfigVersion)
+				require.Len(t, parsed.JSON200.Entities.VirtualClusters, 1)
+				got := parsed.JSON200.Entities.VirtualClusters[0]
+				require.Equal(t, vc.Id, got.Id)
+				actual, err := json.Marshal(got.ConsumePolicies)
+				require.NoError(t, err)
+				// JSONEq ignores object field order, but preserves array order.
+				require.JSONEq(t, string(expected), string(actual), "flat consume_policies retain all payloads and parent_policy_id links")
+				require.Empty(t, got.ProducePolicies)
+				require.Empty(t, got.ClusterPolicies)
+			}
+		}
 	})
 
 	t.Run("created_at must be whole seconds in UTC", func(t *testing.T) {

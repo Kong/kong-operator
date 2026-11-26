@@ -158,8 +158,8 @@ The Type field determines which sub-field is active.
 | Field | Description |
 | --- | --- |
 | `type` _[ControlPlaneRefType](#eventgateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced: a KonnectEventGateway (konnectNamespacedRef) or an OnPremEventGateway (onpremNamespacedRef). It can't be changed, and neither can an onpremNamespacedRef. |
-| `konnectNamespacedRef` _[KonnectNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
-| `onpremNamespacedRef` _[OnPremNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-onpremnamespacedref)_ | OnPremNamespacedRef references an OnPremEventGateway resource in the same namespace. The data plane pulls its configuration from the gw-admin pods of the GWAdmin of that gateway, and authenticates with a client certificate trusted by the cp client CA of the GWAdmin. Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectEventGateway resource. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `onpremNamespacedRef` _[OnPremNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-onpremnamespacedref)_ | OnPremNamespacedRef references an OnPremEventGateway resource. The data plane pulls its configuration from the gw-admin pods of the GWAdmin of that gateway, and authenticates with a client certificate trusted by the cp client CA of the GWAdmin. Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct. |
 
 _Appears in:_
 
@@ -182,8 +182,8 @@ Allowed values:
 
 | Value | Description |
 | --- | --- |
-| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
-| `onpremNamespacedRef` | ControlPlaneRefTypeOnPremNamespacedRef references an OnPremEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
+| `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectEventGateway<br />resource.<br /> |
+| `onpremNamespacedRef` | ControlPlaneRefTypeOnPremNamespacedRef references an OnPremEventGateway<br />resource.<br /> |
 
 #### DebugEndpointsState
 
@@ -253,8 +253,8 @@ All fields map 1-to-1 to keg configuration variables.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectConfig](#eventgateway-konghq-com-v1alpha1-types-konnectconfig)_ | Konnect provides optional overrides for the keg to Konnect connection parameters. All other connection values (region, gateway_cluster_id, cert paths) are derived automatically and cannot be overridden here. To supply a user-owned mTLS certificate, use spec.certificateSecret. |
-| `configPollIntervalSeconds` _*int32_ | ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds. Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL. |
-| `enableDebugEndpoints` _[DebugEndpointsState](#eventgateway-konghq-com-v1alpha1-types-debugendpointsstate)_ | EnableDebugEndpoints enables the /debug/pprof/allocs endpoint. Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS. |
+| `configPollIntervalSeconds` _*int32_ | ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds. Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL.<br /><br />Deprecated: keg 1.3.0 removed this setting: it long-polls its configuration. It is passed only to a keg older than 1.3.0, read from the tag of its image, and ignored otherwise, with a Warning Event on the KegDataPlane. An image without a version tag, e.g. pinned by digest only or tagged main, counts as 1.3.0 or later; the tag of a custom image is read as the keg version. |
+| `enableDebugEndpoints` _[DebugEndpointsState](#eventgateway-konghq-com-v1alpha1-types-debugendpointsstate)_ | EnableDebugEndpoints enables the /debug/pprof/allocs endpoint. Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.<br /><br />Deprecated: keg 1.3.0 removed this setting: it serves its debug endpoints on a listener of its own. It is passed only to a keg older than 1.3.0, read from the tag of its image, and ignored otherwise, with a Warning Event on the KegDataPlane. An image without a version tag, e.g. pinned by digest only or tagged main, counts as 1.3.0 or later; the tag of a custom image is read as the keg version. |
 | `observability` _[ObservabilityConfig](#eventgateway-konghq-com-v1alpha1-types-observabilityconfig)_ | Observability configures logging, metrics, and tracing. |
 | `runtime` _[RuntimeOptions](#eventgateway-konghq-com-v1alpha1-types-runtimeoptions)_ | Runtime configures graceful shutdown and health endpoint behaviour. |
 
@@ -271,7 +271,7 @@ KegDataPlaneSpec defines the desired state of KegDataPlane.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced: konnectNamespacedRef references a KonnectEventGateway resource in the same namespace, onpremNamespacedRef an OnPremEventGateway resource in the same namespace. |
+| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced: konnectNamespacedRef references a KonnectEventGateway resource, onpremNamespacedRef an OnPremEventGateway resource. A gateway in another namespace needs a KongReferenceGrant in its namespace. |
 | `deployment` _[DeploymentOptions](#eventgateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the keg Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
 | `network` _[NetworkOptions](#eventgateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the keg pod is exposed to Kafka clients. |
 | `config` _[KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)_ | Config provides optional overrides for keg runtime settings. When omitted, the keg built-in defaults are used. https://developer.konghq.com/event-gateway/configuration/#applying-configuration |
@@ -320,13 +320,14 @@ _Appears in:_
 #### KonnectNamespacedRef
 
 
-KonnectNamespacedRef is a reference to a KonnectEventGateway resource in the same namespace.
+KonnectNamespacedRef is a reference to a KonnectEventGateway resource.
 
 
 
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the KonnectEventGateway resource. |
+| `namespace` _*string_ | Namespace is the namespace of the KonnectEventGateway resource, by default the namespace of the DataPlane. Another namespace needs a KongReferenceGrant in that namespace allowing the KegDataPlane, and one allowing its EventGatewayDataPlaneCertificate, to reference it. |
 
 _Appears in:_
 
@@ -428,13 +429,14 @@ _Appears in:_
 #### OnPremNamespacedRef
 
 
-OnPremNamespacedRef is a reference to an OnPremEventGateway resource in the same namespace.
+OnPremNamespacedRef is a reference to an OnPremEventGateway resource.
 
 
 
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the OnPremEventGateway resource. |
+| `namespace` _*string_ | Namespace is the namespace of the OnPremEventGateway resource, by default the namespace of the DataPlane. Another namespace needs a KongReferenceGrant in that namespace allowing the KegDataPlane, and one allowing its EventGatewayDataPlaneCertificate, to reference it. |
 
 _Appears in:_
 

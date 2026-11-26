@@ -119,7 +119,8 @@ refresh to new upstream TLS handshakes without replacing the Certificate or
 KongService, or restarting DataPlane Pods. Use a Gateway image supporting the
 Konnect Vault backend and refresh behavior. Label cert-manager output Secrets with
 `konghq.com/secret: "true"` so the default Operator Secret cache sees renewal.
-The Combined Config Store entry must fit its 5120-byte limit.
+The Combined Config Store entry must fit its limit of 8192 Unicode characters
+(8 KiB for ASCII PEM/JSON values).
 
 The annotation alone does not hide private keys: use Vault references instead of
 inline PEM in the selected KongCertificate. Restrict access to the actual Secret

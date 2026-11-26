@@ -113,8 +113,8 @@ func TestGatewayKonnectLabels(t *testing.T) {
 		Return(&sdkkonnectops.CreateControlPlaneResponse{
 			ControlPlane: &sdkkonnectcomp.ControlPlane{
 				ID: konnectControlPlaneID,
-				Config: sdkkonnectcomp.ControlPlaneConfig{
-					ClusterType: sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane,
+				Config: sdkkonnectcomp.Config{
+					ClusterType: sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane.ToPointer(),
 				},
 			},
 		}, nil)
@@ -136,8 +136,8 @@ func TestGatewayKonnectLabels(t *testing.T) {
 				Data: []sdkkonnectcomp.ControlPlane{
 					{
 						ID: konnectControlPlaneID,
-						Config: sdkkonnectcomp.ControlPlaneConfig{
-							ClusterType:          sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane,
+						Config: sdkkonnectcomp.Config{
+							ClusterType:          sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane.ToPointer(),
 							ControlPlaneEndpoint: "https://cp.endpoint",
 							TelemetryEndpoint:    "https://tp.endpoint",
 						},

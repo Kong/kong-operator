@@ -1,0 +1,111 @@
+# The provider, the agent and the model live in the Entities namespace and
+# reference the gateway and the consumer group of the gateway's namespace.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: ($provider_name)
+  namespace: ($entities_namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+      namespace: ($namespace)
+  apiSpec:
+    type: openai
+    openai:
+      name: ($provider_name)
+      displayName: OpenAI-compatible mock provider
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: inline
+                value: test-ai-gateway-key
+---
+# The ACL allow-list references the consumer group of the other namespace.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($agent_name)
+  namespace: ($entities_namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+      namespace: ($namespace)
+  apiSpec:
+    name: ($agent_name)
+    displayName: ($agent_name)
+    type: http
+    enabled: Enabled
+    access:
+      acls:
+        type: allow
+        allow:
+          allow:
+            - kind: AIGatewayConsumerGroup
+              name: ($consumer_group_name)
+              namespace: ($namespace)
+    config:
+      url: http://upstream-agent.example.com
+      route:
+        paths:
+          - ($agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+---
+# The model's ACL allow-list references the same consumer group.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($entities_namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+      namespace: ($namespace)
+  apiSpec:
+    type: model
+    model:
+      name: ($model_name)
+      displayName: Cross-namespace ACL model
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      access:
+        acls:
+          type: allow
+          allow:
+            allow:
+              - kind: AIGatewayConsumerGroup
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          paths:
+            - ($model_route_path)
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

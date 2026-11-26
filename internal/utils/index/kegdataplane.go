@@ -17,6 +17,7 @@ limitations under the License.
 package index
 
 import (
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
@@ -72,7 +73,8 @@ func kegDataPlaneKonnectNamespacedRef(object client.Object) []string {
 	if egdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
 		return nil
 	}
-	return []string{egdp.Namespace + "/" + egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name}
+	ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
+	return []string{lo.FromPtrOr(ref.Namespace, egdp.Namespace) + "/" + ref.Name}
 }
 
 func kegDataPlaneOnPremNamespacedRef(object client.Object) []string {
@@ -80,5 +82,6 @@ func kegDataPlaneOnPremNamespacedRef(object client.Object) []string {
 	if !ok || egdp.Spec.ControlPlaneRef.OnPremNamespacedRef == nil {
 		return nil
 	}
-	return []string{egdp.Namespace + "/" + egdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name}
+	ref := egdp.Spec.ControlPlaneRef.OnPremNamespacedRef
+	return []string{lo.FromPtrOr(ref.Namespace, egdp.Namespace) + "/" + ref.Name}
 }

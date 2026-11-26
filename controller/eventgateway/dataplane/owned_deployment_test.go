@@ -154,7 +154,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-						ConfigPollIntervalSeconds: new(int32(60)),
+						ConfigPollIntervalSeconds: new(int32(60)), //nolint:staticcheck // testing deprecated field
 					},
 				},
 			},
@@ -168,7 +168,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-						EnableDebugEndpoints: new(eventgatewayv1alpha1.DebugEndpointsStateEnabled),
+						EnableDebugEndpoints: new(eventgatewayv1alpha1.DebugEndpointsStateEnabled), //nolint:staticcheck // testing deprecated field
 					},
 				},
 			},
@@ -182,7 +182,7 @@ func Test_buildKEGEnvVars(t *testing.T) {
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-						EnableDebugEndpoints: new(eventgatewayv1alpha1.DebugEndpointsStateDisabled),
+						EnableDebugEndpoints: new(eventgatewayv1alpha1.DebugEndpointsStateDisabled), //nolint:staticcheck // testing deprecated field
 					},
 				},
 			},
@@ -237,7 +237,8 @@ func Test_buildKEGEnvVars(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			envs, err := buildKEGEnvVars(tc.egdp, tc.keg)
+			// A keg older than 1.3.0, which reads every setting.
+			envs, err := buildKEGEnvVars(tc.egdp, tc.keg, "kong/kong-event-gateway:1.2.0")
 			if tc.wantErr {
 				require.Error(t, err)
 				return

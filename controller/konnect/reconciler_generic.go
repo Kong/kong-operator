@@ -9,6 +9,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -56,6 +57,12 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 
 	MetricRecorder metrics.Recorder
 
+	// ConfigVersionTracker, when set, is used to skip periodic updates of entities in sync with Konnect.
+	ConfigVersionTracker *ops.ConfigVersionTracker
+
+	// apiReader makes policy-chain ownership decisions independent of cache lag.
+	apiReader client.Reader
+
 	// pendingKonnectIDs holds the Konnect ID of entities created in Konnect whose
 	// ID has not yet been persisted to their status. It lets the cleanup logic
 	// recover and delete a Konnect entity even if the status update that would
@@ -96,6 +103,15 @@ func WithMetricRecorder[T constraints.SupportedKonnectEntityType, TEnt constrain
 	}
 }
 
+// WithConfigVersionTracker sets the tracker used to skip periodic updates of entities in sync with Konnect.
+func WithConfigVersionTracker[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	tracker *ops.ConfigVersionTracker,
+) KonnectEntityReconcilerOption[T, TEnt] {
+	return func(r *KonnectEntityReconciler[T, TEnt]) {
+		r.ConfigVersionTracker = tracker
+	}
+}
+
 // NewKonnectEntityReconciler returns a new KonnectEntityReconciler for the given
 // Konnect entity type.
 func NewKonnectEntityReconciler[
@@ -111,6 +127,7 @@ func NewKonnectEntityReconciler[
 		sdkFactory:        sdkFactory,
 		LoggingMode:       loggingMode,
 		Client:            client,
+		apiReader:         client,
 		SyncPeriod:        consts.DefaultKonnectSyncPeriod,
 		MetricRecorder:    nil,
 		pendingKonnectIDs: newPendingKonnectIDStore(),
@@ -123,6 +140,7 @@ func NewKonnectEntityReconciler[
 
 // SetupWithManager sets up the controller with the given manager.
 func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
 	var (
 		e              T
 		ent            = TEnt(&e)
@@ -150,11 +168,26 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		logger = logger.WithValues("konnect_id", id)
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
+	// Snapshot the object before this reconcile mutates status. Some type
+	// specific handlers persist only conditions while also setting other
+	// status fields; the final patch must include those fields as well.
+	old := ent.DeepCopyObject().(TEnt)
 
-	// Retaining a cluster policy chain must not depend on live authentication,
+	// Sync records are only stored after the cleanup finalizer was added, so they
+	// must be dropped on every path that removes it, not only on deletion.
+	if controllerutil.ContainsFinalizer(ent, KonnectCleanupFinalizer) {
+		defer forgetIfCleanupFinalizerRemoved(r.ConfigVersionTracker, ent)
+	}
+
+	chainClient := r.Client
+	if r.apiReader != nil {
+		chainClient = policyChainLiveGetClient{Client: r.Client, apiReader: r.apiReader}
+	}
+
+	// Retaining a policy chain must not depend on live authentication,
 	// parent readiness, or policy references.
-	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok && !chain.DeletionTimestamp.IsZero() {
-		return finalizePolicyChain(ctx, r.Client, chain)
+	if chain, ok := any(ent).(policyChain); ok && !chain.GetDeletionTimestamp().IsZero() {
+		return finalizePolicyChain(ctx, chainClient, chain)
 	}
 
 	// Entities referencing a gateway the Konnect reconciler does not manage,
@@ -592,6 +625,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build Konnect SDK: %w", err)
 	}
+	// Expose the current SDK (and therefore the current token) to write
+	// observers so they do not keep using a cached SDK after a token rotation.
+	ctx = sdkops.WithSDK(ctx, sdk)
 
 	// If a type has a KonnectCloudGatewayNetwork ref, handle it.
 	res, err = handleKonnectNetworkRef(ctx, r.Client, ent, sdk)
@@ -721,6 +757,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return ctrl.Result{}, nil
 	}
 
+	// Do not create, update or adopt anything in Konnect when the tags contain
+	// tags reserved for the Kubernetes metadata of the object (e.g. "k8s-uid:").
+	// This is done after the deletion handling so that such objects can still be deleted.
+	if stop, res, err := handleReservedTags(ctx, r.Client, ent); err != nil || !res.IsZero() || stop {
+		return res, err
+	}
+
 	// Add the cleanup finalizer before creating anything in Konnect. This
 	// guarantees that, even if the operator is interrupted right after the
 	// Konnect entity is created, there is always a finalizer that triggers the
@@ -732,7 +775,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
 	// that do not exist or populate some Status fields based on Konnect API.
-	ctx, stop, res, err = handleTypeSpecific(ctx, sdk, r.SyncPeriod, r.Client, ent)
+	ctx, stop, res, err = handleTypeSpecific(ctx, sdk, r.SyncPeriod, r.Client, chainClient, ent, apiAuth.Status.OrganizationID)
 	if err != nil {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
@@ -855,7 +898,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if inputs, ok := any(ent).(createInputsAware); ok {
 		previousHash = inputs.GetCreateInputsHash()
 	}
-	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
+	var syncResult *ops.SyncResult
+	res, syncResult, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, r.ConfigVersionTracker)
 	if inputs, ok := any(ent).(createInputsAware); ok &&
 		(previousID != ent.GetKonnectStatus().GetKonnectID() || previousHash != inputs.GetCreateInputsHash()) {
 		r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), pendingKonnectEntityStatus{
@@ -865,13 +909,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
-	// Update the status of the object regardless of the error.
-	if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
+	// Persist the status only when it changed. The helper also persists
+	// conditions changed by a verified update, which skips the generic
+	// condition/metric block in ops.Update.
+	// Do not use an optimistic lock here: the snapshot predates status changes
+	// made by earlier handlers and patches in this reconcile, so locking on its
+	// resource version would conflict. The merge patch is field-scoped.
+	if _, errUpd := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, ent, old); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
 	}
+	// The status now carries the sync record produced by the update. Only now is
+	// it safe to advance the in-memory fast path with the same record.
+	syncResult.Commit()
 	if err != nil {
 		logger.Error(err, "failed to update")
 
@@ -1007,6 +1059,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 		return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect status for %s: %w", pendingKey, err)
 	}
 	return ctrl.Result{}, true, nil
+}
+
+// forgetIfCleanupFinalizerRemoved drops the sync record of the entity when its Konnect cleanup finalizer is gone.
+func forgetIfCleanupFinalizerRemoved(f interface{ Forget(types.UID) }, ent client.Object) {
+	if !controllerutil.ContainsFinalizer(ent, KonnectCleanupFinalizer) {
+		f.Forget(ent.GetUID())
+	}
 }
 
 // restorePendingKonnectIDForDeletion restores the Konnect ID from the in-memory

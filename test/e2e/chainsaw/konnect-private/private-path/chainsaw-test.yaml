@@ -4,10 +4,10 @@
 # certificate. The fixture is test/e2e/chainsaw/fixtures/konnect-private.
 #
 # What it proves: the operator authenticates and reconciles over the private
-# hostname, and the data plane it renders carries the private control plane and
-# telemetry endpoints. Deviation, on purpose: the certificate is a test one,
-# injected into the operator, while the endpoint Kong serves over PrivateLink is
-# publicly trusted.
+# hostname, and the classic and the AI Gateway data planes it renders carry the
+# private control plane and telemetry endpoints. Deviation, on purpose: the
+# certificate is a test one, injected into the operator, while the endpoint Kong
+# serves over PrivateLink is publicly trusted.
 #
 # The Dedicated Cloud Gateway calls are not covered here: they leave the private
 # path today (Kong/kong-operator#6110), which the envtest layer pins.
@@ -24,7 +24,10 @@ spec:
        plane and telemetry endpoints.
     3. A KonnectExtension becomes ready.
     4. A DataPlane gets the private endpoints in its environment.
-    5. The fake received the calls on the private paths.
+    5. A KonnectAIGateway reconciles and reports the private AI Gateway control
+       plane and telemetry endpoints.
+    6. An AIGatewayDataPlane gets the private endpoints in its environment.
+    7. The fake received the calls on the private paths.
 
   bindings:
     # The hosts, the /api prefix and the endpoint shapes were observed on
@@ -57,6 +60,21 @@ spec:
       value: (join('-', [($namespace), 'dp']))
     - name: dataplane_image
       value: (env('GATEWAY_IMAGE'))
+    - name: aigw_cp_name
+      value: (join('-', [($namespace), 'aigw-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($namespace), 'aigw-dp']))
+    - name: aigw_cp_id
+      value: 3d1f0a52-6b7c-4e18-9a4d-2c5e8f1b0a73
+    # What the operator stores for the AI Gateway, not what Konnect returns:
+    # the scheme is stripped before the values reach the status.
+    - name: aigw_cp_endpoint
+      value: us.svc.konghq.tech/cp/aigw123
+    # The stored telemetry value carries no port; the rendered address does.
+    - name: aigw_tp_endpoint
+      value: us.svc.konghq.tech/tp/aigw123
+    - name: aigw_tp_address
+      value: us.svc.konghq.tech:443/tp/aigw123
 
   steps:
     - name: Create-api-auth
@@ -173,6 +191,78 @@ spec:
             content: |
               kubectl -n "$NAMESPACE" delete deploy -l "app=$DATAPLANE" --ignore-not-found
 
+    - name: Create-ai-gateway-control-plane
+      description: The AI Gateway control plane reconciles over the private host.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($namespace)
+              spec:
+                konnect:
+                  authRef:
+                    name: ($auth_name)
+                apiSpec:
+                  name: ($aigw_cp_name)
+                  displayName: ($aigw_cp_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($namespace)
+              status:
+                id: ($aigw_cp_id)
+                endpoints:
+                  # The operator strips the scheme before writing these fields.
+                  configuration: ($aigw_cp_endpoint)
+                  telemetry: ($aigw_tp_endpoint)
+
+    - name: Create-ai-gateway-data-plane
+      description: The AI Gateway data plane carries the private control plane and telemetry endpoints.
+      try:
+        # Not the shared data plane template: an AI Gateway data plane cannot
+        # become ready against a fake control plane, so the environment is what
+        # is asserted here.
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($aigw_cp_name)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_LABEL_SELECTOR
+                value: (join('=', ['gateway-operator.konghq.com/managed-by-name', ($aigw_dp_name)]))
+              - name: CONTAINER
+                value: aigw
+              - name: EXPECTED_ENV
+                value: (join(';', [join('=', ['KONG_CLUSTER_CONTROL_PLANE', ($aigw_cp_endpoint)]), join('=', ['KONG_CLUSTER_SERVER_NAME', 'us.svc.konghq.tech']), join('=', ['KONG_CLUSTER_TELEMETRY_ENDPOINT', ($aigw_tp_address)]), join('=', ['KONG_CLUSTER_TELEMETRY_SERVER_NAME', 'us.svc.konghq.tech'])]))
+            timeout: 3m
+            content: |
+              bash ../../common/scripts/assert-deployment-env.sh
+      cleanup:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DATAPLANE
+                value: ($aigw_dp_name)
+            content: |
+              kubectl -n "$NAMESPACE" delete deploy -l "gateway-operator.konghq.com/managed-by-name=$DATAPLANE" --ignore-not-found
+
     - name: Assert-the-fake-received-the-private-calls
       description: The fake Konnect logged the calls on the private paths.
       try:
@@ -199,7 +289,9 @@ spec:
               for want in \
                 "GET /api/v3/organizations/me" \
                 "POST /api/v2/control-planes" \
-                "POST /api/v2/control-planes/aee0667a-90c6-45a6-a2d8-575e1e487b86/dp-client-certificates"
+                "POST /api/v2/control-planes/aee0667a-90c6-45a6-a2d8-575e1e487b86/dp-client-certificates" \
+                "POST /api/v1/ai-gateways" \
+                "POST /api/v1/ai-gateways/3d1f0a52-6b7c-4e18-9a4d-2c5e8f1b0a73/data-plane-certificates"
               do
                 line=$(echo "$logs" | grep -F "\"$want" | head -1)
                 if [ -z "$line" ]; then

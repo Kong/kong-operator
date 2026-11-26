@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -105,9 +106,18 @@ const (
 	// KonnectEventGatewayNotFoundReason indicates the referenced
 	// KonnectEventGateway was not found.
 	KonnectEventGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// KonnectEventGatewayRefNotPermittedReason indicates the referenced
+	// KonnectEventGateway is in another namespace, and no KongReferenceGrant
+	// allows the reference.
+	KonnectEventGatewayRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
 	// KonnectEventGatewayNotProgrammedReason indicates the referenced
 	// KonnectEventGateway exists but is not yet Programmed on Konnect.
 	KonnectEventGatewayNotProgrammedReason consts.ConditionReason = "NotProgrammed"
+	// KonnectEventGatewayEndpointMismatchReason indicates the referenced
+	// KonnectEventGateway cannot be reached with its serverURL: it carries a
+	// path, and the Event Gateway composes a public Konnect host from the
+	// region and the domain the data plane derives from it.
+	KonnectEventGatewayEndpointMismatchReason consts.ConditionReason = "EndpointMismatch"
 )
 
 // -----------------------------------------------------------------------------
@@ -128,6 +138,10 @@ const (
 	// OnPremEventGatewayNotFoundReason indicates the referenced
 	// OnPremEventGateway was not found.
 	OnPremEventGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// OnPremEventGatewayRefNotPermittedReason indicates the referenced
+	// OnPremEventGateway is in another namespace, and no KongReferenceGrant
+	// allows the reference.
+	OnPremEventGatewayRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
 	// KegDataPlaneGWAdminNotReadyReason indicates the GWAdmin of the
 	// referenced OnPremEventGateway doesn't provide what the data plane needs
 	// yet.
@@ -262,6 +276,13 @@ const (
 	// could not be reached or rejected the configuration of the
 	// OnPremEventGateway.
 	OnPremEventGatewayConfigurationPushFailedReason consts.ConditionReason = "ConfigurationPushFailed"
+	// OnPremEventGatewayInvalidEntitiesReason indicates the configuration of
+	// the OnPremEventGateway is not pushed: some of its entities can't be
+	// sent, e.g. a policy references an entity that doesn't exist. Left out,
+	// they would change what the gateway does, so gw-admin keeps the
+	// configuration it has. The message names them, and each reports why on
+	// its own Programmed condition.
+	OnPremEventGatewayInvalidEntitiesReason consts.ConditionReason = "InvalidEntities"
 	// OnPremEventGatewayGWAdminNotResolvedMessage is the message of the
 	// Programmed condition while the GWAdminResolved condition is not True.
 	OnPremEventGatewayGWAdminNotResolvedMessage = "The GWAdmin of the gateway is not resolved"
@@ -308,18 +329,28 @@ const (
 	// configuration of its OnPremEventGateway, which is not programmed: its
 	// Programmed condition tells why.
 	OnPremEntityGatewayNotProgrammedReason consts.ConditionReason = "GatewayNotProgrammed"
-	// OnPremEntityInvalidReason indicates the entity is left out of the
+	// OnPremEntityInvalidReason indicates the entity can't be sent in the
 	// configuration of its OnPremEventGateway, e.g. it reads a Secret that
-	// doesn't exist, or sets a field gw-admin doesn't support.
+	// doesn't exist, or sets a field gw-admin doesn't support: the
+	// configuration isn't pushed until it is fixed or deleted. One that
+	// doesn't belong to the gateway, e.g. in another namespace, is only left
+	// out.
 	OnPremEntityInvalidReason consts.ConditionReason = "Invalid"
 	// OnPremEntityDetachedReason indicates the entity was in the
 	// configuration of its OnPremEventGateway, and no longer belongs to it,
 	// e.g. its parent entity was deleted.
 	OnPremEntityDetachedReason consts.ConditionReason = "Detached"
 	// OnPremEntityRefNotPermittedReason indicates the entity is left out of
-	// the configuration of its OnPremEventGateway: it reads a Secret in
-	// another namespace, and no KongReferenceGrant allows it.
+	// the configuration of its OnPremEventGateway: it references its parent,
+	// or reads a Secret, of another namespace, and no KongReferenceGrant
+	// allows it.
 	OnPremEntityRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
+	// OnPremEntityReferenceNotPermittedReason indicates the entity is left out
+	// of the configuration of its OnPremEventGateway: it references another
+	// entity than its parent, e.g. a schema registry, of another namespace,
+	// and no KongReferenceGrant allows it. It is the reason a Konnect entity
+	// reports in its KonnectReferencesResolved condition.
+	OnPremEntityReferenceNotPermittedReason consts.ConditionReason = commonv1alpha1.KonnectReferencesResolvedReasonNotPermitted
 	// OnPremEntityNotRegisteredReason indicates the data plane certificate is
 	// in the configuration of its OnPremEventGateway, and not registered yet
 	// on every gw-admin pod serving it: the message names those it isn't.
@@ -327,4 +358,11 @@ const (
 	// OnPremEntityGatewayNotFoundReason indicates the OnPremEventGateway of
 	// the entity, directly or through its parent entities, doesn't exist.
 	OnPremEntityGatewayNotFoundReason consts.ConditionReason = "GatewayNotFound"
+	// OnPremEntityDeletionBlockedReason indicates the entity is being deleted,
+	// and stays in the configuration of its OnPremEventGateway while policies
+	// reference it: the message names them. The status of the condition tells
+	// whether it is programmed, along with its gateway. The Konnect controllers
+	// use the same reason, with the status False, for an entity whose deletion
+	// Konnect refuses.
+	OnPremEntityDeletionBlockedReason consts.ConditionReason = "DeletionBlocked"
 )

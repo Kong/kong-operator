@@ -68,6 +68,69 @@ type KonnectEntityRef struct {
 	ID string `json:"id,omitzero"`
 }
 
+// SensitiveDataSourceType is the type of source for the sensitive data.
+type SensitiveDataSourceType string
+
+const (
+	// SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.
+	SensitiveDataSourceTypeInline SensitiveDataSourceType = "inline"
+	// SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.
+	SensitiveDataSourceTypeSecretRef SensitiveDataSourceType = "secretRef"
+)
+
+// SensitiveDataSource holds a sensitive string value that can be provided
+// either inline or sourced from a Kubernetes Secret.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+// +kubebuilder:validation:XValidation:rule="!(has(self.value) && has(self.secretRef))",message="only one of value and secretRef can be set"
+type SensitiveDataSource struct {
+	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	Type SensitiveDataSourceType `json:"type"`
+
+	// Value contains the sensitive data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=4096
+	Value *string `json:"value,omitempty"`
+
+	// SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+	// Required when type is 'secretRef'.
+	//
+	// +optional
+	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
+}
+
+// GetValue returns the sensitive value if it is provided inline, or an empty string otherwise.
+func (s SensitiveDataSource) GetValue() string {
+	if s.Value == nil {
+		return ""
+	}
+	return *s.Value
+}
+
+// UnmarshalJSON accepts a bare JSON string and reads it as an inline value.
+// Releases before a field used SensitiveDataSource stored a plain string.
+// Without this, the operator's caches fail to decode those objects and cannot
+// list them. A new write still needs the object shape: the CRD schema rejects
+// a bare string, so an owner must migrate the value before any update.
+func (s *SensitiveDataSource) UnmarshalJSON(data []byte) error {
+	if len(data) > 0 && data[0] == '"' {
+		var value string
+		if err := json.Unmarshal(data, &value); err != nil {
+			return err
+		}
+		s.Type = SensitiveDataSourceTypeInline
+		s.Value = &value
+		return nil
+	}
+	type plain SensitiveDataSource
+	return json.Unmarshal(data, (*plain)(s))
+}
+
 // flattenSDKUnions recursively flattens nested discriminated-union shapes.
 // Object-valued members are rewritten from {"<disc>": "X", "X": {...}}
 // to {"<disc>": "X", ...}, while scalar and array members are rewritten to
@@ -335,7 +398,7 @@ func camelToSnakeCase(s string) string {
 // flattenSDKUnions matches it against the snake_case sibling member key.
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode", "aclAttributeType", "authMethod":
+	case "type", "op", "kind", "mode", "source", "aclAttributeType", "authMethod":
 		return true
 	default:
 		return false

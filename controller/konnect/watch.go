@@ -82,6 +82,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KongDataPlaneClientCertificateReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.MCPServer:
 		return MCPServerReconciliationWatchOptions(cl)
+	case *configurationv1alpha1.EventGatewayBackendCluster:
+		return eventGatewayBackendClusterReconciliationWatchOptions(cl)
 	default:
 		// This handles watch options for generated entities.
 		// reconciliationWatchOptionsForEntity is generated via crd-from-oas.
@@ -340,11 +342,14 @@ type WatchableEntityType interface {
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |
 		configurationv1alpha1.EventGatewayListenerPolicy |
+		configurationv1alpha1.EventGatewayListenerPolicyChain |
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewaySchemaRegistry |
 		configurationv1alpha1.EventGatewayTLSTrustBundle |

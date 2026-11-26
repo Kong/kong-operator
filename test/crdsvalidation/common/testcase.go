@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +43,10 @@ const (
 	DefaultEventuallyTimeout = 30 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
+	// attemptTimeout bounds a single API call made inside an EventuallyConfig
+	// window, so a stalled request fails and the loop retries instead of
+	// consuming the whole window in one attempt.
+	attemptTimeout = 5 * time.Second
 )
 
 // EventuallyConfig is the configuration for assert.Eventually() which is used to assert errors.
@@ -119,6 +125,11 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		t.Parallel()
 		ctx := context.Background()
 
+		// attemptCtx bounds one attempt of the retry loops below.
+		attemptCtx := func() (context.Context, context.CancelFunc) {
+			return context.WithTimeout(ctx, min(attemptTimeout, timeout))
+		}
+
 		// Create a new controller-runtime client.Client.
 		cl, err := client.New(cfg, client.Options{
 			Scheme: scheme,
@@ -171,8 +182,9 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		}
 
 		var (
-			createdObj    T
-			hasCreatedObj bool
+			createdObj     T
+			hasCreatedObj  bool
+			firstCreateErr error
 		)
 		waitForCondition(func() (bool, string) {
 			if hasCreatedObj && warningFound() {
@@ -181,7 +193,9 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 			toCreate := templateObj.DeepCopyObject().(T)
 
-			createErr := cl.Create(ctx, toCreate)
+			createCtx, cancel := attemptCtx()
+			createErr := cl.Create(createCtx, toCreate)
+			cancel()
 			if createErr == nil {
 				createdObj = toCreate
 				hasCreatedObj = true
@@ -195,8 +209,30 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				return false, fmt.Sprintf("Create error: %v; expected: %q", createErr, *tc.ExpectedErrorMessage)
 			}
 
+			// A timed out attempt can still create the object server side. Adopt it
+			// instead of failing on AlreadyExists for test objects with a fixed name.
+			// Adopt only after a timed out attempt: a pre-existing foreign object must
+			// not be adopted, because the cleanup below would delete it.
+			if apierrors.IsAlreadyExists(createErr) &&
+				(apierrors.IsTimeout(firstCreateErr) ||
+					apierrors.IsServerTimeout(firstCreateErr) ||
+					errors.Is(firstCreateErr, context.DeadlineExceeded)) {
+				getCtx, cancel := attemptCtx()
+				err := cl.Get(getCtx, client.ObjectKeyFromObject(toCreate), toCreate)
+				cancel()
+				if err == nil {
+					createdObj = toCreate
+					hasCreatedObj = true
+					tCleanupObject(ctx, t, toCreate)
+					createErr = nil
+				}
+			}
+
 			if createErr != nil {
-				return false, fmt.Sprintf("Create error: %v", createErr)
+				if firstCreateErr == nil {
+					firstCreateErr = createErr
+				}
+				return false, fmt.Sprintf("Create error: %v (first error: %v)", createErr, firstCreateErr)
 			}
 
 			if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
@@ -228,21 +264,27 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// actually landed server-side but the client just timed out waiting
 				// for the response, reusing the stale resource version would turn
 				// the retry into a spurious conflict.
-				if !assert.NoError(c, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)) {
+				statusCtx, cancel := attemptCtx()
+				defer cancel()
+				if !assert.NoError(c, cl.Get(statusCtx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)) {
 					return
 				}
 				desiredObj.SetResourceVersion(tc.TestObject.GetResourceVersion())
-				assert.NoError(c, cl.Status().Update(ctx, desiredObj))
+				assert.NoError(c, cl.Status().Update(statusCtx, desiredObj))
 			}, timeout, period)
 
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assert.NoError(c, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+				getCtx, cancel := attemptCtx()
+				defer cancel()
+				assert.NoError(c, cl.Get(getCtx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
 			}, timeout, period)
 		}
 
 		if tc.Assert != nil {
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assert.NoError(c, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+				getCtx, cancel := attemptCtx()
+				defer cancel()
+				assert.NoError(c, cl.Get(getCtx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
 			}, timeout, period)
 			tc.Assert(t, tc.TestObject)
 		}
@@ -250,11 +292,13 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		// If the Update function was defined, update the object and check if the update is allowed.
 		if tc.Update != nil {
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				err := cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
+				updateCtx, cancel := attemptCtx()
+				defer cancel()
+				err := cl.Get(updateCtx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
 				require.NoError(c, err)
 				// Update the object state and push the update to the server.
 				tc.Update(tc.TestObject)
-				err = cl.Update(ctx, tc.TestObject)
+				err = cl.Update(updateCtx, tc.TestObject)
 				if tc.ExpectedWarningMessage != nil {
 					found := false
 					for _, w := range tc.WarningCollector.GetWarnings() {
@@ -282,11 +326,13 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		// and check if the update is allowed.
 		if tc.StatusUpdate != nil {
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				err := cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
+				statusCtx, cancel := attemptCtx()
+				defer cancel()
+				err := cl.Get(statusCtx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
 				require.NoError(c, err)
 				// Update the object status and push the update to the server.
 				tc.StatusUpdate(tc.TestObject)
-				err = cl.Status().Update(ctx, tc.TestObject)
+				err = cl.Status().Update(statusCtx, tc.TestObject)
 
 				// If the expected status update error message is defined,
 				// check if the error message contains the expected message

@@ -20,6 +20,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // noopScraperNotifier is a no-op cpextensions.ScrapeUpdateNotifier for tests
@@ -137,7 +138,7 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 	// requeued with controller-runtime's default exponential backoff (5ms base,
 	// doubling), so a longer blocking window banks more failures and pushes the
 	// next retry - and thus how long the EventuallyWithT below must wait - further out.
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		var plugins configurationv1.KongPluginList
 		_ = cl.List(ctx, &plugins, client.InNamespace(ns.Name))
 		return len(plugins.Items) > 0

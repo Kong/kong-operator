@@ -108,6 +108,92 @@ func TestEventGatewayStaticKey(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	// On-prem, status.id is never set: the inline value is immutable once the
+	// OnPremEventGateway controller recorded the fingerprint of the value it
+	// pushed. The rest of apiSpec is updated in place, and a value read from a
+	// Secret is checked by the controller.
+	t.Run("value immutability on-prem", func(t *testing.T) {
+		const immutable = "the inline value is immutable once the static key has been pushed: records encrypted with it would no longer be decrypted"
+		const key1 = "Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE="
+		const key2 = "Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy12MiE="
+		onPrem := func(hash string, value configurationv1alpha1.SensitiveDataSource) *configurationv1alpha1.EventGatewayStaticKey {
+			obj := validStaticKey(ns.Name)
+			obj.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+			obj.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway", Name: "gateway"}
+			obj.Spec.APISpec.Value = value
+			obj.Status.CreateInputsHash = hash
+			return obj
+		}
+		const pushed = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayStaticKey]{
+			{
+				Name:       "changing the inline value before it is pushed passes",
+				TestObject: onPrem("", inlineSDS(key1)),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.APISpec.Value = inlineSDS(key2)
+				},
+			},
+			{
+				Name:       "changing the inline value once pushed fails",
+				TestObject: onPrem(pushed, inlineSDS(key1)),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.APISpec.Value = inlineSDS(key2)
+				},
+				ExpectedUpdateErrorMessage: new(immutable),
+			},
+			{
+				Name:       "switching from an inline value to a Secret once pushed passes: the controller checks the value",
+				TestObject: onPrem(pushed, inlineSDS(key1)),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.APISpec.Value = secretRefSDS("another-secret", "key")
+				},
+			},
+			{
+				Name:       "switching to another Secret once pushed passes: the controller checks the value",
+				TestObject: onPrem(pushed, secretRefSDS("my-key-secret", "key")),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.APISpec.Value = secretRefSDS("another-secret", "key")
+				},
+			},
+			{
+				Name: "changing the inline value of a Konnect key with a fingerprint but no id passes",
+				TestObject: func() *configurationv1alpha1.EventGatewayStaticKey {
+					obj := validStaticKey(ns.Name)
+					obj.Spec.APISpec.Value = inlineSDS(key1)
+					obj.Status.CreateInputsHash = pushed
+					return obj
+				}(),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.APISpec.Value = inlineSDS(key2)
+				},
+			},
+			{
+				Name:       "changing the gateway before it is pushed passes",
+				TestObject: onPrem("", inlineSDS(key1)),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.ParentRef.Name = "another-gateway"
+				},
+			},
+			{
+				Name:       "changing the gateway once pushed fails",
+				TestObject: onPrem(pushed, inlineSDS(key1)),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.ParentRef.Name = "another-gateway"
+				},
+				ExpectedUpdateErrorMessage: new("parentRef is immutable once the static key has been pushed"),
+			},
+			{
+				Name:       "changing the name, description and labels once pushed passes",
+				TestObject: onPrem(pushed, inlineSDS(key1)),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.APISpec.Name = "renamed-key"
+					obj.Spec.APISpec.Description = "rotated yearly"
+					obj.Spec.APISpec.Labels = configurationv1alpha1.Labels{"team": "a"}
+				},
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	// Konnect has no update API for static keys: apiSpec is immutable once the
 	// static key exists in Konnect (status.id set), and editable before.
 	t.Run("apiSpec immutability", func(t *testing.T) {

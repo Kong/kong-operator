@@ -703,3 +703,177 @@ func TestHandleSecretRef_StaticKeyReadOnlyAtCreation(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 	})
 }
+
+func TestHandleSecretRef_PortalIdentityProviderRequestSensitiveDataSource(t *testing.T) {
+	ctx := context.Background()
+	scheme := scheme.Get()
+
+	newIDP := func(secretNamespace *string) *konnectv1alpha1.PortalIdentityProviderRequest {
+		return &konnectv1alpha1.PortalIdentityProviderRequest{
+			Name:       "idp",
+			Namespace:  "default",
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "PortalIdentityProviderRequest",
+			Spec: konnectv1alpha1.PortalIdentityProviderRequestSpec{
+				APISpec: konnectv1alpha1.PortalIdentityProviderRequestAPISpec{
+					Type: "oidc",
+					Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
+						Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
+						OIDC: &konnectv1alpha1.CreateOIDCIdentityProviderConfig{
+							ClientID: "client-id",
+							ClientSecret: konnectv1alpha1.SensitiveDataSource{
+								Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &konnectv1alpha1.SensitiveDataSecretRef{Name: "idp-client-secret", Key: "clientSecret", Namespace: secretNamespace},
+							},
+							IssuerURL: "https://issuer.example.com",
+						},
+					},
+				},
+			},
+		}
+	}
+	newSecret := func(namespace string) *corev1.Secret {
+		return &corev1.Secret{
+			Name:      "idp-client-secret",
+			Namespace: namespace,
+			Data:      map[string][]byte{"clientSecret": []byte("s3cret")},
+		}
+	}
+	newGrant := func() *configurationv1alpha1.KongReferenceGrant {
+		return &configurationv1alpha1.KongReferenceGrant{
+			Name:      "allow-idp-to-secret",
+			Namespace: "other",
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{
+					{
+						Group:     "konnect.konghq.com",
+						Kind:      "PortalIdentityProviderRequest",
+						Namespace: "default",
+					},
+				},
+				To: []configurationv1alpha1.ReferenceGrantTo{
+					{
+						Group: "core",
+						Kind:  "Secret",
+						Name:  new(configurationv1alpha1.ObjectName("idp-client-secret")),
+					},
+				},
+			},
+		}
+	}
+	newClient := func(obj client.Object, objs ...client.Object) client.Client {
+		return newFakeClientBuilder(scheme).WithObjects(append(objs, obj)...).WithStatusSubresource(obj).Build()
+	}
+	updatedIDP := func(t *testing.T, cl client.Client, obj *konnectv1alpha1.PortalIdentityProviderRequest) *konnectv1alpha1.PortalIdentityProviderRequest {
+		t.Helper()
+		updated := &konnectv1alpha1.PortalIdentityProviderRequest{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+		return updated
+	}
+
+	t.Run("requires the Secret before creation", func(t *testing.T) {
+		obj := newIDP(nil)
+		cl := newClient(obj)
+		_, stop, err := handleSecretRef(ctx, cl, obj)
+		require.Error(t, err)
+		assert.True(t, stop)
+		updated := updatedIDP(t, cl, obj)
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.SecretRefReasonInvalid, cond.Reason)
+	})
+
+	t.Run("resolves a same-namespace secretRef", func(t *testing.T) {
+		obj := newIDP(nil)
+		cl := newClient(obj, newSecret("default"))
+		_, stop, err := handleSecretRef(ctx, cl, obj)
+		require.NoError(t, err)
+		assert.False(t, stop)
+		updated := updatedIDP(t, cl, obj)
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	})
+
+	t.Run("blocks a cross-namespace secretRef without a KongReferenceGrant", func(t *testing.T) {
+		obj := newIDP(new("other"))
+		cl := newClient(obj, newSecret("other"))
+		_, stop, err := handleSecretRef(ctx, cl, obj)
+		require.NoError(t, err)
+		assert.True(t, stop)
+		updated := updatedIDP(t, cl, obj)
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted, cond.Reason)
+	})
+
+	t.Run("allows a cross-namespace secretRef with a matching KongReferenceGrant", func(t *testing.T) {
+		obj := newIDP(new("other"))
+		cl := newClient(obj, newSecret("other"), newGrant())
+		_, stop, err := handleSecretRef(ctx, cl, obj)
+		require.NoError(t, err)
+		assert.False(t, stop)
+		updated := updatedIDP(t, cl, obj)
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	})
+}
+
+func TestHandleSecretRef_PortalIdentityProviderRequestStaleSecretRefValid(t *testing.T) {
+	// A secretRef that failed validation must not leave a stale
+	// SecretRefValid=False behind once the user switches clientSecret to an
+	// inline value.
+	ctx := context.Background()
+	scheme := scheme.Get()
+
+	obj := &konnectv1alpha1.PortalIdentityProviderRequest{
+		Name:       "idp",
+		Namespace:  "default",
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "PortalIdentityProviderRequest",
+		Spec: konnectv1alpha1.PortalIdentityProviderRequestSpec{
+			APISpec: konnectv1alpha1.PortalIdentityProviderRequestAPISpec{
+				Type: "oidc",
+				Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
+					Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
+					OIDC: &konnectv1alpha1.CreateOIDCIdentityProviderConfig{
+						ClientID: "client-id",
+						ClientSecret: konnectv1alpha1.SensitiveDataSource{
+							Type:      konnectv1alpha1.SensitiveDataSourceTypeSecretRef,
+							SecretRef: &konnectv1alpha1.SensitiveDataSecretRef{Name: "missing-secret", Key: "clientSecret"},
+						},
+						IssuerURL: "https://issuer.example.com",
+					},
+				},
+			},
+		},
+	}
+	cl := newFakeClientBuilder(scheme).WithObjects(obj).WithStatusSubresource(obj).Build()
+
+	_, stop, err := handleSecretRef(ctx, cl, obj)
+	require.Error(t, err)
+	assert.True(t, stop)
+	updated := &konnectv1alpha1.PortalIdentityProviderRequest{}
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+	cond, found := findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+	require.True(t, found)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+
+	// Switch clientSecret to an inline value: the condition is dropped.
+	updated.Spec.APISpec.Config.OIDC.ClientSecret = konnectv1alpha1.SensitiveDataSource{
+		Type:  konnectv1alpha1.SensitiveDataSourceTypeInline,
+		Value: new("s3cret"),
+	}
+	require.NoError(t, cl.Update(ctx, updated))
+
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+	_, stop, err = handleSecretRef(ctx, cl, updated)
+	require.NoError(t, err)
+	assert.False(t, stop)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), updated))
+	_, found = findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+	assert.False(t, found, "stale SecretRefValid condition must be dropped once no Secret is referenced")
+}

@@ -13,6 +13,51 @@ readonly RELATIVE_CRD_DIR
 CURRENT_CRD_DIR="${SCRIPT_ROOT}/${RELATIVE_CRD_DIR}"
 readonly CURRENT_CRD_DIR
 
+# Optional markdown report with only the breaking changes, used to build the pull-request comment.
+CRD_BREAKING_CHANGES_REPORT="${CRD_BREAKING_CHANGES_REPORT:-}"
+readonly CRD_BREAKING_CHANGES_REPORT
+
+# Keeps only the breaking changes of crdify output. It drops WARNING findings, which are not
+# breaking changes. The console keeps the full output. A finding line looks like:
+#   - v1alpha1 - ^.spec.foo - type - ERROR - type changed : "string" -> "integer"
+# crdify cannot classify a change to a CEL validation rule, so it reports the finding as
+# `unhandled` and prints the struct diff on the lines that follow: indented lines and diff lines
+# marked with `+` or `-`. Those lines show the actual change, so they are kept with their finding.
+breaking_changes_only() {
+	awk '
+		/^- [^[:space:]]+ - / {
+			keep = ($0 ~ / - ERROR - /)
+			if (keep) {
+				print
+			}
+			next
+		}
+		keep && ($0 == "" || /^[[:space:]]/ || /^[-+]/) {
+			print
+			next
+		}
+		{ keep = 0 }
+	'
+}
+
+report_breaking_change() {
+	local basename="${1}"
+	local details="${2}"
+
+	if [[ -z "${CRD_BREAKING_CHANGES_REPORT}" ]]; then
+		return 0
+	fi
+
+	if [[ -z "${details}" ]]; then
+		details="The check failed without details."
+	fi
+
+	{
+		printf '### `%s`\n\n' "${basename}"
+		printf '```\n%s\n```\n\n' "${details}"
+	} >> "${CRD_BREAKING_CHANGES_REPORT}"
+}
+
 CONFIG_FILE="${SCRIPT_ROOT}/.crdify.yaml"
 readonly CONFIG_FILE
 
@@ -77,7 +122,9 @@ resolve_base_revision() {
 		return 1
 	fi
 
+	# The override names a branch, so try the remote-tracking form before the local one.
 	for candidate in \
+		"${CRD_BREAKING_CHANGES_BASE_REF:+origin/${CRD_BREAKING_CHANGES_BASE_REF}}" \
 		"${CRD_BREAKING_CHANGES_BASE_REF:-}" \
 		"${GITHUB_BASE_REF:+origin/${GITHUB_BASE_REF}}" \
 		origin/main \
@@ -99,7 +146,18 @@ resolve_base_revision() {
 }
 
 base_revision="$(resolve_base_revision)"
-echo "Comparing CRDs in ${RELATIVE_CRD_DIR} against ${base_revision}"
+
+# A branch base moves, and a pull request in a stack targets another pull request's branch. The
+# checked out tree cannot follow it, so the base tip can hold changes that the tree never had.
+# Anchor both sides at their common ancestor, so that only this pull request's own changes are
+# compared. For a clean pull request the common ancestor is the base tip, so nothing changes.
+# An explicit CRD_BREAKING_CHANGES_BASE_SHA is the caller's own choice of baseline, so it is used
+# as given: it need not be an ancestor of HEAD, for example a release tag.
+comparison_base="${base_revision}"
+if [[ -z "${CRD_BREAKING_CHANGES_BASE_SHA:-}" ]]; then
+	comparison_base="$(git merge-base "${base_revision}" HEAD 2>/dev/null || printf '%s\n' "${base_revision}")"
+fi
+echo "Comparing CRDs in ${RELATIVE_CRD_DIR} against ${comparison_base} (base revision ${base_revision})"
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "${tmpdir}"' EXIT
@@ -113,7 +171,7 @@ find "${CURRENT_CRD_DIR}" -maxdepth 1 -type f -name '*.yaml' -print \
 	| collect_crd_basenames > "${current_basenames}"
 
 (
-	git ls-tree -r --name-only "${base_revision}" -- "${RELATIVE_CRD_DIR}" \
+	git ls-tree -r --name-only "${comparison_base}" -- "${RELATIVE_CRD_DIR}" \
 		| sed 's#.*/##' \
 		| collect_crd_basenames
 ) > "${base_basenames}" || true
@@ -125,6 +183,12 @@ if [[ ! -s "${union_basenames}" ]]; then
 	exit 1
 fi
 
+# The path can hold a report from an earlier run, so empty it here: report_breaking_change only
+# appends, and a second run with the same path would add to the first run's findings.
+if [[ -n "${CRD_BREAKING_CHANGES_REPORT}" ]]; then
+	: > "${CRD_BREAKING_CHANGES_REPORT}"
+fi
+
 status=0
 while IFS= read -r basename; do
 	[[ -n "${basename}" ]] || continue
@@ -132,23 +196,29 @@ while IFS= read -r basename; do
 	current_file="${CURRENT_CRD_DIR}/${basename}"
 	base_file="${RELATIVE_CRD_DIR}/${basename}"
 
-	if ! git cat-file -e "${base_revision}:${base_file}" 2>/dev/null; then
+	if ! git cat-file -e "${comparison_base}:${base_file}" 2>/dev/null; then
 		echo "Skipping new CRD ${basename}"
 		continue
 	fi
 
 	if [[ ! -f "${current_file}" ]]; then
 		echo "Breaking change detected: ${basename} was removed from ${RELATIVE_CRD_DIR}."
+		report_breaking_change "${basename}" "CRD was removed from ${RELATIVE_CRD_DIR}."
 		status=1
 		continue
 	fi
 
 	old_file="${tmpdir}/${basename}"
-	git show "${base_revision}:${base_file}" > "${old_file}"
+	git show "${comparison_base}:${base_file}" > "${old_file}"
 
 	echo "Checking ${basename}"
-	if ! "${CRDIFY_BIN}" --config "${CONFIG_FILE}" "file://${old_file}" "file://${current_file}"; then
+	crdify_output=""
+	if ! crdify_output="$("${CRDIFY_BIN}" --config "${CONFIG_FILE}" "file://${old_file}" "file://${current_file}")"; then
 		status=1
+		report_breaking_change "${basename}" "$(printf '%s\n' "${crdify_output}" | breaking_changes_only)"
+	fi
+	if [[ -n "${crdify_output}" ]]; then
+		printf '%s\n' "${crdify_output}"
 	fi
 done < "${union_basenames}"
 

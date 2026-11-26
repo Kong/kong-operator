@@ -18,6 +18,40 @@ type PortalSDKOpsBoolField struct {
 // PortalSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 	{
+		Label: "ai.enabled",
+		Path: []string{
+			"ai",
+			"enabled",
+		},
+	},
+	{
+		Label: "ai.features.ai_search.enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"ai_search",
+			"enabled",
+		},
+	},
+	{
+		Label: "ai.features.mcp_server.enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"mcp_server",
+			"enabled",
+		},
+	},
+	{
+		Label: "ai.features.mcp_server.write_operations_enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"mcp_server",
+			"write_operations_enabled",
+		},
+	},
+	{
 		Label: "authentication_enabled",
 		Path: []string{
 			"authentication_enabled",

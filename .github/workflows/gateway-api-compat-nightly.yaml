@@ -1,0 +1,293 @@
+name: Gateway API compatibility tests (nightly)
+
+# The test image is built from the checked-out commit. Scheduled runs use the
+# main branch HEAD. The operator-image input can select another image.
+# The operator compiles against the Gateway API version in go.mod (the pin).
+# The docs compatibility table announces support for the last 5 Gateway API
+# minor versions. The pin is the newest of these versions.
+# Each run installs the standard channel CRDs of one supported version. The
+# chart does not install its own Gateway API CRDs.
+# The standard channel CRD set grows with the version: TCPRoute/UDPRoute start
+# at v1.6, TLSRoute at v1.5, BackendTLSPolicy at v1.4. Tests that need those CRDs
+# do not run on those cells.
+on:
+  schedule:
+    # Off-peak slot after the nightly image build (03:30) and chart publish (04:30).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      gateway-api-versions:
+        description: "JSON array of Gateway API versions to test against (standard channel CRDs)."
+        type: string
+        required: false
+        # Last 5 Gateway API minor versions, latest patch of each. The pin in
+        # go.mod (v1.7.0 now) is the newest version. When the pin moves to a
+        # new minor: drop the oldest version here and update the docs
+        # compatibility table in the same PR.
+        default: '["v1.3.0", "v1.4.1", "v1.5.1", "v1.6.3", "v1.7.0"]'
+      operator-image:
+        description: "Operator image (repository:tag) to test. Defaults to building the image from the checked-out commit."
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  MISE_VERBOSE: 1
+  MISE_DEBUG: 1
+
+jobs:
+  build-operator-image:
+    # Build the operator image once for all matrix cells. The operator binary
+    # is compiled against the go.mod Gateway API types. The matrix cells
+    # change only the CRDs installed on the test cluster, so one image serves
+    # every cell. The PR e2e image uses the same distroless target.
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 15) }}
+    if: ${{ inputs.operator-image == '' }}
+    runs-on: ubuntu-latest
+    env:
+      IMG: kong-operator
+      TAG: gwapi-compat
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: setup golang
+      # make docker.build reads the host Go cache for its build args.
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: go.mod
+        cache: false
+    - name: build operator image
+      run: make docker.build
+    - name: save operator image artifact
+      run: docker save "$IMG:$TAG" -o kong-operator_gwapi_compat.tar
+    - name: upload operator image artifact
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: kong-operator-gwapi-compat-image-${{ github.run_id }}
+        path: kong-operator_gwapi_compat.tar
+        retention-days: 1
+        if-no-files-found: error
+
+  gateway-api-compat:
+    needs: [build-operator-image]
+    # Run also when the build job is skipped (operator-image input set).
+    if: ${{ !cancelled() && (needs.build-operator-image.result == 'success' || needs.build-operator-image.result == 'skipped') }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
+    runs-on: ubuntu-latest
+    name: GWAPI ${{ matrix.gateway-api-version }}
+    env:
+      IMG: kong-operator
+      TAG: gwapi-compat
+      CLUSTER_NAME: gwapi-compat
+    strategy:
+      fail-fast: false
+      # The dispatch input has first priority. Then the
+      # KO_GWAPI_COMPAT_VERSIONS repo variable. Then this default. Keep the
+      # default equal to the input default.
+      matrix:
+        gateway-api-version: ${{ fromJSON(inputs.gateway-api-versions || vars.KO_GWAPI_COMPAT_VERSIONS || '["v1.3.0", "v1.4.1", "v1.5.1", "v1.6.3", "v1.7.0"]') }}
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: download operator image artifact
+      if: ${{ inputs.operator-image == '' }}
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+      with:
+        name: kong-operator-gwapi-compat-image-${{ github.run_id }}
+
+    - name: Load or pull operator image
+      # Load the image built by the build job. The operator-image input
+      # selects an image to pull instead. Pull a multi-arch image by its
+      # linux/amd64 digest: a plain docker pull does not fetch the
+      # attestation-manifest content, and kind load docker-image then fails
+      # with "content digest not found".
+      env:
+        OPERATOR_IMAGE_INPUT: ${{ inputs.operator-image }}
+      run: |
+        if [ -n "$OPERATOR_IMAGE_INPUT" ]; then
+          IMAGE_NAME="${OPERATOR_IMAGE_INPUT%%@*}"
+          DIGEST="$(docker buildx imagetools inspect "$OPERATOR_IMAGE_INPUT" \
+            --format '{{range .Manifest.Manifests}}{{if and (eq .Platform.Architecture "amd64") (eq .Platform.OS "linux")}}{{.Digest}}{{end}}{{end}}')"
+          SOURCE="$OPERATOR_IMAGE_INPUT"
+          if [ -n "$DIGEST" ]; then
+            SOURCE="$IMAGE_NAME@$DIGEST"
+          fi
+          echo "Pulling $SOURCE"
+          docker pull "$SOURCE"
+          docker tag "$SOURCE" "$IMG:$TAG"
+        else
+          docker load -i kong-operator_gwapi_compat.tar
+        fi
+        docker image ls "$IMG:$TAG"
+
+    - uses: ./.github/actions/setup-mise
+      with:
+        install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
+
+    - uses: ./.github/actions/kong-license
+      id: license
+      with:
+        cached-license: ${{ secrets.KONG_LICENSE_DATA }}
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+    - uses: ./.github/actions/bump-inotify
+
+    - name: Create k8s KinD Cluster with ktf
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        ktf environments create \
+          --name "$CLUSTER_NAME" \
+          --addon metallb \
+          --addon cert-manager \
+          --kubernetes-version "v1.34.11"
+
+    - name: Load image to kind cluster
+      run: kind load docker-image "$IMG:$TAG" --name "$CLUSTER_NAME"
+
+    - name: Install Gateway API standard CRDs
+      env:
+        GWAPI_VERSION: ${{ matrix.gateway-api-version }}
+      run: |
+        # Some CRDs are larger than the annotation size limit. Use --server-side.
+        kubectl apply --server-side \
+          -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GWAPI_VERSION}/standard-install.yaml"
+        kubectl wait --for=condition=Established crds --all --timeout=2m
+
+    - name: Deploy operator with Helm
+      run: |
+        # The cluster already has the standard channel CRDs. Do not install
+        # the chart's Gateway API CRDs again.
+        helm install kong-operator charts/kong-operator \
+          --namespace kong-system \
+          --create-namespace \
+          --set image.repository="$IMG" \
+          --set image.tag="$TAG" \
+          --set gwapi-standard-crds.enabled=false \
+          --set gwapi-experimental-crds.enabled=false \
+          --wait
+
+    - name: Apply chainsaw suite prerequisites
+      env:
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+      run: make test.e2e.chainsaw.prereq DIRNAME="gateway"
+
+    - name: Resolve excluded tests
+      env:
+        GWAPI_VERSION: ${{ matrix.gateway-api-version }}
+      # This is a static mapping of tests to exclude per matrix cell:
+      # - TCPRoute/UDPRoute CRDs do not exist before v1.6. The tests that
+      #   apply them cannot run on the older cells.
+      # - The Konnect tests need Konnect credentials. They do not test
+      #   Gateway API compatibility.
+      # The mapping needs no runtime discovery. The standard channel CRD set
+      # is fixed per version. If a new test needs a CRD that is absent on
+      # some cells, add it here. A red cell in the nightly run is the signal
+      # to do this. See the regex note in the step below.
+      run: |
+        case "$GWAPI_VERSION" in
+        v1.3.*|v1.4.*|v1.5.*)
+          EXCLUDED_TESTS="gateway-tcproute-onprem udproute-onprem" ;;
+        *)
+          EXCLUDED_TESTS="" ;;
+        esac
+        KONNECT_TESTS="gateway-konnect-dynamic-naming gateway-konnect-static-naming-cross-namespace"
+        if [ -n "$EXCLUDED_TESTS" ]; then
+          EXCLUDED_TESTS="$EXCLUDED_TESTS $KONNECT_TESTS"
+        else
+          EXCLUDED_TESTS="$KONNECT_TESTS"
+        fi
+        # Go matches each regex part against one element of the Go test name,
+        # in order: chainsaw, then the test dir path segments relative to the
+        # make working directory, then the leaf <dir>[<metadata.name>]
+        # (fullName is enabled). Plain names in the last part match as
+        # substrings of the leaf. A single-part regex only constrains the
+        # first element, so anchors and bare names never match.
+        echo "CHAINSAW_EXCLUDE_REGEX=chainsaw/test/e2e/chainsaw/gateway/($(echo "$EXCLUDED_TESTS" | tr ' ' '|'))" >> "$GITHUB_ENV"
+
+    - name: run chainsaw e2e tests
+      id: chainsaw-tests
+      # Set the exclusion regex in the chainsaw config, not on the command
+      # line. This keeps the regex characters ( ) | $ out of shell and make
+      # variable expansion.
+      run: |
+        if [ -n "$CHAINSAW_EXCLUDE_REGEX" ]; then
+          CONFIG="$RUNNER_TEMP/chainsaw-gwapi-compat.yaml"
+          cp test/e2e/chainsaw/.chainsaw.yaml "$CONFIG"
+          yq -i '.spec.excludeTestRegex = strenv(CHAINSAW_EXCLUDE_REGEX)' "$CONFIG"
+          echo "chainsaw config:"
+          cat "$CONFIG"
+          CONFIG_FLAG="CHAINSAW_CONFIG=$CONFIG"
+        fi
+        make test.e2e.chainsaw \
+          CHAINSAW_TEST_DIR=./test/e2e/chainsaw/gateway \
+          $CONFIG_FLAG
+
+    - name: Dump cluster diagnostics on failure or cancellation
+      if: ${{ failure() || cancelled() }}
+      env:
+        SUITE: gateway-${{ matrix.gateway-api-version }}
+      run: |
+        NAMESPACES=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+          | grep -vE '^(kube-(system|node-lease|public)|cert-manager|metallb-system|local-path-storage)$' | tr '\n' ' ')
+        TEST_NAME="${SUITE}" \
+        NAMESPACE="$(echo "${NAMESPACES}" | awk '{print $1}')" \
+        ADDITIONAL_NAMESPACES="$(echo "${NAMESPACES}" | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
+        SKIP_RESOURCE_COUNTS=1 \
+        timeout 4m bash test/e2e/chainsaw/common/scripts/debug_snapshot.sh || true
+
+    - name: Upload debug snapshots as artifacts
+      if: ${{ failure() || cancelled() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: chainsaw-debug-snapshots-gwapi-${{ matrix.gateway-api-version }}-${{ github.run_id }}
+        path: /tmp/chainsaw/
+        if-no-files-found: ignore
+        retention-days: 3
+
+  notify-on-slack:
+    needs: [build-operator-image, gateway-api-compat]
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+      with:
+        egress-policy: audit
+    - name: Notify on Slack with the result of the compatibility tests
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_TEAM_ID: ${{ secrets.SLACK_TEAM_ID }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        # Same priority order as the matrix expression: input, repo variable,
+        # then the default. The run page also shows the per-version matrix.
+        VERSIONS: ${{ join(fromJSON(inputs.gateway-api-versions || vars.KO_GWAPI_COMPAT_VERSIONS || '["v1.3.0", "v1.4.1", "v1.5.1", "v1.6.3", "v1.7.0"]'), ', ') }}
+        COMMIT: ${{ github.sha }}
+        OPERATOR_IMAGE_INPUT: ${{ inputs.operator-image }}
+      run: |
+        # The tested operator: the input image when given, otherwise the
+        # commit the image was built from.
+        if [ -n "$OPERATOR_IMAGE_INPUT" ]; then
+          version="image ${OPERATOR_IMAGE_INPUT}"
+        else
+          version="commit $(echo "$COMMIT" | cut -c1-7)"
+        fi
+        if [ "$FAILED" = "true" ]; then
+          text=":red_circle: Gateway API compatibility tests failed (GWAPI versions: ${VERSIONS}; ${version}): <${RUN_URL}|workflow run> cc: <!subteam^${SLACK_TEAM_ID}>"
+        else
+          text=":white_check_mark: Gateway API compatibility tests passed (GWAPI versions: ${VERSIONS}; ${version}): <${RUN_URL}|workflow run>"
+        fi
+        payload=$(jq -n --arg text "${text}" '{text: $text}')
+        curl -fsS -X POST -H 'Content-type: application/json' --data "${payload}" "${SLACK_WEBHOOK_URL}"

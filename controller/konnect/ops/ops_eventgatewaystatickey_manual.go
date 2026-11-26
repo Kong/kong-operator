@@ -157,13 +157,7 @@ func deleteEventGatewayStaticKeyGuarded(
 		// unmanaged Konnect policies: report the failure and retry.
 		return fmt.Errorf("%w; failed to list EventGatewayVirtualClusterProducePolicy objects using it: %w", err, listErr)
 	}
-	managed := make(map[string]client.ObjectKey, len(list.Items))
-	for i := range list.Items {
-		if policyID := list.Items[i].GetKonnectID(); policyID != "" {
-			managed[policyID] = client.ObjectKeyFromObject(&list.Items[i])
-		}
-	}
-	u := classifyPolicyUsers(obj.GetNamespace(), konnectPolicies, managed)
+	u := classifyPolicyUsers(obj.GetNamespace(), konnectPolicies, managedPolicies(list.Items))
 	return EventGatewayStaticKeyInUseError{
 		Users:                    u.users,
 		OtherNamespacesUsers:     u.otherNamespaces,
@@ -232,13 +226,6 @@ func konnectProducePoliciesUsingStaticKey(
 	}
 }
 
-// producePolicyConfig is a Konnect produce policy with its raw config.
-type producePolicyConfig struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Config any    `json:"config"`
-}
-
 // producePolicyConfigs lists the produce policies of a Konnect virtual
 // cluster with their config, read from the raw response body (see
 // decodeRawResponseBody).
@@ -246,7 +233,7 @@ func producePolicyConfigs(
 	ctx context.Context,
 	sdk sdkkonnectgo.EventGatewayVirtualClusterProducePoliciesSDK,
 	gatewayID, virtualClusterID string,
-) ([]producePolicyConfig, error) {
+) ([]policyConfig, error) {
 	resp, err := sdk.ListEventGatewayVirtualClusterProducePolicies(ctx, sdkkonnectops.ListEventGatewayVirtualClusterProducePoliciesRequest{
 		GatewayID:        gatewayID,
 		VirtualClusterID: virtualClusterID,
@@ -257,7 +244,7 @@ func producePolicyConfigs(
 	if resp == nil {
 		return nil, ErrNilResponse
 	}
-	var policies []producePolicyConfig
+	var policies []policyConfig
 	if err := decodeRawResponseBody(resp.RawResponse, &policies); err != nil {
 		return nil, fmt.Errorf("produce policies: %w", err)
 	}

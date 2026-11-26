@@ -184,7 +184,7 @@ func createTestEnv(scheme *runtime.Scheme, crdPaths []string) *envtest.Environme
 func generateCRDPaths(opts Options) []string {
 	crdPaths := make([]string, 0, 3)
 	if opts.InstallGatewayCRDs {
-		crdPaths = append(crdPaths, kcfg.GatewayAPIExperimentalCRDsPath())
+		crdPaths = append(crdPaths, kcfg.GatewayAPICRDsPath())
 	}
 	if opts.InstallKongCRDs {
 		crdPaths = append(crdPaths,
@@ -348,7 +348,7 @@ func installGatewayCRDs(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config) 
 	t.Helper()
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
-		Paths:              []string{kcfg.GatewayAPIExperimentalCRDsPath()},
+		Paths:              []string{kcfg.GatewayAPICRDsPath()},
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err, "failed installing Gateway API CRDs")

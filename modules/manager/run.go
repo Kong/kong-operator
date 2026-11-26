@@ -27,8 +27,10 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -48,7 +50,9 @@ import (
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/internal/telemetry"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/internal/webhook/conversion"
 	"github.com/kong/kong-operator/v2/modules/diagnostics"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
@@ -56,6 +60,9 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/platform"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -102,6 +109,14 @@ type Config struct {
 	// Resolution of ipfamily.Auto is fatal if detection fails: the operator
 	// exits with an error instead of assuming a concrete family.
 	IPFamily ipfamily.IPFamily
+	// Platform is the k8s platform flavor the operator runs on. When
+	// admission assigns the container user and group (OpenShift
+	// SecurityContextConstraints), the operator leaves them unset on hardened
+	// containers instead of pinning them. platform.Auto resolves the flavor
+	// by probing the apiserver. Resolution of platform.Auto is fatal if the
+	// probe fails: the operator exits with an error instead of assuming a
+	// concrete flavor.
+	Platform platform.Platform
 	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
 	SecretLabelSelector string
 	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
@@ -180,6 +195,9 @@ type Config struct {
 	// Webhook options.
 	ConversionWebhookEnabled bool
 	ValidatingWebhookEnabled bool
+	// ValidatingWebhookCertDir is the directory that holds the validating
+	// webhook's TLS certificate (tls.crt) and key (tls.key).
+	ValidatingWebhookCertDir string
 
 	// CertTTL is the time-to-live for certificates issued by the operator.
 	CertTTL time.Duration
@@ -220,11 +238,13 @@ func DefaultConfig() Config {
 		ConfigMapLabelSelector:              mgrconfig.DefaultConfigMapLabelSelector,
 		LoggerOpts:                          &zap.Options{},
 		IPFamily:                            ipfamily.Auto,
+		Platform:                            platform.Auto,
 		GatewayControllerEnabled:            true,
 		ControlPlaneControllerEnabled:       true,
 		DataPlaneControllerEnabled:          true,
 		ConversionWebhookEnabled:            true,
 		ValidatingWebhookEnabled:            true,
+		ValidatingWebhookCertDir:            validationconsts.DefaultAdmissionWebhookCertDir,
 		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
@@ -417,6 +437,12 @@ func Run(
 	}
 	cfg.IPFamily = ipFamily
 
+	userIDAssignedByPlatform, err := resolveUserIDAssignedByPlatform(setupLog, cfg.Platform, mgr.GetRESTMapper())
+	if err != nil {
+		return err
+	}
+	k8sresources.SetUserIDAssignedByPlatform(userIDAssignedByPlatform)
+
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {
 		setupLog.Error(err, "failed setting up controllers")
@@ -435,7 +461,7 @@ func Run(
 	}
 
 	if cfg.ValidatingWebhookEnabled {
-		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr)
+		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr, cfg.ValidatingWebhookCertDir)
 		if err != nil {
 			return fmt.Errorf("unable to set up admission server: %w", err)
 		}
@@ -479,25 +505,72 @@ func Run(
 		}
 	}
 
+	// Helm and cert-manager create the cluster CA Secret before the operator
+	// starts. OLM cannot, so the operator bootstraps it. Do this before the
+	// manager starts: certificate issuance and metrics scraping need the CA,
+	// and the manager's client cannot be used before Start because of the
+	// read-your-own-writes cache semantics.
+	caClient, err := client.New(mgr.GetConfig(), client.Options{
+		Scheme: mgr.GetScheme(),
+		Mapper: mgr.GetRESTMapper(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed creating client for cluster CA Secret bootstrap: %w", err)
+	}
+	if err := EnsureClusterCASecret(
+		ctx,
+		setupLog,
+		caClient,
+		client.ObjectKey{
+			Namespace: cfg.ClusterCASecretNamespace,
+			Name:      cfg.ClusterCASecretName,
+		},
+		cfg.SecretLabelSelector,
+	); err != nil {
+		return fmt.Errorf("failed ensuring cluster CA certificate: %w", err)
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
 	}
 
-	// Do it after the manager is started to ensure the cache is started and objects can be read.
-	if err := checkExistenceOfCertificateAuthoritySecret(
-		ctx,
-		setupLog,
-		mgr.GetClient(),
-		client.ObjectKey{
-			Namespace: cfg.ClusterCASecretNamespace,
-			Name:      cfg.ClusterCASecretName,
-		},
-	); err != nil {
-		return fmt.Errorf("failed checking existence of cluster CA certificate: %w", err)
-	}
-
 	return nil
+}
+
+// resolveUserIDAssignedByPlatform decides whether admission assigns the
+// container user and group, which makes pinning them in the pod spec invalid.
+// platform.Openshift and platform.Kubernetes answer directly; platform.Auto
+// probes the apiserver for the OpenShift-only securitycontextconstraints
+// resource. Like the ipfamily.Auto resolution, a failed probe is fatal: the
+// operator exits instead of assuming a concrete flavor, because the wrong
+// assumption would be silent and hard to diagnose.
+func resolveUserIDAssignedByPlatform(
+	log logr.Logger, p platform.Platform, mapper apimeta.RESTMapper,
+) (bool, error) {
+	switch p {
+	case platform.Openshift:
+		log.Info("OpenShift platform configured: operands get their user and group from the SecurityContextConstraints")
+		return true, nil
+	case platform.Kubernetes:
+		return false, nil
+	default: // platform.Auto
+		// securitycontextconstraints is served only by OpenShift clusters.
+		onOpenShift, err := k8sutils.CRDExists(mapper, schema.GroupVersionResource{
+			Group:    "security.openshift.io",
+			Version:  "v1",
+			Resource: "securitycontextconstraints",
+		})
+		if err != nil {
+			return false, fmt.Errorf(
+				"unable to detect whether the cluster is OpenShift "+
+					"(set --platform=openshift or --platform=kubernetes to skip the detection): %w", err)
+		}
+		if onOpenShift {
+			log.Info("OpenShift detected: operands get their user and group from the SecurityContextConstraints")
+		}
+		return onOpenShift, nil
+	}
 }
 
 // warnIfLegacyDevelopmentModeEnabled logs a warning if any of the legacy development mode environment variables are set
@@ -526,29 +599,79 @@ func warnIfLegacyDevelopmentModeEnabled(log logr.Logger) {
 	}
 }
 
-func checkExistenceOfCertificateAuthoritySecret(
-	ctx context.Context, log logr.Logger, c client.Client, certObjectKey client.ObjectKey,
+// clusterCACommonName is the common name of the cluster CA certificate. It
+// matches the one Helm's genCA and the cert-manager Certificate use.
+const clusterCACommonName = "Kong Operator CA"
+
+// EnsureClusterCASecret ensures that a valid cluster CA Secret exists at key.
+//
+// Helm and cert-manager create the Secret before the operator starts. OLM does
+// not, so the operator creates it on first start. An existing Secret is never
+// overwritten: rotating the CA would invalidate every certificate already
+// issued from it. The created Secret carries secretLabelSelector so the
+// operator's Secret cache, which filters on that label, can see it; an empty
+// selector leaves the Secret unlabelled, as the cache then has no filter.
+func EnsureClusterCASecret(
+	ctx context.Context,
+	log logr.Logger,
+	c client.Client,
+	key client.ObjectKey,
+	secretLabelSelector string,
 ) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 
-	var (
-		ca corev1.Secret
-	)
-
-	if err := c.Get(ctx, certObjectKey, &ca); err != nil {
-		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("cluster CA certificate not found")
+	var ca corev1.Secret
+	if err := c.Get(ctx, key, &ca); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed getting cluster CA certificate Secret %s: %w", key, err)
 		}
 
-		return err
+		certPEM, keyPEM, err := pki.GenerateCA(clusterCACommonName, time.Now(), consts.DefaultCertTTL)
+		if err != nil {
+			return fmt.Errorf("failed generating cluster CA certificate: %w", err)
+		}
+		var labels map[string]string
+		if secretLabelSelector != "" {
+			labels = map[string]string{
+				secretLabelSelector: mgrconfig.LabelValueForSelectorInternal,
+			}
+		}
+		ca = corev1.Secret{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+			Labels:    labels,
+			Type:      corev1.SecretTypeTLS,
+			Data: map[string][]byte{
+				corev1.TLSCertKey:       certPEM,
+				corev1.TLSPrivateKeyKey: keyPEM,
+			},
+		}
+		if err := c.Create(ctx, &ca); err != nil {
+			if !apierrors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed creating cluster CA certificate Secret %s: %w", key, err)
+			}
+			// Another replica created the Secret between our Get and Create.
+			// Read it back and validate it instead of overwriting it.
+			if err := c.Get(ctx, key, &ca); err != nil {
+				return fmt.Errorf("failed getting concurrently created cluster CA certificate Secret %s: %w", key, err)
+			}
+			return validateClusterCASecret(log, key, &ca)
+		}
+
+		log.Info("created cluster CA certificate", "namespace", key.Namespace, "name", key.Name)
+		return nil
 	}
 
-	if !secrets.IsTLSSecretValid(&ca) {
-		return fmt.Errorf("cluster CA certificate in %s is invalid", certObjectKey)
+	return validateClusterCASecret(log, key, &ca)
+}
+
+func validateClusterCASecret(log logr.Logger, key client.ObjectKey, ca *corev1.Secret) error {
+	if !secrets.IsTLSSecretValid(ca) {
+		return fmt.Errorf("cluster CA certificate in %s is invalid", key)
 	}
 
-	log.Info("found cluster CA certificate", "namespace", certObjectKey.Namespace, "name", certObjectKey.Name)
+	log.Info("found cluster CA certificate", "namespace", key.Namespace, "name", key.Name)
 	return nil
 }
 

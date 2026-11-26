@@ -31,14 +31,17 @@ type SupportedGeneratedKonnectEntityType interface {
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |
 		configurationv1alpha1.EventGatewayListenerPolicy |
+		configurationv1alpha1.EventGatewayListenerPolicyChain |
 		configurationv1alpha1.EventGatewaySchemaRegistry |
 		configurationv1alpha1.EventGatewayStaticKey |
 		configurationv1alpha1.EventGatewayTLSTrustBundle |
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain |
 		konnectv1alpha1.KonnectAIGateway |
 		konnectv1alpha1.KonnectConfigStore |
 		konnectv1alpha1.KonnectEventGateway |

@@ -3,5 +3,7 @@ kind: Kustomization
 
 resources:
 - ./dataplane
+- ./gatewayconfiguration
 - ./service
 - ./konnect
+- ./eventgateway

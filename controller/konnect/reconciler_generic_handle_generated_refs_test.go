@@ -117,7 +117,12 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Namespace:  "default",
 					Generation: 1,
 					Spec: konnectv1alpha1.KonnectConfigStoreSpec{
-						ControlPlaneRef: gatewayRef("control-plane"),
+						ControlPlaneRef: konnectv1alpha1.ConfigStoreControlPlaneRef{
+							Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "control-plane",
+							},
+						},
 					},
 				}
 

@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldPortalIdentityProviderRequestOnPortalRef is the index field for PortalIdentityProviderRequest -> Portal.
 	IndexFieldPortalIdentityProviderRequestOnPortalRef = "portalIdentityProviderRequestOnPortalRef"
+	// IndexFieldPortalIdentityProviderRequestOnSecretRef is the index field for PortalIdentityProviderRequest -> the Secrets it reads.
+	IndexFieldPortalIdentityProviderRequestOnSecretRef = "portalIdentityProviderRequestOnSecretRef"
 )
 
 // OptionsForPortalIdentityProviderRequest returns required Index options for PortalIdentityProviderRequest reconciler.
@@ -20,6 +22,11 @@ func OptionsForPortalIdentityProviderRequest() []Option {
 			Object:         &konnectv1alpha1.PortalIdentityProviderRequest{},
 			Field:          IndexFieldPortalIdentityProviderRequestOnPortalRef,
 			ExtractValueFn: portalIdentityProviderRequestOnPortalRef,
+		},
+		{
+			Object:         &konnectv1alpha1.PortalIdentityProviderRequest{},
+			Field:          IndexFieldPortalIdentityProviderRequestOnSecretRef,
+			ExtractValueFn: portalIdentityProviderRequestOnSecretRef,
 		},
 	}
 }
@@ -39,4 +46,21 @@ func portalIdentityProviderRequestOnPortalRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.PortalRef.NamespacedRef.Name}
+}
+
+func portalIdentityProviderRequestOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.PortalIdentityProviderRequest)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

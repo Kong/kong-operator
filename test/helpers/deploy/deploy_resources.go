@@ -231,10 +231,11 @@ func KonnectAPIAuthConfigurationWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
+	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	t.Helper()
 
-	apiAuth := KonnectAPIAuthConfiguration(t, ctx, cl)
+	apiAuth := KonnectAPIAuthConfiguration(t, ctx, cl, opts...)
 	apiAuth.Status.Conditions = []metav1.Condition{
 		{
 			Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
@@ -657,9 +658,9 @@ func KonnectConfigStore(
 	obj := konnectv1alpha1.KonnectConfigStore{
 		Name: name,
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
-			ControlPlaneRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{
+			ControlPlaneRef: konnectv1alpha1.ConfigStoreControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 					Name: cp.Name,
 				},
 			},

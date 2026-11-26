@@ -19,8 +19,8 @@ spec:
       # The generated Kong Service presents a single client certificate, so at
       # most one is allowed.
       certificates:
-        - ($client_cert_name)
-        - ($client_cert_name)
+        - name: ($client_cert_name)
+        - name: ($client_cert_name)
       route:
         paths:
           - /agents/upstream-tls-two-client-certs

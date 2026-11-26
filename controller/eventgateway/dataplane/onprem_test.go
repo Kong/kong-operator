@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -268,7 +269,7 @@ func resolveOnPremDependencies(t *testing.T, cl client.Client, gateway *eventgat
 // of the data plane.
 func certificateSecretNames(t *testing.T, cl client.Client, r *Reconciler, egdp *eventgatewayv1alpha1.KegDataPlane) []string {
 	t.Helper()
-	owned, err := r.listOnPremCertificates(t.Context(), cl, egdp)
+	owned, err := r.listCertificateSecrets(t.Context(), cl, egdp)
 	require.NoError(t, err)
 	names := make([]string, 0, len(owned))
 	for _, s := range owned {
@@ -475,7 +476,7 @@ func TestEnsureOnPremCertificate(t *testing.T) {
 		require.ElementsMatch(t, []string{first.Name, second.Name}, certificateSecretNames(t, cl, r, egdp))
 		cond := certificateProvisioned(t, egdp)
 		require.Equal(t, metav1.ConditionTrue, cond.Status)
-		require.Contains(t, cond.Message, "the cp client CA of the GWAdmin didn't issue the current one")
+		require.Contains(t, cond.Message, "the cp client CA of the GWAdmin didn't issue any of the current ones for the data plane")
 
 		// The previous certificate is still registered, and a duplicate of
 		// the new one was issued: only the duplicate is deleted, the
@@ -601,7 +602,7 @@ func TestCreateOnPremCertificate(t *testing.T) {
 
 	require.Equal(t, corev1.SecretTypeTLS, secret.Type)
 	require.True(t, metav1.IsControlledBy(secret, egdp))
-	for k, v := range r.onPremCertificateLabels(egdp) {
+	for k, v := range r.certificateSecretLabels(egdp) {
 		require.Equal(t, v, secret.Labels[k], k)
 	}
 	require.Equal(t, []string{secret.Name}, certificateSecretNames(t, cl, r, egdp), "listed as a client certificate of the data plane")
@@ -643,6 +644,54 @@ func TestCreateOnPremCertificate(t *testing.T) {
 		_, err := r.createOnPremCertificate(t.Context(), failing, egdp, deps, time.Hour, now)
 		require.ErrorContains(t, err, "create failed")
 	})
+}
+
+// TestOnPremCertificateLongSubject checks the client certificate of a data
+// plane whose subject is longer than a common name may be: its common name is
+// truncated, its DNS name keeps the whole subject, and only it is taken as the
+// certificate of the data plane.
+func TestOnPremCertificateLongSubject(t *testing.T) {
+	gateway, gw, bundle, ca := onPremFixture(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(gw, bundle, ca).Build()
+	deps := resolveOnPremDependencies(t, cl, gateway)
+	r := &Reconciler{}
+	now := time.Now()
+
+	egdp := onPremDataPlane()
+	egdp.Name = strings.Repeat("k", 57)
+	egdp.Namespace = strings.Repeat("n", 63)
+	subject := onPremCertificateSubject(egdp)
+	require.Len(t, subject, 121)
+
+	secret, err := r.createOnPremCertificate(t.Context(), cl, egdp, deps, 2*time.Hour, now)
+	require.NoError(t, err)
+	cert := pki.LeafCertificate(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey])
+	require.NotNil(t, cert)
+	require.Equal(t, subject[:pki.MaxCommonNameLength], cert.Subject.CommonName)
+	require.Equal(t, []string{subject}, cert.DNSNames)
+
+	current, found := currentOnPremCertificate([]corev1.Secret{*secret}, subject, deps.clientCACert)
+	require.True(t, found)
+	require.Equal(t, secret.Name, current.secret.Name)
+
+	for _, tc := range []struct {
+		name       string
+		commonName string
+		dnsNames   []string
+	}{
+		{name: "the whole subject as common name", commonName: subject, dnsNames: []string{subject}},
+		{name: "the truncated common name of another subject", commonName: subject[:pki.MaxCommonNameLength], dnsNames: []string{subject + "x"}},
+		{name: "no DNS name", commonName: subject[:pki.MaxCommonNameLength]},
+	} {
+		t.Run(tc.name+" isn't the certificate of the data plane", func(t *testing.T) {
+			certPEM, keyPEM, err := pki.IssueCertificate(deps.clientCA, pki.CertRequest{
+				CommonName: tc.commonName, DNSNames: tc.dnsNames, Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, TTL: time.Hour, Now: now,
+			})
+			require.NoError(t, err)
+			other := corev1.Secret{Data: map[string][]byte{corev1.TLSCertKey: certPEM, corev1.TLSPrivateKeyKey: keyPEM}}
+			require.Empty(t, issuedOnPremCertificates([]corev1.Secret{other}, subject, deps.clientCACert))
+		})
+	}
 }
 
 func TestOnPremCertificateRenewalTime(t *testing.T) {
@@ -1747,7 +1796,10 @@ func TestIssuedOnPremCertificatesRequireTheIssuerName(t *testing.T) {
 	egdp := onPremDataPlane()
 	certPEM, keyPEM, err := pki.IssueCertificate(&corev1.Secret{Data: map[string][]byte{
 		"tls.crt": originalPEM, "tls.key": pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}),
-	}}, pki.CertRequest{CommonName: onPremCertificateSubject(egdp), Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, TTL: time.Hour, Now: now})
+	}}, pki.CertRequest{
+		CommonName: onPremCertificateSubject(egdp), DNSNames: []string{onPremCertificateSubject(egdp)},
+		Usages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, TTL: time.Hour, Now: now,
+	})
 	require.NoError(t, err)
 	owned := []corev1.Secret{{Name: "issued", Data: map[string][]byte{"tls.crt": certPEM, "tls.key": keyPEM}}}
 
@@ -2208,6 +2260,24 @@ func TestReleaseDeploymentFromGWAdmin(t *testing.T) {
 		reconcileDataPlane(t, cl, egdp)
 		labels, _ := labelsOf(t, cl, egdp)
 		require.Equal(t, gwAdminLabels, labels)
+	})
+
+	t.Run("a data plane of another namespace no KongReferenceGrant lets in any longer loses its certificates", func(t *testing.T) {
+		gateway, gw, bundle, ca := onPremFixture(t)
+		egdp := onPremDataPlane()
+		egdp.Namespace = "tenant"
+		egdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Namespace = new(gateway.Namespace)
+		cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{Name: "keg-cert", Namespace: egdp.Namespace}
+		require.NoError(t, controllerutil.SetControllerReference(egdp, cert, scheme))
+		other := &configurationv1alpha1.EventGatewayDataPlaneCertificate{Name: "not-its-own", Namespace: egdp.Namespace}
+		cl := fake.NewClientBuilder().WithScheme(scheme).
+			WithObjects(gateway, gw, bundle, ca, egdp, cert, other, labelledDeployment(t, egdp, egdp)).
+			WithStatusSubresource(egdp).Build()
+		reconcileDataPlane(t, cl, egdp)
+		require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(cert), cert)), "its certificate is removed")
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(other), other), "a certificate it doesn't control is left alone")
+		labels, _ := labelsOf(t, cl, egdp)
+		require.Equal(t, map[string]string{"app": "keg"}, labels)
 	})
 
 	t.Run("a Deployment the data plane doesn't control, or none, is left alone", func(t *testing.T) {

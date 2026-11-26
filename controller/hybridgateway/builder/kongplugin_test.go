@@ -170,6 +170,15 @@ func TestKongPluginBuilder_WithTags(t *testing.T) {
 		assert.Empty(t, plugin.Tags)
 	})
 
+	t.Run("drops tags with reserved prefixes", func(t *testing.T) {
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTags(commonv1alpha1.Tags{"team-payments", "k8s-uid:1234"}).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, commonv1alpha1.Tags{"team-payments"}, plugin.Tags)
+	})
+
 	t.Run("composes with WithTagsFromAnnotations", func(t *testing.T) {
 		sourcePlugin := &configurationv1.KongPlugin{
 			Name: "user-plugin",
@@ -218,6 +227,15 @@ func TestKongPluginBuilder_WithOrdering(t *testing.T) {
 			assert.Equal(t, tt.ordering, plugin.Ordering)
 		})
 	}
+}
+
+func TestKongPluginBuilder_WithCondition(t *testing.T) {
+	plugin, err := NewKongPlugin().
+		WithName("test-plugin").
+		WithCondition(`http.path.startsWith("/api")`).
+		Build()
+	require.NoError(t, err)
+	assert.Equal(t, `http.path.startsWith("/api")`, plugin.Condition)
 }
 
 func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
@@ -294,6 +312,23 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 			Build()
 		require.NoError(t, err)
 		assert.Equal(t, "plugin-tag,route-tag,shared-tag", plugin.Annotations["konghq.com/tags"])
+	})
+
+	t.Run("tags with reserved prefixes are dropped", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			Name:      "test-route",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "team-payments,k8s-name:other,managed-by:someone-else",
+			},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsFromAnnotations(route).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, "team-payments", plugin.Annotations["konghq.com/tags"])
 	})
 
 	t.Run("no tags annotation when sources have no tags", func(t *testing.T) {

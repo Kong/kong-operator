@@ -426,7 +426,7 @@ func TestEventGatewayDataPlane(t *testing.T) {
 							},
 						},
 						Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
-							ConfigPollIntervalSeconds: new(int32(0)),
+							ConfigPollIntervalSeconds: new(int32(0)), //nolint:staticcheck // testing deprecated field
 						},
 					},
 				},

@@ -36,10 +36,12 @@ type ControlPlaneRef struct {
 	// Kind is the human-readable kind of the referenced control plane. It must
 	// match the Kind of one of the Config's ControlPlanes entries.
 	Kind string
-	// Name is the name of the referenced control plane in the DataPlane's
-	// namespace. It is empty when the DataPlane has no control plane reference
-	// configured.
+	// Name is the name of the referenced control plane. It is empty when the
+	// DataPlane has no control plane reference configured.
 	Name string
+	// Namespace is the namespace of the referenced control plane, the
+	// DataPlane's when empty. Another namespace needs a KongReferenceGrant.
+	Namespace string
 }
 
 // ResolvedControlPlane carries the control plane resolved for a DataPlane
@@ -144,6 +146,10 @@ type ControlPlaneConditions struct {
 	NotFoundReason string
 	// NotFoundMessage is the message used when the control plane was not found.
 	NotFoundMessage string
+	// NotPermittedReason is the reason used when the control plane is in
+	// another namespace and no KongReferenceGrant allows the reference. Only
+	// used by a kind whose references can name a namespace.
+	NotPermittedReason string
 	// NotProgrammedReason is the reason used when the control plane is not yet Programmed.
 	NotProgrammedReason string
 	// NotProgrammedMessage is the message used when the control plane is not yet Programmed.
@@ -168,6 +174,9 @@ type ControlPlaneKindConfig struct {
 	// Kind is the human-readable control plane kind used in logs, errors and
 	// events (e.g. "KonnectAIGateway", "OnPremAIGateway").
 	Kind string
+	// GVK identifies the control plane kind in a KongReferenceGrant. Only used
+	// by a kind whose references can name a namespace.
+	GVK metav1.GroupVersionKind
 	// NewObject returns a new empty control plane object of this kind.
 	NewObject func() ControlPlaneObject
 	// ControlPlaneRefIndexField is the field index used to list DataPlanes by
@@ -183,11 +192,12 @@ type ControlPlaneKindConfig struct {
 	// control plane is considered resolved as soon as it exists.
 	ReadinessConditionType string
 	// EndpointCheck reports whether the control plane's endpoints are usable
-	// with its serverURL, naming the offending endpoint in the error. A
-	// non-nil error holds the DataPlane: it sets Resolved=False with
+	// with its serverURL, naming the offending endpoint in the error. dp is
+	// the reconciled DataPlane, for kinds whose verdict depends on its spec.
+	// A non-nil error holds the DataPlane: it sets Resolved=False with
 	// Conditions.EndpointMismatchReason and returns errEndpointsMismatch.
 	// Nil for kinds that have no such endpoints.
-	EndpointCheck func(cp ControlPlaneObject) error
+	EndpointCheck func(dp Object, cp ControlPlaneObject) error
 	// Conditions carries the control plane resolution condition types, reasons
 	// and messages for this kind.
 	Conditions ControlPlaneConditions

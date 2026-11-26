@@ -33,6 +33,7 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/envtest/update"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -192,7 +193,7 @@ func TestAIGatewayDataPlaneReconciler_NoControlPlaneRef(t *testing.T) {
 
 	// No AIGatewayDataPlaneCertificate should ever be created: there's no
 	// KonnectAIGateway to register a certificate against.
-	assert.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 		return cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), cert) == nil
 	}, waitTime, tickTime)
@@ -257,7 +258,7 @@ func TestAIGatewayDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	assert.Equal(t, userSecret.Name, certVolume.Secret.SecretName)
 
 	// No automatically-provisioned certificate Secret should ever be created.
-	assert.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		var secretList corev1.SecretList
 		if err := cl.List(ctx, &secretList, client.InNamespace(ns.Name),
 			client.MatchingLabels{consts.SecretAIGatewayDataPlaneCertificateLabel: "true"},
@@ -371,7 +372,7 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 		assert.NotEqual(ct, checksumV1, cs)
 	}, waitTime, tickTime)
 
-	assert.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		return apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(certA), &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}))
 	}, waitTime, tickTime, "old certificate must not be removed before the rollout to the new one is confirmed complete")
 
@@ -840,7 +841,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			}
 			assert.Equal(ct, metav1.ConditionTrue, cond.Status)
 		}, waitTime, tickTime)
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			var secretList corev1.SecretList
 			if err := cl.List(ctx, &secretList, client.InNamespace(ns.Name),
 				client.MatchingLabels{
@@ -852,7 +853,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			}
 			return len(secretList.Items) > 0
 		}, waitTime, tickTime)
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			var certList aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList
 			if err := cl.List(ctx, &certList, client.InNamespace(ns.Name),
 				client.MatchingLabels{consts.GatewayOperatorManagedByNameLabel: aigwdp.Name},
@@ -899,7 +900,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			assert.NotEqual(t, aigwdataplane.EnvKongNginxAdminSSLVerifyClient, e.Name)
 		}
 
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			svc := &corev1.Service{}
 			return cl.Get(ctx, client.ObjectKey{
 				Name: aigwdp.Name + aigwdataplane.AdminServiceNameSuffix, Namespace: ns.Name,
@@ -909,7 +910,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 		// A Konnect-backed DataPlane is licensed by Konnect: the
 		// operator-provided KongLicense does not apply, so no license condition
 		// is reported for it (it would sit at False/LicenseMissing forever).
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			current := &aigatewayv1alpha1.AIGatewayDataPlane{}
 			if err := cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), current); err != nil {
 				return false

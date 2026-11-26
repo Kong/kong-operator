@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/crdschema"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // mockReconciler is a minimal, request-recording controller registered
@@ -113,7 +114,7 @@ func TestCRDSchemaReconciler(t *testing.T) {
 		crd.Labels["kong-operator-test/touch"] = "1"
 		require.NoError(t, cl.Update(ctx, crd))
 
-		assert.Never(t, func() bool {
+		asserts.Never(t, func(context.Context) bool {
 			return mock.countFor(irrelevantCRD) > 0
 		}, waitTime, tickTime, "the predicate delivered a CRD outside the configured groups")
 	})

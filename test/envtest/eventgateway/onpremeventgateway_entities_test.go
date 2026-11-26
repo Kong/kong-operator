@@ -24,6 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -31,6 +32,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync/gwadminsynctest"
@@ -40,6 +42,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -67,6 +70,21 @@ spec:` + onPremEventGatewayParentRef(gateway) + `
     authentication: {type: anonymous, anonymous: {}}
     tls: {enabled: Disabled}
 `
+}
+
+// programmedOf reads the object again and returns its Programmed condition,
+// or nil when it can't be read or has none.
+func programmedOf(ctx context.Context, ct *assert.CollectT, cl client.Client, obj interface {
+	client.Object
+	GetConditions() []metav1.Condition
+},
+) *metav1.Condition {
+	if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+		return nil
+	}
+	cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
+	assert.NotNil(ct, cond, "%T %s", obj, obj.GetName())
+	return cond
 }
 
 // backendClusterNames returns the names of the backend clusters the pod
@@ -133,6 +151,23 @@ spec:
 		}, waitTime, tickTime)
 	}
 
+	// expectBlocked waits for the push of the gateway to be stopped by an
+	// entity that can't be sent, naming it, the gw-admin pods keeping the
+	// backend clusters they have.
+	expectBlocked := func(t *testing.T, entity string, names ...string) {
+		t.Helper()
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := pushedCondition(ct); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status, cond.Message)
+				assert.Equal(ct, "InvalidEntities", cond.Reason, cond.Message)
+				assert.Contains(ct, cond.Message, "EventGatewayBackendCluster "+ns.Name+"/"+entity+": ")
+			}
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				assert.ElementsMatch(ct, names, backendClusterNames(ct, pod, gateway))
+			}
+		}, waitTime, tickTime)
+	}
+
 	// expectCondition waits for the condition of the backend cluster to have
 	// that status and reason.
 	expectCondition := func(t *testing.T, name, conditionType string, status metav1.ConditionStatus, reason string) {
@@ -163,11 +198,7 @@ spec:
 	) {
 		t.Helper()
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
-				return
-			}
-			cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
-			if assert.NotNil(ct, cond, "%T %s", obj, obj.GetName()) {
+			if cond := programmedOf(ctx, ct, cl, obj); cond != nil {
 				assert.Equal(ct, status, cond.Status, cond.Message)
 				assert.Equal(ct, reason, cond.Reason, cond.Message)
 			}
@@ -207,17 +238,21 @@ spec:
 		}, waitTime, tickTime)
 	})
 
-	t.Run("a backend cluster that can't be sent is left out", func(t *testing.T) {
+	t.Run("a backend cluster never sent with a name taken is left out, and the push goes on", func(t *testing.T) {
 		duplicate := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 			backendClusterYAML("duplicate", "backend-cluster", gateway.Name))
 		require.NoError(t, cl.Create(ctx, duplicate))
 		other := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 			backendClusterYAML("other", "other", gateway.Name))
 		require.NoError(t, cl.Create(ctx, other))
-		// The duplicate name is left out, the other backend cluster is sent.
+		// The backend cluster running with the name keeps it: the duplicate
+		// changes nothing on the gateway.
 		expectBackendClusters(t, "backend-cluster", "other")
 		expectProgrammed(t, "duplicate", metav1.ConditionFalse, "Invalid")
 		expectProgrammed(t, "other", metav1.ConditionTrue, "Programmed")
+
+		require.NoError(t, cl.Delete(ctx, duplicate))
+		expectBackendClusters(t, "backend-cluster", "other")
 	})
 
 	t.Run("a backend cluster reads a Secret of another namespace once a KongReferenceGrant allows it", func(t *testing.T) {
@@ -243,7 +278,7 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 `)
 		require.NoError(t, cl.Create(ctx, crossNamespace))
 		expectProgrammed(t, "cross-namespace", metav1.ConditionFalse, "RefNotPermitted")
-		expectBackendClusters(t, "backend-cluster", "other")
+		expectBlocked(t, "cross-namespace", "backend-cluster", "other")
 
 		require.NoError(t, cl.Create(ctx, &configurationv1alpha1.KongReferenceGrant{
 			Name: "backend-cluster-secrets", Namespace: secretsNS.Name,
@@ -282,7 +317,7 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 `)
 		require.NoError(t, cl.Create(ctx, withSecret))
 		expectProgrammed(t, "with-secret", metav1.ConditionFalse, "Invalid")
-		expectBackendClusters(t, "backend-cluster", "other")
+		expectBlocked(t, "with-secret", "backend-cluster", "other")
 
 		secret := &corev1.Secret{
 			Name: "with-secret-tls", Namespace: ns.Name,
@@ -398,6 +433,17 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 		for _, obj := range []client.Object{bundle, registry, key} {
 			require.NoError(t, cl.Create(ctx, obj))
 		}
+		// staticKeyIDs returns the ids of the static keys each pod holds.
+		staticKeyIDs := func(ct *assert.CollectT) []string {
+			var ids []string
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				if g, ok, _ := pod.state(gatewayID(ct, gateway)); assert.True(ct, ok) && assert.Len(ct, g.entities.StaticKeys, 1) {
+					ids = append(ids, g.entities.StaticKeys[0].Id.String())
+				}
+			}
+			return ids
+		}
+		var keyID string
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
 				g, ok, _ := pod.state(gatewayID(ct, gateway))
@@ -408,9 +454,13 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 					assert.Equal(ct, string(bundle.UID), g.entities.TlsTrustBundles[0].Id.String())
 				}
 				assert.Len(ct, g.entities.SchemaRegistries, 1)
-				if assert.Len(ct, g.entities.StaticKeys, 1) {
-					assert.Equal(ct, string(key.UID), g.entities.StaticKeys[0].Id.String())
-				}
+			}
+			ids := staticKeyIDs(ct)
+			if assert.Len(ct, ids, 2) && assert.Equal(ct, ids[0], ids[1]) {
+				keyID = ids[0]
+				// A static key isn't under the UID of its object: its id
+				// is hashed from its group, kind, namespace and name.
+				assert.NotEqual(ct, string(key.UID), keyID)
 			}
 		}, waitTime, tickTime)
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -422,6 +472,155 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 					assert.True(ct, apimeta.IsStatusConditionTrue(obj.GetConditions(), "Programmed"), "%T %s", obj, obj.GetName())
 				}
 			}
+		}, waitTime, tickTime)
+
+		// Recreated, e.g. by a GitOps tool, the static key gets another UID
+		// but keeps its id, which the records it encrypted name.
+		oldUID := key.UID
+		require.NoError(t, cl.Delete(ctx, key))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(key), &configurationv1alpha1.EventGatewayStaticKey{})
+			assert.True(ct, apierrors.IsNotFound(err), "the static key must be gone: %v", err)
+		}, waitTime, tickTime)
+		key = key.DeepCopy()
+		key.ResourceVersion, key.UID, key.Finalizers, key.Status = "", "", nil, configurationv1alpha1.EventGatewayStaticKeyStatus{}
+		require.NoError(t, cl.Create(ctx, key))
+		require.NotEqual(t, oldUID, key.UID)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(key), key)) {
+				assert.True(ct, apimeta.IsStatusConditionTrue(key.GetConditions(), "Programmed"))
+			}
+			assert.Equal(ct, []string{keyID, keyID}, staticKeyIDs(ct))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("a static key whose value changed since it was pushed stops the push until it is put back", func(t *testing.T) {
+		key := &configurationv1alpha1.EventGatewayStaticKey{}
+		getKey := func(ct *assert.CollectT) bool {
+			return assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "key"}, key))
+		}
+		inputsApplied := func() *metav1.Condition {
+			return apimeta.FindStatusCondition(key.GetConditions(), konnectv1alpha1.CreateInputsAppliedConditionType)
+		}
+		// pushedValues returns the value of the static key each pod holds.
+		pushedValues := func(ct *assert.CollectT) []string {
+			var values []string
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				if g, ok, _ := pod.state(gatewayID(ct, gateway)); assert.True(ct, ok) && assert.Len(ct, g.entities.StaticKeys, 1) {
+					data, err := json.Marshal(g.entities.StaticKeys[0].Value)
+					if assert.NoError(ct, err) {
+						values = append(values, string(data))
+					}
+				}
+			}
+			return values
+		}
+		setValue := func(value string) {
+			t.Helper()
+			var secret corev1.Secret
+			require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "key-secret"}, &secret))
+			secret.Data = map[string][]byte{"key": []byte(value)}
+			require.NoError(t, cl.Update(ctx, &secret))
+		}
+
+		var hash string
+		var pushed []string
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if getKey(ct) && assert.NotEmpty(ct, key.Status.CreateInputsHash, "the push records the fingerprint of the key") {
+				hash = key.Status.CreateInputsHash
+				if cond := inputsApplied(); assert.NotNil(ct, cond) {
+					assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+				}
+			}
+			pushed = pushedValues(ct)
+			assert.Len(ct, pushed, 2)
+		}, waitTime, tickTime)
+
+		// Its description isn't part of the fingerprint: changed, it is pushed.
+		require.NoError(t, cl.Patch(ctx, key, client.RawPatch(types.MergePatchType, []byte(`{"spec":{"apiSpec":{"description":"rotated yearly"}}}`))))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				if g, ok, _ := pod.state(gatewayID(ct, gateway)); assert.True(ct, ok) && assert.Len(ct, g.entities.StaticKeys, 1) {
+					if assert.NotNil(ct, g.entities.StaticKeys[0].Description) {
+						assert.Equal(ct, "rotated yearly", *g.entities.StaticKeys[0].Description)
+					}
+				}
+			}
+			if getKey(ct) {
+				assert.True(ct, apimeta.IsStatusConditionTrue(key.GetConditions(), "Programmed"))
+				assert.Equal(ct, hash, key.Status.CreateInputsHash)
+			}
+		}, waitTime, tickTime)
+
+		setValue("b3RoZXItc2VjcmV0LWtleS0xMjM0NTY3ODkw")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !getKey(ct) {
+				return
+			}
+			if cond := apimeta.FindStatusCondition(key.GetConditions(), "Programmed"); assert.NotNil(ct, cond) {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Contains(ct, cond.Message, "its value changed since it was pushed")
+			}
+			if cond := inputsApplied(); assert.NotNil(ct, cond) {
+				assert.Equal(ct, konnectv1alpha1.CreateInputsReasonValueChanged, cond.Reason)
+			}
+			assert.Equal(ct, hash, key.Status.CreateInputsHash, "the fingerprint of the value pushed is kept")
+			var g eventgatewayv1alpha1.OnPremEventGateway
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(gateway), &g)) {
+				cond := apimeta.FindStatusCondition(g.Status.Conditions, "Programmed")
+				if assert.NotNil(ct, cond) {
+					assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEventGatewayInvalidEntitiesReason), cond.Reason)
+				}
+			}
+		}, waitTime, tickTime)
+		// gw-admin keeps the value pushed, while the key reports the change.
+		asserts.Never(t, func(context.Context) bool {
+			values := pushedValues(&assert.CollectT{})
+			return len(values) == len(pushed) && !slices.Equal(values, pushed)
+		}, 3*time.Second, tickTime, "gw-admin keeps the value pushed")
+
+		setValue("c2VjcmV0LWtleS0xMjM0NTY3ODkwMTIzNDU2")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !getKey(ct) {
+				return
+			}
+			assert.True(ct, apimeta.IsStatusConditionTrue(key.GetConditions(), "Programmed"))
+			if cond := inputsApplied(); assert.NotNil(ct, cond) {
+				assert.Equal(ct, konnectv1alpha1.CreateInputsReasonUnchanged, cond.Reason)
+			}
+			assert.Equal(ct, hash, key.Status.CreateInputsHash)
+		}, waitTime, tickTime)
+
+		// A key pushed to one gw-admin pod may be served from it: its
+		// fingerprint is recorded, though the push to the other failed.
+		pod1.setReject(func(e gwadminapi.GatewayEntitySet) string {
+			if len(e.StaticKeys) > 1 {
+				return "static_keys.1.value"
+			}
+			return ""
+		})
+		defer pod1.setReject(nil)
+		second := objectFromYAML[configurationv1alpha1.EventGatewayStaticKey](t, ns.Name, `
+metadata: {name: second-key}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    name: second-key
+    value: {type: secretRef, secretRef: {name: key-secret, key: key}}
+`)
+		require.NoError(t, cl.Create(ctx, second))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if g, ok, _ := pod0.state(gatewayID(ct, gateway)); assert.True(ct, ok) {
+				assert.Len(ct, g.entities.StaticKeys, 2)
+			}
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(second), second)) {
+				assert.False(ct, apimeta.IsStatusConditionTrue(second.GetConditions(), "Programmed"), "the push to gw-admin-1 failed")
+				assert.NotEmpty(ct, second.Status.CreateInputsHash)
+			}
+		}, waitTime, tickTime)
+		require.NoError(t, cl.Delete(ctx, second))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(second), &configurationv1alpha1.EventGatewayStaticKey{})
+			assert.True(ct, apierrors.IsNotFound(err), "the second key must be gone: %v", err)
 		}, waitTime, tickTime)
 	})
 
@@ -578,6 +777,21 @@ spec:
 			metav1.ConditionFalse, "GatewayNotFound")
 		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayListenerPolicy{Name: "forward", Namespace: ns.Name},
 			metav1.ConditionFalse, "GatewayNotFound")
+		// No gateway holds the value of the static key anymore: it loses its
+		// fingerprint, and can be attached to another gateway.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var key configurationv1alpha1.EventGatewayStaticKey
+			if assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "key"}, &key)) {
+				assert.Empty(ct, key.Status.CreateInputsHash)
+				assert.Nil(ct, apimeta.FindStatusCondition(key.GetConditions(), konnectv1alpha1.CreateInputsAppliedConditionType))
+				if cond := apimeta.FindStatusCondition(key.GetConditions(), "Programmed"); assert.NotNil(ct, cond) {
+					assert.Equal(ct, "GatewayNotFound", cond.Reason)
+				}
+			}
+		}, waitTime, tickTime)
+		require.NoError(t, cl.Patch(ctx, &configurationv1alpha1.EventGatewayStaticKey{Name: "key", Namespace: ns.Name},
+			client.RawPatch(types.MergePatchType, []byte(`{"spec":{"parentRef":{"name":"another-gateway"}}}`))),
+			"without its fingerprint, the static key can be attached to another gateway")
 	})
 }
 
@@ -764,7 +978,9 @@ spec:
 
 	t.Run("a gateway is pushed to every gw-admin pod over mutual TLS", func(t *testing.T) {
 		expectPushed(t, gatewayA, []*fakeGWAdmin{pod0, pod1}, func(ct *assert.CollectT, g fakeGateway, expected []uuid.UUID) {
-			assert.Equal(ct, []uuid.UUID{gatewayID(ct, gatewayA)}, expected)
+			// With no data plane certificate yet, the pods don't wait for
+			// the gateway to turn ready: they couldn't.
+			assert.Empty(ct, expected)
 			assert.Empty(ct, g.entities.BackendClusters)
 		})
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(gatewayA), gatewayA))
@@ -917,7 +1133,7 @@ spec:
 		}, waitTime, tickTime)
 	})
 
-	t.Run("an entity that can't be sent is left out and reported", func(t *testing.T) {
+	t.Run("an entity that can't be sent stops the push and is reported", func(t *testing.T) {
 		duplicate := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name, `
 metadata: {name: duplicate-name}
 spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
@@ -927,32 +1143,74 @@ spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
     authentication: {type: anonymous, anonymous: {}}
     tls: {enabled: Disabled}
 `)
+		taken := `its spec.apiSpec.name "backend-cluster" is already the one of EventGatewayBackendCluster ` + ns.Name + "/backend-cluster"
+		programmed := func(ct *assert.CollectT, obj *configurationv1alpha1.EventGatewayBackendCluster) *metav1.Condition {
+			return programmedOf(ctx, ct, cl, obj.DeepCopy())
+		}
+		renameDuplicate := func(t *testing.T, name string) {
+			t.Helper()
+			require.NoError(t, cl.Patch(ctx, duplicate, client.RawPatch("application/merge-patch+json",
+				[]byte(`{"spec":{"apiSpec":{"name":"`+name+`"}}}`))))
+		}
+
+		// Never sent, it is only left out: the push goes on.
 		require.NoError(t, cl.Create(ctx, duplicate))
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := programmed(ct, duplicate); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Equal(ct, "Invalid", cond.Reason)
+				assert.Contains(ct, cond.Message, taken)
+			}
+			if cond := programmed(ct, backendCluster); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
+			}
 			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
-				// The entity left out reports it on its own status.
-				assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
 			}
 		}, waitTime, tickTime)
-		g, _, _ := pod0.state(gatewayID(t, gatewayA))
-		require.Len(t, g.entities.BackendClusters, 1)
-		// Each entity reports it too.
+
+		// Under a name of its own, it is sent.
+		renameDuplicate(t, "backend-cluster-2")
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			left := &configurationv1alpha1.EventGatewayBackendCluster{}
-			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(duplicate), left)) {
-				cond := apimeta.FindStatusCondition(left.Status.Conditions, "Programmed")
-				if assert.NotNil(ct, cond) {
-					assert.Equal(ct, metav1.ConditionFalse, cond.Status)
-					assert.Equal(ct, "Invalid", cond.Reason)
-					assert.Contains(ct, cond.Message, `another backend cluster of the gateway is named "backend-cluster"`)
-				}
+			if cond := programmed(ct, duplicate); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
 			}
-			kept := &configurationv1alpha1.EventGatewayBackendCluster{}
-			if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(backendCluster), kept)) {
-				assert.True(ct, apimeta.IsStatusConditionTrue(kept.Status.Conditions, "Programmed"))
+			g, _, _ := pod0.state(gatewayID(t, gatewayA))
+			assert.Len(ct, g.entities.BackendClusters, 2)
+		}, waitTime, tickTime)
+
+		// Sent, and renamed into the name the other runs with, it stops the
+		// push: left out, it would be taken off the gateway.
+		renameDuplicate(t, "backend-cluster")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
+				// The gateway names it, and so does the entity on its own status.
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Equal(ct, "InvalidEntities", cond.Reason)
+				assert.Contains(ct, cond.Message, "EventGatewayBackendCluster "+ns.Name+"/duplicate-name: ")
+			}
+			if cond := programmed(ct, duplicate); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+				assert.Equal(ct, "Invalid", cond.Reason)
+				assert.Contains(ct, cond.Message, taken)
+			}
+			if cond := programmed(ct, backendCluster); cond != nil {
+				assert.Equal(ct, metav1.ConditionFalse, cond.Status, "the configuration isn't pushed")
+				assert.Equal(ct, "GatewayNotProgrammed", cond.Reason)
 			}
 		}, waitTime, tickTime)
+		// gw-admin keeps what it has.
+		g, _, _ := pod0.state(gatewayID(t, gatewayA))
+		require.Len(t, g.entities.BackendClusters, 2)
+
 		require.NoError(t, cl.Delete(ctx, duplicate))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if cond := conditionOf(ct, gatewayA, "ConfigurationPushed"); cond != nil {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status, cond.Message)
+			}
+			g, _, _ := pod0.state(gatewayID(t, gatewayA))
+			assert.Len(ct, g.entities.BackendClusters, 1)
+		}, waitTime, tickTime)
 	})
 
 	t.Run("a configuration a gw-admin pod rejects is reported with the pod and the object at fault, then recovered", func(t *testing.T) {
@@ -1011,11 +1269,7 @@ spec:`+onPremEventGatewayParentRef("gateway")+`
 	expectStatusOf := func(t *testing.T, obj k8sutils.ConditionsAwareObject, status metav1.ConditionStatus, reason, message string) {
 		t.Helper()
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
-				return
-			}
-			cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
-			if assert.NotNil(ct, cond) {
+			if cond := programmedOf(ctx, ct, cl, obj); cond != nil {
 				assert.Equal(ct, status, cond.Status)
 				assert.Equal(ct, reason, cond.Reason)
 				assert.Contains(ct, cond.Message, message)
@@ -1070,7 +1324,7 @@ spec:
 `)
 		require.NoError(t, cl.Create(ctx, other))
 		require.NoError(t, cl.Create(ctx, policy))
-		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `it forwards to the virtual cluster "missing"`)
+		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `EventGatewayVirtualCluster `+ns.Name+`/missing`)
 		require.NoError(t, cl.Delete(ctx, other))
 		expectStatusOf(t, policy, metav1.ConditionFalse, "Detached", "its EventGatewayListener "+ns.Name+"/other-listener does not exist")
 	})

@@ -391,31 +391,6 @@ func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 // BackendClusterName The unique name of the backend cluster.
 type BackendClusterName string
 
-// BackendClusterReferenceByID is a type alias.
-type BackendClusterReferenceByID struct {
-}
-
-// BackendClusterReferenceByName is a type alias.
-type BackendClusterReferenceByName struct {
-	// The unique name of the backend cluster.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name BackendClusterName `json:"name,omitzero"`
-}
-
-// BackendClusterReferenceModify is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type BackendClusterReferenceModify struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *BackendClusterName `json:"name,omitempty"`
-}
-
 // BackendClusterTLS is a type alias.
 type BackendClusterTLS struct {
 	// A literal value or a reference to an existing secret as a template string
@@ -485,12 +460,21 @@ type BackendMetadataUpdateIntervalSeconds int
 // * `error` - the batch is not delivered to the client.
 // Use sparingly: erroring on a batch causes clients to get stuck on the
 // problematic offset and requires manual intervention to skip it.
+// A single record that always fails the policy, for example one written by a
+// producer with access to the topic, pins every consumer group on that offset.
+// The error the client receives contains the policy failure reason, which can
+// include runtime-specific configuration details.
 // * `skip` - the record is not delivered to the client.
 // * `passthrough` - passes the record to the client even though policy
 // execution failed.
 // * `mark` - passes the record to the client but marks it with a
 // `kong/policy-failure-<id>` header whose value is the reason for the policy
 // failure (truncated to 512 characters).
+// The failure reason can contain runtime-specific configuration details, such
+// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+// text, JWT issuer and audience data, or expression snippets.
+// If you don't want to share this information with clients, remove the header
+// with a Modify Headers consume policy.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type ConsumeFailureMode string
@@ -640,42 +624,10 @@ type EncryptionKeyAWS struct {
 
 // EncryptionKeyStatic A static encryption key.
 type EncryptionKeyStatic struct {
-	// A static encryption key reference, either by ID or by value.
-	//
-	//
-	// +required
-	Key *EncryptionKeyStaticReference `json:"key,omitempty"`
-}
-
-// EncryptionKeyStaticReference is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type EncryptionKeyStaticReference struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *string `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayStaticKey object,
-	// resolved to its Konnect id.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewayStaticKeyRef `json:"namespacedRef,omitempty"`
-}
-
-// EncryptionKeyStaticReferenceByID A static encryption key reference by ID.
-type EncryptionKeyStaticReferenceByID struct {
-}
-
-// EncryptionKeyStaticReferenceByName A static encryption key reference by name.
-type EncryptionKeyStaticReferenceByName struct {
-	// The name of the static key defined in the key source.
+	// A reference to an EventGatewayStaticKey holding the static encryption key.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitzero"`
+	Key EventGatewayStaticKeyRef `json:"key,omitzero"`
 }
 
 // EncryptionRecordPart * key - encrypt the record key
@@ -1266,12 +1218,21 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -1562,12 +1523,21 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -1587,10 +1557,6 @@ type EventGatewayConsumeSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=mark;skip
 	KeyValidationAction ConsumeKeyValidationAction `json:"keyValidationAction,omitzero"`
-	// A reference to a schema Registry.
-	//
-	// +optional
-	SchemaRegistry *EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -1627,12 +1593,21 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3293,12 +3268,21 @@ type EventGatewayParsedRecordDecryptFieldsConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3319,6 +3303,12 @@ type EventGatewayParsedRecordDecryptFieldsConfig struct {
 //
 // Note this policy can only be used as a child of a
 // `EventGatewayConsumeSchemaValidationPolicy` policy.
+//
+// This policy only runs on records that the parent schema validation policy
+// successfully parses.
+// If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+// that fail schema validation are delivered to the client without parsing, so
+// this policy doesn't run on them and their fields stay encrypted.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type EventGatewayParsedRecordDecryptFieldsPolicyCreate struct {
@@ -3507,6 +3497,16 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3523,6 +3523,12 @@ type EventGatewayParsedRecordEncryptFieldsConfig struct {
 //
 // Note this policy can only be used as a child of a
 // `EventGatewayProduceSchemaValidationPolicy` policy.
+//
+// This policy only runs on records that the parent schema validation policy
+// successfully parses.
+// If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+// that fail schema validation are sent to the backend cluster without parsing,
+// so this policy doesn't run on them and their fields aren't encrypted.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type EventGatewayParsedRecordEncryptFieldsPolicyCreate struct {
@@ -3834,12 +3840,21 @@ type EventGatewayParsedRecordMaskFieldsConsumeConfig struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -3919,6 +3934,16 @@ type EventGatewayParsedRecordMaskFieldsProduceConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -4359,12 +4384,21 @@ type EventGatewayParsedRecordTranscodeConsumeConfigAvro struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -4519,12 +4553,21 @@ type EventGatewayParsedRecordTranscodeConsumeConfigJSON struct {
 	// * `error` - the batch is not delivered to the client.
 	// Use sparingly: erroring on a batch causes clients to get stuck on the
 	// problematic offset and requires manual intervention to skip it.
+	// A single record that always fails the policy, for example one written by a
+	// producer with access to the topic, pins every consumer group on that offset.
+	// The error the client receives contains the policy failure reason, which can
+	// include runtime-specific configuration details.
 	// * `skip` - the record is not delivered to the client.
 	// * `passthrough` - passes the record to the client even though policy
 	// execution failed.
 	// * `mark` - passes the record to the client but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets.
+	// If you don't want to share this information with clients, remove the header
+	// with a Modify Headers consume policy.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -4931,6 +4974,16 @@ type EventGatewayParsedRecordTranscodeProduceConfigAvro struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -5497,7 +5550,7 @@ type EventGatewayParsedRecordTranscodeSchemaSourceReference struct {
 	// A reference to a schema Registry.
 	//
 	// +required
-	SchemaRegistry *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry `json:"schemaRegistry,omitempty"`
+	SchemaRegistry EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitzero"`
 	// An expression that computes the schema registry subject of the output data's
 	// schema.
 	//
@@ -5638,107 +5691,6 @@ func (u *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestinat
 	return nil
 }
 
-// EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name
-	Type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-}
-
-// EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType represents the type of schema_registry.
-type EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType string
-
-// EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType values.
-const (
-	EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeID   EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType = "id"
-	EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeName EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType = "name"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	}
-	return nil
-}
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayParsedRecordTranscodeSchemaSourceReference) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -5747,15 +5699,11 @@ func (s *EventGatewayParsedRecordTranscodeSchemaSourceReference) UnmarshalJSON(d
 	type alias EventGatewayParsedRecordTranscodeSchemaSourceReference
 	aux := alias{}
 	aux.SchemaRefDestination = &EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination{}
-	aux.SchemaRegistry = &EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry{}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSourceReference: %w", err)
 	}
 	if aux.SchemaRefDestination != nil && aux.SchemaRefDestination.Type == "" && aux.SchemaRefDestination.ConfluentFormat == nil && aux.SchemaRefDestination.None == nil && aux.SchemaRefDestination.RecordHeader == nil {
 		aux.SchemaRefDestination = nil
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
 	}
 	*s = EventGatewayParsedRecordTranscodeSchemaSourceReference(aux)
 	return nil
@@ -6007,6 +5955,16 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -6023,8 +5981,6 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6055,8 +6011,6 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6300,6 +6254,16 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -6310,8 +6274,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6319,10 +6281,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	KeyValidationAction ProduceKeyValidationAction `json:"keyValidationAction,omitzero"`
-	// A reference to a schema Registry.
-	//
-	// +optional
-	SchemaRegistry *EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -6340,8 +6298,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6349,125 +6305,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	ValueValidationAction ProduceValueValidationAction `json:"valueValidationAction,omitzero"`
-}
-
-// EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name
-	Type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-}
-
-// EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType string
-
-// EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType values.
-const (
-	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID   EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "id"
-	EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeName EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType = "name"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayProduceSchemaValidationPolicyJSONConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfig: nil receiver")
-	}
-	type alias EventGatewayProduceSchemaValidationPolicyJSONConfig
-	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyJSONConfig: %w", err)
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
-	}
-	*s = EventGatewayProduceSchemaValidationPolicyJSONConfig(aux)
-	return nil
 }
 
 // EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig The
@@ -6481,6 +6318,16 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// * `mark` - passes the record to the backend cluster but marks it with a
 	// `kong/policy-failure-<id>` header whose value is the reason for the policy
 	// failure (truncated to 512 characters).
+	// The header is stored with the record in the backend cluster, so every
+	// consumer of the topic sees it, including systems that never pass through the
+	// Event Gateway.
+	// The failure reason can contain runtime-specific configuration details, such
+	// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+	// text, JWT issuer and audience data, or expression snippets, and a producer
+	// with access to the topic can trigger policy failures on purpose to expose
+	// it.
+	// If you don't want to share this information, remove the header with a Modify
+	// Headers produce policy, or use a different failure mode.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
 	//
@@ -6491,8 +6338,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6503,7 +6348,7 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// A reference to a schema Registry.
 	//
 	// +optional
-	SchemaRegistry *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	SchemaRegistry *EventGatewaySchemaRegistryRef `json:"schemaRegistry,omitempty"`
 	// If true, validate the record key.
 	//
 	// **Requires a minimum runtime version of `1.2`**.
@@ -6521,8 +6366,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -6530,125 +6373,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	ValueValidationAction ProduceValueValidationAction `json:"valueValidationAction,omitzero"`
-}
-
-// EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
-// Only one of the fields should be set based on the Type.
-type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=id;name
-	Type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType `json:"type,omitempty"`
-
-	// ID configuration.
-	//
-	// +optional
-	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
-	// Name configuration.
-	//
-	// +optional
-	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
-}
-
-// EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
-type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType string
-
-// EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType values.
-const (
-	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID   EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "id"
-	EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType = "name"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeID:
-		if u.ID != nil {
-			raw, err := json.Marshal(u.ID)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
-			}
-			m["id"] = raw
-		}
-	case EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryTypeName:
-		if u.Name != nil {
-			raw, err := json.Marshal(u.Name)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
-			}
-			m["name"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType(probe.Type)
-	switch probe.Type {
-	case "id":
-		payload, ok := raw["id"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByID
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Id: %w", err)
-		}
-		u.ID = &val
-	case "name":
-		payload, ok := raw["name"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val SchemaRegistryReferenceByName
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry Name: %w", err)
-		}
-		u.Name = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig: nil receiver")
-	}
-	type alias EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
-	aux := alias{}
-	aux.SchemaRegistry = &EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig: %w", err)
-	}
-	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
-		aux.SchemaRegistry = nil
-	}
-	*s = EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig(aux)
-	return nil
 }
 
 // EventGatewayRequestRuleAction What to do when a rule evaluates to `false`.
@@ -7227,7 +6951,7 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	//
 	//
 	// +required
-	TLSTrustBundles []TLSTrustBundleReference `json:"tlsTrustBundles,omitempty"`
+	TLSTrustBundles []EventGatewayTLSTrustBundleRef `json:"tlsTrustBundles,omitempty"`
 }
 
 // EventGatewayTxnOffsetCommitRequestRules The rules to apply to Kafka
@@ -7419,7 +7143,7 @@ type ForwardToClusterByPortMappingConfig struct {
 	// A reference to a virtual cluster.
 	//
 	// +required
-	Destination *VirtualClusterReference `json:"destination,omitempty"`
+	Destination EventGatewayVirtualClusterRef `json:"destination,omitzero"`
 	// The lowest broker node ID in the cluster.
 	//
 	// +optional
@@ -7714,6 +7438,15 @@ type NamespaceExactAllowListItem struct {
 // * `mark` - passes the record to the backend cluster but marks it with a
 // `kong/policy-failure-<id>` header whose value is the reason for the policy
 // failure (truncated to 512 characters).
+// The header is stored with the record in the backend cluster, so every
+// consumer of the topic sees it, including systems that never pass through the
+// Event Gateway.
+// The failure reason can contain runtime-specific configuration details, such
+// as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+// text, JWT issuer and audience data, or expression snippets, and a producer
+// with access to the topic can trigger policy failures on purpose to expose it.
+// If you don't want to share this information, remove the header with a Modify
+// Headers produce policy, or use a different failure mode.
 //
 // **Requires a minimum runtime version of `1.2`**.
 type ProduceFailureMode string
@@ -7721,7 +7454,6 @@ type ProduceFailureMode string
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 // to help to identify the clients violating schema.
 type ProduceKeyValidationAction string
 
@@ -7729,7 +7461,6 @@ type ProduceKeyValidationAction string
 // valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 // to help to identify the clients violating schema.
 type ProduceValueValidationAction string
 
@@ -7868,6 +7599,10 @@ type SchemaRegistryConfluent struct {
 // Registry](https://github.com/confluentinc/schema-registry)
 type SchemaRegistryConfluentConfig struct {
 	// The authentication configuration for the schema registry.
+	// The Event Gateway only requires read-only access to the schema registry to
+	// fetch schemas for validation, so we recommend using credentials with
+	// read-only scope.
+	//
 	//
 	// +optional
 	Authentication *SchemaRegistryConfluentConfigAuthentication `json:"authentication,omitempty"`
@@ -7989,23 +7724,6 @@ func (s *SchemaRegistryConfluentConfig) UnmarshalJSON(data []byte) error {
 	}
 	*s = SchemaRegistryConfluentConfig(aux)
 	return nil
-}
-
-// SchemaRegistryReference A reference to a schema Registry.
-type SchemaRegistryReference map[string]string
-
-// SchemaRegistryReferenceByID is a type alias.
-type SchemaRegistryReferenceByID struct {
-}
-
-// SchemaRegistryReferenceByName Reference a schema registry by its unique name.
-type SchemaRegistryReferenceByName struct {
-	// The unique name of the schema registry.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name string `json:"name,omitzero"`
 }
 
 // SchemaValidationInlineSchemaConfig represents a union type for SchemaValidationInlineSchemaConfig.
@@ -8171,37 +7889,6 @@ type TLSTrustBundleConfig struct {
 // TLSTrustBundleName The unique name of the TLS trust bundle.
 type TLSTrustBundleName string
 
-// TLSTrustBundleReference is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type TLSTrustBundleReference struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *TLSTrustBundleName `json:"name,omitempty"`
-	// NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object,
-	// resolved to its Konnect id.
-	// It is mutually exclusive with the other fields.
-	//
-	// +optional
-	NamespacedRef *EventGatewayTLSTrustBundleRef `json:"namespacedRef,omitempty"`
-}
-
-// TLSTrustBundleReferenceByID is a type alias.
-type TLSTrustBundleReferenceByID struct {
-}
-
-// TLSTrustBundleReferenceByName is a type alias.
-type TLSTrustBundleReferenceByName struct {
-	// The unique name of the TLS trust bundle.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name TLSTrustBundleName `json:"name,omitzero"`
-}
-
 // TLSVersionRange A range of TLS versions.
 type TLSVersionRange struct {
 	// Maximum TLS version to use.
@@ -8231,7 +7918,6 @@ type TranscodeOnUnknownField string
 // the gateway.
 // - `enforce_on_gateway` means the gateway enforces its own ACL policies for
 // this virtual cluster
-//
 // and does not forward ACL-related commands to the backend cluster.
 // Note that if there are no ACL policies configured, all access is denied.
 // - `passthrough` tells the gateway to forward all ACL-related commands.
@@ -8329,18 +8015,12 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// Methods to mediate authentication:
 	// * passthrough - pass authentication from the client through proxy to the
 	// backend cluster without any kind of
-	//
-	//
 	// validation
 	// * validate_forward - pass authentication from the client through proxy to
 	// the backend cluster.
-	//
-	//
 	// Proxy does the validation before forwarding it to the client.
 	// * terminate - terminate authentication at the proxy level and originate
 	// authentication to the backend cluster
-	//
-	//
 	// using the configuration defined at BackendCluster's authentication.
 	// SASL auth is not originated if authentication on the backend_cluster is not
 	// configured.
@@ -8636,12 +8316,8 @@ type VirtualClusterNamespace struct {
 	Additional VirtualClusterNamespaceAdditionalProperties `json:"additional,omitzero"`
 	// * hide_prefix - the configured prefix is hidden from clients for topics and
 	// IDs when reading.
-	//
-	//
 	// Created resources are written with the prefix on the backend cluster.
 	// * enforce_prefix - the configured prefix remains visible to clients.
-	//
-	//
 	// Created resources must include the prefix or the request will fail.
 	//
 	//
@@ -8962,32 +8638,6 @@ type VirtualClusterNamespaceTopicSelectorGlob struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._?*-]+$`
 	Glob string `json:"glob,omitzero"`
-}
-
-// VirtualClusterReference is a type alias.
-//
-// +kubebuilder:validation:MinProperties=1
-// +kubebuilder:validation:MaxProperties=1
-type VirtualClusterReference struct {
-	// +optional
-	ID *string `json:"id,omitempty"`
-	// +optional
-	Name *VirtualClusterName `json:"name,omitempty"`
-}
-
-// VirtualClusterReferenceByID Reference a virtual cluster by its unique
-// identifier.
-type VirtualClusterReferenceByID struct {
-}
-
-// VirtualClusterReferenceByName Reference a virtual cluster by its unique name.
-type VirtualClusterReferenceByName struct {
-	// The name of the virtual cluster.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	Name VirtualClusterName `json:"name,omitzero"`
 }
 
 // VirtualClusterTopicAlias A topic alias maps an alias name to a

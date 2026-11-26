@@ -388,7 +388,10 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 		return fmt.Errorf("failed to get DataPlane %s: %w", dpNN, err)
 	}
 
-	adminAPIAddressProvider := NewAdminAPIAddressProvider(msm.client)
+	adminAPIAddressProvider, err := NewAdminAPIAddressProvider(msm.client)
+	if err != nil {
+		return fmt.Errorf("failed to create Admin API address provider: %w", err)
+	}
 
 	if msm.certs == nil || msm.certs.ExpirationDate.Sub(time.Now().UTC()) < msm.certExpirationMargin {
 		if err := msm.initMTLSCerts(ctx); err != nil {

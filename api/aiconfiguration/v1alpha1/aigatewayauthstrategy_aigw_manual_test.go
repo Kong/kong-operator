@@ -56,7 +56,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 								DisplayName: "Key Auth Strategy 1",
 								Labels:      PublicLabels{"app": "test1"},
 								ManagedBy:   ManagedBy{"kong-operator": "true"},
-								Config: AIGWKeyAuthGeneratedConfig{
+								Config: AIGatewayAuthStrategyKeyAuthConfig{
 									HideCredentials: "Enabled",
 								},
 							},
@@ -83,7 +83,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "my-oidc-provider",
 								DisplayName: "My OpenID Connect Identity Provider",
-								Config: AIGWOpenIDConnectGeneratedConfig{
+								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
 									Issuer:          "https://my-idp.example.com/.well-known/openid-configuration",
 									CacheTokensSalt: "my-cache-salt",
 									ClientID:        []string{"my-client-id"},
@@ -120,12 +120,12 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "my-oidc-provider-redis",
 								DisplayName: "My OpenID Connect Identity Provider",
-								Config: AIGWOpenIDConnectGeneratedConfig{
-									ClusterCacheRedis: AIGWOpenIDConnectGeneratedConfigClusterCacheRedis{
+								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
+									ClusterCacheRedis: AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis{
 										Password:         redisPasswordRef("oidc-redis", "clusterPassword"),
 										SentinelPassword: redisPasswordRef("oidc-redis", "clusterSentinelPassword"),
 									},
-									Redis: AIGWOpenIDConnectGeneratedConfigRedis{
+									Redis: AIGatewayAuthStrategyOpenIDConnectConfigRedis{
 										Password:         redisPasswordRef("oidc-redis", "redisPassword"),
 										SentinelPassword: redisPasswordRef("oidc-redis", "redisSentinelPassword"),
 									},
@@ -189,7 +189,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "cross-ns-oidc",
 								DisplayName: "Cross NS OIDC",
-								Config: AIGWOpenIDConnectGeneratedConfig{
+								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
 									ClientSecret: []SensitiveDataSource{{
 										Type: SensitiveDataSourceTypeSecretRef,
 										SecretRef: &SensitiveDataSecretRef{
@@ -217,7 +217,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "cross-ns-oidc",
 								DisplayName: "Cross NS OIDC",
-								Config: AIGWOpenIDConnectGeneratedConfig{
+								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
 									ClientSecret: []SensitiveDataSource{{
 										Type: SensitiveDataSourceTypeSecretRef,
 										SecretRef: &SensitiveDataSecretRef{
@@ -321,7 +321,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy_StrictRoundTrip(t *testing.T) 
 					OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 						Name:        "my-oidc-provider",
 						DisplayName: "My OpenID Connect Identity Provider",
-						Config: AIGWOpenIDConnectGeneratedConfig{
+						Config: AIGatewayAuthStrategyOpenIDConnectConfig{
 							Issuer:          "https://my-idp.example.com/.well-known/openid-configuration",
 							CacheTokensSalt: "my-cache-salt",
 							ClientID:        []string{"my-client-id"},

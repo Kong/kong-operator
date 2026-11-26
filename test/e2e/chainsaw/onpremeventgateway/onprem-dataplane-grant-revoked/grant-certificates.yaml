@@ -1,0 +1,15 @@
+# The KongReferenceGrant letting the EventGatewayDataPlaneCertificates of the
+# namespace dp_namespace reference the OnPremEventGateway gateway_name.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: certificates
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: EventGatewayDataPlaneCertificate
+      namespace: ($dp_namespace)
+  to:
+    - group: eventgateway.konghq.com
+      kind: OnPremEventGateway
+      name: ($gateway_name)

@@ -1,7 +1,6 @@
 package sendconfig
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -10,8 +9,27 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	dataplanepush "github.com/kong/kong-operator/v2/ingress-controller/pkg/dataplane/push"
+)
+
+type (
+	// FlatEntityError represents a single Kong entity with one or more invalid fields.
+	FlatEntityError = dataplanepush.FlatEntityError
+
+	// FlatError represents an error for a single field within a Kong entity or a whole entity.
+	FlatError = dataplanepush.FlatError
+
+	// FlatErrorType tells whether a FlatError is associated with a single field or a whole entity.
+	FlatErrorType = dataplanepush.FlatErrorType
+)
+
+const (
+	// FlatErrorTypeField is an error associated with a single field.
+	FlatErrorTypeField = dataplanepush.FlatErrorTypeField
+
+	// FlatErrorTypeEntity is an error associated with a whole entity.
+	FlatErrorTypeEntity = dataplanepush.FlatErrorTypeEntity
 )
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored
@@ -23,96 +41,19 @@ type rawResourceError struct {
 	Problems map[string]string
 }
 
-// ConfigError is an error response from Kong's DB-less /config endpoint.
-type ConfigError struct {
-	Code      int               `json:"code,omitempty" yaml:"code,omitempty"`
-	Flattened []FlatEntityError `json:"flattened_errors,omitempty" yaml:"flattened_errors,omitempty"`
-	Message   string            `json:"message,omitempty" yaml:"message,omitempty"`
-	Name      string            `json:"name,omitempty" yaml:"name,omitempty"`
-}
-
-// ConfigErrorFields is the structure under the "fields" key in a /config error response.
-type ConfigErrorFields struct{}
-
-// FlatEntityError represents a single Kong entity with one or more invalid fields.
-type FlatEntityError struct {
-	// Name is the name of the Kong entity.
-	Name string `json:"entity_name,omitempty" yaml:"entity_name,omitempty"`
-
-	// ID is the ID of the Kong entity.
-	ID string `json:"entity_id,omitempty" yaml:"entity_id,omitempty"`
-
-	// Tags are the tags of the Kong entity.
-	Tags []string `json:"entity_tags,omitempty" yaml:"entity_tags,omitempty"`
-
-	// Type is the type of the Kong entity.
-	Type string `json:"entity_type,omitempty" yaml:"entity_type,omitempty"`
-
-	// Errors are the errors associated with the Kong entity.
-	Errors []FlatError `json:"errors,omitempty" yaml:"errors,omitempty"`
-}
-
-// FlatErrorType tells whether a FlatError is associated with a single field or a whole entity.
-type FlatErrorType string
-
-const (
-	// FlatErrorTypeField is an error associated with a single field.
-	FlatErrorTypeField FlatErrorType = "field"
-
-	// FlatErrorTypeEntity is an error associated with a whole entity.
-	FlatErrorTypeEntity FlatErrorType = "entity"
-)
-
-// FlatError represents an error for a single field within a Kong entity or a whole entity.
-type FlatError struct {
-	// Field is the name of the entity's field that has an error.
-	// Optional: Field can be empty if the error is associated with the whole entity.
-	Field string `json:"field,omitempty" yaml:"field,omitempty"`
-
-	// Message is the error associated with Field (for single-value fields) or with a whole entity when Type is "entity".
-	Message string `json:"message,omitempty" yaml:"message,omitempty"`
-
-	// Messages are the errors associated with Field for multi-value fields. The array index in Messages matches the
-	// array index in the input.
-	Messages []string `json:"messages,omitempty" yaml:"messages,omitempty"`
-
-	// Type tells whether the error is associated with a single field or a whole entity.
-	Type FlatErrorType `json:"type,omitempty" yaml:"type,omitempty"`
-}
-
 // parseFlatEntityErrors takes a Kong /config error response body and parses its "fields.flattened_errors" value
 // into errors associated with Kubernetes resources.
 func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, error) {
-	// Directly return here to avoid the misleading "could not unmarshal config" message appear in logs.
-	if len(body) == 0 {
+	flattened, err := dataplanepush.ParseFlatEntityErrors(body, logger)
+	if err != nil {
+		return nil, err
+	}
+	if len(flattened) == 0 {
 		return nil, nil
 	}
 
-	var configError ConfigError
-
-	err := json.Unmarshal(body, &configError)
-	if err != nil {
-		// we _should_ arguably be able to parse the "message" field into a ConfigError even if we can't parse a full set
-		// of flattened errors, but for some reason those incomplete errors still don't unmarshal. as a fallback, try and
-		// yank the field out via a more basic unmarshal target
-		fallback := map[string]any{}
-		if fallbackErr := json.Unmarshal(body, &fallback); fallbackErr == nil {
-			if message, ok := fallback["message"]; ok {
-				logger.Error(nil, "Could not fully parse config error", "message", message)
-			}
-		}
-		return nil, NewResponseParsingError(body)
-	}
-	if len(configError.Flattened) == 0 {
-		if len(configError.Message) > 0 {
-			logger.Error(nil, "Config error missing per-resource errors", "message", configError.Message)
-		} else {
-			logger.Error(nil, "Config error missing per-resource and message", "message", configError.Message)
-		}
-	}
-
-	resourceErrors := make([]ResourceError, 0, len(configError.Flattened))
-	for _, ee := range configError.Flattened {
+	resourceErrors := make([]ResourceError, 0, len(flattened))
+	for _, ee := range flattened {
 		raw := flattenedErrorIntoRaw(ee, logger)
 		parsed, err := parseRawResourceError(raw)
 		if err != nil {

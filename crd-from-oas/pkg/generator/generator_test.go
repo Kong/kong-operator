@@ -980,6 +980,9 @@ func TestGenerateCRDType_ParentRefIsImmutableOnceProgrammed(t *testing.T) {
 		assert.Contains(t, content, "ControlPlaneRef commonv1alpha1.ObjectRef")
 		assert.Contains(t, content, rulePrefix+"controlPlaneRef)")
 		assert.Contains(t, content, `message="spec.controlPlaneRef is immutable when an entity is already Programmed"`)
+		// An object updated before any status is written has no self.status,
+		// and self.status.conditions would fail with "no such key".
+		assert.Contains(t, content, `rule="!has(self.spec.controlPlaneRef) || !has(self.status) || !has(self.status.conditions) ||`)
 	})
 
 	t.Run("root entity without a parent", func(t *testing.T) {
@@ -989,6 +992,77 @@ func TestGenerateCRDType_ParentRefIsImmutableOnceProgrammed(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotContains(t, content, "is immutable when an entity is already Programmed")
 	})
+}
+
+func TestGenerateConfigStoreCustomControlPlaneRef(t *testing.T) {
+	t.Parallel()
+
+	rc := &config.ReconcilerConfig{
+		ParentEntityGVK: &config.EntityGVKConfig{
+			Kind:    "KonnectGatewayControlPlane",
+			Group:   "konnect.konghq.com",
+			Version: "v1alpha2",
+		},
+		ParentRef: &config.ParentRefConfig{
+			FieldName: "controlPlaneRef",
+			TypeName:  "ConfigStoreControlPlaneRef",
+		},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "konnect.konghq.com",
+		APIVersion: "v1alpha1",
+		CommonTypes: &config.CommonTypesConfig{
+			ObjectRef: &config.ObjectRefConfig{
+				Import: &config.ImportConfig{
+					Path:  "github.com/kong/kong-operator/v2/api/common/v1alpha1",
+					Alias: "commonv1alpha1",
+				},
+			},
+		},
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{"KonnectConfigStore": rc},
+	})
+	schema := &parser.Schema{
+		Name: "CreateKonnectConfigStore",
+		Dependencies: []*parser.Dependency{{
+			ParamName:  "controlPlaneId",
+			EntityName: "ControlPlane",
+			FieldName:  "ControlPlaneRef",
+			JSONName:   "controlPlaneRef",
+		}},
+	}
+	content, err := g.generateCRDType(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "ControlPlaneRef ConfigStoreControlPlaneRef")
+	require.Contains(t, content, "ControlPlaneID *KonnectEntityRef")
+
+	funcs, err := g.generateCRDFuncs(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, funcs, "return obj.GetConfigStoreControlPlaneRef().ToObjectRef()")
+	require.Contains(t, funcs, "ConfigStoreControlPlaneRefFromObjectRef(ref)")
+	require.Contains(t, funcs, `Kind:    "KonnectGatewayControlPlane"`)
+	require.Contains(t, funcs, "return ControlPlaneRefValidConditionType")
+	require.NotContains(t, funcs, "OnPremAIGateway")
+	require.NotContains(t, funcs, "SkipKonnectReconciliation")
+
+	metadata := reconcilerEntityMetadata{
+		EntityName:                 "KonnectConfigStore",
+		EntityNameLowerCamel:       "konnectConfigStore",
+		ParentEntityName:           "KonnectGatewayControlPlane",
+		ParentRefFieldName:         "ControlPlaneRef",
+		APIGroupPackagePath:        "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias:       "konnectv1alpha1",
+		ParentAPIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha2",
+		ParentAPIGroupPackageAlias: "konnectv1alpha2",
+	}
+	index, err := g.generateIndex(metadata, rc)
+	require.NoError(t, err)
+	require.Contains(t, index, "ref := ent.GetParentRef()")
+	require.NotContains(t, index, "OnPremAIGateway")
+
+	watch, err := g.generateWatch(metadata, rc)
+	require.NoError(t, err)
+	require.NotContains(t, watch, "SkipKonnectReconciliation")
+	require.False(t, g.kindsSkippingKonnectReconciliation([]string{"KonnectConfigStore"})["KonnectConfigStore"])
 }
 
 func TestGenerateCRDType_FieldDescriptionOverride(t *testing.T) {
@@ -1069,6 +1143,53 @@ func TestGenerateCRDType_EmitsInlineAPISpecTypes(t *testing.T) {
 	assert.Contains(t, content, "Menu Menu `json:\"menu,omitzero\"`") //nolint:dupword
 	assert.Contains(t, content, "type Menu struct {")
 	assert.Contains(t, content, "Title string `json:\"title,omitzero\"`")
+}
+
+func TestGenerateCRDType_ImportsForUnionInInlineObject(t *testing.T) {
+	inlineConfig := func(nested *parser.Property) *parser.Schema {
+		return &parser.Schema{
+			Name: "CreateAIGatewayAgentRequest",
+			Properties: []*parser.Property{
+				{
+					Name:       "config",
+					Type:       "object",
+					Properties: []*parser.Property{{Name: "url", Type: "string"}, nested},
+				},
+			},
+		}
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "aiconfiguration.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	t.Run("union in inline object", func(t *testing.T) {
+		content, err := g.generateCRDType("CreateAIGatewayAgentRequest", inlineConfig(&parser.Property{
+			Name: "balancer",
+			OneOf: []*parser.Property{
+				{RefName: "AIGatewayUpstreamBalancerRoundRobinConfig"},
+				{RefName: "AIGatewayUpstreamBalancerLeastConnectionsConfig"},
+			},
+			Discriminator: "algorithm",
+			DiscriminatorMapping: map[string]string{
+				"round-robin":       "AIGatewayUpstreamBalancerRoundRobinConfig",
+				"least-connections": "AIGatewayUpstreamBalancerLeastConnectionsConfig",
+			},
+		}))
+		require.NoError(t, err)
+		assert.Contains(t, content, "func (u ConfigBalancer) MarshalJSON() ([]byte, error) {")
+		assert.Contains(t, content, "\t\"encoding/json\"\n\t\"fmt\"\n")
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+	})
+
+	t.Run("inline object without union", func(t *testing.T) {
+		content, err := g.generateCRDType("CreateAIGatewayAgentRequest", inlineConfig(&parser.Property{Name: "path", Type: "string"}))
+		require.NoError(t, err)
+		assert.NotContains(t, content, "\"encoding/json\"")
+		assert.NotContains(t, content, "\"fmt\"")
+	})
 }
 
 func TestGenerateCRDFuncs_GeneratesKonnectLabelAccessors(t *testing.T) {
@@ -1886,25 +2007,27 @@ func generatedStructBlock(t *testing.T, content, typeName string) string {
 
 func TestTagOmitSuffix(t *testing.T) {
 	tests := []struct {
-		goType string
-		want   string
+		goType        string
+		forceOmitZero bool
+		want          string
 	}{
-		{"string", ",omitzero"},
-		{"int64", ",omitzero"},
-		{"float64", ",omitzero"},
-		{"VirtualClusterNamespace", ",omitzero"},
-		{"VirtualClusterName", ",omitzero"},
-		{"apiextensionsv1.JSON", ",omitzero"},
-		{"*string", ",omitempty"},
-		{"*KonnectEntityRef", ",omitempty"},
-		{"[]VirtualClusterTopicAlias", ",omitempty"},
-		{"[]metav1.Condition", ",omitempty"},
-		{"map[string]Labels", ",omitempty"},
-		{"map[string]string", ",omitempty"},
+		{"string", false, ",omitzero"},
+		{"int64", false, ",omitzero"},
+		{"float64", false, ",omitzero"},
+		{"VirtualClusterNamespace", false, ",omitzero"},
+		{"VirtualClusterName", false, ",omitzero"},
+		{"apiextensionsv1.JSON", false, ",omitzero"},
+		{"*string", false, ",omitempty"},
+		{"*KonnectEntityRef", false, ",omitempty"},
+		{"[]VirtualClusterTopicAlias", false, ",omitempty"},
+		{"[]metav1.Condition", false, ",omitempty"},
+		{"map[string]Labels", false, ",omitempty"},
+		{"map[string]string", false, ",omitempty"},
+		{"[]VirtualClusterTopicAlias", true, ",omitzero"},
 	}
 	for _, tc := range tests {
-		t.Run(tc.goType, func(t *testing.T) {
-			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType))
+		t.Run(fmt.Sprintf("%s/force=%t", tc.goType, tc.forceOmitZero), func(t *testing.T) {
+			assert.Equal(t, tc.want, tagOmitSuffix(tc.goType, tc.forceOmitZero))
 		})
 	}
 }
@@ -1938,6 +2061,244 @@ func TestGenerateSchemaTypes_EmitsOmitzeroForStructFields(t *testing.T) {
 	assert.NotContains(t, content, "Namespace VirtualClusterNamespace `json:\"namespace,omitempty\"`")
 	_, err := format.Source([]byte(content))
 	require.NoError(t, err)
+}
+
+func TestGenerateSchemaTypes_FieldConfigOmitZero(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"KeyAuthConfig": {
+				Name: "KeyAuthConfig",
+				Properties: []*parser.Property{
+					{Name: "identity_realms", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "key_names", Type: "array", Items: &parser.Property{Type: "string"}},
+				},
+			},
+		},
+	}
+	schemaCursors := map[string]*config.FieldConfig{
+		"KeyAuthConfig": {
+			Fields: map[string]*config.FieldConfig{
+				"identityRealms": {OmitZero: true},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"KeyAuthConfig": true}, parsed, schemaCursors)
+
+	assert.Contains(t, content, "IdentityRealms []string `json:\"identityRealms,omitzero\"`")
+	assert.Contains(t, content, "KeyNames []string `json:\"keyNames,omitempty\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+func TestGenerateSchemaTypes_FieldConfigOmitZeroThroughRootUnion(t *testing.T) {
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateAIGatewayAuthStrategy": {
+				Name:                 "CreateAIGatewayAuthStrategy",
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"key-auth": "AIGatewayAuthStrategyKeyAuth"},
+				OneOf: []*parser.Property{
+					{Name: "AIGatewayAuthStrategyKeyAuth", RefName: "AIGatewayAuthStrategyKeyAuth"},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayAuthStrategyKeyAuth": {
+				Name:       "AIGatewayAuthStrategyKeyAuth",
+				Properties: []*parser.Property{{Name: "config", RefName: "AIGWKeyAuthGeneratedConfig"}},
+			},
+			"AIGWKeyAuthGeneratedConfig": {
+				Name: "AIGWKeyAuthGeneratedConfig",
+				Properties: []*parser.Property{
+					{Name: "identity_realms", Type: "array", Items: &parser.Property{Type: "string"}},
+				},
+			},
+		},
+	}
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"AIGatewayAuthStrategy": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"key-auth": {Fields: map[string]*config.FieldConfig{
+									"config": {Fields: map[string]*config.FieldConfig{
+										"identityRealms": {OmitZero: true},
+									}},
+								}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+
+	cursors, err := g.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	content := g.generateSchemaTypes(map[string]bool{"AIGWKeyAuthGeneratedConfig": true}, parsed, cursors)
+
+	assert.Contains(t, content, "IdentityRealms []string `json:\"identityRealms,omitzero\"`")
+}
+
+func TestAllowZeroGoType(t *testing.T) {
+	testCases := []struct {
+		goType string
+		fc     *config.FieldConfig
+		want   string
+	}{
+		{goType: "int", fc: nil, want: "int"},
+		{goType: "int", fc: &config.FieldConfig{}, want: "int"},
+		{goType: "int", fc: &config.FieldConfig{AllowZero: true}, want: "*int"},
+		{goType: "float64", fc: &config.FieldConfig{AllowZero: true}, want: "*float64"},
+		{goType: "SomeEnum", fc: &config.FieldConfig{AllowZero: true}, want: "*SomeEnum"},
+		{goType: "*int", fc: &config.FieldConfig{AllowZero: true}, want: "*int"},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s/%v", tc.goType, tc.fc), func(t *testing.T) {
+			assert.Equal(t, tc.want, allowZeroGoType(tc.goType, tc.fc))
+		})
+	}
+}
+
+func TestGenerateSchemaTypes_FieldConfigAllowZero(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"ListenerConfig": {
+				Name: "ListenerConfig",
+				Properties: []*parser.Property{
+					{Name: "max_request_body_size", Type: "integer", Minimum: new(float64(0))},
+					{Name: "ttl", Type: "integer", Format: "int64"},
+					{Name: "ratio", Type: "number"},
+					{Name: "prefix", Type: "string"},
+					{Name: "timeout", Type: "integer"},
+				},
+			},
+		},
+	}
+	schemaCursors := map[string]*config.FieldConfig{
+		"ListenerConfig": {
+			Fields: map[string]*config.FieldConfig{
+				"maxRequestBodySize": {AllowZero: true},
+				"ttl":                {AllowZero: true},
+				"ratio":              {AllowZero: true},
+				"prefix":             {AllowZero: true},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"ListenerConfig": true}, parsed, schemaCursors)
+
+	assert.Contains(t, content, "MaxRequestBodySize *int `json:\"maxRequestBodySize,omitempty\"`")
+	assert.Contains(t, content, "+kubebuilder:validation:Minimum=0")
+	assert.Contains(t, content, "Ttl *int64 `json:\"ttl,omitempty\"`")
+	assert.Contains(t, content, "Ratio *float64 `json:\"ratio,omitempty\"`")
+	assert.Contains(t, content, "Prefix *string `json:\"prefix,omitempty\"`")
+	// Fields without _allowZero keep the default omitzero behavior.
+	assert.Contains(t, content, "Timeout int `json:\"timeout,omitzero\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+// allowZeroRootUnionSpec returns a root-union request body whose "listener"
+// variant has a config schema with fields of several types, so cursors can be
+// built (and validated) the same way buildSchemaCursors walks real entities.
+func allowZeroRootUnionSpec() *parser.ParsedSpec {
+	return &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateAIGatewayMCPServer": {
+				Name:                 "CreateAIGatewayMCPServer",
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"listener": "AIGatewayMCPServerListener"},
+				OneOf: []*parser.Property{
+					{Name: "AIGatewayMCPServerListener", RefName: "AIGatewayMCPServerListener"},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayMCPServerListener": {
+				Name:       "AIGatewayMCPServerListener",
+				Properties: []*parser.Property{{Name: "config", RefName: "AIGatewayMCPServerListenerConfig"}},
+			},
+			"AIGatewayMCPServerListenerConfig": {
+				Name: "AIGatewayMCPServerListenerConfig",
+				Properties: []*parser.Property{
+					{Name: "max_request_body_size", Type: "integer"},
+					{Name: "url", Type: "string", Required: true},
+					{Name: "hosts", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "enabled", Type: "boolean"},
+					{Name: "logging", Type: "object", Properties: []*parser.Property{{Name: "level", Type: "string"}}},
+				},
+			},
+		},
+	}
+}
+
+func allowZeroGenerator(field string, fc *config.FieldConfig) *Generator {
+	return NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"AIGatewayMCPServer": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"listener": {Fields: map[string]*config.FieldConfig{
+									"config": {Fields: map[string]*config.FieldConfig{
+										field: fc,
+									}},
+								}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestGenerateSchemaTypes_FieldConfigAllowZeroThroughRootUnion(t *testing.T) {
+	parsed := allowZeroRootUnionSpec()
+	g := allowZeroGenerator("maxRequestBodySize", &config.FieldConfig{AllowZero: true})
+
+	cursors, err := g.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	content := g.generateSchemaTypes(map[string]bool{"AIGatewayMCPServerListenerConfig": true}, parsed, cursors)
+
+	assert.Contains(t, content, "MaxRequestBodySize *int `json:\"maxRequestBodySize,omitempty\"`")
+}
+
+func TestBuildSchemaCursors_AllowZeroValidation(t *testing.T) {
+	testCases := []struct {
+		name    string
+		field   string
+		fc      *config.FieldConfig
+		wantErr string
+	}{
+		{name: "optional integer", field: "maxRequestBodySize", fc: &config.FieldConfig{AllowZero: true}},
+		{name: "required field", field: "url", fc: &config.FieldConfig{AllowZero: true}, wantErr: "only supported on optional fields"},
+		{name: "array field", field: "hosts", fc: &config.FieldConfig{AllowZero: true}, wantErr: `got "array"`},
+		{name: "object field", field: "logging", fc: &config.FieldConfig{AllowZero: true}, wantErr: `got "object"`},
+		{name: "boolean field", field: "enabled", fc: &config.FieldConfig{AllowZero: true}, wantErr: `got "boolean"`},
+		{name: "combined with omitZero", field: "maxRequestBodySize", fc: &config.FieldConfig{AllowZero: true, OmitZero: true}, wantErr: "mutually exclusive"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := allowZeroGenerator(tc.field, tc.fc)
+			_, err := g.buildSchemaCursors(allowZeroRootUnionSpec())
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+			require.ErrorContains(t, err, "spec.apiSpec.listener.config."+tc.field)
+		})
+	}
 }
 
 func TestEntityFilePrefix(t *testing.T) {
@@ -2534,8 +2895,8 @@ func TestBuildSchemaCursors_RootOneOfVariant(t *testing.T) {
 		Schemas:       map[string]*parser.Schema{"TLSChannelPolicy": variantSchema},
 	}
 
-	// jsonName("TLSChannelPolicy") = "tLSChannelPolicy" (only first char lowercased,
-	// no underscore conversion for PascalCase without underscores).
+	// jsonName("TLSChannelPolicy") = "tlsChannelPolicy" (a leading initialism is
+	// lowercased, no underscore conversion for PascalCase without underscores).
 	fieldCfg := &config.Config{
 		Entities: map[string]*config.EntityConfig{
 			"ChannelPolicy": {
@@ -2544,7 +2905,7 @@ func TestBuildSchemaCursors_RootOneOfVariant(t *testing.T) {
 						Fields: map[string]*config.FieldConfig{
 							"apiSpec": {
 								Fields: map[string]*config.FieldConfig{
-									"tLSChannelPolicy": {
+									"tlsChannelPolicy": {
 										Fields: map[string]*config.FieldConfig{
 											"certificate": {
 												Validations: []string{"+kubebuilder:validation:MaxLength=4096"},
@@ -3396,6 +3757,65 @@ func TestCollectSDKOpsBoolFields(t *testing.T) {
 		{Label: "items.[].item_enabled", Path: []string{"items", "[]", "item_enabled"}},
 		{Label: "settings.nested_enabled", Path: []string{"settings", "nested_enabled"}},
 	}, g.collectSDKOpsBoolFields(schema))
+}
+
+func TestCollectSDKOpsConstFields_DescendsUnionMembers(t *testing.T) {
+	g := NewGenerator(Config{})
+	g.parsed = &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"UpstreamAuth": {
+				Name:                 "UpstreamAuth",
+				OneOf:                []*parser.Property{{RefName: "UpstreamAuthAWS"}},
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"aws": "UpstreamAuthAWS"},
+			},
+			"UpstreamAuthAWS": {
+				Name: "UpstreamAuthAWS",
+				Properties: []*parser.Property{
+					{Name: "type", Type: "string", Enum: []any{"aws"}},
+					{Name: "region", Type: "string"},
+				},
+			},
+			"WorkloadIdentityFederation": {
+				Name:                 "WorkloadIdentityFederation",
+				OneOf:                []*parser.Property{{RefName: "WorkloadIdentityFederationAwsIam"}},
+				Discriminator:        "source",
+				DiscriminatorMapping: map[string]string{"aws_iam": "WorkloadIdentityFederationAwsIam"},
+			},
+			"WorkloadIdentityFederationAwsIam": {
+				Name: "WorkloadIdentityFederationAwsIam",
+				Properties: []*parser.Property{
+					{Name: "source", Type: "string", Enum: []any{"aws_iam"}},
+					{Name: "aws", RefName: "UpstreamAuthAWS"},
+				},
+			},
+			"AuthGCP": {
+				Name: "AuthGCP",
+				Properties: []*parser.Property{
+					{Name: "workload_identity_federation", RefName: "WorkloadIdentityFederation"},
+				},
+			},
+		},
+	}
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name:                 "auth",
+				OneOf:                []*parser.Property{{RefName: "AuthGCP"}},
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"gcp": "AuthGCP"},
+			},
+		},
+	}
+
+	assert.Equal(t, []sdkOpsConstField{
+		{
+			Label: "auth.gcp.workload_identity_federation.aws_iam.aws.type",
+			Path:  []string{"auth", "gcp", "workload_identity_federation", "aws_iam", "aws"},
+			Key:   "type",
+			Value: "aws",
+		},
+	}, g.collectSDKOpsConstFields(schema))
 }
 
 func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
@@ -5708,7 +6128,7 @@ func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t
 				ResponseVariantContainer: "GetConfig()",
 				Cases: []config.GetForUIDRootUnionCase{
 					{
-						TypeValue:            "oIDC",
+						TypeValue:            "oidc",
 						VariantField:         "OIDC",
 						ResponseTypeValue:    "oidc",
 						ResponseVariantField: "OIDCIdentityProviderConfigOutput",
@@ -5751,6 +6171,8 @@ func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t
 	assert.NotContains(t, content, "sdkkonnectops.GetPortalIdentityProvidersRequest")
 	// Slice list-items source iterates the response field directly.
 	assert.Contains(t, content, "for _, entry := range resp.PortalIdentityProviders {")
+	assert.Contains(t, content, `case "oidc":`)
+	assert.Contains(t, content, `case "portalSAML":`)
 	// Pointer-typed SDK discriminator is nil-checked and dereferenced.
 	assert.Contains(t, content, `if responseType := entry.GetType(); responseType == nil || string(*responseType) != "oidc" {`)
 	assert.Contains(t, content, `if responseType := entry.GetType(); responseType == nil || string(*responseType) != "saml" {`)
@@ -7312,6 +7734,16 @@ func TestJSONName(t *testing.T) {
 		{"forward_to_virtual_cluster", "forwardToVirtualCluster"},
 		// Already-camelCase input is idempotent (no underscores).
 		{"displayName", "displayName"},
+		// Leading initialisms are lowercased.
+		{"OIDC", "oidc"},
+		{"SAML", "saml"},
+		{"OIDCConfig", "oidcConfig"},
+		{"TLSChannelPolicy", "tlsChannelPolicy"},
+		{"Variant1", "variant1"},
+		{"Auth0", "auth0"},
+		// An initialism ended by a digit is fully lowercased (dedup suffixes too).
+		{"OIDC2", "oidc2"},
+		{"OIDC2Config", "oidc2Config"},
 		// Empty string.
 		{"", ""},
 	}
@@ -7966,9 +8398,17 @@ func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
 		want       bool
 	}{
 		{
-			name:       "typed parent ref, e.g. AIGatewayRef",
+			name: "typed parent ref with on-prem support, e.g. AIGatewayRef",
+			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{
+				FieldName:               "aiGatewayRef",
+				TypeName:                "AIGatewayRef",
+				SupportsOnPremAIGateway: true,
+			}},
+			want: true,
+		},
+		{
+			name:       "typed parent ref without on-prem support",
 			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{FieldName: "aiGatewayRef", TypeName: "AIGatewayRef"}},
-			want:       true,
 		},
 		{
 			name: "gatewayRef with additional kinds",

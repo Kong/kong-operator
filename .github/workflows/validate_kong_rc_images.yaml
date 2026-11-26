@@ -1,6 +1,7 @@
 name: validate Kong RC images (scheduled)
 
-# Polls kong/kong-gateway-dev for release candidate images (x.x.x.x-rc.x) and triggers
+# Polls kong/kong-gateway-dev for release candidate images (x.x.x.x-rc.x, and
+# x.x.x.x-cgw.x.rc.x / x.x.x.x-cgw.x-rc.x for Kong dedicated cloud gateways) and triggers
 # validate_kong_image.yaml for each of them.
 # Scheduled runs cover the fixed window [previous POLL_ANCHOR_TIME, latest POLL_ANCHOR_TIME)
 # so that consecutive runs neither miss nor re-validate images, even if a run is delayed.
@@ -22,8 +23,9 @@ permissions:
 
 env:
   KONG_IMAGE_REPO: kong/kong-gateway-dev
-  # Pattern of RC image tags to validate, e.g. 3.16.0.1-rc.3.
-  KONG_RC_TAG_REGEX: '^3\.[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'
+  # Pattern of RC image tags to validate, e.g. 3.16.0.1-rc.3 or, for Kong dedicated
+  # cloud gateways, 3.17.0.0-cgw.2.rc.1 (or 3.17.0.0-cgw.2-rc.1).
+  KONG_RC_TAG_REGEX: '^3\.[0-9]+\.[0-9]+\.[0-9]+(-cgw\.[0-9]+[-.]|-)rc\.[0-9]+$'
   # Time of day (UTC) at which the daily poll window starts and ends. Must match the cron schedule.
   POLL_ANCHOR_TIME: "06:00"
   # Interval between triggering subsequent validation workflows. Each matrix leg of
@@ -38,7 +40,7 @@ jobs:
       tags: ${{ steps.find.outputs.tags }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -59,9 +61,10 @@ jobs:
           fi
 
           # Docker Hub only supports substring filtering on tag names, so narrow the results
-          # down with "-rc." and let the script apply the exact pattern.
+          # down with "rc." (matching both "-rc." and the ".rc." used by cloud gateway tags)
+          # and let the script apply the exact pattern.
           tags=$(./scripts/list-docker-hub-tags.sh --repository "${KONG_IMAGE_REPO}" \
-            --regex "${KONG_RC_TAG_REGEX}" --name-filter "-rc." "${window[@]}")
+            --regex "${KONG_RC_TAG_REGEX}" --name-filter "rc." "${window[@]}")
           if [[ -z "${tags}" ]]; then
             echo "No new RC images found." | tee -a "${GITHUB_STEP_SUMMARY}"
           else
@@ -86,7 +89,7 @@ jobs:
         tag: ${{ fromJSON(needs.find-images.outputs.tags) }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
 
@@ -112,7 +115,8 @@ jobs:
         # Dispatch through gh so each matrix leg spaces its dispatch; a reusable workflow cannot sleep between tags.
         run: |
           set -euo pipefail
-          # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
+          # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0,
+          # 3.17.0.0-cgw.2.rc.1 -> 3.17.0.
           effective_version=$(echo "${TAG}" | cut -d. -f1-3)
           echo "Triggering validation for ${KONG_IMAGE_REPO}:${TAG} (effective version ${effective_version})"
           gh workflow run validate_kong_image.yaml --ref "${REF}" \

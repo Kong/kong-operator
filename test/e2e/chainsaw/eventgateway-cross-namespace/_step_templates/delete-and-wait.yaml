@@ -1,0 +1,28 @@
+# Template for deleting an object and waiting for it to be gone, e.g. to delete
+# an entity from Konnect while the KongReferenceGrants it needs still exist.
+#
+# Not common/wait-for-resource-deleted.yaml: it only waits, and its script is
+# found relative to a test two directories below the suites, while the tests
+# of this suite are three.
+#
+# Required bindings:
+#   - object_api_version, object_kind, object_name, object_namespace: The object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: delete-and-wait
+spec:
+  try:
+    - delete:
+        ref:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          name: ($object_name)
+          namespace: ($object_namespace)
+    - error:
+        resource:
+          apiVersion: ($object_api_version)
+          kind: ($object_kind)
+          metadata:
+            name: ($object_name)
+            namespace: ($object_namespace)

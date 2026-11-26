@@ -15,27 +15,33 @@ import (
 )
 
 type resolvedPolicyChainIDsContextKey struct {
+	kind       string
 	key        client.ObjectKey
 	uid        types.UID
 	generation int64
 }
 
-func policyChainIDsContextKey(obj *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) resolvedPolicyChainIDsContextKey {
+type policyChainObject interface {
+	client.Object
+	GetTypeName() string
+}
+
+func policyChainIDsContextKey(obj policyChainObject) resolvedPolicyChainIDsContextKey {
 	return resolvedPolicyChainIDsContextKey{
-		key: client.ObjectKeyFromObject(obj), uid: obj.UID, generation: obj.Generation,
+		kind: obj.GetTypeName(), key: client.ObjectKeyFromObject(obj), uid: obj.GetUID(), generation: obj.GetGeneration(),
 	}
 }
 
 // WithResolvedPolicyChainIDs passes validated, ordered IDs to the chain operation
 // in the same reconciliation. Callers must resolve them again for each reconcile.
-func WithResolvedPolicyChainIDs(ctx context.Context, obj *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, ids []string) context.Context {
+func WithResolvedPolicyChainIDs(ctx context.Context, obj policyChainObject, ids []string) context.Context {
 	if ids == nil {
 		return ctx
 	}
 	return context.WithValue(ctx, policyChainIDsContextKey(obj), slices.Clone(ids))
 }
 
-func resolvedPolicyChainIDsFromContext(ctx context.Context, obj *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) ([]string, bool) {
+func resolvedPolicyChainIDsFromContext(ctx context.Context, obj policyChainObject) ([]string, bool) {
 	ids, ok := ctx.Value(policyChainIDsContextKey(obj)).([]string)
 	return ids, ok
 }
@@ -85,19 +91,23 @@ func applyEventGatewayVirtualClusterPolicyChain(
 	if resp == nil || resp.EventGatewayPolicyChainResponse == nil {
 		return fmt.Errorf("applying cluster policy chain: %w", ErrNilResponse)
 	}
-	if !slices.Equal(desired, resp.EventGatewayPolicyChainResponse.Policies) {
-		return fmt.Errorf("cluster policy chain response does not match the complete requested policy order")
-	}
-	return nil
+	return validateAppliedPolicyChain(desired, resp.EventGatewayPolicyChainResponse.Policies, "cluster")
 }
 
 func validateCompletePolicyChain(desired, remote []string) error {
+	return validateCompletePolicyChainForScope(desired, remote, "cluster")
+}
+
+func validateCompletePolicyChainForScope(desired, remote []string, scope string) error {
+	if desired == nil || remote == nil {
+		return configurationv1alpha1.PolicyChainInvalidError{Message: scope + " policy chain must contain an explicit policy list; an omitted or null list is not an empty chain"}
+	}
 	for _, ids := range [][]string{desired, remote} {
 		seen := make(map[string]struct{}, len(ids))
 		for _, id := range ids {
 			if _, duplicate := seen[id]; duplicate || id == "" {
 				return configurationv1alpha1.PolicyChainInvalidError{
-					Message: "cluster policy chain must contain unique, non-empty policy IDs",
+					Message: scope + " policy chain must contain unique, non-empty policy IDs",
 				}
 			}
 			seen[id] = struct{}{}
@@ -108,8 +118,22 @@ func validateCompletePolicyChain(desired, remote []string) error {
 	slices.Sort(sortedRemote)
 	if !slices.Equal(sortedDesired, sortedRemote) {
 		return configurationv1alpha1.PolicyChainInvalidError{
-			Message: "this controller only reorders the complete remote cluster policy chain: spec.apiSpec.policies must reference every policy ID returned by GET exactly once; an empty list is allowed only when the remote chain is empty",
+			Message: "this controller only reorders the complete remote " + scope + " policy chain: spec.apiSpec.policies must reference every policy ID returned by GET exactly once; an empty list is allowed only when the remote chain is empty",
 		}
 	}
 	return nil
+}
+
+func validateAppliedPolicyChain(desired, actual []string, scope string) error {
+	if actual == nil || !slices.Equal(desired, actual) {
+		return fmt.Errorf("%s policy chain response does not match the complete requested policy order", scope)
+	}
+	return nil
+}
+
+func policyChainOperationError(err error) error {
+	if retryAfter, limited := GetRetryAfterFromRateLimitError(err); limited {
+		return RateLimitError{Err: err, RetryAfter: retryAfter}
+	}
+	return err
 }

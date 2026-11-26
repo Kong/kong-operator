@@ -16,11 +16,15 @@ import (
 )
 
 // ToAIGWAgent converts the AIGatewayAgent into ai-deck-converter's aigw.Agent, resolving
-// spec.apiSpec.policies and spec.apiSpec.access (ACL consumer groups and auth strategies)
-// references to the referenced entities' names, and the proxy's basic-auth password
-// secretRef to its Secret value.
+// spec.apiSpec.policies, spec.apiSpec.access (ACL consumer groups and auth strategies) and
+// spec.apiSpec.config.caCertificates/certificates references to the referenced entities'
+// names, and the proxy's basic-auth password secretRef to its Secret value. The config
+// certificate references must target the agent's own OnPremAIGateway.
 func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*aigw.Agent, error) {
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+	if err := CheckCrossNamespaceConsumerGroupRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
@@ -47,6 +51,17 @@ func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*
 
 	if err := obj.resolveAIGWAccess(ctx, cl, &agent); err != nil {
 		return nil, err
+	}
+
+	if agent.Config.CACertificates, err = resolveEntityNamesTargeting[AIGatewayCACertificate](
+		ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, caCertificateRefs(obj.Spec.APISpec.Config.CaCertificates),
+	); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayAgent %s/%s caCertificates: %w", obj.Namespace, obj.Name, err)
+	}
+	if agent.Config.Certificates, err = resolveEntityNamesTargeting[AIGatewayCertificate](
+		ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, certificateRefs(obj.Spec.APISpec.Config.Certificates),
+	); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayAgent %s/%s certificates: %w", obj.Namespace, obj.Name, err)
 	}
 	return &agent, nil
 }
@@ -93,7 +108,7 @@ func (obj *AIGatewayAgent) resolveAIGWAccess(
 			return fmt.Errorf("AIGatewayAgent %s/%s: unsupported access.acls.type %q", obj.Namespace, obj.Name, acls.Type)
 		}
 		if target != nil {
-			names, err := resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs))
+			names, err := resolveEntityNamesCrossNamespaceTargeting[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, obj.Spec.AIGatewayRef, consumerGroupRefs(aclRefs))
 			if err != nil {
 				return fmt.Errorf("resolving AIGatewayAgent %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
 			}
@@ -116,8 +131,9 @@ func (obj *AIGatewayAgent) resolveAIGWAccess(
 // marshalSDKOpsPayload already does everything the aigw shape needs — the Enabled/Disabled
 // boolean enum normalization and the camel→snake key rename — leaving only the managed_by
 // drop (Konnect-only bookkeeping) and the stripping of the CR-reference keys
-// (policies, access.acls, access.auth_strategies: they carry {kind,name} references, aigw
-// wants plain resolved names, re-attached in ToAIGWAgent). The deprecated
+// (policies, access.acls, access.auth_strategies, config.ca_certificates,
+// config.certificates: they carry {kind,name} references, aigw wants plain resolved names,
+// re-attached in ToAIGWAgent). The deprecated
 // access.identity_providers is not supported: aigw rejects the key, so a CR carrying it
 // fails translation.
 func (spec *AIGatewayAgentAPISpec) marshalAIGWAgentPayload() ([]byte, error) {
@@ -134,6 +150,10 @@ func (spec *AIGatewayAgentAPISpec) marshalAIGWAgentPayload() ([]byte, error) {
 	// These carry {kind,name} CR references; aigw wants plain resolved names. Stripped here,
 	// re-attached resolved in ToAIGWAgent.
 	delete(cfg, "policies")
+	if config, ok := cfg["config"].(map[string]any); ok {
+		delete(config, "ca_certificates")
+		delete(config, "certificates")
+	}
 	if access, ok := cfg["access"].(map[string]any); ok {
 		delete(access, "acls")
 		delete(access, "auth_strategies")

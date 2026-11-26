@@ -21,7 +21,8 @@ import (
 // virtual cluster policies): their parent reference is immutable once they
 // have been created in Konnect, even when they are not Programmed, so an
 // entity that exists in Konnect can't be moved under another parent, e.g. one
-// attached to an OnPremEventGateway.
+// attached to an OnPremEventGateway. A parent reference by konnectID, which
+// was never resolved, is rejected.
 func TestEventGatewayChildrenParentRefImmutableOnceInKonnect(t *testing.T) {
 	t.Parallel()
 
@@ -133,6 +134,16 @@ func runChildParentRefImmutableOnceInKonnect[
 			NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "another-parent"},
 		})
 	}
+	konnectIDRef := commonv1alpha1.ObjectRef{
+		Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+		KonnectID: new("8ae65120-cdec-4310-84c1-4b19caf67967"),
+	}
+	withKonnectIDRef := func() T {
+		obj := valid.DeepCopy()
+		obj.SetParentRef(konnectIDRef)
+		return obj
+	}
+	mustUseNamespacedRef := refField + " must use namespacedRef"
 
 	common.TestCasesGroup[T]{
 		{
@@ -145,6 +156,19 @@ func runChildParentRefImmutableOnceInKonnect[
 			Name:       "parent ref can change when not programmed and not created in Konnect",
 			TestObject: withStatus(""),
 			Update:     moveToAnotherParent,
+		},
+		{
+			Name:                 "parent ref with a konnectID is rejected",
+			TestObject:           withKonnectIDRef(),
+			ExpectedErrorMessage: new(mustUseNamespacedRef),
+		},
+		{
+			Name:       "parent ref can't be changed to a konnectID",
+			TestObject: valid.DeepCopy(),
+			Update: func(obj T) {
+				obj.SetParentRef(konnectIDRef)
+			},
+			ExpectedUpdateErrorMessage: new(mustUseNamespacedRef),
 		},
 	}.RunWithConfig(t, cfg, scheme.Get())
 }

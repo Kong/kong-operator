@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -128,6 +130,12 @@ func Create[
 		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
 		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, CreateOp)
+	case *configurationv1alpha1.EventGatewayListenerPolicyChain:
+		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, CreateOp)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		_, err = applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent, CreateOp, true)
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		_, err = applyEventGatewayVirtualClusterConsumePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent, CreateOp)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
@@ -138,9 +146,21 @@ func Create[
 		err = CreateGeneratedOps(ctx, sdk, cl, e)
 	}
 
+	// Policy chains reorder existing singleton scopes and have no create-conflict
+	// recovery. Do not use ID persistence as a proxy: other singleton resources,
+	// such as PortalCustomDomain, can still recover through getKonnectIDForUID.
+	var isPolicyChain bool
+	switch any(e).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		isPolicyChain = true
+	}
+
 	var errGet error
 	switch {
-	case ErrorIsCreateConflict(err), isCreateNameConflict(e, err):
+	case (ErrorIsCreateConflict(err) || isCreateNameConflict(e, err)) && !isPolicyChain:
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
@@ -208,6 +228,11 @@ func Create[
 		)
 	}
 
+	// Singleton chain failures must remain errors, including GET failures and
+	// conflicts: there is no create/list-for-UID recovery for a policy chain.
+	if isPolicyChain {
+		return e, policyChainOperationError(err)
+	}
 	logger := loggerForEntity(ctx, e, CreateOp)
 	err = IgnoreUnrecoverableAPIErr(err, logger)
 	err = IgnoreAlreadyHandledErr(err, logger)
@@ -406,6 +431,15 @@ func Delete[
 		err = deleteEventGatewayTLSTrustBundleGuarded(
 			ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), sdk.GetEventGatewayListenersSDK(), sdk.GetEventGatewayListenerPoliciesSDK(), cl, e,
 		)
+	case *configurationv1alpha1.EventGatewayBackendCluster:
+		err = deleteEventGatewayBackendClusterGuarded(ctx, sdk.GetEventGatewayBackendClustersSDK(), cl, e)
+	case *configurationv1alpha1.EventGatewaySchemaRegistry:
+		err = deleteEventGatewaySchemaRegistryGuarded(
+			ctx, sdk.GetEventGatewaySchemaRegistriesSDK(), sdk.GetEventGatewayVirtualClustersSDK(),
+			sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), cl, e,
+		)
+	case *configurationv1alpha1.EventGatewayVirtualCluster:
+		err = deleteEventGatewayVirtualClusterGuarded(ctx, sdk.GetEventGatewayVirtualClustersSDK(), cl, e)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		err = deleteEventGatewayVirtualClusterProducePolicyGuarded(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), cl, e)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
@@ -448,7 +482,10 @@ func Delete[
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), e)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), e)
-	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
 		// Deleting the declaration relinquishes management, not remote configuration.
 		break
 	case *konnectv1alpha1.MCPServer:
@@ -495,6 +532,33 @@ func Delete[
 	return err
 }
 
+// isProgrammedForCurrentGeneration reports whether the entity was successfully programmed in Konnect
+// for its current generation.
+func isProgrammedForCurrentGeneration[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	condProgrammed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok &&
+		condProgrammed.Status == metav1.ConditionTrue &&
+		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration()
+}
+
+// isParentNotFoundForCurrentState reports whether the last attempt found that the parent
+// does not exist in Konnect, for the current generation and parent IDs of the entity.
+func isParentNotFoundForCurrentState[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	condProgrammed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok &&
+		condProgrammed.Status == metav1.ConditionFalse &&
+		condProgrammed.Reason == string(kcfgkonnect.KonnectEntitiesParentNotFoundReason) &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
+		condProgrammed.Message == NewParentNotFoundInKonnectError(ent, nil).Error()
+}
+
 func shouldUpdate[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -505,16 +569,15 @@ func shouldUpdate[
 	now time.Time,
 ) (bool, ctrl.Result) {
 	var (
-		condProgrammed, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+		condProgrammed, _  = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		timeFromLastUpdate = time.Since(condProgrammed.LastTransitionTime.Time)
 	)
 
 	// If the entity is already programmed and the last update was less than
 	// the configured sync period, requeue after the remaining time.
-	if ok &&
-		condProgrammed.Status == metav1.ConditionTrue &&
-		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
-		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration() &&
+	// Do the same if its parent did not exist in Konnect at the last attempt,
+	// so that events from other objects do not cause more attempts.
+	if (isProgrammedForCurrentGeneration(ent) || isParentNotFoundForCurrentState(ent)) &&
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
 		log.Debug(ctrllog.FromContext(ctx),
@@ -532,8 +595,37 @@ func shouldUpdate[
 	return true, ctrl.Result{}
 }
 
+// syncStatusStater is implemented by entities that persist their internal Konnect synchronization state in status.
+type syncStatusStater interface {
+	GetSyncStatus() *configurationv1alpha1.SyncStatus
+	SetSyncStatus(*configurationv1alpha1.SyncStatus)
+}
+
+// SyncResult carries the in-memory sync record produced by a real PUT in Update.
+//
+// The record is persisted in the entity status by the reconciler together with
+// the other status changes. Commit stores it in the in-memory tracker and must
+// be called only after the status patch succeeds, so a failed status write
+// cannot make the tracker believe an unpersisted state is durable.
+type SyncResult struct {
+	tracker *ConfigVersionTracker
+	uid     types.UID
+	record  entitySyncRecord
+	ok      bool
+}
+
+// Commit stores the record in the in-memory tracker.
+func (r *SyncResult) Commit() {
+	if r == nil || !r.ok || r.tracker == nil {
+		return
+	}
+	r.tracker.store(r.uid, r.record)
+}
+
 // Update updates a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
+// When tracker is not nil, periodic updates of Kong Gateway entities that are in sync with Konnect are skipped.
+// The returned SyncResult, when non-nil, must be committed after the status carrying it is persisted.
 func Update[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -544,15 +636,22 @@ func Update[
 	cl client.Client,
 	metricRecorder metrics.Recorder,
 	e TEnt,
-) (ctrl.Result, error) {
+	tracker *ConfigVersionTracker,
+) (ctrl.Result, *SyncResult, error) {
 	now := time.Now()
 
-	if ok, res := shouldUpdate(ctx, e, syncPeriod, now); !ok {
-		return res, nil
+	update, res := shouldUpdate(ctx, e, syncPeriod, now)
+	if !update {
+		switch any(e).(type) {
+		case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+			*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		default:
+			return res, nil, nil
+		}
 	}
 
 	if e.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(e) {
-		return ctrl.Result{}, fmt.Errorf(
+		return ctrl.Result{}, nil, fmt.Errorf(
 			"can't update %T %s when it does not have the Konnect ID",
 			e, client.ObjectKeyFromObject(e),
 		)
@@ -563,7 +662,17 @@ func Update[
 		entityType = e.GetTypeName()
 		statusCode int
 		start      = time.Now()
+		g          *syncGuard
 	)
+	if cpEnt, ok := any(e).(interface{ GetControlPlaneID() string }); ok && tracker != nil {
+		var persisted *configurationv1alpha1.SyncStatus
+		if stater, ok := any(e).(syncStatusStater); ok {
+			persisted = stater.GetSyncStatus()
+		}
+		g = tracker.guard(
+			sdk.GetDPNodesSDK(), e.GetUID(), cpEnt.GetControlPlaneID(), isProgrammedForCurrentGeneration(e), persisted,
+		)
+	}
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		// if the ControlPlane is of type origin, enforce the spec on Konnect.
@@ -577,41 +686,41 @@ func Update[
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		err = updateService(ctx, sdk.GetServicesSDK(), ent)
+		err = updateService(ctx, sdk.GetServicesSDK(), g, ent)
 	case *configurationv1alpha1.KongRoute:
-		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
+		err = updateRoute(ctx, sdk.GetRoutesSDK(), g, ent)
 	case *configurationv1.KongConsumer:
-		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
+		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, g, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), g, ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
+		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, g, ent)
 	case *configurationv1alpha1.KongUpstream:
-		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialACL:
-		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
+		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialJWT:
-		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
+		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCACertificate:
-		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), ent)
+		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), g, ent)
 	case *configurationv1alpha1.KongCertificate:
-		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), ent)
+		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), g, ent)
 	case *configurationv1alpha1.KongTarget:
-		err = updateTarget(ctx, sdk.GetTargetsSDK(), ent)
+		err = updateTarget(ctx, sdk.GetTargetsSDK(), g, ent)
 	case *configurationv1alpha1.KongVault:
 		err = updateVault(ctx, cl, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
-		err = updateKey(ctx, sdk.GetKeysSDK(), ent)
+		err = updateKey(ctx, sdk.GetKeysSDK(), g, ent)
 	case *configurationv1alpha1.KongKeySet:
-		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), g, ent)
 	case *configurationv1alpha1.KongSNI:
-		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
+		err = updateSNI(ctx, sdk.GetSNIsSDK(), g, ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
@@ -620,6 +729,32 @@ func Update[
 		err = updateEventGatewayStaticKey(ctx, cl, sdk.GetEventGatewayStaticKeysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
 		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, UpdateOp)
+	case *configurationv1alpha1.EventGatewayListenerPolicyChain:
+		err = applyEventGatewayListenerPolicyChain(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent, UpdateOp)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain:
+		// Scope/reference watches must check the complete remote set even within
+		// the sync period, without refreshing status for an unchanged order.
+		var applied bool
+		applied, err = applyEventGatewayVirtualClusterProducePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent, UpdateOp, update)
+		if err == nil && !applied {
+			return res, nil, nil
+		}
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		var applied bool
+		applied, err = applyEventGatewayVirtualClusterConsumePolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent, UpdateOp)
+		if err == nil && !applied {
+			// A GET-only check must not refresh Programmed and trigger a watch loop.
+			condition, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+			if !ok || condition.Status != metav1.ConditionTrue ||
+				condition.Reason != konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed ||
+				condition.ObservedGeneration != ent.GetGeneration() {
+				SetKonnectEntityProgrammedConditionTrue(ent)
+			}
+			if res.IsZero() {
+				res.RequeueAfter = syncPeriod
+			}
+			return res, nil, nil
+		}
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -630,10 +765,37 @@ func Update[
 		err = UpdateGeneratedOps(ctx, sdk, cl, e)
 	}
 
+	// Persist the sync state produced by a real PUT together with the rest of the
+	// status. The caller commits the in-memory record only after the status patch
+	// that carries it succeeds.
+	var syncResult *SyncResult
+	if err == nil && g != nil {
+		if status := g.pendingStatus(); status != nil {
+			if stater, ok := any(e).(syncStatusStater); ok {
+				stater.SetSyncStatus(status)
+				if record, ok := g.pendingRecord(); ok {
+					syncResult = &SyncResult{tracker: tracker, uid: e.GetUID(), record: record, ok: true}
+				}
+			}
+		}
+	}
+
+	// Leave the status untouched so that its Programmed condition keeps the time
+	// of the last update sent to Konnect.
+	if err == nil && g.notSent() {
+		return ctrl.Result{RequeueAfter: syncPeriod}, nil, nil
+	}
+
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)
 	errRelationsFailed, isRelationsFailed := errors.AsType[KonnectEntityCreatedButRelationsFailedError](err)
+	errParentNotFound, isParentNotFound := errors.AsType[ParentNotFoundInKonnectError](err)
 
 	switch {
+	case isParentNotFound:
+		if isSDKErr {
+			statusCode = errSDK.StatusCode
+		}
+		SetKonnectEntityProgrammedConditionParentNotFound(e, errParentNotFound)
 	case isSDKErr:
 		statusCode = errSDK.StatusCode
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK)
@@ -679,11 +841,18 @@ func Update[
 		)
 	}
 
+	switch any(e).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain,
+		*configurationv1alpha1.EventGatewayListenerPolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicyChain,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyChain:
+		return ctrl.Result{}, nil, policyChainOperationError(err)
+	}
 	logger := loggerForEntity(ctx, e, UpdateOp)
 	err = IgnoreUnrecoverableAPIErr(err, logger)
 	err = IgnoreAlreadyHandledErr(err, logger)
 
-	return ctrl.Result{}, err
+	return ctrl.Result{}, syncResult, err
 }
 
 // Adopt adopts an exiting entity in Konnect and take over the management of the entity.
@@ -1044,14 +1213,52 @@ func ClearInstanceFromError(err error) error {
 		return &c
 	}
 
-	// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
-	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode >= http.StatusInternalServerError {
+	// The SDK returns a generic SDKError for status codes that the API spec does
+	// not declare (e.g. 404 on some AI Gateway creates). Its body is the raw
+	// problem+json with the per-request instance.
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 		c := *errSDK
-		c.Body = ""
+		if errSDK.StatusCode >= http.StatusInternalServerError {
+			// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
+			c.Body = ""
+		} else {
+			// Keep the 4xx details, as they tell the user what to fix.
+			c.Body = clearPerRequestIDsFromBody(errSDK.Body)
+		}
 		return &c
 	}
 
 	return err
+}
+
+// perRequestIDBodyFields are the error body fields whose values change with each request.
+var perRequestIDBodyFields = []string{"instance", "request_id"}
+
+// clearPerRequestIDsFromBody sets perRequestIDBodyFields to "" in a JSON object body.
+// It returns the body unchanged if it is not a JSON object.
+func clearPerRequestIDsFromBody(body string) string {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(body), &fields); err != nil {
+		return body
+	}
+	var changed bool
+	for _, f := range perRequestIDBodyFields {
+		if _, ok := fields[f]; ok {
+			fields[f] = json.RawMessage(`""`)
+			changed = true
+		}
+	}
+	if !changed {
+		return body
+	}
+	// Do not escape HTML, so that the details read as Konnect sent them.
+	var b strings.Builder
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(fields); err != nil {
+		return body
+	}
+	return strings.TrimSuffix(b.String(), "\n")
 }
 
 // MirrorableEntity is implemented by generated Konnect CRD types that opted into

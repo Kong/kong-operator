@@ -166,6 +166,14 @@ func (p *Parser) ParsePaths(targetPaths []string) (*ParsedSpec, error) {
 		if err != nil {
 			return nil, err
 		}
+		// Shared request bodies still represent distinct entities at each path.
+		if _, exists := result.RequestBodies[name]; exists {
+			name = deriveSchemaNameFromPath(targetPath, schema.OperationID)
+			if previous, exists := result.RequestBodies[name]; exists {
+				return nil, fmt.Errorf("request body name %q collides for paths %q and %q", name, previous.SourcePath, targetPath)
+			}
+			schema.Name = name
+		}
 		result.RequestBodies[name] = schema
 		p.collectReferencedSchemas(schema, referencedSchemas)
 	}
@@ -715,6 +723,31 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	if len(schemaValue.AllOf) > 0 && len(schemaValue.OneOf) == 0 && len(schemaValue.AnyOf) == 0 &&
 		schemaValue.Discriminator == nil && len(schema.Properties) == 0 {
 		schema.Properties = flattenAllOfProperties(schemaValue, 0, p.visited)
+	}
+
+	// An allOf whose members refine a non-object base (e.g. a $ref to an array
+	// schema with a minItems sibling, as in CreateOIDCIdentityProviderScopes)
+	// constrains that base rather than composing an object: adopt the first
+	// member's concrete non-object type so the schema keeps it instead of
+	// degrading to map[string]string.
+	if len(schemaValue.AllOf) > 0 && schema.Type == "" && len(schema.Properties) == 0 &&
+		len(schema.OneOf) == 0 && len(schema.AnyOf) == 0 && schema.Discriminator == "" {
+		for _, member := range schemaValue.AllOf {
+			memberValue := member.Value
+			if memberValue == nil {
+				continue
+			}
+			memberType := getSchemaType(memberValue)
+			if memberType == "" || memberType == "object" {
+				continue
+			}
+			schema.Type = memberType
+			schema.Format = memberValue.Format
+			if memberType == "array" && memberValue.Items != nil {
+				schema.Items = ParseProperty("items", memberValue.Items, 0, p.visited)
+			}
+			break
+		}
 	}
 
 	// Handle allOf: merge properties from every entry that declares its own,

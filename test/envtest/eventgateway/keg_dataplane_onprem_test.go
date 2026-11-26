@@ -554,6 +554,7 @@ spec:
   gwAdminRef: {name: `+testGWAdminName+`, namespace: `+gwAdminNS.Name+`}
 `)
 	require.NoError(t, cl.Create(ctx, gateway))
+	withDataPlaneCertificate(t, ctx, cl, gateway)
 	expectGateway := func(t *testing.T, status metav1.ConditionStatus, message string) {
 		t.Helper()
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {

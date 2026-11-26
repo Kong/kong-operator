@@ -64,6 +64,12 @@ type Config struct {
 	// with the new value.
 	SyncTimeout time.Duration
 
+	// MinRuntimeVersion is the oldest AI Gateway release that must accept the
+	// generated configuration. Zero means the translator default applies.
+	// It's part of the hashed config so that changing it restarts the instance
+	// with the new value.
+	MinRuntimeVersion string
+
 	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret the
 	// instance reads when pushing configuration to its data planes. It is part of the
 	// hashed config so that a renewed Secret - recreated under a new GenerateName by
@@ -105,6 +111,10 @@ func Hash(cfg Config) (string, error) {
 	if cfg.SyncTimeout != 0 {
 		h.Write([]byte("timeout:"))
 		h.Write([]byte(cfg.SyncTimeout.String()))
+	}
+	if cfg.MinRuntimeVersion != "" {
+		h.Write([]byte("minRuntimeVersion:"))
+		h.Write([]byte(cfg.MinRuntimeVersion))
 	}
 	if len(cfg.SecretLabelFilters) > 0 {
 		// Sorted so the hash is stable regardless of map iteration order.
@@ -193,6 +203,18 @@ type Instance struct {
 	// touches it, so no locking.
 	pushClients map[string]pusher
 
+	// lastSuccessfulConfigSHAs holds the SHA of the last configuration pushed
+	// successfully to each discovered endpoint. It is keyed by endpoint rather
+	// than by push-client cache key so certificate rotation does not force a
+	// redundant push. Only the sync loop goroutine touches it.
+	lastSuccessfulConfigSHAs map[adminapi.DiscoveredAdminAPI][]byte
+
+	// lastDBLessConfigHashes holds the configuration hash reported by each
+	// endpoint after its last successful push. A later unchanged sync compares
+	// it with the reported hash to detect out-of-band changes. Only the sync
+	// loop goroutine touches it.
+	lastDBLessConfigHashes map[adminapi.DiscoveredAdminAPI]string
+
 	// statusReporter records the per-entity outcome of the configuration syncs
 	// (translation and push) and serves it to the configuration-entity
 	// reconcilers, which turn it into the entities' Programmed conditions.
@@ -219,14 +241,16 @@ func NewInstance(
 	env Env,
 ) *Instance {
 	return &Instance{
-		id:             id,
-		logger:         logger.WithValues("instanceID", id.String()),
-		env:            env,
-		cfg:            cfg,
-		cn:             changenotifier.New(),
-		newPushClient:  newMTLSClientAdapter,
-		statusReporter: NewEntityStatusReporter(env.Scheme),
-		done:           make(chan struct{}),
+		id:                       id,
+		logger:                   logger.WithValues("instanceID", id.String()),
+		env:                      env,
+		cfg:                      cfg,
+		cn:                       changenotifier.New(),
+		newPushClient:            newMTLSClientAdapter,
+		lastSuccessfulConfigSHAs: map[adminapi.DiscoveredAdminAPI][]byte{},
+		lastDBLessConfigHashes:   map[adminapi.DiscoveredAdminAPI]string{},
+		statusReporter:           NewEntityStatusReporter(env.Scheme),
+		done:                     make(chan struct{}),
 	}
 }
 
@@ -445,7 +469,10 @@ func (i *Instance) sendConfig(
 		return fmt.Errorf("nil gateway reference")
 	}
 
-	doc, entityStatuses, err := translator.BuildDocument(ctx, i.client, *gw)
+	opts := convert.Options{
+		MinRuntimeVersion: i.cfg.MinRuntimeVersion,
+	}
+	doc, entityStatuses, err := translator.BuildDocument(ctx, i.client, *gw, opts)
 	if err != nil {
 		// A failure to list the entities of a kind aborts the translation, and
 		// no per-entity status is reported for that sync: the sync loop retries
@@ -454,7 +481,7 @@ func (i *Instance) sendConfig(
 	}
 	included, failures := splitEntityStatuses(entityStatuses)
 
-	payload, issues, err := translator.RenderDBLessYAML(doc, convert.Options{})
+	payload, issues, err := translator.RenderDBLessYAML(doc, opts)
 	if err != nil {
 		// The rendered payload is broken, so nothing gets pushed: every entity
 		// included in the document failed to be applied.

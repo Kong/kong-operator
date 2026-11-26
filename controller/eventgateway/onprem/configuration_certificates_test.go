@@ -88,6 +88,7 @@ spec:
 	assert.ElementsMatch(t, []client.ObjectKey{client.ObjectKeyFromObject(invalid), client.ObjectKeyFromObject(withKey), client.ObjectKeyFromObject(gone)}, slices.Collect(maps.Keys(excluded)))
 	for _, e := range excluded {
 		assert.Equal(t, eventgatewayv1alpha1.OnPremEntityInvalidReason, e.reason, e.obj.GetName())
+		assert.False(t, e.blocks, "a certificate left out is only no longer trusted: %s", e.obj.GetName())
 	}
 	assert.Contains(t, excluded[client.ObjectKeyFromObject(withKey)].message, `PRIVATE KEY"`, "a private key isn't sent")
 }

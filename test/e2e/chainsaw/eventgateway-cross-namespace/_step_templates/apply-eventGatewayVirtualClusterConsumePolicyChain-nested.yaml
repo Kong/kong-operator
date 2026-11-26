@@ -1,0 +1,35 @@
+# Template for creating an EventGatewayVirtualClusterConsumePolicyChain ordering
+# a schemaValidation consume policy, then its single child.
+#
+# Required bindings:
+#   - chain_name, chain_namespace: The chain.
+#   - virtual_cluster_name, virtual_cluster_namespace: Its virtual cluster.
+#   - parent_policy_name, parent_policy_namespace: The parent policy.
+#   - policy_name, policy_namespace: The child policy.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster-consume-policy-chain-nested
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualClusterConsumePolicyChain
+          metadata:
+            name: ($chain_name)
+            namespace: ($chain_namespace)
+          spec:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($virtual_cluster_name)
+                namespace: ($virtual_cluster_namespace)
+            apiSpec:
+              policies:
+                - kind: EventGatewayVirtualClusterConsumePolicy
+                  name: ($parent_policy_name)
+                  namespace: ($parent_policy_namespace)
+                - kind: EventGatewayVirtualClusterConsumePolicy
+                  name: ($policy_name)
+                  namespace: ($policy_namespace)

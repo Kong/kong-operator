@@ -1,0 +1,33 @@
+# Template for creating an EventGatewayListener attached to the gateway.
+#
+# Required bindings:
+#   - listener_name, listener_namespace: The listener.
+#   - listener_port: The port it listens on, a string.
+#   - gateway_group, gateway_kind, gateway_name: The gateway.
+#   - gateway_ref_namespace: The namespace of the gateway, or null to leave
+#     it to default to the namespace of the object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-listener
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayListener
+          metadata:
+            name: ($listener_name)
+            namespace: ($listener_namespace)
+          spec:
+            parentRef:
+              group: ($gateway_group)
+              kind: ($gateway_kind)
+              name: ($gateway_name)
+              namespace: ($gateway_ref_namespace)
+            apiSpec:
+              name: ($listener_name)
+              addresses:
+                - "0.0.0.0"
+              ports:
+                - ($listener_port)

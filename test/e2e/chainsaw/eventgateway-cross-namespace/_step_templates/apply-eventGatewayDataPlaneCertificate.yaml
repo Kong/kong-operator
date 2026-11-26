@@ -1,0 +1,39 @@
+# Template for creating an EventGatewayDataPlaneCertificate attached to the
+# gateway, the certificate of the Secret data-plane-ca (see
+# create-tls-secrets.yaml).
+#
+# Required bindings:
+#   - data_plane_certificate_name, data_plane_certificate_namespace: The data plane certificate.
+#   - api_name: Its name in the API of the gateway.
+#   - secret_ref_namespace: Namespace of the Secret data-plane-ca, or null to leave it
+#     to default to the namespace of the object.
+#   - gateway_group, gateway_kind, gateway_name: The gateway.
+#   - gateway_ref_namespace: The namespace of the gateway, or null to leave
+#     it to default to the namespace of the object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-data-plane-certificate
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayDataPlaneCertificate
+          metadata:
+            name: ($data_plane_certificate_name)
+            namespace: ($data_plane_certificate_namespace)
+          spec:
+            parentRef:
+              group: ($gateway_group)
+              kind: ($gateway_kind)
+              name: ($gateway_name)
+              namespace: ($gateway_ref_namespace)
+            apiSpec:
+              name: ($api_name)
+              certificate:
+                type: secretRef
+                secretRef:
+                  name: data-plane-ca
+                  namespace: ($secret_ref_namespace)
+                  key: tls.crt

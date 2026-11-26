@@ -260,3 +260,65 @@ func TestGenerateTagsForObject(t *testing.T) {
 		require.ElementsMatch(t, expectedTagSetWithAdditional, tags, "generated tags are not as expected")
 	})
 }
+
+func TestMergeTags(t *testing.T) {
+	testCases := []struct {
+		name     string
+		base     []*string
+		groups   [][]string
+		expected []*string
+	}{
+		{
+			name:     "nothing to merge returns nil",
+			expected: nil,
+		},
+		{
+			name:     "only empty and blank tags returns nil",
+			base:     []*string{new(""), nil},
+			groups:   [][]string{{" ", ""}},
+			expected: nil,
+		},
+		{
+			name:     "base only",
+			base:     []*string{new("a"), new("b")},
+			expected: []*string{new("a"), new("b")},
+		},
+		{
+			name:     "groups only",
+			groups:   [][]string{{"gw"}, {"gwc"}},
+			expected: []*string{new("gw"), new("gwc")},
+		},
+		{
+			name:     "order is base, then groups in the given order",
+			base:     []*string{new("own")},
+			groups:   [][]string{{"gw-1", "gw-2"}, {"gwc"}},
+			expected: []*string{new("own"), new("gw-1"), new("gw-2"), new("gwc")},
+		},
+		{
+			name:     "tags are trimmed and deduplicated keeping the first occurrence",
+			base:     []*string{new("own"), new(" shared ")},
+			groups:   [][]string{{"shared", "gw", "own"}, {" gw ", "gwc", "gwc"}},
+			expected: []*string{new("own"), new("shared"), new("gw"), new("gwc")},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.expected, MergeTags(tc.base, tc.groups...))
+		})
+	}
+
+	t.Run("result does not alias base", func(t *testing.T) {
+		base := make([]*string, 1, 10)
+		base[0] = new("own")
+		merged := MergeTags(base, []string{"gw"})
+		require.Equal(t, []*string{new("own"), new("gw")}, merged)
+
+		// Appending to base must not affect the merged result and vice versa.
+		base = append(base, new("other"))
+		merged[0] = new("changed")
+		require.Equal(t, "own", *base[0])
+		require.Equal(t, "other", *base[1])
+		require.Equal(t, "gw", *merged[1])
+	})
+}

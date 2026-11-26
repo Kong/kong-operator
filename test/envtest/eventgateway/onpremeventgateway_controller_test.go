@@ -445,8 +445,10 @@ spec:`+onPremEventGatewayParentRef(gatewayB.Name)+`
 		// The CRDs allow changing the parent reference of a child only when it
 		// has status conditions and is not Programmed: their rule fails to
 		// evaluate on an object without status. Write the status the gateway
-		// reconcile will write on an entity it can't push. A status write on
-		// an entity reconciles no gateway.
+		// reconcile will write on an entity it can't push. A Programmed
+		// condition someone else sets reconciles the gateway of the entity,
+		// which sets its own back: not Programmed either, its gateway having
+		// no GWAdmin.
 		expectReconciled(t, func() {
 			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(virtualCluster), virtualCluster))
 			virtualCluster.Status.Conditions = []metav1.Condition{{
@@ -454,7 +456,7 @@ spec:`+onPremEventGatewayParentRef(gatewayB.Name)+`
 				Reason: "Pending", Message: "not pushed", LastTransitionTime: metav1.Now(),
 			}}
 			require.NoError(t, cl.Status().Update(ctx, virtualCluster))
-		})
+		}, gatewayA)
 		expectReconciled(t, func() {
 			require.NoError(t, cl.Patch(ctx, virtualCluster, client.RawPatch(types.MergePatchType, []byte(
 				`{"spec":{"eventGatewayBackendClusterRef":{"namespacedRef":{"name":"`+backendClusterB.Name+`"}}}}`,
@@ -478,12 +480,15 @@ spec:`+onPremEventGatewayParentRef(gatewayB.Name)+`
 		}, gatewayA)
 	})
 
-	t.Run("a change to an entity's metadata only reconciles no gateway", func(t *testing.T) {
+	// Every change to an entity triggers its gateway, its metadata too: e.g. a
+	// finalizer the gateway couldn't hold or release as the entity changed
+	// since it was read.
+	t.Run("a change to an entity's metadata only reconciles its gateway", func(t *testing.T) {
 		expectReconciled(t, func() {
 			require.NoError(t, cl.Patch(ctx, backendCluster, client.RawPatch(types.MergePatchType, []byte(
 				`{"metadata":{"labels":{"example.com/label":"value"}}}`,
 			))))
-		})
+		}, gatewayA)
 	})
 
 	t.Run("an entity in another namespace reconciles the gateway of its parent", func(t *testing.T) {
@@ -510,7 +515,7 @@ spec:
 			require.NoError(t, cl.Patch(ctx, registry, client.RawPatch(types.MergePatchType, []byte(
 				`{"metadata":{"finalizers":["example.com/hold"]}}`,
 			))))
-		})
+		}, gatewayA)
 		expectReconciled(t, func() {
 			require.NoError(t, cl.Delete(ctx, registry))
 		}, gatewayA)

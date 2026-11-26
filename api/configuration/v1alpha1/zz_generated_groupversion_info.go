@@ -17,6 +17,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&EventGatewayListenerList{},
 		&EventGatewayListenerPolicy{},
 		&EventGatewayListenerPolicyList{},
+		&EventGatewayListenerPolicyChain{},
+		&EventGatewayListenerPolicyChainList{},
 		&EventGatewaySchemaRegistry{},
 		&EventGatewaySchemaRegistryList{},
 		&EventGatewayStaticKey{},
@@ -27,12 +29,16 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&EventGatewayVirtualClusterList{},
 		&EventGatewayVirtualClusterConsumePolicy{},
 		&EventGatewayVirtualClusterConsumePolicyList{},
+		&EventGatewayVirtualClusterConsumePolicyChain{},
+		&EventGatewayVirtualClusterConsumePolicyChainList{},
 		&EventGatewayVirtualClusterPolicy{},
 		&EventGatewayVirtualClusterPolicyList{},
 		&EventGatewayVirtualClusterPolicyChain{},
 		&EventGatewayVirtualClusterPolicyChainList{},
 		&EventGatewayVirtualClusterProducePolicy{},
 		&EventGatewayVirtualClusterProducePolicyList{},
+		&EventGatewayVirtualClusterProducePolicyChain{},
+		&EventGatewayVirtualClusterProducePolicyChainList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)

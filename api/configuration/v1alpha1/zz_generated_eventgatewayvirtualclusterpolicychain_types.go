@@ -18,7 +18,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef", message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef", message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable",fieldPath=".spec.eventGatewayVirtualClusterRef"
 // +kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef.type == 'namespacedRef'",message="spec.eventGatewayVirtualClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayVirtualClusterRef"
 // +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.id) || size(self.status.id) == 0",message="status.id must be unset because policy chains have no independent Konnect ID",fieldPath=".status.id"
@@ -59,10 +59,9 @@ type EventGatewayVirtualClusterPolicyChainSpec struct {
 type EventGatewayVirtualClusterPolicyChainAPISpec struct {
 	// Policies lists distinct EventGatewayVirtualClusterPolicy references in
 	// execution order.
-	// Each policy must belong to the referenced EventGatewayVirtualCluster and be
-	// in the same namespace as this chain.
-	// Namespace defaults to this chain's namespace and may be set explicitly to
-	// that same namespace; cross-namespace references are not supported.
+	// Each policy must belong to the referenced EventGatewayVirtualCluster.
+	// Namespace defaults to this chain's namespace; a policy in another namespace
+	// needs a KongReferenceGrant in its namespace.
 	// List every cluster-level policy exactly once.
 	// An explicit empty list is valid only when the remote chain has no policies;
 	// it does not clear an existing chain.

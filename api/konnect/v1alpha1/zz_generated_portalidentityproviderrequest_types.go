@@ -21,7 +21,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.portalRef == self.spec.portalRef", message="spec.portalRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.portalRef == self.spec.portalRef", message="spec.portalRef is immutable when an entity is already Programmed"
 type PortalIdentityProviderRequest struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -57,7 +57,7 @@ type PortalIdentityProviderRequestSpec struct {
 
 // PortalIdentityProviderRequestAPISpec defines the API spec fields for PortalIdentityProviderRequest.
 type PortalIdentityProviderRequestAPISpec struct {
-	//
+	// The configuration data for creating an authentication integration.
 	//
 	// +optional
 	Config *PortalIdentityProviderRequestConfig `json:"config,omitempty"`
@@ -113,17 +113,17 @@ type PortalIdentityProviderRequestConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=oIDC;sAML
+	// +kubebuilder:validation:Enum=oidc;saml
 	Type PortalIdentityProviderRequestConfigType `json:"type,omitempty"`
 
 	// OIDC configuration.
 	//
 	// +optional
-	OIDC *PortalOIDCIdentityProviderConfig `json:"oIDC,omitempty"`
+	OIDC *CreateOIDCIdentityProviderConfig `json:"oidc,omitempty"`
 	// SAML configuration.
 	//
 	// +optional
-	SAML *PortalSAMLIdentityProviderConfig `json:"sAML,omitempty"`
+	SAML *PortalSAMLIdentityProviderConfig `json:"saml,omitempty"`
 }
 
 // PortalIdentityProviderRequestConfigType represents the type of config.
@@ -131,8 +131,8 @@ type PortalIdentityProviderRequestConfigType string
 
 // PortalIdentityProviderRequestConfigType values.
 const (
-	PortalIdentityProviderRequestConfigTypeOIDC PortalIdentityProviderRequestConfigType = "oIDC"
-	PortalIdentityProviderRequestConfigTypeSAML PortalIdentityProviderRequestConfigType = "sAML"
+	PortalIdentityProviderRequestConfigTypeOIDC PortalIdentityProviderRequestConfigType = "oidc"
+	PortalIdentityProviderRequestConfigTypeSAML PortalIdentityProviderRequestConfigType = "saml"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -145,7 +145,7 @@ func (u PortalIdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("marshaling PortalIdentityProviderRequestConfig OIDC: %w", err)
 			}
-			m["oIDC"] = raw
+			m["oidc"] = raw
 		}
 	case PortalIdentityProviderRequestConfigTypeSAML:
 		if u.SAML != nil {
@@ -153,7 +153,7 @@ func (u PortalIdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("marshaling PortalIdentityProviderRequestConfig SAML: %w", err)
 			}
-			m["sAML"] = raw
+			m["saml"] = raw
 		}
 	}
 	if u.Type != "" {
@@ -183,18 +183,18 @@ func (u *PortalIdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 	}
 	u.Type = PortalIdentityProviderRequestConfigType(probe.Type)
 	switch probe.Type {
-	case "oIDC":
-		payload, ok := raw["oIDC"]
+	case "oidc":
+		payload, ok := raw["oidc"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val PortalOIDCIdentityProviderConfig
+		var val CreateOIDCIdentityProviderConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling PortalIdentityProviderRequestConfig OIDC: %w", err)
 		}
 		u.OIDC = &val
-	case "sAML":
-		payload, ok := raw["sAML"]
+	case "saml":
+		payload, ok := raw["saml"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}

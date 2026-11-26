@@ -1,17 +1,25 @@
 package ops
 
 import (
+	"net/http"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	sdkmocks "github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
+	opsdkmocks "github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
 func TestCreatePortalCustomDomain(t *testing.T) {
@@ -33,6 +41,59 @@ func TestCreatePortalCustomDomain(t *testing.T) {
 
 	require.NoError(t, createPortalCustomDomain(ctx, sdk, domain))
 	assert.Empty(t, domain.GetKonnectID())
+}
+
+// TestCreatePortalCustomDomainConflictRecovery verifies that shared Create still
+// recovers singleton custom domains by hostname without requiring ID persistence.
+func TestCreatePortalCustomDomainConflictRecovery(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name       string
+		hostname   string
+		programmed metav1.ConditionStatus
+		id         string
+	}{
+		{
+			name:       "matching existing domain recovers",
+			hostname:   "developer.example.com",
+			programmed: metav1.ConditionTrue,
+			id:         "developer.example.com",
+		},
+		{
+			name:       "different existing domain is not adopted",
+			hostname:   "other.example.com",
+			programmed: metav1.ConditionFalse,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			domain := testPortalCustomDomain()
+			require.False(t, domain.PersistsKonnectID())
+			sdk := opsdkmocks.NewMockSDKWrapperWithT(t)
+			expectedRequest, err := domain.Spec.APISpec.ToCreatePortalCustomDomainRequest()
+			require.NoError(t, err)
+			sdk.PortalCustomDomainsSDK.EXPECT().
+				CreatePortalCustomDomain(mock.Anything, "portal-1", *expectedRequest).
+				Return(nil, &sdkkonnecterrs.SDKError{StatusCode: http.StatusConflict, Message: "custom domain already exists"}).
+				Once()
+			sdk.PortalCustomDomainsSDK.EXPECT().
+				GetPortalCustomDomain(mock.Anything, "portal-1").
+				Return(&sdkkonnectops.GetPortalCustomDomainResponse{
+					PortalCustomDomain: &sdkkonnectcomp.PortalCustomDomain{Hostname: tt.hostname},
+				}, nil).
+				Once()
+
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+			_, err = Create(t.Context(), sdk, cl, &metricsmocks.MockRecorder{}, domain)
+			require.NoError(t, err)
+			programmed := apimeta.FindStatusCondition(domain.Status.Conditions, "Programmed")
+			require.NotNil(t, programmed)
+			assert.Equal(t, tt.programmed, programmed.Status)
+			assert.Equal(t, tt.id, domain.GetKonnectID())
+		})
+	}
 }
 
 func TestUpdatePortalCustomDomain(t *testing.T) {

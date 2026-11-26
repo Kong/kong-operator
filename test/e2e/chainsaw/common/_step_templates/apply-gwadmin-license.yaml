@@ -1,0 +1,28 @@
+# File-based Secret provisioning, without rendering license data in Chainsaw.
+# Override gwadmin_license_namespace with use.with.bindings for cross-namespace
+# scenarios. Namespace resources remain tracked by Chainsaw for cleanup.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-gwadmin-license
+spec:
+  bindings:
+    - name: gwadmin_license_namespace
+      value: ($namespace)
+  try:
+    - script:
+        content: |
+          if [ -n "${GW_ADMIN_LICENSE_FILE:-}" ] || [ "${GW_ADMIN_LICENSE_REQUIRED:-false}" = true ]; then
+            bash ../../fixtures/gwadmin-license.sh check
+          fi
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: ($gwadmin_license_namespace)
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($gwadmin_license_namespace)
+        content: bash ../../fixtures/gwadmin-license.sh install

@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -13,7 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -1717,10 +1720,24 @@ func TestGatewayReconciler_Reconcile_InvalidKonnectLabels(t *testing.T) {
 				objects = append(objects, kgcp)
 			}
 
+			statusPatches := 0
 			fakeClient := fakectrlruntimeclient.NewClientBuilder().
 				WithScheme(scheme.Get()).
 				WithObjects(objects...).
 				WithStatusSubresource(objects...).
+				WithInterceptorFuncs(interceptor.Funcs{
+					SubResourcePatch: func(
+						ctx context.Context,
+						cl controllerruntimeclient.Client,
+						subResourceName string,
+						obj controllerruntimeclient.Object,
+						p controllerruntimeclient.Patch,
+						opts ...controllerruntimeclient.SubResourcePatchOption,
+					) error {
+						statusPatches++
+						return cl.SubResource(subResourceName).Patch(ctx, obj, p, opts...)
+					},
+				}).
 				Build()
 			r := Reconciler{Client: fakeClient}
 			nn := controllerruntimeclient.ObjectKeyFromObject(gateway)
@@ -1750,15 +1767,163 @@ func TestGatewayReconciler_Reconcile_InvalidKonnectLabels(t *testing.T) {
 			require.NoError(t, fakeClient.Get(ctx, nn, &gw))
 			assert.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&gw)))
 			statusBefore := gw.Status.DeepCopy()
+			patchesBefore := statusPatches
 
 			// Reconciling again must not requeue nor return an error, and must
-			// leave the status untouched so no new event is triggered.
+			// write nothing: an unchanged status patch would bump the
+			// resourceVersion and re-enqueue the Gateway on every reconcile.
 			res, err := reconcileOnce()
 			require.NoError(t, err)
 			assert.Equal(t, reconcile.Result{}, res)
+			assert.Equal(t, patchesBefore, statusPatches, "an unchanged status must not be written")
 
 			require.NoError(t, fakeClient.Get(ctx, nn, &gw))
 			assert.Equal(t, *statusBefore, gw.Status)
 		})
 	}
+}
+
+func TestPatchStatus_UsesOptimisticLock(t *testing.T) {
+	gw := &gwtypes.Gateway{
+		Name:            "test-gateway",
+		Namespace:       "test-namespace",
+		ResourceVersion: "42",
+		Generation:      1,
+	}
+
+	var patchBody []byte
+	cl := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(gw).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(
+				_ context.Context,
+				_ controllerruntimeclient.Client,
+				_ string,
+				obj controllerruntimeclient.Object,
+				p controllerruntimeclient.Patch,
+				_ ...controllerruntimeclient.SubResourcePatchOption,
+			) error {
+				var err error
+				patchBody, err = p.Data(obj)
+				return err
+			},
+		}).
+		Build()
+
+	updated := gw.DeepCopy()
+	updated.Status.Conditions = append(updated.Status.Conditions, metav1.Condition{
+		Type:   string(gatewayv1.GatewayConditionProgrammed),
+		Status: metav1.ConditionTrue,
+		Reason: string(gatewayv1.GatewayReasonProgrammed),
+	})
+	require.NoError(t,
+		(&Reconciler{Client: cl}).patchStatus(t.Context(), updated, gw),
+	)
+
+	// The resourceVersion makes the API server reject the patch when another
+	// actor changed the Gateway after this reconcile read it. Without it the
+	// merge patch replaces status.conditions wholesale and deletes conditions
+	// the operator does not own.
+	require.Contains(t, string(patchBody), `"resourceVersion":"42"`)
+}
+
+func TestRequeueOnConflict(t *testing.T) {
+	conflict := apierrors.NewConflict(
+		schema.GroupResource{
+			Group:    gatewayv1.GroupName,
+			Resource: "gateways",
+		},
+		"test-gateway",
+		errors.New("the object has been modified"),
+	)
+	res, err := requeueOnConflict(conflict)
+	require.NoError(t, err)
+	assert.False(t, res.IsZero())
+
+	_, err = requeueOnConflict(errors.New("boom"))
+	require.EqualError(t, err, "boom")
+}
+
+// TestPatchStatus_SecondWriteInSameReconcileDoesNotConflict checks that a
+// reconcile that writes Gateway status more than once does not conflict with
+// itself: the patch base follows the resourceVersion of its own last write.
+func TestPatchStatus_SecondWriteInSameReconcileDoesNotConflict(t *testing.T) {
+	gw := &gwtypes.Gateway{
+		Name:            "test-gateway",
+		Namespace:       "test-namespace",
+		ResourceVersion: "1",
+		Generation:      1,
+	}
+
+	// Simulate the API server: reject a patch whose resourceVersion does not
+	// match the stored object, and bump the resourceVersion on every write.
+	storedRV := "1"
+	writes := 0
+	cl := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(gw).
+		WithStatusSubresource(gw).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(
+				ctx context.Context,
+				cl controllerruntimeclient.Client,
+				_ string,
+				obj controllerruntimeclient.Object,
+				p controllerruntimeclient.Patch,
+				opts ...controllerruntimeclient.SubResourcePatchOption,
+			) error {
+				data, err := p.Data(obj)
+				if err != nil {
+					return err
+				}
+				var patchData struct {
+					Metadata struct {
+						ResourceVersion string `json:"resourceVersion"`
+					} `json:"metadata"`
+				}
+				if err := json.Unmarshal(data, &patchData); err != nil {
+					return err
+				}
+				if patchData.Metadata.ResourceVersion != storedRV {
+					return apierrors.NewConflict(
+						schema.GroupResource{Group: gatewayv1.GroupName, Resource: "gateways"},
+						obj.GetName(),
+						errors.New("the object has been modified"),
+					)
+				}
+				if err := cl.Status().Patch(ctx, obj, p, opts...); err != nil {
+					return err
+				}
+				writes++
+				storedRV = fmt.Sprintf("%d", writes+1)
+				obj.SetResourceVersion(storedRV)
+				return nil
+			},
+		}).
+		Build()
+
+	r := &Reconciler{Client: cl}
+	old := gw.DeepCopy()
+
+	first := gw.DeepCopy()
+	first.Status.Conditions = []metav1.Condition{
+		{
+			Type:   string(gatewayv1.GatewayConditionAccepted),
+			Status: metav1.ConditionTrue,
+			Reason: string(gatewayv1.GatewayReasonAccepted),
+		},
+	}
+	require.NoError(t, r.patchStatus(t.Context(), first, old))
+
+	second := first.DeepCopy()
+	second.Status.Conditions = append(second.Status.Conditions, metav1.Condition{
+		Type:   string(gatewayv1.GatewayConditionProgrammed),
+		Status: metav1.ConditionFalse,
+		Reason: "Pending",
+	})
+	require.NoError(t,
+		r.patchStatus(t.Context(), second, old),
+		"the second status write in the same reconcile must not conflict with the first",
+	)
 }

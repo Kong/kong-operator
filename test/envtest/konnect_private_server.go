@@ -30,10 +30,21 @@ const (
 	KonnectPrivateOrgID                   = "5f9fd312-a987-4628-b4c5-bb4f4fddd5f7"
 	KonnectPrivateControlPlaneID          = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
 	KonnectPrivateNetworkID               = "0d6a9a44-6d3c-4e0e-9a3b-2a3f9c1b7e10"
+	KonnectPrivateConfigurationID         = "7c2b8e91-3f4a-4c2d-9e1b-5a6d0f8c2b71"
 	KonnectPrivateControlPlaneEndpoint    = "https://" + KonnectPrivateRegionalHost + "/cp/abc123"
 	KonnectPrivateTelemetryEndpoint       = "https://" + KonnectPrivateRegionalHost + "/tp/abc123"
 	konnectPrivateControlPlaneSubresource = "/api/v2/control-planes/"
 	konnectPrivateNetworksPath            = "/api/v2/cloud-gateways/networks"
+	konnectPrivateConfigurationsPath      = "/api/v2/cloud-gateways/configurations"
+
+	// KonnectPrivateAIGatewayID and the values beside it are the AI Gateway
+	// values, in the same private shape: the prefix sits in the path.
+	KonnectPrivateAIGatewayID          = "3d1f0a52-6b7c-4e18-9a4d-2c5e8f1b0a73"
+	KonnectPrivateAIGatewayCertID      = "9e4c1b70-2a3d-4f56-8b9c-1d2e3f4a5b6c"
+	KonnectPrivateAIGatewayCPEndpoint  = "https://" + KonnectPrivateRegionalHost + "/cp/aigw123"
+	KonnectPrivateAIGatewayTPEndpoint  = "https://" + KonnectPrivateRegionalHost + "/tp/aigw123"
+	konnectPrivateAIGatewaysPath       = "/api/v1/ai-gateways"
+	konnectPrivateAIGatewayCertsSuffix = "/data-plane-certificates"
 )
 
 // KonnectRequest is one request the fake received. ServerName is the SNI the
@@ -131,7 +142,15 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 		},
 	}
 	page := map[string]any{"page": map[string]any{"number": 1, "size": 10, "total": 1}}
-	network := map[string]any{"id": KonnectPrivateNetworkID, "state": "initializing"}
+	network := map[string]any{"id": KonnectPrivateNetworkID, "state": "ready"}
+	// The configuration create and its update are the same PUT, and the delete is
+	// a PUT with no data plane groups: one body serves all three.
+	configuration := map[string]any{
+		"id":                     KonnectPrivateConfigurationID,
+		"control_plane_id":       KonnectPrivateControlPlaneID,
+		"dataplane_group_config": []any{},
+		"dataplane_groups":       []any{},
+	}
 
 	regional := func(method, path string, status int, body any) {
 		mux.HandleFunc(method+" "+KonnectPrivateRegionalHost+path, jsonHandler(status, body))
@@ -153,6 +172,36 @@ func (s *KonnectPrivateServer) handler() http.Handler {
 	global("POST", konnectPrivateNetworksPath, http.StatusCreated, network)
 	global("GET", konnectPrivateNetworksPath+"/{id}", http.StatusOK, network)
 	global("DELETE", konnectPrivateNetworksPath+"/{id}", http.StatusNoContent, nil)
+
+	// AI Gateway: the control plane and the data plane certificate of an AI
+	// Gateway data plane, both on the private regional host.
+	aiGateway := map[string]any{
+		"id":           KonnectPrivateAIGatewayID,
+		"name":         "private-aigw",
+		"display_name": "Private AI Gateway",
+		"endpoints": map[string]any{
+			"configuration": KonnectPrivateAIGatewayCPEndpoint,
+			"telemetry":     KonnectPrivateAIGatewayTPEndpoint,
+		},
+		"created_at": "2026-01-01T00:00:00Z",
+		"updated_at": "2026-01-01T00:00:00Z",
+	}
+	certificate := map[string]any{
+		"id":         KonnectPrivateAIGatewayCertID,
+		"cert":       "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----",
+		"title":      "aigwdp",
+		"created_at": "2026-01-01T00:00:00Z",
+		"updated_at": "2026-01-01T00:00:00Z",
+	}
+	regional("POST", konnectPrivateAIGatewaysPath, http.StatusCreated, aiGateway)
+	regional("GET", konnectPrivateAIGatewaysPath+"/{id}", http.StatusOK, aiGateway)
+	regional("PATCH", konnectPrivateAIGatewaysPath+"/{id}", http.StatusOK, aiGateway)
+	regional("DELETE", konnectPrivateAIGatewaysPath+"/{id}", http.StatusNoContent, nil)
+	certsPath := konnectPrivateAIGatewaysPath + "/{id}" + konnectPrivateAIGatewayCertsSuffix
+	regional("POST", certsPath, http.StatusCreated, certificate)
+	regional("GET", certsPath, http.StatusOK, map[string]any{"meta": page, "data": []any{certificate}})
+	regional("DELETE", certsPath+"/{certificateId}", http.StatusNoContent, nil)
+	global("PUT", konnectPrivateConfigurationsPath, http.StatusOK, configuration)
 
 	// Anything else is a call the test does not know about: record it and fail,
 	// so an operator change that adds a call surfaces here instead of silently.

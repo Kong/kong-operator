@@ -8,13 +8,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 
-	"github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
 
@@ -27,7 +28,7 @@ import (
 //   - Reads (Get/List) are metadata-only: secret values are never returned.
 //   - Create on an existing key fails with 409 Conflict.
 //   - Update is an upsert: it returns 201 for a new key and 200 otherwise.
-//   - Keys are capped at 512 bytes, values at 5120 bytes (400 Bad Request).
+//   - Keys are capped at 512 bytes, values at 8192 Unicode code points (400 Bad Request).
 //   - There is NO key-character validation on create: keys containing '#',
 //     '%' or '/' are accepted, but subsequent reads/updates/deletes of such
 //     keys fail ('#' -> 404, '%' -> 500, '/' -> 404) because of how the
@@ -39,8 +40,8 @@ import (
 const (
 	// FakeConfigStoreSecretMaxKeyBytes is the Konnect Config Store key size cap.
 	FakeConfigStoreSecretMaxKeyBytes = 512
-	// FakeConfigStoreSecretMaxValueBytes is the Konnect Config Store value size cap.
-	FakeConfigStoreSecretMaxValueBytes = 5120
+	// FakeConfigStoreSecretMaxValueCharacters is the value cap in Unicode code points.
+	FakeConfigStoreSecretMaxValueCharacters = 8192
 )
 
 // ConfigStoreSecretsCall records one invocation of the fake SDK.
@@ -143,9 +144,9 @@ func validateKeyValueCaps(key, value string) error {
 		return newFakeSDKError(http.StatusBadRequest,
 			"key length %d exceeds maximum of %d bytes", len(key), FakeConfigStoreSecretMaxKeyBytes)
 	}
-	if len(value) > FakeConfigStoreSecretMaxValueBytes {
+	if characters := utf8.RuneCountInString(value); characters > FakeConfigStoreSecretMaxValueCharacters {
 		return newFakeSDKError(http.StatusBadRequest,
-			"value length %d exceeds maximum of %d bytes", len(value), FakeConfigStoreSecretMaxValueBytes)
+			"value length %d exceeds maximum of %d characters", characters, FakeConfigStoreSecretMaxValueCharacters)
 	}
 	return nil
 }
@@ -439,7 +440,7 @@ func (f *FakeConfigStoreSecrets) StoreEmpty(controlPlaneID, configStoreID string
 // -----------------------------------------------------------------------------
 
 type fakeConfigStoreSecretsSDKWrapper struct {
-	sdk.SDKWrapper // embedded nil interface; only the overridden method is usable
+	sdkops.SDKWrapper // embedded nil interface; only the overridden method is usable
 
 	secrets sdkkonnectgo.ConfigStoreSecretsSDK
 }
@@ -450,19 +451,19 @@ func (w fakeConfigStoreSecretsSDKWrapper) GetConfigStoreSecretsSDK() sdkkonnectg
 }
 
 type fakeConfigStoreSecretsSDKFactory struct {
-	wrapper sdk.SDKWrapper
+	wrapper sdkops.SDKWrapper
 }
 
 // NewKonnectSDK returns the wrapper holding the fake, ignoring credentials.
-func (f fakeConfigStoreSecretsSDKFactory) NewKonnectSDK(server.Server, sdk.SDKToken) (sdk.SDKWrapper, error) {
+func (f fakeConfigStoreSecretsSDKFactory) NewKonnectSDK(server.Server, sdkops.SDKToken) (sdkops.SDKWrapper, error) {
 	return f.wrapper, nil
 }
 
-// NewFakeConfigStoreSecretsSDKFactory returns an sdk.SDKFactory whose
+// NewFakeConfigStoreSecretsSDKFactory returns an sdkops.SDKFactory whose
 // SDKWrapper serves the given ConfigStoreSecretsSDK (typically a
 // FakeConfigStoreSecrets). All other sub-clients are nil and must not be
 // called by the code under test.
-func NewFakeConfigStoreSecretsSDKFactory(secrets sdkkonnectgo.ConfigStoreSecretsSDK) sdk.SDKFactory {
+func NewFakeConfigStoreSecretsSDKFactory(secrets sdkkonnectgo.ConfigStoreSecretsSDK) sdkops.SDKFactory {
 	return fakeConfigStoreSecretsSDKFactory{
 		wrapper: fakeConfigStoreSecretsSDKWrapper{secrets: secrets},
 	}

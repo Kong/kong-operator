@@ -878,6 +878,59 @@ func TestAPIGroupVersionConfig_GetPaths(t *testing.T) {
 	assert.Equal(t, []string{"/v3/portals", "/v3/portals/{portalId}/teams"}, agv.GetPaths())
 }
 
+func TestFieldConfig_OmitZero(t *testing.T) {
+	var agv APIGroupVersionConfig
+	require.NoError(t, yaml.Unmarshal([]byte(`
+types:
+  - path: /v1/ai-gateways/{gatewayId}/auth-strategies
+    name: AIGatewayAuthStrategy
+    cel:
+      spec:
+        apiSpec:
+          key-auth:
+            config:
+              identityRealms:
+                _omitZero: true
+`), &agv))
+
+	fc := agv.FieldConfig(map[string]string{
+		"/v1/ai-gateways/{gatewayId}/auth-strategies": "AIGatewayAuthStrategy",
+	})
+	identityRealms := fc.GetFieldConfig(
+		"AIGatewayAuthStrategy",
+		"spec",
+		"apiSpec",
+		"key-auth",
+		"config",
+		"identityRealms",
+	)
+	require.NotNil(t, identityRealms)
+	assert.True(t, identityRealms.OmitZero)
+}
+
+func TestFieldConfig_AllowZero(t *testing.T) {
+	var agv APIGroupVersionConfig
+	require.NoError(t, yaml.Unmarshal([]byte(`
+types:
+  - path: /v1/ai-gateways/{gatewayId}/agents
+    name: AIGatewayAgent
+    cel:
+      spec:
+        apiSpec:
+          config:
+            maxRequestBodySize:
+              _allowZero: true
+`), &agv))
+
+	fc := agv.FieldConfig(map[string]string{
+		"/v1/ai-gateways/{gatewayId}/agents": "AIGatewayAgent",
+	})
+	field := fc.GetFieldConfig("AIGatewayAgent", "spec", "apiSpec", "config", "maxRequestBodySize")
+	require.NotNil(t, field)
+	assert.True(t, field.AllowZero)
+	assert.False(t, field.OmitZero)
+}
+
 func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 	t.Run("with cel validations", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
@@ -1421,37 +1474,12 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "injectInto must name a top-level apiSpec field",
 		},
 		{
-			name: "injectInto with cross-namespace support rejected",
+			name: "injectInto with cross-namespace support accepted",
 			cfg: base(func(rc *ReferenceConfig) {
 				rc.Path = "spec.apiSpec.customPolicyRef"
 				rc.InjectInto = "type"
 				rc.SupportCrossNamespaceReference = true
 			}),
-			wantErr: "supportCrossNamespaceReference is not supported with injectInto",
-		},
-		{
-			name: "unionMember accepted",
-			cfg: base(func(rc *ReferenceConfig) {
-				rc.Path = "spec.apiSpec.config.trustBundles"
-				rc.UnionMember = "namespacedRef"
-			}),
-		},
-		{
-			name: "unionMember that is not a lowerCamelCase field name rejected",
-			cfg: base(func(rc *ReferenceConfig) {
-				rc.Path = "spec.apiSpec.config.trustBundles"
-				rc.UnionMember = "namespaced_ref"
-			}),
-			wantErr: "unionMember must be a lowerCamelCase JSON field name",
-		},
-		{
-			name: "unionMember with injectInto rejected",
-			cfg: base(func(rc *ReferenceConfig) {
-				rc.Path = "spec.apiSpec.customPolicyRef"
-				rc.InjectInto = "type"
-				rc.UnionMember = "namespacedRef"
-			}),
-			wantErr: "unionMember and injectInto are mutually exclusive",
 		},
 		{
 			name: "reverseWatch on a single-kind reference accepted",
@@ -1465,6 +1493,19 @@ func TestReferenceConfigValidation(t *testing.T) {
 				rc.ReverseWatch = true
 			}),
 			wantErr: "reverseWatch requires exactly one kind",
+		},
+		{
+			name: "watchSameParent on a single-kind reference accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.WatchSameParent = true }),
+		},
+		{
+			name: "watchSameParent on a multi-kind reference rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+				rc.RefTypeName = "AIGatewayACLRef"
+				rc.WatchSameParent = true
+			}),
+			wantErr: "watchSameParent requires exactly one kind",
 		},
 		{
 			name: "two reverseWatch references to the same kind accepted",

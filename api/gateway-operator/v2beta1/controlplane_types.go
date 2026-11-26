@@ -63,6 +63,7 @@ type ControlPlaneList struct {
 // ControlPlaneSpec defines the desired state of ControlPlane
 //
 // +kubebuilder:validation:XValidation:message="When dataplane target is of type 'ref' the ingressClass must be set",rule="self.dataplane.type != 'ref' || has(self.ingressClass)"
+// +kubebuilder:validation:XValidation:message="fallbackConfiguration.useLastValidConfig can only be enabled when the FallbackConfiguration feature gate is enabled",rule="!has(self.translation) || !has(self.translation.fallbackConfiguration) || !has(self.translation.fallbackConfiguration.useLastValidConfig) || self.translation.fallbackConfiguration.useLastValidConfig != 'enabled' || (has(self.featureGates) && self.featureGates.exists(g, g.name == 'FallbackConfiguration' && g.state == 'enabled'))"
 type ControlPlaneSpec struct {
 	ControlPlaneOptions `json:",inline"`
 
@@ -131,6 +132,7 @@ type ControlPlaneOptions struct {
 	// DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
 	//
 	// +optional
+	// +kubebuilder:default={reverseSync: "disabled"}
 	DataPlaneSync *ControlPlaneDataPlaneSync `json:"dataplaneSync,omitempty"`
 
 	// Translation defines the configuration for translating Kong configuration.
@@ -142,6 +144,7 @@ type ControlPlaneOptions struct {
 	// ConfigDump defines the options for dumping generated Kong configuration from a diagnostics server.
 	//
 	// +optional
+	// +kubebuilder:default={state: "disabled", dumpSensitive: "disabled"}
 	ConfigDump *ControlPlaneConfigDump `json:"configDump,omitempty"`
 
 	// ObjectFilters defines the filters to limit watched objects by the controllers.
@@ -208,7 +211,7 @@ type ControlPlaneFallbackConfiguration struct {
 	// when the current configuration is invalid.
 	//
 	// +optional
-	// +kubebuilder:default=enabled
+	// +kubebuilder:default=disabled
 	// +kubebuilder:validation:Enum=enabled;disabled
 	UseLastValidConfig *ControlPlaneFallbackConfigurationState `json:"useLastValidConfig,omitempty"`
 }

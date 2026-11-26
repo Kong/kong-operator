@@ -1,0 +1,53 @@
+# Template for creating a transcode EventGatewayVirtualClusterConsumePolicy, child of a
+# schemaValidation one, transcoding to json with the schema of a schema
+# registry.
+#
+# Required bindings:
+#   - policy_name, policy_namespace: The policy.
+#   - virtual_cluster_name, virtual_cluster_namespace: Its virtual cluster.
+#   - parent_policy_name, parent_policy_namespace: Its parent, a schemaValidation
+#     policy of the same virtual cluster.
+#   - schema_registry_name, schema_registry_namespace: The schema registry.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster-consume-policy-transcode
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualClusterConsumePolicy
+          metadata:
+            name: ($policy_name)
+            namespace: ($policy_namespace)
+          spec:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($virtual_cluster_name)
+                namespace: ($virtual_cluster_namespace)
+            apiSpec:
+              type: transcode
+              parentPolicyRef:
+                kind: EventGatewayVirtualClusterConsumePolicy
+                name: ($parent_policy_name)
+                namespace: ($parent_policy_namespace)
+              transcode:
+                name: ($policy_name)
+                config:
+                  outputFormat: json
+                  json:
+                    failureMode: error
+                    schemaSource:
+                      type: reference
+                      reference:
+                        subject: "'orders-value'"
+                        version: "'latest'"
+                        schemaRefDestination:
+                          type: none
+                          none: {}
+                        schemaRegistry:
+                          kind: EventGatewaySchemaRegistry
+                          name: ($schema_registry_name)
+                          namespace: ($schema_registry_namespace)

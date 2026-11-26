@@ -470,7 +470,7 @@ func camelToSnakeCase(s string) string {
 // flattenSDKUnions matches it against the snake_case sibling member key.
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode", "aclAttributeType", "authMethod":
+	case "type", "op", "kind", "mode", "source", "aclAttributeType", "authMethod":
 		return true
 	default:
 		return false

@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
@@ -404,7 +405,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, alterIngress))
 
 	t.Logf("verify that ancestor status of KongUpstreamPolicy is not updated when it is not referenced by reconciled Ingress")
-	require.Never(t, func() bool {
+	asserts.Never(t, func(context.Context) bool {
 		var (
 			kup configurationv1beta1.KongUpstreamPolicy
 			nn  = k8stypes.NamespacedName{

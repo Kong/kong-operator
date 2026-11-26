@@ -481,6 +481,116 @@ func resolveAIGatewayAgentAccessAuthStrategies(ctx context.Context, cl client.Cl
 	return resolved, nil
 }
 
+// RefsAtAIGatewayAgentConfigCaCertificates returns the references at spec.apiSpec.config.caCertificates,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayAgentConfigCaCertificates(obj *AIGatewayAgent) []AIGatewayCACertificateRef {
+	return obj.Spec.APISpec.Config.CaCertificates
+}
+
+// resolveAIGatewayAgentConfigCaCertificates resolves the CR references in spec.apiSpec.config.caCertificates
+// to Konnect names.
+func resolveAIGatewayAgentConfigCaCertificates(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {
+	refs := RefsAtAIGatewayAgentConfigCaCertificates(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayCACertificate"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayCACertificate
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayCACertificate", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayCACertificate %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayCACertificate", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayCACertificate", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayCACertificate", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayAgentConfigCertificates returns the references at spec.apiSpec.config.certificates,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayAgentConfigCertificates(obj *AIGatewayAgent) []AIGatewayCertificateRef {
+	return obj.Spec.APISpec.Config.Certificates
+}
+
+// resolveAIGatewayAgentConfigCertificates resolves the CR references in spec.apiSpec.config.certificates
+// to Konnect names.
+func resolveAIGatewayAgentConfigCertificates(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {
+	refs := RefsAtAIGatewayAgentConfigCertificates(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayCertificate"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced AIGatewayCertificate
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayCertificate", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayCertificate %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayCertificate", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayCertificate", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayCertificate", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
@@ -495,6 +605,12 @@ func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl clie
 		errs = append(errs, err)
 	}
 	if _, err := resolveAIGatewayAgentAccessAuthStrategies(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayAgentConfigCaCertificates(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayAgentConfigCertificates(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -537,6 +653,46 @@ func (obj *AIGatewayAgent) CrossNamespaceSiblingReferences() []CrossNamespaceRef
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayAgent"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayAgentConfigCaCertificates(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayCACertificate"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayAgent"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayAgentConfigCertificates(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayCertificate"
 		}
 		checks = append(checks, CrossNamespaceReferenceCheck{
 			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayAgent"},
@@ -600,9 +756,7 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 		payload["access"] = access
 	}
 	// spec.apiSpec.access.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	access, _ := payload["access"].(map[string]any)
 	if access == nil {
 		access = map[string]any{}
@@ -613,6 +767,30 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 	}
 	access["auth_strategies"] = resolvedAccessAuthStrategies
 	payload["access"] = access
+	// spec.apiSpec.config.caCertificates carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	config, _ := payload["config"].(map[string]any)
+	if config == nil {
+		config = map[string]any{}
+	}
+	resolvedConfigCaCertificates, err := resolveAIGatewayAgentConfigCaCertificates(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.config.caCertificates references: %w", err)
+	}
+	config["ca_certificates"] = resolvedConfigCaCertificates
+	payload["config"] = config
+	// spec.apiSpec.config.certificates carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	config2, _ := payload["config"].(map[string]any)
+	if config2 == nil {
+		config2 = map[string]any{}
+	}
+	resolvedConfigCertificates, err := resolveAIGatewayAgentConfigCertificates(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.config.certificates references: %w", err)
+	}
+	config2["certificates"] = resolvedConfigCertificates
+	payload["config"] = config2
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal AIGatewayAgent SDK payload with references: %w", err)
@@ -675,9 +853,7 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 		payload["access"] = access
 	}
 	// spec.apiSpec.access.authStrategies carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.
 	access, _ := payload["access"].(map[string]any)
 	if access == nil {
 		access = map[string]any{}
@@ -688,6 +864,30 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 	}
 	access["auth_strategies"] = resolvedAccessAuthStrategies
 	payload["access"] = access
+	// spec.apiSpec.config.caCertificates carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	config, _ := payload["config"].(map[string]any)
+	if config == nil {
+		config = map[string]any{}
+	}
+	resolvedConfigCaCertificates, err := resolveAIGatewayAgentConfigCaCertificates(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.config.caCertificates references: %w", err)
+	}
+	config["ca_certificates"] = resolvedConfigCaCertificates
+	payload["config"] = config
+	// spec.apiSpec.config.certificates carries a CR reference: overwrite its resolved Konnect values in
+	// the SDK payload, preserving sibling keys of its ancestors.
+	config2, _ := payload["config"].(map[string]any)
+	if config2 == nil {
+		config2 = map[string]any{}
+	}
+	resolvedConfigCertificates, err := resolveAIGatewayAgentConfigCertificates(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.config.certificates references: %w", err)
+	}
+	config2["certificates"] = resolvedConfigCertificates
+	payload["config"] = config2
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal AIGatewayAgent SDK payload with references: %w", err)

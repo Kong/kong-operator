@@ -12,12 +12,14 @@ import (
 
 	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	validationconsts "github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/platform"
 )
 
 const deprecationPrefix = "WARN: DEPRECATED (it has no effect): "
@@ -63,6 +65,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
 	flagSet.BoolVar(&cfg.FQDNModeEnabled, "enable-fqdn-mode", ingressmgrconfig.DefaultFQDNModeEnabled, "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery.")
 	flagSet.Var(newValidatedValue(&cfg.IPFamily, ipfamily.New, withDefault(ipfamily.Auto)), "ip-family", "IP family of the cluster, used e.g. to decide which IP family (or families) DataPlanes' Kong listens bind to. Possible values: auto, ipv4, ipv6, dual. When 'auto' (default), the operator detects the cluster's IP family at startup and exits with an error if detection fails.")
+	flagSet.Var(newValidatedValue(&cfg.Platform, platform.New, withDefault(platform.Auto)), "platform", "Platform flavor the operator runs on, deciding whether admission assigns the container user and group of hardened containers (as OpenShift does through SecurityContextConstraints, rejecting a pinned user). Possible values: auto, openshift, kubernetes. When 'auto' (default), the operator detects the cluster at startup and exits with an error if detection fails.")
 	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s.")
 	flagSet.BoolVar(&cfg.ReadYourOwnWritesConsistencyEnabled, "enable-read-your-own-writes-consistency", true, "Make cached reads wait until the cache has observed the operator's own preceding writes. Disable only if the cache does not watch every object the operator writes to.")
 	flagSet.BoolVar(&cfg.EmitKubernetesEvents, "emit-kubernetes-events", ingressmgrconfig.DefaultEmitKubernetesEvents, "Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.")
@@ -120,6 +123,7 @@ func New(m metadata.Info) *CLI {
 	// webhook and validation options
 	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
 	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
+	flagSet.StringVar(&cfg.ValidatingWebhookCertDir, "validating-webhook-cert-dir", validationconsts.DefaultAdmissionWebhookCertDir, "Directory that holds the validating webhook's TLS certificate (tls.crt) and key (tls.key).")
 
 	// Deprecated flags retained for printing warning messages.
 	flagSet.Var(&DiscardFlagValue{}, "cluster-ca-key-type", deprecationPrefix+"Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
@@ -311,6 +315,12 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.LeaderElection = leaderElection
 	c.cfg.ControllerNamespace = controllerNamespace
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
+	// An explicitly empty value (e.g. an empty environment variable) means
+	// "unset": fall back to the default instead of failing at startup with an
+	// error that would not name the flag.
+	if c.cfg.ValidatingWebhookCertDir == "" {
+		c.cfg.ValidatingWebhookCertDir = validationconsts.DefaultAdmissionWebhookCertDir
+	}
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
 

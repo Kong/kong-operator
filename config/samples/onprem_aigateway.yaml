@@ -7,6 +7,9 @@ metadata:
   name: ai-gw-cp-onprem-1
   namespace: default
 spec:
+  # Oldest AI Gateway runtime that must accept the generated configuration.
+  # Set this value before adding a DataPlane with an older runtime.
+  minRuntimeVersion: "2.1"
   # Optional namespaces the gateway watches for configuration entities and the
   # Secrets they reference. Defaults to the gateway's own namespace ("own").
   # "list" also watches the listed namespaces and needs a WatchNamespaceGrant

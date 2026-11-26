@@ -55,6 +55,8 @@ func ApplyPatchIfNotEmpty[
 
 // ApplyStatusPatchIfNotEmpty patches the provided object if the resulting patch
 // between the provided existing and oldExisting is non empty.
+// Extra merge options, such as client.MergeFromWithOptimisticLock, are passed to
+// the merge patch.
 func ApplyStatusPatchIfNotEmpty[
 	T client.Object,
 ](
@@ -63,9 +65,18 @@ func ApplyStatusPatchIfNotEmpty[
 	logger logr.Logger,
 	existing T,
 	oldExisting T,
+	opts ...client.MergeFromOption,
 ) (res op.Result, err error) {
 	// Check if the patch to be applied is empty.
-	patch := client.MergeFrom(oldExisting)
+	//
+	// The check ignores the resourceVersion: an optimistic lock adds it to the
+	// patch even when nothing else changed, and a status write earlier in the
+	// same reconcile leaves the object with a newer version than the base.
+	// Writing the version alone would bump the resourceVersion on every
+	// reconcile, and that write and its watch event would keep re-enqueueing
+	// the object.
+	probeBase := oldExisting.DeepCopyObject().(T)
+	probeBase.SetResourceVersion(existing.GetResourceVersion())
 
 	// NOTE: Code below is not 100% correct as it generates a diff for whole object,
 	// not only for status subresource. However, controller-runtime does not provide
@@ -73,7 +84,7 @@ func ApplyStatusPatchIfNotEmpty[
 	// being modified before calling this function.
 	// In future we might want to implement a custom patcher that would only
 	// consider status field.
-	b, err := patch.Data(existing)
+	b, err := client.MergeFrom(probeBase).Data(existing)
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed to generate patch for %T %s: %w",
 			existing, client.ObjectKeyFromObject(existing), err,
@@ -85,7 +96,7 @@ func ApplyStatusPatchIfNotEmpty[
 		return op.Noop, nil
 	}
 
-	if err := cl.Status().Patch(ctx, existing, patch); err != nil {
+	if err := cl.Status().Patch(ctx, existing, client.MergeFromWithOptions(oldExisting, opts...)); err != nil {
 		return op.Noop, fmt.Errorf("failed patching %T, %s: %w",
 			existing, client.ObjectKeyFromObject(existing), err,
 		)

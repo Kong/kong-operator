@@ -1,0 +1,30 @@
+# The duplicates are left out, each naming the entity holding its value.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend-duplicate
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: Invalid
+      (contains(message, 'its spec.apiSpec.name "backend" is already the one of EventGatewayBackendCluster')): true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: vcluster-duplicate
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: Invalid
+      (contains(message, 'its spec.apiSpec.dnsLabel "vcluster" is already the one of EventGatewayVirtualCluster')): true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: forward-duplicate
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: Invalid
+      (contains(message, 'its policy name "headers" is already the one of EventGatewayVirtualClusterConsumePolicy')): true

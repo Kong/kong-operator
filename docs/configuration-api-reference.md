@@ -35,6 +35,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[][KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+| `condition` _string_ | Condition is an expression evaluated for every request right before the plugin's `access` phase. When it evaluates to false, the plugin is skipped for that request. When it evaluates to true or is unset, the plugin runs as usual. Requires Kong Gateway 3.14 or later. Kong Gateway 3.15 and later use CEL syntax. Kong Gateway 3.14 shipped the field as a beta using ATC syntax, which is not compatible with CEL: 3.14 expressions must be rewritten when upgrading to 3.15. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `status` _[KongClusterPluginStatus](#configuration-konghq-com-v1-types-kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
@@ -79,6 +80,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
 | `protocols` _[][KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+| `condition` _string_ | Condition is an expression evaluated for every request right before the plugin's `access` phase. When it evaluates to false, the plugin is skipped for that request. When it evaluates to true or is unset, the plugin runs as usual. Requires Kong Gateway 3.14 or later. Kong Gateway 3.15 and later use CEL syntax. Kong Gateway 3.14 shipped the field as a beta using ATC syntax, which is not compatible with CEL: 3.14 expressions must be rewritten when upgrading to 3.15. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `status` _[KongPluginStatus](#configuration-konghq-com-v1-types-kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
@@ -166,6 +168,7 @@ KongConsumerStatus represents the current status of the KongConsumer resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongConsumer.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
@@ -276,14 +279,17 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
 - [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
 - [EventGatewayStaticKey](#configuration-konghq-com-v1alpha1-eventgatewaystatickey)
 - [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
+- [EventGatewayVirtualClusterConsumePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicychain)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
 - [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+- [EventGatewayVirtualClusterProducePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicychain)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
 - [KongCertificate](#configuration-konghq-com-v1alpha1-kongcertificate)
@@ -366,6 +372,21 @@ EventGatewayListenerPolicy is the Schema for the eventgatewaylistenerpolicys API
 | `spec` _[EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)_ |  |
 | `status` _[EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)_ |  |
 
+### EventGatewayListenerPolicyChain
+
+
+EventGatewayListenerPolicyChain is the Schema for the eventgatewaylistenerpolicychains API.
+
+<!-- event_gateway_listener_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayListenerPolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)_ |  |
+| `status` _[EventGatewayListenerPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainstatus)_ |  |
+
 ### EventGatewaySchemaRegistry
 
 
@@ -441,6 +462,21 @@ EventGatewayVirtualClusterConsumePolicy is the Schema for the eventgatewayvirtua
 | `spec` _[EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)_ |  |
 
+### EventGatewayVirtualClusterConsumePolicyChain
+
+
+EventGatewayVirtualClusterConsumePolicyChain is the Schema for the eventgatewayvirtualclusterconsumepolicychains API.
+
+<!-- event_gateway_virtual_cluster_consume_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterConsumePolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterConsumePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterConsumePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainstatus)_ |  |
+
 ### EventGatewayVirtualClusterPolicy
 
 
@@ -485,6 +521,21 @@ EventGatewayVirtualClusterProducePolicy is the Schema for the eventgatewayvirtua
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)_ |  |
+
+### EventGatewayVirtualClusterProducePolicyChain
+
+
+EventGatewayVirtualClusterProducePolicyChain is the Schema for the eventgatewayvirtualclusterproducepolicychains API.
+
+<!-- event_gateway_virtual_cluster_produce_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterProducePolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterProducePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterProducePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainstatus)_ |  |
 
 ### IngressClassParameters
 
@@ -985,15 +1036,7 @@ BackendClusterName The unique name of the backend cluster.
 
 _Appears in:_
 
-- [BackendClusterReferenceByName](#configuration-konghq-com-v1alpha1-types-backendclusterreferencebyname)
-- [BackendClusterReferenceModify](#configuration-konghq-com-v1alpha1-types-backendclusterreferencemodify)
 - [EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)
-
-
-
-
-
-
 
 #### BackendClusterTLS
 
@@ -1055,12 +1098,21 @@ consumed records.
 * `error` - the batch is not delivered to the client.
 Use sparingly: erroring on a batch causes clients to get stuck on the
 problematic offset and requires manual intervention to skip it.
+A single record that always fails the policy, for example one written by a
+producer with access to the topic, pins every consumer group on that offset.
+The error the client receives contains the policy failure reason, which can
+include runtime-specific configuration details.
 * `skip` - the record is not delivered to the client.
 * `passthrough` - passes the record to the client even though policy
 execution failed.
 * `mark` - passes the record to the client but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
+failure (truncated to 512 characters).
+The failure reason can contain runtime-specific configuration details, such
+as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+text, JWT issuer and audience data, or expression snippets.
+If you don't want to share this information with clients, remove the header
+with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -1194,34 +1246,13 @@ EncryptionKeyStatic A static encryption key.
 
 | Field | Description |
 | --- | --- |
-| `key` _[EncryptionKeyStaticReference](#configuration-konghq-com-v1alpha1-types-encryptionkeystaticreference)_ | A static encryption key reference, either by ID or by value. |
+| `key` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | A reference to an EventGatewayStaticKey holding the static encryption key. |
 
 _Appears in:_
 
 - [EncryptionKey](#configuration-konghq-com-v1alpha1-types-encryptionkey)
 - [EventGatewayEncryptConfigEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayencryptconfigencryptionkey)
 - [EventGatewayParsedRecordEncryptionSelectorEncryptionKey](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorencryptionkey)
-
-#### EncryptionKeyStaticReference
-
-
-EncryptionKeyStaticReference is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `id` _*string_ |  |
-| `name` _*string_ |  |
-| `namespacedRef` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | NamespacedRef references an in-cluster EventGatewayStaticKey object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
-
-_Appears in:_
-
-- [EncryptionKeyStatic](#configuration-konghq-com-v1alpha1-types-encryptionkeystatic)
-
-
-
-
 
 #### EncryptionKeyType
 
@@ -1699,7 +1730,7 @@ of the consume schema validation policy when using an inline schema.<br /><br />
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `key` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigkey)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
@@ -1797,9 +1828,8 @@ consume schema validation policy when using JSON parsing without schema.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
-| `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
@@ -1819,7 +1849,7 @@ registry.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
 | `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
@@ -2265,6 +2295,55 @@ _Appears in:_
 
 - [EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
 
+#### EventGatewayListenerPolicyChainAPISpec
+
+
+EventGatewayListenerPolicyChainAPISpec defines the API spec fields for EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayListenerPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyref)_ | Policies lists distinct EventGatewayListenerPolicy references in execution order. Each policy must belong to the referenced EventGatewayListener. Namespace defaults to this chain's namespace; a policy in another namespace needs a KongReferenceGrant in its namespace. List every listener policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainspec)
+
+#### EventGatewayListenerPolicyChainSpec
+
+
+EventGatewayListenerPolicyChainSpec defines the desired state of EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayListenerRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayListenerRef is the reference to the parent EventGatewayListener object. |
+| `apiSpec` _[EventGatewayListenerPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
+
+#### EventGatewayListenerPolicyChainStatus
+
+
+EventGatewayListenerPolicyChainStatus defines the observed state of EventGatewayListenerPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `eventGatewayListenerID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | EventGatewayListenerID is the Konnect ID of the parent EventGatewayListener. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicychain)
+
 #### EventGatewayListenerPolicyConfig
 
 
@@ -2302,6 +2381,24 @@ Allowed values:
 | --- | --- |
 | `forwardToVirtualCluster` |  |
 | `tlsServer` |  |
+
+#### EventGatewayListenerPolicyRef
+
+
+EventGatewayListenerPolicyRef references an EventGatewayListenerPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
+
+_Appears in:_
+
+- [EventGatewayListenerPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainapispec)
 
 
 
@@ -2788,7 +2885,7 @@ parsed record fields policy.
 | Field | Description |
 | --- | --- |
 | `decryptFields` _[EventGatewayParsedRecordDecryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselector)_ | Selects fields of a parsed record for decryption. |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `keySources` _[][EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)_ | Describes how to find a symmetric key for decryption. |
 
 _Appears in:_
@@ -2801,7 +2898,11 @@ _Appears in:_
 EventGatewayParsedRecordDecryptFieldsPolicyCreate Decrypts fields of parsed
 Kafka records using AES_256_GCM.
 Keys are therefore 256 bits long.<br /><br />Note this policy can only be used as a child of a
-`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
+`EventGatewayConsumeSchemaValidationPolicy` policy.<br /><br />This policy only runs on records that the parent schema validation policy
+successfully parses.
+If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+that fail schema validation are delivered to the client without parsing, so
+this policy doesn't run on them and their fields stay encrypted.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -2883,7 +2984,7 @@ parsed record policy.
 | Field | Description |
 | --- | --- |
 | `encryptFields` _[][EventGatewayParsedRecordEncryptionSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselector)_ | Selects which fields to encrypt and with what keys. |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 
 _Appears in:_
 
@@ -2895,7 +2996,11 @@ _Appears in:_
 EventGatewayParsedRecordEncryptFieldsPolicyCreate Encrypts fields of parsed
 Kafka records using AES_256_GCM.
 Keys are therefore 256 bits long.<br /><br />Note this policy can only be used as a child of a
-`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />**Requires a minimum runtime version of `1.2`**.
+`EventGatewayProduceSchemaValidationPolicy` policy.<br /><br />This policy only runs on records that the parent schema validation policy
+successfully parses.
+If the parent policy's `failure_mode` is `passthrough` or `mark`, records
+that fail schema validation are sent to the backend cluster without parsing,
+so this policy doesn't run on them and their fields aren't encrypted.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -3065,7 +3170,7 @@ parsed record fields consume policy.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `maskFields` _[][EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)_ | Selects which fields to mask and how to mask them. |
 
 _Appears in:_
@@ -3107,7 +3212,7 @@ record fields produce policy.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `maskFields` _[][EventGatewayParsedRecordMaskSelector](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordmaskselector)_ | Selects which fields to mask and how to mask them. |
 
 _Appears in:_
@@ -3249,7 +3354,7 @@ be set.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `schemaSource` _[EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigavroschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
 
@@ -3306,7 +3411,7 @@ transcode parsed record policy when converting consumed records to JSON.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. A single record that always fails the policy, for example one written by a producer with access to the topic, pins every consumer group on that offset. The error the client receives contains the policy failure reason, which can include runtime-specific configuration details. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets. If you don't want to share this information with clients, remove the header with a Modify Headers consume policy.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `schemaSource` _[EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeconsumeconfigjsonschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
 
@@ -3448,7 +3553,7 @@ be set.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `onUnknownField` _[TranscodeOnUnknownField](#configuration-konghq-com-v1alpha1-types-transcodeonunknownfield)_ | Describes how to handle JSON fields that are not defined in the target schema. * `fail` - the transcoding fails. The policy `failure_mode` determines how the failure is handled. * `drop` - the unknown fields are removed from the transcoded value.<br /><br />**Requires a minimum runtime version of `1.3`**. |
 | `schemaSource` _[EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeproduceconfigavroschemasource)_ | Determines how to look up the schema to use for the transcoded output data. Leave this unset if the output data schema isn't needed. |
 
@@ -3673,7 +3778,7 @@ registered in a schema registry, computing the subject and version to use.
 | Field | Description |
 | --- | --- |
 | `schemaRefDestination` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRefDestination](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemarefdestination)_ | Defines how to record the schema id for the transcoded output data. See the [Confluent docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format) for more about the wire format. |
-| `schemaRegistry` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)_ | A reference to a schema Registry. |
+| `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
 | `subject` _string_ | An expression that computes the schema registry subject of the output data's schema. |
 | `version` _string_ | An expression that computes the schema registry version of the output data's schema. |
 
@@ -3723,44 +3828,6 @@ Allowed values:
 | `confluentFormat` |  |
 | `none` |  |
 | `recordHeader` |  |
-
-#### EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry
-
-
-EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry represents a union type for schema_registry.
-Only one of the fields should be set based on the Type.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistrytype)_ | Type designates the type of configuration. |
-| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
-| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
-
-_Appears in:_
-
-- [EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)
-
-#### EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType
-
-_Underlying type:_ `string`
-
-EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistryType represents the type of schema_registry.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `id` |  |
-| `name` |  |
 
 #### EventGatewayParsedRecordTranscodeSchemaSourceType
 
@@ -3888,13 +3955,13 @@ of the produce schema validation policy when using an inline schema.<br /><br />
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `key` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigkey)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `value` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigvalue)_ | Defines the schema for a record key or value, inline.<br /><br />**Requires a minimum runtime version of `1.3`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
@@ -3986,54 +4053,15 @@ produce schema validation policy when using JSON parsing without schema.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
-| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)_ | A reference to a schema Registry. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
 - [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
-
-#### EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry
-
-
-EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry represents a union type for schema_registry.
-Only one of the fields should be set based on the Type.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistrytype)_ | Type designates the type of configuration. |
-| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
-| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
-
-_Appears in:_
-
-- [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
-
-#### EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType
-
-_Underlying type:_ `string`
-
-EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistryType represents the type of schema_registry.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `id` |  |
-| `name` |  |
 
 #### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
 
@@ -4046,54 +4074,16 @@ registry.
 
 | Field | Description |
 | --- | --- |
-| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
-| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)_ | A reference to a schema Registry. |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters). The header is stored with the record in the backend cluster, so every consumer of the topic sees it, including systems that never pass through the Event Gateway. The failure reason can contain runtime-specific configuration details, such as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error text, JWT issuer and audience data, or expression snippets, and a producer with access to the topic can trigger policy failures on purpose to expose it. If you don't want to share this information, remove the header with a Modify Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
+| `schemaRegistry` _[EventGatewaySchemaRegistryRef](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryref)_ | A reference to a schema Registry. |
 | `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
-| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. |
 
 _Appears in:_
 
 - [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
-
-#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry
-
-
-EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry represents a union type for schema_registry.
-Only one of the fields should be set based on the Type.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistrytype)_ | Type designates the type of configuration. |
-| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
-| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
-
-_Appears in:_
-
-- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
-
-#### EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType
-
-_Underlying type:_ `string`
-
-EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistryType represents the type of schema_registry.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `id` |  |
-| `name` |  |
 
 #### EventGatewayRequestRuleAction
 
@@ -4286,12 +4276,13 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
-- [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
 - [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
+- [EventGatewayParsedRecordTranscodeSchemaSourceReference](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereference)
+- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
 #### EventGatewaySchemaRegistrySpec
 
@@ -4377,11 +4368,11 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
-- [EncryptionKeyStaticReference](#configuration-konghq-com-v1alpha1-types-encryptionkeystaticreference)
+- [EncryptionKeyStatic](#configuration-konghq-com-v1alpha1-types-encryptionkeystatic)
 
 #### EventGatewayStaticKeySource
 
@@ -4485,7 +4476,7 @@ handshake.<br /><br />**Requires a minimum runtime version of `1.1`**.
 | --- | --- |
 | `mode` _string_ | * required - Reject TLS connections without a valid client certificate. * requested - Request a client certificate during the TLS handshake, but allow connections without one (falls back to other configured authentication methods). If a certificate is presented but cannot be verified, the connection is closed. |
 | `principalMapping` _string_ | An expression that extracts a principal identifier from a verified client certificate. This expression must evaluate to a string.<br /><br />**Requires a minimum runtime version of `1.1`**. |
-| `tlsTrustBundles` _[][TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
+| `tlsTrustBundles` _[][EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | TLS trust bundles contain CA certificate bundles used to verify client certificates. All bundles are merged into a single trust store; a client certificate is accepted if it chains to any trusted CA across all bundles. |
 
 _Appears in:_
 
@@ -4521,11 +4512,11 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
-- [TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)
+- [EventGatewayTLSListenerPolicyConfigClientAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfigclientauthentication)
 
 #### EventGatewayTLSTrustBundleSpec
 
@@ -4603,7 +4594,7 @@ EventGatewayVirtualClusterAPISpec defines the API spec fields for EventGatewayVi
 
 | Field | Description |
 | --- | --- |
-| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
+| `aclMode` _[VirtualClusterACLMode](#configuration-konghq-com-v1alpha1-types-virtualclusteraclmode)_ | Configures whether or not ACL policies are enforced on the gateway. - `enforce_on_gateway` means the gateway enforces its own ACL policies for this virtual cluster and does not forward ACL-related commands to the backend cluster. Note that if there are no ACL policies configured, all access is denied. - `passthrough` tells the gateway to forward all ACL-related commands. |
 | `authentication` _[][VirtualClusterAuthenticationScheme](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationscheme)_ | How to handle authentication from clients.<br /><br />It tries to authenticate with every rule sequentially one by one. It succeeds on the first match, and fails if no rule matches. |
 | `description` _string_ | A human-readable description of the virtual cluster. |
 | `dnsLabel` _[VirtualClusterDNSLabel](#configuration-konghq-com-v1alpha1-types-virtualclusterdnslabel)_ | The DNS label used in the bootstrap server URL to identify the virtual cluster when using SNI routing. The format follows the RFC1035: 1-63 chars, lowercase alphanumeric or '-', must start and end with an alphanumeric character. |
@@ -4625,11 +4616,60 @@ EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for E
 
 | Field | Description |
 | --- | --- |
-| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
+| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy of the same virtual cluster. One in another namespace needs a KongReferenceGrant in its namespace. Required for decryptFields, maskFields and transcode, and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
+
+#### EventGatewayVirtualClusterConsumePolicyChainAPISpec
+
+
+EventGatewayVirtualClusterConsumePolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterConsumePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterConsumePolicy references in execution order. The same declared order applies on-prem: the operator rebuilds the ordered consume-policy list of the gw-admin configuration from it. Each policy must belong to the referenced EventGatewayVirtualCluster. Namespace defaults to this chain's namespace; a policy in another namespace needs a KongReferenceGrant in its namespace. List every consume policy exactly once, including roots and nested children. A root schemaValidation parent must precede its immediately contiguous children. Root groups may move and sibling children may reorder within their group. Deeper nesting is not supported. Ordering never changes parentPolicyRef. Existing parent requirements remain: decryptFields, maskFields and transcode require a schemaValidation parent; modifyHeaders and skipRecord may reference one. No other consume policy type accepts parentPolicyRef. An explicit empty list is valid only when the parent has no consume policies; it does not clear an existing chain, on-prem included. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainspec)
+
+#### EventGatewayVirtualClusterConsumePolicyChainSpec
+
+
+EventGatewayVirtualClusterConsumePolicyChainSpec defines the desired state of EventGatewayVirtualClusterConsumePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterConsumePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicychain)
+
+#### EventGatewayVirtualClusterConsumePolicyChainStatus
+
+
+EventGatewayVirtualClusterConsumePolicyChainStatus defines the observed state of EventGatewayVirtualClusterConsumePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicychain)
 
 #### EventGatewayVirtualClusterConsumePolicyConfig
 
@@ -4691,11 +4731,12 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)
+- [EventGatewayVirtualClusterConsumePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainapispec)
 
 
 
@@ -4754,7 +4795,7 @@ EventGatewayVirtualClusterPolicyChainAPISpec defines the API spec fields for Eve
 
 | Field | Description |
 | --- | --- |
-| `policies` _[][EventGatewayVirtualClusterPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyref)_ | Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order. Each policy must belong to the referenced EventGatewayVirtualCluster and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every cluster-level policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+| `policies` _[][EventGatewayVirtualClusterPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyref)_ | Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order. Each policy must belong to the referenced EventGatewayVirtualCluster. Namespace defaults to this chain's namespace; a policy in another namespace needs a KongReferenceGrant in its namespace. List every cluster-level policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
 
 _Appears in:_
 
@@ -4844,7 +4885,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -4895,11 +4936,60 @@ EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for E
 
 | Field | Description |
 | --- | --- |
-| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
+| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy of the same virtual cluster. One in another namespace needs a KongReferenceGrant in its namespace. Required for encryptFields, maskFields and transcode, and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
+
+#### EventGatewayVirtualClusterProducePolicyChainAPISpec
+
+
+EventGatewayVirtualClusterProducePolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterProducePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | Policies lists distinct EventGatewayVirtualClusterProducePolicy references in execution order. The same declared order applies on-prem: the operator rebuilds the ordered produce-policy list of the gw-admin configuration from it. Each policy must belong to the referenced EventGatewayVirtualCluster. Namespace defaults to this chain's namespace; a policy in another namespace needs a KongReferenceGrant in its namespace. List every produce policy exactly once, including roots and nested children. A parent must precede its children, and each parent's group must remain contiguous. Root groups may move and sibling children may reorder within their group. Ordering does not change parentPolicyRef or move children between parents. An explicit empty list is valid only when the parent has no produce policies; it does not clear an existing chain, on-prem included. Omitted and null lists are invalid. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainspec)
+
+#### EventGatewayVirtualClusterProducePolicyChainSpec
+
+
+EventGatewayVirtualClusterProducePolicyChainSpec defines the desired state of EventGatewayVirtualClusterProducePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterProducePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicychain)
+
+#### EventGatewayVirtualClusterProducePolicyChainStatus
+
+
+EventGatewayVirtualClusterProducePolicyChainStatus defines the observed state of EventGatewayVirtualClusterProducePolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicychain)
 
 #### EventGatewayVirtualClusterProducePolicyConfig
 
@@ -4959,11 +5049,12 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
+- [EventGatewayVirtualClusterProducePolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainapispec)
 
 
 
@@ -5000,6 +5091,24 @@ EventGatewayVirtualClusterProducePolicyStatus defines the observed state of Even
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
+
+#### EventGatewayVirtualClusterRef
+
+
+EventGatewayVirtualClusterRef references an EventGatewayVirtualCluster in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
+
+_Appears in:_
+
+- [ForwardToClusterByPortMappingConfig](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)
 
 #### EventGatewayVirtualClusterSpec
 
@@ -5134,7 +5243,7 @@ gaps in broker ids.<br /><br />It is strongly discouraged to use port mapping in
 | --- | --- |
 | `advertisedHost` _string_ | Virtual brokers are advertised to clients using this host. Any kind of host supported by kafka can be used. If not defined, it's listen_address. If listen_address is `0.0.0.0` it's the destination IP of the TCP connection. |
 | `bootstrapPort` _string_ | If set to `at_start`, the first port will be used as a bootstrap port. It provides a stable endpoint to use as the bootstrap server for clients, regardless of broker IDs in the cluster.<br /><br />Additionally, it offsets all ports by one, so for example, if there are 3 brokers (id=1, id=2, id=3) then we will use 4 ports: 9092 (bootstrap), 9093 (id=1), 9094 (id=2), 9095 (id=3) With `none` we will use 3 ports: 9092 (id=1), 9093 (id=2), 9094 (id=3). |
-| `destination` _[VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)_ | A reference to a virtual cluster. |
+| `destination` _[EventGatewayVirtualClusterRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterref)_ | A reference to a virtual cluster. |
 | `minBrokerID` _int_ | The lowest broker node ID in the cluster. |
 
 _Appears in:_
@@ -5438,6 +5547,7 @@ KongCACertificateStatus defines the observed state of KongCACertificate.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5517,6 +5627,7 @@ KongCertificateStatus defines the observed state of KongCertificate.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5567,6 +5678,7 @@ KongCredentialACLStatus represents the current status of the ACL credential reso
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5617,6 +5729,7 @@ KongCredentialAPIKeyStatus represents the current status of the API Key credenti
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5669,6 +5782,7 @@ KongCredentialBasicAuthStatus represents the current status of the BasicAuth cre
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5723,6 +5837,7 @@ KongCredentialHMACStatus represents the current status of the HMAC credential re
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5781,6 +5896,7 @@ KongCredentialJWTStatus represents the current status of the JWT credential reso
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5933,6 +6049,7 @@ KongKeySetStatus defines the status for a KongKeySet.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -5971,6 +6088,7 @@ KongKeyStatus defines the status for a KongKey.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6063,6 +6181,7 @@ KongPluginBindingStatus represents the current status of the KongBinding resourc
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6182,6 +6301,7 @@ KongRouteStatus represents the current status of the Kong Route resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandservicerefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6232,6 +6352,7 @@ KongSNIStatus defines the status for a KongSNI.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6312,6 +6433,7 @@ KongServiceStatus represents the current status of the Kong Service resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificateandcacertificatesrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6327,7 +6449,7 @@ KongTargetAPISpec are the attributes of the Kong Target itself.
 
 | Field | Description |
 | --- | --- |
-| `target` _string_ | Target is the target address of the upstream. |
+| `target` _string_ | Target is the target address of the upstream. An IP address is valid unless the KongService sets spec.tls_verify; then the host must match the server certificate's CN or SAN, so use the service FQDN. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 
@@ -6344,7 +6466,7 @@ KongTargetSpec defines the spec of KongTarget.
 
 | Field | Description |
 | --- | --- |
-| `target` _string_ | Target is the target address of the upstream. |
+| `target` _string_ | Target is the target address of the upstream. An IP address is valid unless the KongService sets spec.tls_verify; then the host must match the server certificate's CN or SAN, so use the service FQDN. |
 | `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
 | `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `upstreamRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
@@ -6364,6 +6486,7 @@ KongTargetStatus defines the observed state of KongTarget.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6452,6 +6575,7 @@ KongUpstreamStatus represents the current status of the Kong Upstream resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
@@ -6530,14 +6654,17 @@ _Appears in:_
 
 - [EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
 - [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
+- [EventGatewayListenerPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicychainstatus)
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)
 - [EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)
 - [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
+- [EventGatewayVirtualClusterConsumePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicychainstatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
 - [EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
+- [EventGatewayVirtualClusterProducePolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicychainstatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
 
@@ -6689,7 +6816,16 @@ produced records.
 though policy execution failed.
 * `mark` - passes the record to the backend cluster but marks it with a
 `kong/policy-failure-<id>` header whose value is the reason for the policy
-failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**.
+failure (truncated to 512 characters).
+The header is stored with the record in the backend cluster, so every
+consumer of the topic sees it, including systems that never pass through the
+Event Gateway.
+The failure reason can contain runtime-specific configuration details, such
+as schema IDs, registry URLs, field paths, KMS ARNs and key IDs, KMS error
+text, JWT issuer and audience data, or expression snippets, and a producer
+with access to the topic can trigger policy failures on purpose to expose it.
+If you don't want to share this information, remove the header with a Modify
+Headers produce policy, or use a different failure mode.<br /><br />**Requires a minimum runtime version of `1.2`**.
 
 
 
@@ -6709,7 +6845,8 @@ _Underlying type:_ `string`
 
 ProduceKeyValidationAction Defines a behavior when record key is not valid.
 * reject - rejects a batch for topic partition. Only available for produce.
-* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
 
 
 
@@ -6727,7 +6864,8 @@ _Underlying type:_ `string`
 ProduceValueValidationAction Defines a behavior when record value is not
 valid.
 * reject - rejects a batch for topic partition. Only available for produce.
-* mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema.
+* mark - marks a record with kong/server header and client ID value
+to help to identify the clients violating schema.
 
 
 
@@ -6840,7 +6978,7 @@ Registry](https://github.com/confluentinc/schema-registry)
 
 | Field | Description |
 | --- | --- |
-| `authentication` _[SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)_ | The authentication configuration for the schema registry. |
+| `authentication` _[SchemaRegistryConfluentConfigAuthentication](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluentconfigauthentication)_ | The authentication configuration for the schema registry. The Event Gateway only requires read-only access to the schema registry to fetch schemas for validation, so we recommend using credentials with read-only scope. |
 | `endpoint` _string_ | The endpoint of the Confluent schema registry. |
 | `schemaType` _string_ | The format of the message.<br /><br />**`any` requires a minimum runtime version of `1.3`**. |
 | `timeoutSeconds` _int_ | Total time in seconds from establishing connection to receive a response from schema registry. |
@@ -6884,39 +7022,6 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `basic` |  |
-
-
-
-#### SchemaRegistryReferenceByID
-
-
-SchemaRegistryReferenceByID is a type alias.
-
-
-
-
-_Appears in:_
-
-- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
-- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
-- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
-
-#### SchemaRegistryReferenceByName
-
-
-SchemaRegistryReferenceByName Reference a schema registry by its unique name.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | The unique name of the schema registry. |
-
-_Appears in:_
-
-- [EventGatewayParsedRecordTranscodeSchemaSourceReferenceSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordtranscodeschemasourcereferenceschemaregistry)
-- [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
-- [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 
 
 
@@ -7061,6 +7166,45 @@ _Appears in:_
 
 - [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
 
+#### SyncStatus
+
+
+SyncStatus contains the internal synchronization state of a Kong Gateway
+configuration entity managed in Konnect.<br /><br />It lets the operator skip periodic PUT requests for entities that did not
+change, also across operator restarts and leader changes. The values are
+internal implementation details: do not rely on them, and do not edit them.<br /><br />If the CRD schema installed in the cluster predates this field, Kubernetes
+prunes it from the status. The operator then falls back to the in-memory
+tracker: it sends one PUT per entity after a restart instead of one PUT per
+sync period, and it does not retry the pruned status write on every reconcile.
+
+
+
+| Field | Description |
+| --- | --- |
+| `payloadHash` _string_ | PayloadHash is the canonical hash of the payload the operator last sent to Konnect for this entity. |
+| `representationHash` _string_ | RepresentationHash is the canonical hash of the entity representation the operator last received from Konnect. |
+| `hashVersion` _string_ | HashVersion identifies the hashing scheme used to compute PayloadHash and RepresentationHash. A change of hash version makes the stored hashes unverifiable, so the entity is sent to Konnect once more. |
+
+_Appears in:_
+
+- [KongCACertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcacertificatestatus)
+- [KongCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcertificatestatus)
+- [KongConsumerGroupStatus](#configuration-konghq-com-v1beta1-types-kongconsumergroupstatus)
+- [KongConsumerStatus](#configuration-konghq-com-v1-types-kongconsumerstatus)
+- [KongCredentialACLStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialaclstatus)
+- [KongCredentialAPIKeyStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeystatus)
+- [KongCredentialBasicAuthStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthstatus)
+- [KongCredentialHMACStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacstatus)
+- [KongCredentialJWTStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtstatus)
+- [KongKeySetStatus](#configuration-konghq-com-v1alpha1-types-kongkeysetstatus)
+- [KongKeyStatus](#configuration-konghq-com-v1alpha1-types-kongkeystatus)
+- [KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)
+- [KongRouteStatus](#configuration-konghq-com-v1alpha1-types-kongroutestatus)
+- [KongSNIStatus](#configuration-konghq-com-v1alpha1-types-kongsnistatus)
+- [KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)
+- [KongTargetStatus](#configuration-konghq-com-v1alpha1-types-kongtargetstatus)
+- [KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)
+
 #### TLSCertificate
 
 
@@ -7104,29 +7248,6 @@ TLSTrustBundleName The unique name of the TLS trust bundle.
 _Appears in:_
 
 - [EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)
-- [TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)
-- [TLSTrustBundleReferenceByName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereferencebyname)
-
-#### TLSTrustBundleReference
-
-
-TLSTrustBundleReference is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `id` _*string_ |  |
-| `name` _[TLSTrustBundleName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlename)_ |  |
-| `namespacedRef` _[EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
-
-_Appears in:_
-
-- [EventGatewayTLSListenerPolicyConfigClientAuthentication](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfigclientauthentication)
-
-
-
-
 
 #### TLSVersionRange
 
@@ -7202,7 +7323,8 @@ _Underlying type:_ `string`
 VirtualClusterACLMode Configures whether or not ACL policies are enforced on
 the gateway.
 - `enforce_on_gateway` means the gateway enforces its own ACL policies for
-this virtual cluster<br /><br />and does not forward ACL-related commands to the backend cluster.
+this virtual cluster
+and does not forward ACL-related commands to the backend cluster.
 Note that if there are no ACL policies configured, all access is denied.
 - `passthrough` tells the gateway to forward all ACL-related commands.
 
@@ -7304,7 +7426,7 @@ for the virtual cluster.
 | `claimsMapping` _[VirtualClusterAuthenticationClaimsMapping](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationclaimsmapping)_ | Maps JWT claims in the case when sub and scope are presented as different claims in your JWT token. |
 | `fetchKongIdentityPrincipal` _[FetchKongIdentityPrincipalOauthBearer](#configuration-konghq-com-v1alpha1-types-fetchkongidentityprincipaloauthbearer)_ | Fetches principal metadata from Kong Identity after successful OAUTHBEARER authentication. The principal is looked up by the iss and sub claims from the JWT token.<br /><br />**Requires a minimum runtime version of `1.2`**. |
 | `jwks` _[VirtualClusterAuthenticationJWKS](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationjwks)_ | JSON Web Key Set configuration for verifying token signatures. |
-| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of<br /><br />validation * validate_forward - pass authentication from the client through proxy to the backend cluster.<br /><br />Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster<br /><br />using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
+| `mediation` _string_ | Methods to mediate authentication: * passthrough - pass authentication from the client through proxy to the backend cluster without any kind of validation * validate_forward - pass authentication from the client through proxy to the backend cluster. Proxy does the validation before forwarding it to the client. * terminate - terminate authentication at the proxy level and originate authentication to the backend cluster using the configuration defined at BackendCluster's authentication. SASL auth is not originated if authentication on the backend_cluster is not configured. |
 | `validate` _[VirtualClusterAuthenticationValidate](#configuration-konghq-com-v1alpha1-types-virtualclusterauthenticationvalidate)_ | Validation rules. |
 
 _Appears in:_
@@ -7451,8 +7573,6 @@ VirtualClusterName The name of the virtual cluster.
 _Appears in:_
 
 - [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
-- [VirtualClusterReference](#configuration-konghq-com-v1alpha1-types-virtualclusterreference)
-- [VirtualClusterReferenceByName](#configuration-konghq-com-v1alpha1-types-virtualclusterreferencebyname)
 
 #### VirtualClusterNamespace
 
@@ -7467,7 +7587,7 @@ consumer group IDs, transaction IDs).
 | Field | Description |
 | --- | --- |
 | `additional` _[VirtualClusterNamespaceAdditionalProperties](#configuration-konghq-com-v1alpha1-types-virtualclusternamespaceadditionalproperties)_ |  |
-| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading.<br /><br />Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients.<br /><br />Created resources must include the prefix or the request will fail. |
+| `mode` _string_ | * hide_prefix - the configured prefix is hidden from clients for topics and IDs when reading. Created resources are written with the prefix on the backend cluster. * enforce_prefix - the configured prefix remains visible to clients. Created resources must include the prefix or the request will fail. |
 | `prefix` _string_ | The namespace is differentiated by this chosen prefix. The prefix is prepended to Kafka topic names, so it can only contain the characters Kafka allows in them: ASCII letters, digits, `.`, `_` and `-`. It must contain at least one character other than `.` and be at most 100 characters long to leave room for the rest of the topic name (Kafka limits topic names to 249 characters). For example, if the prefix is set to "analytics_" the topic named "analytics_user_clicks" is available to the clients of the virtual cluster. Topics without the prefix will be ignored unless added via `additional.topics`. |
 
 _Appears in:_
@@ -7594,26 +7714,6 @@ Allowed values:
 | --- | --- |
 | `exactList` |  |
 | `glob` |  |
-
-#### VirtualClusterReference
-
-
-VirtualClusterReference is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `id` _*string_ |  |
-| `name` _[VirtualClusterName](#configuration-konghq-com-v1alpha1-types-virtualclustername)_ |  |
-
-_Appears in:_
-
-- [ForwardToClusterByPortMappingConfig](#configuration-konghq-com-v1alpha1-types-forwardtoclusterbyportmappingconfig)
-
-
-
-
 
 #### VirtualClusterTopicAlias
 
@@ -7757,6 +7857,7 @@ KongConsumerGroupStatus represents the current status of the KongConsumerGroup r
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `sync` _[SyncStatus](#configuration-konghq-com-v1alpha1-types-syncstatus)_ | Sync contains the internal Konnect synchronization state of the entity. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongConsumerGroup.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_

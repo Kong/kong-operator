@@ -52,6 +52,11 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 	certChecksum string,
 ) error {
 	image := ResolveImage(dp, r.Config.Deployment)
+	if r.Config.Deployment.IgnoredSettings != nil {
+		for _, ignored := range r.Config.Deployment.IgnoredSettings(dp, image) {
+			r.EventRecorder.Eventf(dp, nil, corev1.EventTypeWarning, "SettingIgnored", "BuildDeployment", "%s", ignored)
+		}
+	}
 	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config.Deployment, r.Config.Certificate.ChecksumAnnotation)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",
@@ -190,6 +195,8 @@ func BuildDeployment[T Object](
 		}
 		u = &unstructured.Unstructured{Object: raw}
 	} else {
+		// The overlay is trimmed below: work on a copy of the user's.
+		pts = pts.DeepCopy()
 		// Wrap the user PodTemplateSpec overlay into a Deployment skeleton.
 		userDeployment := &appsv1.Deployment{
 			APIVersion: "apps/v1",
@@ -227,6 +234,8 @@ func BuildDeployment[T Object](
 			}
 		}
 
+		dropReassertedVolumes(&base.Spec.Template.Spec, &userDeployment.Spec.Template.Spec, cfg)
+
 		u, err = controllerpkgssa.MergeObjects(tc, base, userDeployment)
 		if err != nil {
 			return nil, err
@@ -249,6 +258,37 @@ func BuildDeployment[T Object](
 	// diverges from the server-defaulted rolling-update value every reconcile.
 	unstructured.RemoveNestedField(u.Object, "spec", "strategy")
 	return u, nil
+}
+
+// dropReassertedVolumes drops from the overlay the volumes of base listed in
+// cfg.ReassertVolumes, the mounts of them, and the mounts at their mount paths
+// in the DataPlane container: merged by name, an overlay volume would add its
+// source to the operator's, and another volume mounted at the same path would
+// make the pod invalid.
+func dropReassertedVolumes[T Object](base, overlay *corev1.PodSpec, cfg DeploymentConfig[T]) {
+	if len(cfg.ReassertVolumes) == 0 {
+		return
+	}
+	reasserted := map[string]bool{}
+	for _, v := range base.Volumes {
+		if slices.Contains(cfg.ReassertVolumes, v.Name) {
+			reasserted[v.Name] = true
+		}
+	}
+	paths := map[string]bool{}
+	if c := k8sutils.GetPodContainerByName(base, cfg.ContainerName); c != nil {
+		for _, m := range c.VolumeMounts {
+			if reasserted[m.Name] {
+				paths[m.MountPath] = true
+			}
+		}
+	}
+	overlay.Volumes = slices.DeleteFunc(overlay.Volumes, func(v corev1.Volume) bool { return reasserted[v.Name] })
+	if c := k8sutils.GetPodContainerByName(overlay, cfg.ContainerName); c != nil {
+		c.VolumeMounts = slices.DeleteFunc(c.VolumeMounts, func(m corev1.VolumeMount) bool {
+			return reasserted[m.Name] || paths[m.MountPath]
+		})
+	}
 }
 
 // SelectorLabels returns the labels uniquely identifying the pods of the

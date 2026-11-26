@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: portalidentityproviderrequests.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -66,11 +66,10 @@ spec:
                   spec fields.
                 properties:
                   config:
-                    description: |-
-                      PortalIdentityProviderRequestConfig represents a union type for config.
-                      Only one of the fields should be set based on the Type.
+                    description: The configuration data for creating an authentication
+                      integration.
                     properties:
-                      oIDC:
+                      oidc:
                         description: OIDC configuration.
                         properties:
                           claimMappings:
@@ -103,8 +102,60 @@ spec:
                           clientSecret:
                             description: The Client Secret assigned to your application
                               by the identity provider.
-                            maxLength: 253
-                            type: string
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           issuerURL:
                             description: |-
                               The issuer URI of the identity provider.
@@ -116,14 +167,16 @@ spec:
                             description: |-
                               The scopes requested by your application when authenticating with the
                               identity provider.
+                              Must include `openid`.
                             items:
                               type: string
                             type: array
                         required:
                         - clientID
+                        - clientSecret
                         - issuerURL
                         type: object
-                      sAML:
+                      saml:
                         description: SAML configuration.
                         properties:
                           idpMetadataURL:
@@ -143,8 +196,8 @@ spec:
                       type:
                         description: Type designates the type of configuration.
                         enum:
-                        - oIDC
-                        - sAML
+                        - oidc
+                        - saml
                         minLength: 1
                         type: string
                     required:
@@ -322,9 +375,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef
-            == self.spec.portalRef'
+          rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
     served: true
     storage: true
     subresources:

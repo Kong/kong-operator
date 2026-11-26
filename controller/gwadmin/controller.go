@@ -131,12 +131,20 @@ func (r *Reconciler) event(gw *operatorv1alpha1.GWAdmin, eventType, reason, acti
 // Secrets a GWAdmin references, and those it needs for itself.
 const IndexFieldGWAdminOnSecret = "gwAdminSecret" //nolint:gosec
 
+// IndexFieldSecretLicenseInUse is the index field of the Secrets held by
+// consts.GWAdminLicenseInUseFinalizer, which all index the value "true".
+const IndexFieldSecretLicenseInUse = "gwAdminLicenseInUse" //nolint:gosec
+
 // IndexOptions returns the index options the GWAdmin controller needs.
 func IndexOptions() []index.Option {
 	return []index.Option{{
 		Object:         &operatorv1alpha1.GWAdmin{},
 		Field:          IndexFieldGWAdminOnSecret,
 		ExtractValueFn: secretIndexValues,
+	}, {
+		Object:         &corev1.Secret{},
+		Field:          IndexFieldSecretLicenseInUse,
+		ExtractValueFn: licenseInUseIndexValues,
 	}}
 }
 
@@ -154,6 +162,9 @@ func secretIndexValues(obj client.Object) []string {
 	}
 	if isManualCP(gw) {
 		names = append(names, gw.Spec.TLS.CP.SecretRef.Name)
+	}
+	if gw.Spec.License.SecretRef.Name != "" {
+		names = append(names, gw.Spec.License.SecretRef.Name)
 	}
 	values := make([]string, 0, len(names))
 	for _, n := range names {
@@ -174,7 +185,7 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
-		// The user's CA and cp certificate Secrets, and Secrets taken by
+		// The user's license, CA and cp certificate Secrets, and Secrets taken by
 		// someone else under a name the GWAdmin needs.
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(shareddataplane.EnqueueDataPlanesByIndex(
 			mgr.GetClient(),
@@ -199,7 +210,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, gw *operatorv1alpha1.GWAdmin
 	// Owner references garbage collect everything the GWAdmin owns in its
 	// namespace, the finalizer what it keeps in the operator namespace.
 	if !gw.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, r.cleanup(ctx, gw)
+		if err := r.cleanup(ctx, gw); errors.Is(err, errLicenseReleaseConflict) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		} else if err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 	logger := log.GetLogger(ctx, ControllerName, r.LoggingMode)
 	log.Trace(logger, "reconciling GWAdmin resource")
@@ -237,23 +253,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, gw *operatorv1alpha1.GWAdmin
 	}
 	material, tlsErr := r.ensureTLS(ctx, gw, ownDeployment)
 	switch {
-	case tlsErr == nil:
+	case tlsErr == nil, errors.Is(tlsErr, errStop):
 	case errors.Is(tlsErr, errCacheStale):
 		log.Debug(logger, "waiting for the cache to catch up with a Secret")
 		return ctrl.Result{RequeueAfter: time.Second}, nil
-	case errors.Is(tlsErr, errStop):
-		log.Debug(logger, "TLS material can't be provisioned", "reason", certificateMessageOf(gw))
-		// The pods keep running the material in place while the user fixes
-		// the reason: keep applying the rest of the spec, unless the pods
-		// couldn't mount it.
-		if !material.mountable() {
-			setReadyCondition(gw, false, operatorv1alpha1.GWAdminReasonDependenciesNotReady, certificateMessageOf(gw))
-			return ctrl.Result{RequeueAfter: stopRequeue(tlsErr)}, nil
-		}
 	default:
 		// A transient failure: the conditions keep describing the last
 		// known state while the reconcile is retried.
 		return ctrl.Result{}, tlsErr
+	}
+
+	// A missing license is reported, not waited for: the Deployment is
+	// applied anyway, and its new pods fail to start until the user fixes the
+	// license Secret, whose changes trigger a reconcile. It is checked before
+	// the TLS and conflict paths returning early, so that they report it too.
+	licensed, err := r.ensureLicense(ctx, gw)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if errors.Is(tlsErr, errStop) {
+		certificates := conditionMessage(gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned)
+		log.Debug(logger, "TLS material can't be provisioned", "reason", certificates)
+		// The pods keep running the material in place while the user fixes
+		// the reason: keep applying the rest of the spec, unless the pods
+		// couldn't mount it.
+		if !material.mountable() {
+			setReadyCondition(gw, false, operatorv1alpha1.GWAdminReasonDependenciesNotReady, certificates)
+			return ctrl.Result{RequeueAfter: stopRequeue(tlsErr)}, nil
+		}
 	}
 	setStatus(gw, r.ClusterDomain)
 
@@ -312,6 +340,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, gw *operatorv1alpha1.GWAdmin
 		return failedToApply(err)
 	}
 
+	// The license Secrets no GWAdmin references anymore are released once
+	// no pod mounts them: after a rollout completed with nothing new applied,
+	// so that the pods of a stalled rollout onto another Secret keep theirs.
+	if applied == op.Noop && rolloutOf(deployment).complete {
+		if err := r.releaseLicenseSecrets(ctx, gw, gw.Spec.License.SecretRef.Name); errors.Is(err, errLicenseReleaseConflict) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		} else if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// The pods only turn Ready once Kong Operator provisions them, so Ready
 	// only waits for the Deployment to observe the applied spec.
 	certificates, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned), gw)
@@ -321,6 +360,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gw *operatorv1alpha1.GWAdmin
 		return ctrl.Result{RequeueAfter: stopRequeue(tlsErr)}, nil
 	case certificates.Status == metav1.ConditionFalse:
 		setReadyCondition(gw, false, operatorv1alpha1.GWAdminReasonDependenciesNotReady, certificates.Message)
+	case !licensed:
+		setReadyCondition(gw, false, operatorv1alpha1.GWAdminReasonDependenciesNotReady, conditionMessage(gw, operatorv1alpha1.GWAdminConditionTypeLicenseProvisioned))
 	case deployment == nil || applied != op.Noop || deployment.Status.ObservedGeneration < deployment.Generation:
 		setReadyCondition(gw, false, operatorv1alpha1.GWAdminReasonWaitingToBecomeReady, "Waiting for the Deployment to observe its spec")
 	default:
@@ -329,13 +370,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, gw *operatorv1alpha1.GWAdmin
 
 	log.Debug(logger, "reconciliation complete for GWAdmin resource")
 	return ctrl.Result{RequeueAfter: material.requeueAfter}, nil
-}
-
-// certificateMessageOf returns the message of the CertificateProvisioned
-// condition of the GWAdmin.
-func certificateMessageOf(gw *operatorv1alpha1.GWAdmin) string {
-	c, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned), gw)
-	return c.Message
 }
 
 // warnOnFailedConditions records a warning event when a condition turns
@@ -347,7 +381,11 @@ func (r *Reconciler) warnOnFailedConditions(gw *operatorv1alpha1.GWAdmin, old *o
 		operatorv1alpha1.GWAdminReasonWaitingToBecomeReady,
 		operatorv1alpha1.GWAdminReasonPending,
 	}
-	for _, t := range []string{operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned, operatorv1alpha1.GWAdminConditionTypeReady} {
+	for _, t := range []string{
+		operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
+		operatorv1alpha1.GWAdminConditionTypeLicenseProvisioned,
+		operatorv1alpha1.GWAdminConditionTypeReady,
+	} {
 		c, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(t), gw)
 		if !ok || c.Status != metav1.ConditionFalse || slices.Contains(quiet, c.Reason) {
 			continue
@@ -466,7 +504,7 @@ func (r *Reconciler) enqueueForGrant(ctx context.Context, obj client.Object) []r
 }
 
 // cleanup deletes the Secrets the GWAdmin keeps in the operator namespace,
-// then lets it go.
+// releases its license Secret, then lets it go.
 func (r *Reconciler) cleanup(ctx context.Context, gw *operatorv1alpha1.GWAdmin) error {
 	if !controllerutil.ContainsFinalizer(gw, consts.GWAdminCleanupFinalizer) {
 		return nil
@@ -479,6 +517,9 @@ func (r *Reconciler) cleanup(ctx context.Context, gw *operatorv1alpha1.GWAdmin) 
 		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete Secret %s/%s: %w", r.OperatorNamespace, name, err)
 		}
+	}
+	if err := r.releaseLicenseSecrets(ctx, gw, ""); err != nil {
+		return err
 	}
 	base := gw.DeepCopy()
 	controllerutil.RemoveFinalizer(gw, consts.GWAdminCleanupFinalizer)

@@ -65,6 +65,11 @@ const (
 	// operator namespace.
 	GWAdminCleanupFinalizer = OperatorLabelPrefix + "gwadmin-cleanup"
 
+	// GWAdminLicenseInUseFinalizer delays the deletion of a license Secret
+	// until no GWAdmin references it, nor any of their pods mounts it: a
+	// gw-admin pod losing it stops at its next license check.
+	GWAdminLicenseInUseFinalizer = OperatorLabelPrefix + "gwadmin-license-in-use"
+
 	// GWAdminDataPlaneNamespaceLabel is the label that, set on a data plane
 	// Deployment, holds the namespace of the GWAdmin it pulls the
 	// configuration from: its rollouts gate the rotations of that GWAdmin.
@@ -101,14 +106,11 @@ const (
 	RelatedImageGWAdminEnvVar = "RELATED_IMAGE_GW_ADMIN"
 
 	// DefaultGWAdminBaseImage is the base image name for the gw-admin container.
-	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp-dev"
+	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp"
 	// DefaultGWAdminTag is the default image tag for the gw-admin container.
-	// gw-admin has no release yet: the tag pins the dev image by digest, the
-	// build of its pull request 1520 serving version 1.11.0 of its API and
-	// deleting the data plane certificates of a gateway with it, and must be
-	// bumped by hand, to a main-<commit> build once that is merged.
-	// TODO: move to a released image with a renovate annotation once gw-admin is released.
-	DefaultGWAdminTag = "pr-1520@sha256:dcf2f39c9d9e4f308603701073c0fe57b903b65ee484756a20807bb598007f49"
+	// gw-admin requires a license (GW_ADMIN_ONPREM_LICENSE_FILE) granting the
+	// entitlements of GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS.
+	DefaultGWAdminTag = "1.0.0" // renovate: datasource=docker depName=kong/kong-gw-admin-cp
 	// DefaultGWAdminImage is the full default image reference for the gw-admin container.
 	DefaultGWAdminImage = DefaultGWAdminBaseImage + ":" + DefaultGWAdminTag
 
@@ -134,6 +136,10 @@ const (
 	GWAdminAPITLSMountPath = "/etc/gw-admin/api-tls"
 	// GWAdminCPTLSMountPath is where the TLS material of the cp listener is mounted.
 	GWAdminCPTLSMountPath = "/etc/gw-admin/cp-tls"
+	// GWAdminLicenseMountPath is where the license is mounted.
+	GWAdminLicenseMountPath = "/etc/gw-admin/license"
+	// GWAdminLicenseFileName is the name of the license file in GWAdminLicenseMountPath.
+	GWAdminLicenseFileName = "license.jwt"
 
 	// GWAdminAPITLSCertFileEnvVar points gw-admin at the API listener certificate.
 	GWAdminAPITLSCertFileEnvVar = "GW_ADMIN_ONPREM_API_TLS_CERT_FILE"
@@ -147,6 +153,13 @@ const (
 	GWAdminCPTLSKeyFileEnvVar = "GW_ADMIN_ONPREM_CP_TLS_KEY_FILE"
 	// GWAdminCPTLSClientCAFileEnvVar points gw-admin at the CAs trusted for cp clients.
 	GWAdminCPTLSClientCAFileEnvVar = "GW_ADMIN_ONPREM_CP_TLS_CLIENT_CA_FILE"
+	// GWAdminLicenseFileEnvVar points gw-admin at the enveloped license. gw-admin
+	// reads the file again on each periodic license check, so an updated license
+	// is picked up without a restart.
+	GWAdminLicenseFileEnvVar = "GW_ADMIN_ONPREM_LICENSE_FILE"
+	// GWAdminLicenseEntitlementsEnvVar is the comma separated list of
+	// entitlements gw-admin requires the license to grant.
+	GWAdminLicenseEntitlementsEnvVar = "GW_ADMIN_ONPREM_LICENSE_ENTITLEMENTS"
 )
 
 // -----------------------------------------------------------------------------

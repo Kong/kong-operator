@@ -30,6 +30,8 @@ type AdminAPIClient interface {
 	AdminAPIClient() *kong.Client
 	LastConfigSHA() []byte
 	SetLastConfigSHA([]byte)
+	LastDBLessConfigHash() string
+	SetLastDBLessConfigHash(string)
 	SetLastCacheStoresHash(store.SnapshotHash)
 	BaseRootURL() string
 	PluginSchemaStore() *util.PluginSchemaStore
@@ -64,7 +66,16 @@ func PerformUpdate(
 	//
 	// We do this because in db mode, when applying fails, some entities are applied successfully, then the Kong gateway may be in a "partial success" state.
 	if !config.EnableReverseSync && (config.InMemory || !isFallback) {
-		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client.AdminAPIClient())
+		compareDBLessConfigHash := config.InMemory && !client.IsKonnect()
+		configurationChanged, err := configChangeDetector.HasConfigurationChanged(
+			ctx,
+			oldSHA,
+			newSHA,
+			deckgen.IsContentEmpty(targetContent),
+			client.LastDBLessConfigHash(),
+			compareDBLessConfigHash,
+			client.AdminAPIClient(),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect configuration change: %w", err)
 		}
@@ -114,6 +125,19 @@ func PerformUpdate(
 		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Konnect", "duration", duration.Truncate(time.Millisecond).String())
 	} else {
 		logger.V(logging.InfoLevel).Info("Successfully synced configuration to Kong", "duration", duration.Truncate(time.Millisecond).String())
+	}
+
+	if config.InMemory && !client.IsKonnect() {
+		// Record the hash Kong computed for the pushed configuration. A later
+		// unchanged sync compares the reported hash with this value to detect
+		// out-of-band changes.
+		status, err := client.AdminAPIClient().Status(ctx)
+		if err != nil {
+			client.SetLastDBLessConfigHash("")
+			logger.Error(err, "Failed to read the configuration hash after a successful push")
+		} else {
+			client.SetLastDBLessConfigHash(status.ConfigurationHash)
+		}
 	}
 
 	return newSHA, nil

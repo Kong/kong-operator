@@ -53,53 +53,68 @@ func AIGatewayDatastoreReconciliationWatchOptions(
 			)
 		},
 		// AIGatewayAuthStrategy objects reference AIGatewayDatastore (reverseWatch):
-		// re-reconcile the ones AIGatewayAuthStrategy objects use whenever they change or are deleted.
+		// re-reconcile the ones AIGatewayAuthStrategy objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayDatastoreForAIGatewayAuthStrategy(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		// AIGatewayMCPServer objects reference AIGatewayDatastore (reverseWatch):
-		// re-reconcile the ones AIGatewayMCPServer objects use whenever they change or are deleted.
+		// re-reconcile the ones AIGatewayMCPServer objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayMCPServer{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayDatastoreForAIGatewayMCPServer(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		// AIGatewayModel objects reference AIGatewayDatastore (reverseWatch):
-		// re-reconcile the ones AIGatewayModel objects use whenever they change or are deleted.
+		// re-reconcile the ones AIGatewayModel objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayModel{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayDatastoreForAIGatewayModel(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		// AIGatewayModelProvider objects reference AIGatewayDatastore (reverseWatch):
-		// re-reconcile the ones AIGatewayModelProvider objects use whenever they change or are deleted.
+		// re-reconcile the ones AIGatewayModelProvider objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayModelProvider{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayDatastoreForAIGatewayModelProvider(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		// AIGatewayPolicy objects reference AIGatewayDatastore (reverseWatch):
-		// re-reconcile the ones AIGatewayPolicy objects use whenever they change or are deleted.
+		// re-reconcile the ones AIGatewayPolicy objects use whenever their spec
+		// changes, they are created or deleted, or their Programmed condition
+		// changes, but not on their other status writes (see referrerChanged).
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayPolicy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayDatastoreForAIGatewayPolicy(cl),
 				),
+				builder.WithPredicates(referrerChanged()),
 			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {

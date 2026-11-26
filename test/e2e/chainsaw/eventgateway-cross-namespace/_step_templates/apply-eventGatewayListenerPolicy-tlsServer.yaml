@@ -1,0 +1,52 @@
+# Template for creating a tlsServer EventGatewayListenerPolicy requiring client
+# certificates: its server certificate is the Secret server-tls (see
+# create-tls-secrets.yaml), and the client certificates are checked against a
+# TLS trust bundle.
+#
+# Required bindings:
+#   - policy_name, policy_namespace: The listener policy.
+#   - listener_name, listener_namespace: Its listener.
+#   - server_tls_secret_namespace: Namespace of the Secret server-tls.
+#   - tls_trust_bundle_name, tls_trust_bundle_namespace: The TLS trust bundle.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-listener-policy-tls-server
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayListenerPolicy
+          metadata:
+            name: ($policy_name)
+            namespace: ($policy_namespace)
+          spec:
+            eventGatewayListenerRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($listener_name)
+                namespace: ($listener_namespace)
+            apiSpec:
+              type: tlsServer
+              tlsServer:
+                name: ($policy_name)
+                config:
+                  certificates:
+                    - certificate:
+                        type: secretRef
+                        secretRef:
+                          name: server-tls
+                          namespace: ($server_tls_secret_namespace)
+                          key: tls.crt
+                      key:
+                        type: secretRef
+                        secretRef:
+                          name: server-tls
+                          namespace: ($server_tls_secret_namespace)
+                          key: tls.key
+                  clientAuthentication:
+                    mode: required
+                    tlsTrustBundles:
+                      - name: ($tls_trust_bundle_name)
+                        namespace: ($tls_trust_bundle_namespace)

@@ -83,6 +83,10 @@ kind: GWAdmin
 metadata:
   name: gwadmin-cp-cert
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   tls:
     clientCA:
       provisioning: Automatic

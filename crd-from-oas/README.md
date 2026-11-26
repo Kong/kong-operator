@@ -52,6 +52,9 @@ a rule on an optional field is skipped when that field is removed, and a normal
 transition rule is also skipped when it is re-added without an old value.
 `_description` replaces the OAS description of one of `spec.apiSpec`'s direct
 fields, e.g. when it describes Konnect behavior that doesn't hold for the CR.
+`_omitZero` emits `json:",omitzero"` for the field, so an explicit empty list
+survives serialization and reaches Konnect instead of being dropped by
+`omitempty`.
 Field markers also apply to configured reference arrays: use `+listType=atomic`
 when reference order is significant. Required reference arrays preserve an
 explicit empty list during JSON serialization.
@@ -66,6 +69,13 @@ lets one reference list apply stricter readiness and parent checks consistently
 in `ResolveKonnectReferences` and both SDK converters. The method must validate
 every reference and preserve order and explicit empty lists. Entries without
 this setting retain the default generated resolution.
+
+A single-kind reference can set `watchSameParent: true` when reconciliation
+depends on the entire parent scope, not only the listed references. The generated
+watch also enqueues declarations sharing the changed object's namespaced parent.
+Both kinds must configure the same parent GVK and an `ObjectRef` parent.
+Produce policy chains use this to observe additions and removals from the complete
+policy set, including policies not yet listed in the chain.
 
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a

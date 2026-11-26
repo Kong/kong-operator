@@ -16,6 +16,9 @@ spec:
     - name: gwadmin_name
       value: gw-podtpl
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Create-gwadmin-with-overlay
       try:
         - apply:

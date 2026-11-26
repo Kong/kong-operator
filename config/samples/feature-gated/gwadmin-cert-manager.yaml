@@ -97,6 +97,10 @@ kind: GWAdmin
 metadata:
   name: gwadmin-cert-manager
 spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license
   tls:
     clientCA:
       provisioning: Manual

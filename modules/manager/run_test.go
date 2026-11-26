@@ -1,15 +1,21 @@
 package manager
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kong-operator/v2/pkg/platform"
 )
 
 func TestSetByObjectFor(t *testing.T) {
@@ -162,4 +168,79 @@ func TestSetByObjectFor(t *testing.T) {
 			}(),
 		)
 	})
+}
+
+// erroringRESTMapper makes every lookup fail with an error that is neither a
+// no-match nor a 404, like a discovery failure does.
+type erroringRESTMapper struct {
+	apimeta.RESTMapper
+}
+
+func (erroringRESTMapper) KindFor(schema.GroupVersionResource) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{}, errors.New("discovery unavailable")
+}
+
+func TestResolveUserIDAssignedByPlatform(t *testing.T) {
+	openShiftSCCGVR := schema.GroupVersionResource{
+		Group:    "security.openshift.io",
+		Version:  "v1",
+		Resource: "securitycontextconstraints",
+	}
+
+	restMapperServingSCC := func() apimeta.RESTMapper {
+		mapper := apimeta.NewDefaultRESTMapper(nil)
+		mapper.Add(openShiftSCCGVR.GroupVersion().WithKind("SecurityContextConstraints"), apimeta.RESTScopeRoot)
+		return mapper
+	}
+
+	testCases := []struct {
+		name        string
+		platform    platform.Platform
+		mapper      apimeta.RESTMapper
+		expected    bool
+		expectedErr bool
+	}{
+		{
+			name:     "kubernetes platform never assigns the user",
+			platform: platform.Kubernetes,
+			mapper:   restMapperServingSCC(),
+			expected: false,
+		},
+		{
+			name:     "openshift platform always assigns the user",
+			platform: platform.Openshift,
+			mapper:   apimeta.NewDefaultRESTMapper(nil),
+			expected: true,
+		},
+		{
+			name:     "auto detects OpenShift",
+			platform: platform.Auto,
+			mapper:   restMapperServingSCC(),
+			expected: true,
+		},
+		{
+			name:     "auto detects a cluster without SCCs",
+			platform: platform.Auto,
+			mapper:   apimeta.NewDefaultRESTMapper(nil),
+			expected: false,
+		},
+		{
+			name:        "auto fails startup when the probe fails",
+			platform:    platform.Auto,
+			mapper:      erroringRESTMapper{apimeta.NewDefaultRESTMapper(nil)},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assigned, err := resolveUserIDAssignedByPlatform(logr.Discard(), tc.platform, tc.mapper)
+			if tc.expectedErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tc.expected, assigned)
+		})
+	}
 }

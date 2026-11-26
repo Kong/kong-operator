@@ -1,0 +1,21 @@
+# The consume policy child, now a child of the policy parent.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: child
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    parentPolicyRef:
+      name: parent
+    type: modifyHeaders
+    modifyHeaders:
+      name: child
+      config:
+        actions:
+          - op: remove
+            remove:
+              key: x-child

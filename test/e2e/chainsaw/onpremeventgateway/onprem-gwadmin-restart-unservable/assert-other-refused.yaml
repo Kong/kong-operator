@@ -1,0 +1,10 @@
+# The OnPremEventGateway other_gateway_name can't be pushed: gw-admin refuses
+# its configuration.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($other_gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: ConfigurationPushFailed

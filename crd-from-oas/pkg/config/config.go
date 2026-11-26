@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/token"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -124,17 +123,6 @@ type ReferenceConfig struct {
 	// RequiredAPISpecType restricts the referenced root-union entity's
 	// apiSpec.type discriminator, e.g. schemaValidation for a policy parent.
 	RequiredAPISpecType string `yaml:"requiredAPISpecType,omitempty"`
-	// UnionMember makes this an additive reference for a field whose OAS type
-	// is a by-id/by-name reference object (anyOf, e.g. TLSTrustBundleReference)
-	// or an array of them: instead of replacing the field's type, the generated
-	// ref struct is added to the reference object as one more mutually
-	// exclusive member under this JSON name (e.g. "namespacedRef"). Konnect IDs
-	// and names keep being accepted and sent as-is; only members set to the
-	// in-cluster reference are resolved and rewritten as
-	// {"<ResolvesTo>": <resolved value>} in the SDK payload. The reference
-	// object type gains the member wherever it is used, so every other field
-	// of that type must declare the same reference.
-	UnionMember string `yaml:"unionMember,omitempty"`
 	// Description is the doc comment of the field added for an InjectInto
 	// reference. Ignored otherwise: other references reuse the OAS field's
 	// description.
@@ -149,6 +137,10 @@ type ReferenceConfig struct {
 	// the InjectInto target to the referenced object's Konnect name on the
 	// same gateway. Requires a single kind.
 	ReverseWatch bool `yaml:"reverseWatch,omitempty"`
+	// WatchSameParent also enqueues referring objects sharing the referenced
+	// object's namespaced parent, even when they do not list that object.
+	// Both kinds must configure the same parent GVK and ObjectRef parent.
+	WatchSameParent bool `yaml:"watchSameParent,omitempty"`
 }
 
 // TypeName returns the Go type name of the generated ref struct.
@@ -350,6 +342,13 @@ type ParentRefConfig struct {
 	// accessors keep their commonv1alpha1.ObjectRef signature. When unset, the
 	// field is emitted as commonv1alpha1.ObjectRef.
 	TypeName string `yaml:"typeName,omitempty"`
+	// SupportsOnPremAIGateway declares that the TypeName type can reference
+	// either a Konnect or an on-prem AI Gateway. Such a type must provide
+	// TargetsOnPremAIGateway, TargetsKonnectAIGateway and ParentGVK methods.
+	// Entities using it get a SkipKonnectReconciliation method, a separate
+	// on-prem index, and use the type's ParentGVK instead of the configured
+	// parent GVK.
+	SupportsOnPremAIGateway bool `yaml:"supportsOnPremAIGateway,omitempty"`
 	// AllowedKinds optionally restricts the kinds the parent ref field may
 	// target, via a generated CEL rule on its "kind" field. Use it when the ref
 	// type admits more kinds than the entity supports, e.g. an AIGatewayRef
@@ -1061,9 +1060,6 @@ func equalKinds(a, b []string) bool {
 	return true
 }
 
-// unionMemberNameRegex matches a lowerCamelCase JSON field name.
-var unionMemberNameRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
-
 func (tc *TypeConfig) validate() error {
 	if rc := tc.Reconciler; rc != nil && rc.GatewayRef != nil {
 		if err := rc.GatewayRef.validate(rc); err != nil {
@@ -1095,20 +1091,12 @@ func (tc *TypeConfig) validate() error {
 			if strings.Contains(ref.InjectInto, ".") {
 				return fmt.Errorf("reference %q: injectInto must name a top-level apiSpec field, got %q", ref.Path, ref.InjectInto)
 			}
-			if ref.SupportCrossNamespaceReference {
-				return fmt.Errorf("reference %q: supportCrossNamespaceReference is not supported with injectInto", ref.Path)
-			}
-		}
-		if ref.UnionMember != "" {
-			if ref.InjectInto != "" {
-				return fmt.Errorf("reference %q: unionMember and injectInto are mutually exclusive", ref.Path)
-			}
-			if !unionMemberNameRegex.MatchString(ref.UnionMember) {
-				return fmt.Errorf("reference %q: unionMember must be a lowerCamelCase JSON field name, got %q", ref.Path, ref.UnionMember)
-			}
 		}
 		if ref.ReverseWatch && len(ref.Kinds) != 1 {
 			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)
+		}
+		if ref.WatchSameParent && len(ref.Kinds) != 1 {
+			return fmt.Errorf("reference %q: watchSameParent requires exactly one kind", ref.Path)
 		}
 	}
 	// Several reverseWatch references to a kind share one generated
@@ -1277,6 +1265,15 @@ type FieldConfig struct {
 	// Description replaces the field's OpenAPI description in the CRD, e.g.
 	// when it describes Konnect behavior that doesn't hold for the CR.
 	Description string `yaml:"_description,omitempty"`
+	// OmitZero emits `json:",omitzero"` instead of the default tag for the
+	// field's Go type. Use it for optional collections whose explicitly empty
+	// value must reach the API instead of being dropped by `omitempty`.
+	OmitZero bool `yaml:"_omitZero,omitempty"`
+	// AllowZero emits an optional scalar (string, integer or number) field as
+	// a pointer with `json:",omitempty"`. Use it when the zero value means
+	// something to the API, e.g. "0 for unlimited": a plain value with
+	// `omitzero` can't tell an explicit zero from an unset field and drops it.
+	AllowZero bool `yaml:"_allowZero,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.
 	Fields map[string]*FieldConfig `yaml:",inline"`

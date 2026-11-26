@@ -96,7 +96,7 @@ type {{.EntityName}}Spec struct {
 	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
-	// {{.ParentRefGoFieldName}} is the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
 	//
 	// +required
 	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
@@ -495,25 +495,28 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .RootRefDependency}}
 {{- if .ParentRef}}
 
-// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
+// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
 func (obj *{{.EntityName}}) Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}}() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
 {{- if .ParentRefCustomTypeName}}
 
 // GetParentRef returns the reference to the parent entity as a generic
-// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef.{{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}} The custom parent ref type's Group/Kind discriminator has no
 // ObjectRef representation, so only the namespaced reference is carried over.
+{{- end}}
 func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
 	return obj.Get{{.ParentRefCustomTypeName}}().ToObjectRef()
 }
 
 // SetParentRef sets the reference to the parent entity from a generic
-// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// ObjectRef.{{if and .ParentRef .ParentRef.SupportsOnPremAIGateway}} The parent ref defaults to the custom type's default Group/Kind
 // (Konnect): only the namespaced reference is carried over.
+{{- end}}
 func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
 }
+{{- if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}
 
 // SkipKonnectReconciliation reports whether the entity's parent reference
 // resolves to a parent the Konnect reconciler does not manage (an
@@ -523,6 +526,7 @@ func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
 	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
 }
+{{- end}}
 {{- else}}
 
 // GetParentRef returns the reference to the parent entity.
@@ -617,7 +621,7 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
-{{- if .ParentRefCustomTypeName}}
+{{- if and .ParentRef .ParentRef.SupportsOnPremAIGateway}}
 	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
 {{- else}}
 {{- with .GatewayRef}}
@@ -1405,6 +1409,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
 		}
 {{- end}}
+{{- if index .AncestorSkipsKonnectReconciliation .DefaultKind}}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
 {{- if .SameParentRefField}}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
@@ -1477,16 +1488,6 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 			continue
 		}
 		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
-{{- else if .UnionMemberGoName}}
-{{- if .ArrayLeafPointer}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
-			continue
-		}
-{{- end}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}} == nil {
-			continue
-		}
-		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}})
 {{- else if .ArrayLeafPointer}}
 		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
 			continue
@@ -1512,22 +1513,12 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 		return nil
 	}
 {{- end}}
-{{- if and .UnionMemberGoName .SingleValueObjectRef}}
-	if {{$path}}.{{.UnionMemberGoName}} == nil {
-		return nil
-	}
-	return []{{.TypeName}}{*{{$path}}.{{.UnionMemberGoName}}}
-{{- else if .UnionMemberGoName}}
-	var refs []{{.TypeName}}
-	for i := range {{$path}} {
-		if {{$path}}[i].{{.UnionMemberGoName}} == nil {
-			continue
-		}
-		refs = append(refs, *{{$path}}[i].{{.UnionMemberGoName}})
-	}
-	return refs
-{{- else if .SingleValueObjectRef}}
+{{- if and .SingleValueObjectRef .LeafPointer}}
 	return []{{.TypeName}}{*{{$path}}}
+{{- else if .SingleValueObjectRef}}
+	// The field is required: an unset name is returned, for the resolver to
+	// report it rather than leave the reference in the payload.
+	return []{{.TypeName}}{ {{- $path}}}
 {{- else}}
 	return {{$path}}
 {{- end}}
@@ -1598,6 +1589,14 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				continue
 			}
 {{- end}}
+{{- if index $ref.AncestorSkipsKonnectReconciliation .}}
+			// Nor does an object under an ancestor it does not manage, e.g. a
+			// virtual cluster of a backend cluster attached to an on-prem gateway.
+			if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.}}", Namespace: ns, Name: ref.Name})
+				continue
+			}
+{{- end}}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
@@ -1655,6 +1654,14 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- if index .SkipsKonnectReconciliation .DefaultKind}}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
 		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- end}}
+{{- if index .AncestorSkipsKonnectReconciliation .DefaultKind}}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1719,7 +1726,7 @@ func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.Obje
 	var keys []client.ObjectKey
 {{- range .ReverseWatchRefsExprs}}
 	for _, ref := range {{.}} {
-		if ref.Kind != "" && ref.Kind != "{{$kind}}" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "{{$kind}}") {
 			continue
 		}
 		ns := ref.Namespace
@@ -1819,30 +1826,26 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- else if .ArrayKey}}
 	// {{.Path}} carries a CR reference: inject the resolved Konnect values into
 	// each element of the "{{.ArrayKey}}" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors.{{if .OptionalAncestor}} A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.{{end}}
 {{- else if .ObjectWrap}}
 	// {{.Path}} carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
-	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
-	// that part of the config wasn't set, so the payload is left untouched.
-{{- else if .UnionMemberKey}}
-	// {{.Path}} may carry CR references: replace each reference object set to
-	// "{{.UnionMemberKey}}" in the SDK payload with one wrapping its resolved
-	// Konnect value under "{{.ObjectWrapKey}}", leaving reference objects set by
-	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// preserving sibling keys of its ancestors.{{if .OptionalAncestor}} A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.{{end}}
 {{- else if .ItemObjectKey}}
 	// {{.Path}} carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "{{.ItemObjectKey}}". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "{{.ItemObjectKey}}".{{if .OptionalAncestor}} A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.{{end}}
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
+	// the SDK payload, preserving sibling keys of its ancestors.{{if .OptionalAncestor}} A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.{{end}}
 {{- end}}
 {{- if .Cond}}
 	if {{.Cond}} {
@@ -1877,7 +1880,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		if err != nil {
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
-{{- if $inj.UnionMemberKey}}
+{{- if $inj.ElementObjectWrap}}
 		rewritten{{.ResolverName}} := 0
 		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
 {{- else}}
@@ -1897,12 +1900,8 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				}
 {{- $lp = .Var}}
 {{- end}}
-{{- if $inj.UnionMemberKey}}
-				leaf, ok := {{$lp}}["{{.LeafSDKKey}}"].(map[string]any)
-				if !ok {
-					continue
-				}
-				if _, has := leaf["{{$inj.UnionMemberKey}}"]; !has {
+{{- if $inj.ElementObjectWrap}}
+				if _, ok := {{$lp}}["{{.LeafSDKKey}}"].(map[string]any); !ok {
 					continue
 				}
 				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
@@ -1921,7 +1920,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- end}}
 			}
 		}
-{{- if $inj.UnionMemberKey}}
+{{- if $inj.ElementObjectWrap}}
 		// Every resolved reference must have been rewritten: a mismatch means
 		// the references and the payload disagree on which items carry one.
 		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
@@ -1939,48 +1938,6 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 		}
 {{- end}}
-{{- else if .UnionMemberKey}}
-{{- range .Variants}}
-		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
-		}
-{{- if $inj.UnionMemberArray}}
-		rewritten{{.ResolverName}} := 0
-		if arr, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].([]any); ok {
-			for i, e := range arr {
-				el, ok := e.(map[string]any)
-				if !ok {
-					continue
-				}
-				if _, has := el["{{$inj.UnionMemberKey}}"]; !has {
-					continue
-				}
-				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
-					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
-				}
-				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[rewritten{{.ResolverName}}]}
-				rewritten{{.ResolverName}}++
-			}
-		}
-		// Every resolved reference must have been rewritten: a mismatch means
-		// the references and the payload disagree on which items carry one.
-		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
-			return nil, fmt.Errorf("resolving {{.RefPath}} references: %d resolved but %d set in the payload", len(resolved{{.ResolverName}}), rewritten{{.ResolverName}})
-		}
-{{- else}}
-		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok {
-			if _, has := el["{{$inj.UnionMemberKey}}"]; has {
-				// The reference is set in the payload: it must have resolved,
-				// or it would reach Konnect unresolved.
-				if len(resolved{{.ResolverName}}) == 0 {
-					return nil, fmt.Errorf("resolving {{.RefPath}} references: reference set in the payload but not resolved")
-				}
-				{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
-			}
-		}
-{{- end}}
-{{- end}}
 {{- else}}
 {{- range .Variants}}
 		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
@@ -1992,7 +1949,13 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		for _, v := range resolved{{.ResolverName}} {
 			wrapped{{.ResolverName}} = append(wrapped{{.ResolverName}}, map[string]string{"{{$inj.ItemObjectKey}}": v})
 		}
+{{- if $inj.SkipEmpty}}
+		if len(wrapped{{.ResolverName}}) > 0 {
+			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = wrapped{{.ResolverName}}
+		}
+{{- else}}
 		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = wrapped{{.ResolverName}}
+{{- end}}
 {{- else}}
 		{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}
 {{- end}}

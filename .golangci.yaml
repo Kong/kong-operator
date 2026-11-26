@@ -82,10 +82,10 @@ linters:
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
-          msg: Please use v2beta1 ControlPlane (through github.com/kong/kong-operator/internal/types)
+          msg: Please use v2beta1 ControlPlane (through github.com/kong/kong-operator/v2/internal/types)
         # NOTE: When all references use the types package, this rule can use .* instead of listing types.
         - pattern: ^.*operatorv2alpha1.ControlPlane.*$
-          msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
+          msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/v2/internal/types)
         - pattern: ^errors.As$
           msg: Please use errors.AsType instead
         - pattern: ^ptr\.To$
@@ -96,6 +96,8 @@ linters:
           msg: Please use slices.Contains() instead
         - pattern: ^lo\.FindIndexOf$
           msg: Please use slices.IndexFunc() instead
+        - pattern: ^(require|assert)\.Never$
+          msg: Please use test/helpers/asserts.Never instead. Testify's Never runs the condition in a goroutine, which leaks when the condition outlives the wait.
         - pattern: GatewayOperatorV1beta1\(\)\.GatewayConfigurations$
           msg: Please use controller-runtime client and v2beta1 GatewayConfigurations instead
         - pattern: v1beta1\.GatewayConfiguration$
@@ -138,15 +140,13 @@ linters:
           alias: sdkkonnectops
         - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
           alias: sdkkonnecterrs
-        - pkg: github.com/kong/kong-operator/controller/konnect/ops/sdk
+        - pkg: github.com/kong/kong-operator/v2/controller/konnect/ops/sdk
           alias: sdkops
-        - pkg: github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks
-          alias: sdkmocks
-        - pkg: github.com/kong/kong-operator/internal/types
+        - pkg: github.com/kong/kong-operator/v2/internal/types
           alias: gwtypes
-        - pkg: github.com/kong/kong-operator/pkg/utils/kubernetes
+        - pkg: github.com/kong/kong-operator/v2/pkg/utils/kubernetes
           alias: k8sutils
-        - pkg: github.com/kong/kong-operator/pkg/utils/kubernetes/resources
+        - pkg: github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources
           alias: k8sresources
         - pkg: k8s.io/apimachinery/pkg/api/errors
           alias: apierrors

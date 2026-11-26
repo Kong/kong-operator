@@ -116,7 +116,7 @@ spec:
 	// The same name as backendCluster, created later: left out.
 	duplicate := newBackendCluster("duplicate", "backend-cluster")
 	duplicate.SetCreationTimestamp(metav1.NewTime(created.Add(time.Minute)))
-	// In another namespace than the gateway: left out.
+	// In another namespace than the gateway, without a KongReferenceGrant: left out.
 	otherNamespace := newBackendCluster("other-namespace", "other-namespace")
 	otherNamespace.SetNamespace("other")
 	otherNamespace.Spec.ParentRef.Namespace = new(ns)
@@ -201,9 +201,9 @@ spec:
 		assert.Len(t, excluded, 5, "excluded: %v", cfg.excluded)
 		invalid := eventgatewayv1alpha1.OnPremEntityInvalidReason
 		assert.Equal(t, invalid, excluded["default/duplicate"].reason)
-		assert.Contains(t, excluded["default/duplicate"].message, `another backend cluster of the gateway is named "backend-cluster"`)
-		assert.Equal(t, invalid, excluded["other/other-namespace"].reason)
-		assert.Contains(t, excluded["other/other-namespace"].message, "must be in the namespace of the OnPremEventGateway, default")
+		assert.Contains(t, excluded["default/duplicate"].message, `its spec.apiSpec.name "backend-cluster" is already the one of EventGatewayBackendCluster default/backend-cluster`)
+		assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, excluded["other/other-namespace"].reason)
+		assert.Equal(t, "no KongReferenceGrant allows it to reference the OnPremEventGateway default/gateway", excluded["other/other-namespace"].message)
 		assert.Equal(t, invalid, excluded["default/not-v4"].reason)
 		assert.Contains(t, excluded["default/not-v4"].message, "is not a version 4 UUID")
 		assert.Equal(t, invalid, excluded["default/missing-secret"].reason)
@@ -309,6 +309,51 @@ spec:
 		assert.Equal(t, "client-cert", cfg.entities.BackendClusters[0].Tls.ClientIdentity.Certificate)
 	})
 
+	t.Run("held while being deleted, an entity whose grant is revoked is sent as it was last", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			Name: "grant", Namespace: "secrets",
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayBackendCluster", Namespace: ns}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "core", Kind: "Secret"}},
+			},
+		}
+		secret := backendClusterSecret.DeepCopy()
+		secret.Name, secret.Namespace = "tls", "secrets"
+		granted, err := buildConfiguration(t.Context(), newFakeClient(t, notGranted, grant, secret, backendClusterSecret), gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, granted.excluded)
+		require.Len(t, granted.entities.BackendClusters, 1)
+
+		// Deleted with its KongReferenceGrant, e.g. along with its namespace,
+		// while policies of the last configuration sent still use it.
+		deleting := notGranted.DeepCopy()
+		deleting.SetDeletionTimestamp(new(metav1.Now()))
+		deleting.SetFinalizers([]string{FinalizerInUse})
+
+		kept, err := buildConfiguration(t.Context(), newFakeClient(t, deleting, secret, backendClusterSecret), gateway, "", granted.built)
+		require.NoError(t, err)
+		assert.Empty(t, kept.excluded, "it doesn't stop the push that releases it")
+		assert.Equal(t, granted.entities.BackendClusters, kept.entities.BackendClusters)
+		require.Len(t, kept.included, 1)
+		assert.True(t, kept.included[0].kept)
+		assertSecretRefValid(t, kept.included[0], metav1.ConditionFalse,
+			"The Secrets it reads aren't read: no KongReferenceGrant allows it to read the Secret secrets/tls")
+
+		t.Run("not sent before, it is left out as any other", func(t *testing.T) {
+			cfg, err := buildConfiguration(t.Context(), newFakeClient(t, deleting, secret, backendClusterSecret), gateway, "", nil)
+			require.NoError(t, err)
+			require.Len(t, cfg.excluded, 1)
+			assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, cfg.excluded[0].reason)
+		})
+
+		t.Run("not being deleted, it is left out as any other", func(t *testing.T) {
+			cfg, err := buildConfiguration(t.Context(), newFakeClient(t, notGranted, secret, backendClusterSecret), gateway, "", granted.built)
+			require.NoError(t, err)
+			require.Len(t, cfg.excluded, 1)
+			assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, cfg.excluded[0].reason)
+		})
+	})
+
 	t.Run("a Secret that can't be read is returned, not left out", func(t *testing.T) {
 		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
 			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -401,7 +446,7 @@ spec:
 	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 	require.NoError(t, err)
 
-	t.Run("each kind is converted, under the UID of its object", func(t *testing.T) {
+	t.Run("each kind is converted, under the UID of its object, but a static key", func(t *testing.T) {
 		require.Len(t, cfg.entities.TlsTrustBundles, 1)
 		assert.Equal(t, string(bundle.UID), cfg.entities.TlsTrustBundles[0].Id.String())
 		assert.Equal(t, "bundle", cfg.entities.TlsTrustBundles[0].Name)
@@ -414,7 +459,10 @@ spec:
 		assert.Contains(t, string(got), `"endpoint":"https://registry.example.com"`)
 
 		require.Len(t, cfg.entities.StaticKeys, 1)
-		assert.Equal(t, string(key.UID), cfg.entities.StaticKeys[0].Id.String())
+		// A static key is under an id hashed from its group, kind, namespace and
+		// name, which recreating its object keeps (see staticKeyID).
+		assert.Equal(t, staticKeyID(client.ObjectKeyFromObject(key)), cfg.entities.StaticKeys[0].Id)
+		assert.NotEqual(t, string(key.UID), cfg.entities.StaticKeys[0].Id.String())
 		assert.Equal(t, "key", cfg.entities.StaticKeys[0].Name)
 
 		assert.Equal(t, map[string]string{
@@ -430,7 +478,7 @@ spec:
 			reasons[e.obj.GetName()] = e.message
 		}
 		assert.Len(t, reasons, 2, "excluded: %v", cfg.excluded)
-		assert.Contains(t, reasons["duplicate-registry"], `another schema registry of the gateway is named "registry"`)
+		assert.Contains(t, reasons["duplicate-registry"], `its spec.apiSpec.name "registry" is already the one of EventGatewaySchemaRegistry default/registry`)
 		assert.Contains(t, reasons["missing-secret"], "the Secret default/missing doesn't exist")
 	})
 
@@ -751,4 +799,83 @@ func mustPolicyID(t *testing.T, e gwadminapi.GatewayEntitySet) string {
 	editedJSON(e.Listeners[0].Policies[0], func(fields map[string]any) { id, _ = fields["id"].(string) })
 	require.NotEmpty(t, id)
 	return id
+}
+
+// A Secret key holding an empty value can't be sent: gw-admin refuses it. It is
+// reported as a problem of the Secret, and the entity sent as it was last.
+func TestBuildConfigurationEmptySecretValue(t *testing.T) {
+	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: "gateway", Namespace: ns}
+	gateway.SetUID(types.UID(uuid.NewString()))
+	created := time.Date(2026, 11, 5, 10, 0, 0, 500_000_000, time.UTC)
+	bundle := fromYAML[configurationv1alpha1.EventGatewayTLSTrustBundle](t, created, `
+metadata: {name: bundle}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: bundle
+    config: {trustedCa: {type: secretRef, secretRef: {name: ca, key: ca.crt}}}
+`)
+	secret := func(value string) *corev1.Secret {
+		return &corev1.Secret{Name: "ca", Namespace: ns, Data: map[string][]byte{"ca.crt": []byte(value)}}
+	}
+
+	cfg, err := buildConfiguration(t.Context(), newFakeClient(t, bundle, secret("")), gateway, "", nil)
+	require.NoError(t, err)
+	require.Len(t, cfg.excluded, 1)
+	assert.True(t, cfg.excluded[0].blocks)
+	assert.Equal(t, `the key "ca.crt" of the Secret default/ca is empty`, cfg.excluded[0].message)
+	require.NotNil(t, cfg.excluded[0].secretRefValid)
+	assert.Equal(t, metav1.ConditionFalse, cfg.excluded[0].secretRefValid.Status)
+
+	t.Run("sent as it was last, once it was sent", func(t *testing.T) {
+		sent, err := buildConfiguration(t.Context(), newFakeClient(t, bundle, secret("ca-pem")), gateway, "", nil)
+		require.NoError(t, err)
+		require.Empty(t, sent.excluded)
+		kept, err := buildConfiguration(t.Context(), newFakeClient(t, bundle, secret("")), gateway, "", sent.built)
+		require.NoError(t, err)
+		require.Empty(t, kept.excluded)
+		require.Len(t, kept.included, 1)
+		assert.True(t, kept.included[0].kept)
+		assert.Equal(t, "ca-pem", kept.entities.TlsTrustBundles[0].Config.TrustedCa)
+	})
+}
+
+// TestByCreationAcrossNamespaces checks objects of several namespaces sharing
+// a name and a creation second are always ordered the same way, whatever
+// order the cache lists them in.
+func TestByCreationAcrossNamespaces(t *testing.T) {
+	created := metav1.NewTime(time.Date(2026, 11, 9, 0, 0, 0, 0, time.UTC))
+	objs := []*configurationv1alpha1.EventGatewayBackendCluster{
+		{Name: "backend", Namespace: "b", CreationTimestamp: created},
+		{Name: "backend", Namespace: "a", CreationTimestamp: created},
+		{Name: "backend", Namespace: "c", CreationTimestamp: created},
+	}
+	slices.SortFunc(objs, byCreation[*configurationv1alpha1.EventGatewayBackendCluster])
+	var got []string
+	for _, o := range objs {
+		got = append(got, o.Namespace)
+	}
+	assert.Equal(t, []string{"a", "b", "c"}, got)
+}
+
+// TestBlockedPushTellsEveryProblem checks a push stopped by invalid policy
+// chains and by entities that can't be sent tells both, the chains giving the
+// reason, and the revision pushed in its place.
+func TestBlockedPushTellsEveryProblem(t *testing.T) {
+	key := &configurationv1alpha1.EventGatewayStaticKey{}
+	key.SetNamespace(ns)
+	key.SetName("key")
+	cfg := configuration{
+		invalidChains: []string{"chain problem"},
+		excluded:      []excludedEntity{{obj: key, message: "entity problem", blocks: true}},
+	}
+	blocked := withServing(cfg.blockedPush(), 3)
+	require.Error(t, blocked)
+	assert.Contains(t, blocked.Error(), "chain problem")
+	assert.Contains(t, blocked.Error(), "entity problem")
+	assert.Equal(t, "InvalidPolicyChain", string(failureReason(blocked)))
+	serving, isBlocked := servingOf(blocked)
+	assert.True(t, isBlocked)
+	assert.Equal(t, int64(3), serving)
+	assert.Contains(t, blocked.Error(), "revision 3", "each tells the revision pushed in its place")
 }

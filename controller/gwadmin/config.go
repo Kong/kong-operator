@@ -67,7 +67,7 @@ var deploymentConfig = shareddataplane.DeploymentConfig[*operatorv1alpha1.GWAdmi
 		return gw.Spec.Deployment.Annotations
 	},
 	BuildContainer: buildContainer,
-	// The TLS wiring must survive a pod template overlay.
+	// The TLS and license wiring must survive a pod template overlay.
 	ReassertEnvVars: []string{
 		consts.GWAdminAPITLSCertFileEnvVar,
 		consts.GWAdminAPITLSKeyFileEnvVar,
@@ -75,7 +75,11 @@ var deploymentConfig = shareddataplane.DeploymentConfig[*operatorv1alpha1.GWAdmi
 		consts.GWAdminCPTLSCertFileEnvVar,
 		consts.GWAdminCPTLSKeyFileEnvVar,
 		consts.GWAdminCPTLSClientCAFileEnvVar,
+		consts.GWAdminLicenseFileEnvVar,
+		consts.GWAdminLicenseEntitlementsEnvVar,
 	},
+	// The license can't be replaced through a pod template overlay either.
+	ReassertVolumes: []string{licenseVolumeName},
 }
 
 // buildDeployment builds the desired gw-admin Deployment, recording the
@@ -111,7 +115,7 @@ func buildDeployment(
 }
 
 // buildContainer builds the gw-admin container and the volumes holding its
-// TLS material.
+// TLS material and its license.
 func buildContainer(
 	gw *operatorv1alpha1.GWAdmin,
 	_ shareddataplane.ResolvedControlPlane,
@@ -156,6 +160,7 @@ func buildContainer(
 		tlsVolume(apiTLSVolumeName, apiTLSSecretName(gw), apiCABundleSecretName(gw)),
 		tlsVolume(cpTLSVolumeName, cpTLSSecretName(gw), cpClientCABundleSecretName(gw)),
 	)
+	container, volumes = withLicense(gw, container, volumes)
 	return container, volumes, nil
 }
 

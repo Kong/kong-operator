@@ -68,9 +68,9 @@ type KegDataPlaneList struct {
 type KegDataPlaneSpec struct {
 	// ControlPlaneRef references the control plane this KegDataPlane connects to.
 	// The type field identifies which kind of control plane is being referenced:
-	// konnectNamespacedRef references a KonnectEventGateway resource in the
-	// same namespace, onpremNamespacedRef an OnPremEventGateway resource in
-	// the same namespace.
+	// konnectNamespacedRef references a KonnectEventGateway resource,
+	// onpremNamespacedRef an OnPremEventGateway resource. A gateway in another
+	// namespace needs a KongReferenceGrant in its namespace.
 	//
 	// +required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
@@ -389,12 +389,27 @@ type KegDataPlaneConfiguration struct {
 	// ConfigPollIntervalSeconds overrides how often keg polls Konnect for config changes, in seconds.
 	// Corresponds to config_poll_interval / KEG__CONFIG_POLL_INTERVAL.
 	//
+	// Deprecated: keg 1.3.0 removed this setting: it long-polls its configuration.
+	// It is passed only to a keg older than 1.3.0, read from the tag of its image,
+	// and ignored otherwise, with a Warning Event on the KegDataPlane.
+	// An image without a version tag, e.g. pinned by digest only or tagged main,
+	// counts as 1.3.0 or later; the tag of a custom image is read as the keg
+	// version.
+	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	ConfigPollIntervalSeconds *int32 `json:"configPollIntervalSeconds,omitempty"`
 
 	// EnableDebugEndpoints enables the /debug/pprof/allocs endpoint.
 	// Corresponds to enable_debug_endpoints / KEG__ENABLE_DEBUG_ENDPOINTS.
+	//
+	// Deprecated: keg 1.3.0 removed this setting: it serves its debug endpoints on
+	// a listener of its own. It is passed only to a keg older than 1.3.0, read from
+	// the tag of its image, and ignored otherwise, with a Warning Event on the
+	// KegDataPlane.
+	// An image without a version tag, e.g. pinned by digest only or tagged main,
+	// counts as 1.3.0 or later; the tag of a custom image is read as the keg
+	// version.
 	//
 	// +optional
 	EnableDebugEndpoints *DebugEndpointsState `json:"enableDebugEndpoints,omitempty"`

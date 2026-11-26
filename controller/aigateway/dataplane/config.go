@@ -424,24 +424,16 @@ func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp sharedda
 	return cp.IsResolved() && cp.Kind == onPremAIGatewayKind.Kind
 }
 
-// checkKonnectAIGatewayEndpoints reports whether the endpoints of a resolved
-// KonnectAIGateway can be used: a nil Status.Endpoints is left to
-// buildAIGatewayEnvVars, which refuses it with its own message.
-func checkKonnectAIGatewayEndpoints(cp shareddataplane.ControlPlaneObject) error {
+// checkKonnectAIGatewayEndpoints reports whether a resolved KonnectAIGateway has
+// usable endpoints. The DataPlane the hook passes is for the verdicts that read
+// it, the KegDataPlane one; a nil Status.Endpoints is left to buildAIGatewayEnvVars.
+func checkKonnectAIGatewayEndpoints(_ shareddataplane.Object, cp shareddataplane.ControlPlaneObject) error {
 	aigw, ok := cp.(*konnectv1alpha1.KonnectAIGateway)
 	if !ok {
 		return fmt.Errorf("unexpected control plane object %T", cp)
 	}
 	if aigw.Status.Endpoints == nil {
 		return nil
-	}
-
-	for _, endpoint := range []string{aigw.Status.Endpoints.Configuration, aigw.Status.Endpoints.Telemetry} {
-		// shortcut: the AI Gateway has no private rendering yet (#6105), drop
-		// this loop when it lands.
-		if konnectendpoint.CarriesPath(endpoint) {
-			return fmt.Errorf("cannot use private endpoint %q: the AI Gateway has no private rendering yet", endpoint)
-		}
 	}
 
 	return konnectendpoint.CheckPrivateEndpoints(
@@ -486,15 +478,21 @@ func buildAIGatewayEnvVars(
 		return nil, fmt.Errorf("KonnectAIGateway %q has no endpoints in status", aigatewaycp.Name)
 	}
 
-	cpHost := aigatewaycp.Status.Endpoints.Configuration
-	tpHost := aigatewaycp.Status.Endpoints.Telemetry
+	cpEndpoint, err := konnectendpoint.Parse(aigatewaycp.Status.Endpoints.Configuration)
+	if err != nil {
+		return nil, fmt.Errorf("control plane endpoint %q: %w", aigatewaycp.Status.Endpoints.Configuration, err)
+	}
+	tpEndpoint, err := konnectendpoint.Parse(aigatewaycp.Status.Endpoints.Telemetry)
+	if err != nil {
+		return nil, fmt.Errorf("telemetry endpoint %q: %w", aigatewaycp.Status.Endpoints.Telemetry, err)
+	}
 
 	return append(
 		envVars,
-		corev1.EnvVar{Name: EnvKongClusterControlPlane, Value: cpHost + ":443"},
-		corev1.EnvVar{Name: EnvKongClusterServerName, Value: cpHost},
-		corev1.EnvVar{Name: EnvKongClusterTelemetryEndpoint, Value: tpHost + ":443"},
-		corev1.EnvVar{Name: EnvKongClusterTelemetryServerName, Value: tpHost},
+		corev1.EnvVar{Name: EnvKongClusterControlPlane, Value: cpEndpoint.ControlPlaneAddress()},
+		corev1.EnvVar{Name: EnvKongClusterServerName, Value: cpEndpoint.ServerName()},
+		corev1.EnvVar{Name: EnvKongClusterTelemetryEndpoint, Value: tpEndpoint.TelemetryAddress()},
+		corev1.EnvVar{Name: EnvKongClusterTelemetryServerName, Value: tpEndpoint.ServerName()},
 	), nil
 }
 

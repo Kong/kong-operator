@@ -19,8 +19,8 @@ spec:
             namespace: ($config_store_namespace)
           spec:
             controlPlaneRef:
-              type: namespacedRef
-              namespacedRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
                 name: ($cp_name)
             apiSpec:
               name: ($config_store_name)

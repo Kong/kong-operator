@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -17,6 +19,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // MetricsConsumer is an interface for consumers of metrics scraped by a MetricsScraper.
@@ -32,6 +35,22 @@ type MetricsScraper interface {
 
 // adminAPIEndpointURL is a strong type for the URL of an Admin API endpoint for metrics map indexing.
 type adminAPIEndpointURL string
+
+// dataplaneLabelURL returns the dataplane_url metric label value for an endpoint.
+// The value keeps the pod DNS name form that earlier releases used, for example
+// https://10-0-0-1.dataplane-admin-kong-abc.default.svc:8443, so that existing
+// dashboards and alerts keep working.
+func dataplaneLabelURL(endpoint adminapidiscovery.DiscoveredAdminAPI) adminAPIEndpointURL {
+	u, err := url.Parse(endpoint.Address)
+	if err != nil || u.Port() == "" {
+		return adminAPIEndpointURL(endpoint.Address)
+	}
+	// The first DNS label of the TLS server name is a placeholder ("pod"). The
+	// wildcard certificate matches any value, and earlier releases used the
+	// dashed pod IP there.
+	host := strings.ReplaceAll(u.Hostname(), ".", "-") + strings.TrimPrefix(endpoint.TLSServerName, "pod")
+	return adminAPIEndpointURL(fmt.Sprintf("%s://%s:%s", u.Scheme, host, u.Port()))
+}
 
 // metricName is a strong type for the name of a metric for metrics map indexing.
 type metricName string
@@ -50,6 +69,7 @@ type Metrics struct {
 type PrometheusMetricsScraper struct {
 	logger                  logr.Logger
 	httpClient              *http.Client
+	endpointClients         endpointHTTPClients
 	dp                      *operatorv1beta1.DataPlane
 	adminAPIAddressProvider AdminAPIAddressProvider
 
@@ -74,27 +94,31 @@ func NewPrometheusMetricsScraper(
 // Scrape scrapes metrics from the Admin API endpoints of the configured DataPlane.
 func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) {
 	// TODO: watch for changes in admin API addresses, do not query every scrape.
-	urls, err := p.adminAPIAddressProvider.AdminAddressesForDP(ctx, p.dp)
+	endpoints, err := p.adminAPIAddressProvider.AdminAddressesForDP(ctx, p.dp)
 	if err != nil {
 		return Metrics{}, err
 	}
-	if len(urls) == 0 {
+	if len(endpoints) == 0 {
 		return Metrics{}, nil
 	}
 
-	log.Debug(p.logger, "scraping DataPlane metrics", "DataPlane", p.dp, "urls", urls)
+	log.Debug(p.logger, "scraping DataPlane metrics", "DataPlane", p.dp, "endpoints", endpoints)
 
 	metrics := Metrics{
 		metrics: make(metricsMap),
 	}
 
-	for _, u := range urls {
-		metricFamilies, err := p.scrapeURL(ctx, u)
+	for _, endpoint := range endpoints {
+		httpClient, err := p.endpointClients.ForEndpoint(p.httpClient, endpoint.TLSServerName)
+		if err != nil {
+			return Metrics{}, err
+		}
+		metricFamilies, err := p.scrapeURL(ctx, httpClient, endpoint.Address)
 		if err != nil {
 			return Metrics{}, err
 		}
 
-		adminAPIURL := adminAPIEndpointURL(u)
+		adminAPIURL := dataplaneLabelURL(endpoint)
 		m := metrics.metrics[adminAPIURL]
 		for name, metricFamily := range metricFamilies {
 			if m == nil {
@@ -116,13 +140,17 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 	return metrics, nil
 }
 
-func (p *PrometheusMetricsScraper) scrapeURL(ctx context.Context, u string) (map[string]*prometheus.MetricFamily, error) {
+func (p *PrometheusMetricsScraper) scrapeURL(
+	ctx context.Context,
+	httpClient *http.Client,
+	u string,
+) (map[string]*prometheus.MetricFamily, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u+"/metrics", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := p.httpClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics from %s: %w", u, err)
 	}

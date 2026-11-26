@@ -19,7 +19,8 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef", message="spec.eventGatewayBackendClusterRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef", message="spec.eventGatewayBackendClusterRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayBackendClusterRef) || self.spec.eventGatewayBackendClusterRef.type == 'namespacedRef' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayBackendClusterRef) && oldSelf.value().spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef)",message="spec.eventGatewayBackendClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayBackendClusterRef",optionalOldSelf=true
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef == oldSelf.spec.eventGatewayBackendClusterRef",message="spec.eventGatewayBackendClusterRef is immutable once the entity has been created in Konnect",fieldPath=".spec.eventGatewayBackendClusterRef"
 type EventGatewayVirtualCluster struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -59,8 +60,6 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// Configures whether or not ACL policies are enforced on the gateway.
 	// - `enforce_on_gateway` means the gateway enforces its own ACL policies for
 	// this virtual cluster
-	//
-	//
 	// and does not forward ACL-related commands to the backend cluster.
 	// Note that if there are no ACL policies configured, all access is denied.
 	// - `passthrough` tells the gateway to forward all ACL-related commands.

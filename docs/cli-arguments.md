@@ -249,6 +249,10 @@ rows:
     type: '`bool`'
     description: "Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager."
     default: '`false`'
+  - flag: '`--platform`'
+    type: '`string`'
+    description: "Platform flavor the operator runs on, deciding whether admission assigns the container user and group of hardened containers (as OpenShift does through SecurityContextConstraints, rejecting a pinned user). Possible values: auto, openshift, kubernetes. When 'auto' (default), the operator detects the cluster at startup and exits with an error if detection fails."
+    default: '`"auto"`'
   - flag: '`--secret-label-selector`'
     type: '`string`'
     description: "Limits the secrets ingested to those having this label set to \"true\". If empty, all secrets are ingested."
@@ -257,6 +261,10 @@ rows:
     type: '`bool`'
     description: "Validate the images set in ControlPlane and DataPlane specifications."
     default: '`true`'
+  - flag: '`--validating-webhook-cert-dir`'
+    type: '`string`'
+    description: "Directory that holds the validating webhook's TLS certificate (tls.crt) and key (tls.key)."
+    default: '`/tmp/k8s-webhook-server/serving-certs/validating-admission-webhook`'
   - flag: '`--version`'
     type: '`bool`'
     description: "Print version information."

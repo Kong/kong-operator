@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -517,6 +518,41 @@ func TestDataplane(t *testing.T) {
 	})
 	t.Run("service ingress type", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
+			{
+				Name: "service ingress type defaults to LoadBalancer",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network:    operatorv1beta1.DataPlaneNetworkOptions{},
+						},
+					},
+				},
+				Assert: func(t *testing.T, dp *operatorv1beta1.DataPlane) {
+					require.NotNil(t, dp.Spec.Network.Services)
+					require.NotNil(t, dp.Spec.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, dp.Spec.Network.Services.Ingress.Type)
+				},
+			},
+			{
+				Name: "service ingress type defaults to LoadBalancer when services is empty",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{},
+							},
+						},
+					},
+				},
+				Assert: func(t *testing.T, dp *operatorv1beta1.DataPlane) {
+					require.NotNil(t, dp.Spec.Network.Services.Ingress)
+					require.Equal(t, corev1.ServiceTypeLoadBalancer, dp.Spec.Network.Services.Ingress.Type)
+				},
+			},
 			{
 				Name: "service ingress type LoadBalancer",
 				TestObject: &operatorv1beta1.DataPlane{

@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -940,6 +941,40 @@ func (l listenerConditionAwareT) SetConditions(conditions []metav1.Condition) {
 	l.Conditions = conditions
 }
 
+// routeKindSet holds the route kinds whose CRDs the cluster serves.
+// A nil set means that all kinds are installed, which is the behaviour when CRD detection did not run.
+type routeKindSet map[gatewayv1.Kind]struct{}
+
+func (s routeKindSet) has(kind gatewayv1.Kind) bool {
+	if s == nil {
+		return true
+	}
+	_, ok := s[kind]
+	return ok
+}
+
+// detectInstalledRouteKinds returns the route kinds whose CRDs the mapper can
+// resolve. HTTPRoute is always included: it is a required CRD, so the Gateway
+// controller cannot start without it.
+func detectInstalledRouteKinds(mapper apimeta.RESTMapper) (routeKindSet, error) {
+	installed := routeKindSet{"HTTPRoute": {}}
+	for kind, gvr := range map[gatewayv1.Kind]schema.GroupVersionResource{
+		"TLSRoute":  {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "tlsroutes"},
+		"GRPCRoute": {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "grpcroutes"},
+		"UDPRoute":  {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "udproutes"},
+		"TCPRoute":  {Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version, Resource: "tcproutes"},
+	} {
+		exists, err := k8sutils.CRDExists(mapper, gvr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if %s CRD exists: %w", kind, err)
+		}
+		if exists {
+			installed[kind] = struct{}{}
+		}
+	}
+	return installed, nil
+}
+
 // supportedRoutesByProtocol returns a map of maps to relate each protocolType with the
 // set of supported Routes.
 //
@@ -989,11 +1024,11 @@ func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus()
 }
 
 func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
-	ctx context.Context, c client.Client, referenceGrantVersion schema.GroupVersion,
+	ctx context.Context, c client.Client, referenceGrantVersion schema.GroupVersion, installedRouteKinds routeKindSet,
 ) error {
 	for i, listener := range g.Spec.Listeners {
 		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(
-			ctx, c, referenceGrantVersion, *g.Gateway, g.Generation, listener,
+			ctx, c, referenceGrantVersion, *g.Gateway, g.Generation, listener, installedRouteKinds,
 		)
 		if err != nil {
 			return err
@@ -1002,15 +1037,13 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 
 		// Only report SupportedKinds for listeners whose Accepted condition is True.
 		//
-		// NOTE: this behavior is required by the Gateway API conformance test helper
-		// `gatewayListenersMatch` (sigs.k8s.io/gateway-api conformance/utils/kubernetes),
-		// which treats an empty expected SupportedKinds as an exact-empty assertion.
-		// Tests like TLSRouteListenerMixedTerminationNotSupported omit SupportedKinds
-		// for listeners they expect to be rejected, so any non-empty value here fails
-		// the test. The Gateway API spec itself does NOT explicitly require
-		// SupportedKinds to be empty when a listener is not accepted; the expected
-		// value for an unaccepted listener is not clearly defined in the spec. We
-		// follow the conformance helper's convention to remain conformant.
+		// NOTE: the Gateway API conformance helper `gatewayListenersMatch`
+		// (sigs.k8s.io/gateway-api conformance/utils/kubernetes), used by tests like
+		// TLSRouteListenerMixedTerminationNotSupported, asserts an exact-empty
+		// SupportedKinds for listeners the test expects to be rejected, so any
+		// non-empty value here fails the test. The Gateway API spec does not define
+		// the expected value for an unaccepted listener, so we follow the conformance
+		// helper's convention.
 		// setAcceptedAndAttachedRoutes() always runs before this function, so the
 		// Accepted condition is guaranteed to be present.
 		accepted, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionAccepted), lStatus)
@@ -1019,7 +1052,11 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 		} else {
 			// Carried-over listener statuses may hold SupportedKinds from when
 			// the listener was accepted; clear them to match a fresh status.
-			lStatus.SupportedKinds = nil
+			// Keep the slice non-nil: Gateway API CRDs before v1.5 (OpenShift
+			// 4.19 to 4.22) require supportedKinds. A nil slice is omitted from
+			// JSON, so the field goes missing and the API server rejects the
+			// whole status. An empty list satisfies the old CRDs.
+			lStatus.SupportedKinds = []gatewayv1.RouteGroupKind{}
 		}
 
 		k8sutils.SetCondition(resolvedRefsCondition, lStatus)
@@ -1058,6 +1095,9 @@ func (g *gatewayConditionsAndListenersAwareT) initListenersStatus() {
 		listenersStatus[i] = gatewayv1.ListenerStatus{
 			Name:       listener.Name,
 			Conditions: []metav1.Condition{},
+			// Gateway API CRDs before v1.5 (OpenShift 4.19 to 4.22) require supportedKinds.
+			// A nil slice is omitted from JSON and the API server rejects the whole status.
+			SupportedKinds: []gatewayv1.RouteGroupKind{},
 		}
 	}
 	g.Status.Listeners = listenersStatus
@@ -1065,7 +1105,9 @@ func (g *gatewayConditionsAndListenersAwareT) initListenersStatus() {
 
 // setAcceptedAndAttachedRoutes sets the listeners and gateway Accepted condition according to the Gateway API specification.
 // It also sets the AttachedRoutes field in the listener status.
-func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx context.Context, c client.Client) error {
+func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(
+	ctx context.Context, c client.Client, installedRouteKinds routeKindSet,
+) error {
 	for i, listener := range g.Spec.Listeners {
 		acceptedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionAccepted),
@@ -1095,7 +1137,7 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 		k8sutils.SetCondition(acceptedCondition, listenerConditionsAware)
 
 		// AttachedRoutes
-		count, err := countAttachedRoutesForGatewayListener(ctx, g.Gateway, g.Spec.Listeners[i], c)
+		count, err := countAttachedRoutesForGatewayListener(ctx, g.Gateway, g.Spec.Listeners[i], c, installedRouteKinds)
 		if err != nil {
 			return fmt.Errorf("failed to count attached routes for Gateway %s: %w", client.ObjectKeyFromObject(g), err)
 		}
@@ -1110,7 +1152,9 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 // countAttachedRoutesForGatewayListener counts the number of attached routes for a given listener.
 // It takes into account the AllowedRoutes field in the listener spec and route's ParentRefs.
 // It returns the number of attached routes and an error.
-func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gateway, listener gwtypes.Listener, cl client.Client) (int32, error) {
+func countAttachedRoutesForGatewayListener(
+	ctx context.Context, g *gwtypes.Gateway, listener gwtypes.Listener, cl client.Client, installedRouteKinds routeKindSet,
+) (int32, error) {
 	allowedRoutes := listener.AllowedRoutes
 	// Gateway API defines a default value for AllowedRoutes, so if this is nil there's something wrong.
 	if allowedRoutes == nil {
@@ -1192,10 +1236,18 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			// then the routes with the given kind is not supported so we skip it.
 			continue
 		}
+		// No route of a kind can attach when the cluster does not serve its CRD
+		// (for example GRPCRoute or TLSRoute on OpenShift).
+		if !installedRouteKinds.has(k) {
+			continue
+		}
 		// Otherwise, the kind of routes are supported and we need to count the attached routes of that kind for the listener.
 		switch k {
 		case "HTTPRoute":
 			httpRoutes, err := gatewayutils.ListHTTPRoutesForGateway(ctx, cl, g, opts...)
+			if apimeta.IsNoMatchError(err) {
+				continue
+			}
 			if err != nil {
 				return 0, fmt.Errorf(
 					"failed to list HTTPRoutes for Gateway %s when counting AttachedRoutes: %w",
@@ -1205,6 +1257,9 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			count += countAttachedHTTPRoutes(g, listener, httpRoutes)
 		case "TLSRoute":
 			tlsRoutes, err := gatewayutils.ListTLSRoutesForGateway(ctx, cl, g, opts...)
+			if apimeta.IsNoMatchError(err) {
+				continue
+			}
 			if err != nil {
 				return 0, fmt.Errorf(
 					"failed to list TLSRoutes for Gateway %s when counting AttachedRoutes: %w",
@@ -1214,6 +1269,9 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			count += countAttachedTLSRoutes(g, listener, tlsRoutes)
 		case "GRPCRoute":
 			grpcRoutes, err := gatewayutils.ListGRPCRoutesForGateway(ctx, cl, g, opts...)
+			if apimeta.IsNoMatchError(err) {
+				continue
+			}
 			if err != nil {
 				return 0, fmt.Errorf(
 					"failed to list GRPCRoutes for Gateway %s when counting AttachedRoutes: %w",
@@ -1223,6 +1281,9 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			count += countAttachedGRPCRoutes(g, listener, grpcRoutes)
 		case "UDPRoute":
 			udpRoutes, err := gatewayutils.ListUDPRoutesForGateway(ctx, cl, g, opts...)
+			if apimeta.IsNoMatchError(err) {
+				continue
+			}
 			if err != nil {
 				return 0, fmt.Errorf(
 					"failed to list UDPRoutes for Gateway %s when counting AttachedRoutes: %w",
@@ -1232,6 +1293,9 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 			count += countAttachedUDPRoutes(g, listener, udpRoutes)
 		case "TCPRoute":
 			tcpRoutes, err := gatewayutils.ListTCPRoutesForGateway(ctx, cl, g, opts...)
+			if apimeta.IsNoMatchError(err) {
+				continue
+			}
 			if err != nil {
 				return 0, fmt.Errorf(
 					"failed to list TCPRoutes for Gateway %s when counting AttachedRoutes: %w",
@@ -1712,6 +1776,7 @@ func getSupportedKindsWithResolvedRefsCondition(
 	gateway gatewayv1.Gateway,
 	generation int64,
 	listener gatewayv1.Listener,
+	installedRouteKinds routeKindSet,
 ) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
 	supportedKinds = make([]gatewayv1.RouteGroupKind, 0)
 	resolvedRefsCondition = metav1.Condition{
@@ -1806,11 +1871,25 @@ func getSupportedKindsWithResolvedRefsCondition(
 
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 		supportedRoutes := supportedRoutesByProtocol()[listener.Protocol]
+		var missingKinds []string
 		for routeKind := range supportedRoutes {
+			if !installedRouteKinds.has(routeKind) {
+				missingKinds = append(missingKinds, string(routeKind))
+				continue
+			}
 			supportedKinds = append(supportedKinds, gatewayv1.RouteGroupKind{
 				Group: (*gatewayv1.Group)(&gatewayv1.GroupVersion.Group),
 				Kind:  routeKind,
 			})
+		}
+		// A listener that no installed route kind can attach to can never serve traffic.
+		if len(supportedRoutes) > 0 && len(supportedKinds) == 0 {
+			sort.Strings(missingKinds)
+			resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
+			message = conditionMessage(message, fmt.Sprintf(
+				"No route kind for protocol %s is installed in the cluster (missing CRDs: %s)",
+				listener.Protocol, strings.Join(missingKinds, ", "),
+			))
 		}
 	} else {
 		for _, routeGK := range listener.AllowedRoutes.Kinds {
@@ -1818,6 +1897,11 @@ func getSupportedKindsWithResolvedRefsCondition(
 			if _, ok := validRoutes[routeGK.Kind]; !ok || routeGK.Group == nil || *routeGK.Group != gatewayv1.Group(gatewayv1.GroupVersion.Group) {
 				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
 				message = conditionMessage(message, fmt.Sprintf("Route %s not supported", string(routeGK.Kind)))
+				continue
+			}
+			if !installedRouteKinds.has(routeGK.Kind) {
+				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidRouteKinds)
+				message = conditionMessage(message, fmt.Sprintf("Route %s CRD is not installed in the cluster", string(routeGK.Kind)))
 				continue
 			}
 

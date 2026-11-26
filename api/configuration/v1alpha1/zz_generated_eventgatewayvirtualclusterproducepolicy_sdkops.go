@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -447,10 +448,6 @@ func resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx context.C
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
 			continue
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced EventGatewayVirtualClusterProducePolicy
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -474,6 +471,12 @@ func resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx context.C
 		}
 		if referenced.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil || string(referenced.Spec.APISpec.Type) != "schemaValidation" {
 			errs = append(errs, fmt.Errorf("EventGatewayVirtualClusterProducePolicy %s/%s must have apiSpec.type schemaValidation", ns, ref.Name))
+			continue
+		}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -515,19 +518,15 @@ func RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStat
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static == nil {
 		return nil
 	}
-	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key == nil {
-		return nil
-	}
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy {
 		return nil
 	}
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Type != EventGatewayEncryptConfigEncryptionKeyTypeStatic {
 		return nil
 	}
-	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key.NamespacedRef == nil {
-		return nil
-	}
-	return []EventGatewayStaticKeyRef{*obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key.NamespacedRef}
+	// The field is required: an unset name is returned, for the resolver to
+	// report it rather than leave the reference in the payload.
+	return []EventGatewayStaticKeyRef{obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key}
 }
 
 // resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey resolves the CR references in spec.apiSpec.encrypt.config.encryptionKey.static.key
@@ -547,10 +546,6 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeySta
 		}
 		if ref.Name == "" {
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
 		var referenced EventGatewayStaticKey
@@ -615,13 +610,7 @@ func RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFiel
 		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Type != EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic {
 			continue
 		}
-		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key == nil {
-			continue
-		}
-		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key.NamespacedRef == nil {
-			continue
-		}
-		refs = append(refs, *obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key.NamespacedRef)
+		refs = append(refs, obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key)
 	}
 	return refs
 }
@@ -643,10 +632,6 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFie
 		}
 		if ref.Name == "" {
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
 		var referenced EventGatewayStaticKey
@@ -688,12 +673,188 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFie
 	return resolved, nil
 }
 
+// RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry returns the references at spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewaySchemaRegistryRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.Type != EventGatewayProduceSchemaValidationPolicyConfigTypeSchemaRegistry {
+		return nil
+	}
+	return []EventGatewaySchemaRegistryRef{*obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry resolves the CR references in spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry
+// to Konnect names.
+func resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced EventGatewaySchemaRegistry
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewaySchemaRegistry objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry returns the references at spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewaySchemaRegistryRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.OutputFormat != EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeEventGatewayParsedRecordTranscodeProduceConfigAvro {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Type != EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeReferenc {
+		return nil
+	}
+	// The field is required: an unset name is returned, for the resolver to
+	// report it rather than leave the reference in the payload.
+	return []EventGatewaySchemaRegistryRef{obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc.SchemaRegistry}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry resolves the CR references in spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry
+// to Konnect names.
+func resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced EventGatewaySchemaRegistry
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewaySchemaRegistry objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy returns the keys of the EventGatewayVirtualClusterProducePolicy
 // objects obj references through spec.apiSpec.parentPolicyRef, with the default namespace applied.
 func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(obj) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterProducePolicy" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterProducePolicy") {
 			continue
 		}
 		ns := ref.Namespace
@@ -710,7 +871,7 @@ func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProd
 func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewayStaticKey") {
 			continue
 		}
 		ns := ref.Namespace
@@ -720,7 +881,34 @@ func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(obj *Eve
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(obj) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewayStaticKey") {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry returns the keys of the EventGatewaySchemaRegistry
+// objects obj references through spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry, spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry, with the default namespace applied.
+func EventGatewayVirtualClusterProducePolicyRefsToEventGatewaySchemaRegistry(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj) {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry") {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj) {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewaySchemaRegistry") {
 			continue
 		}
 		ns := ref.Namespace
@@ -745,6 +933,12 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx
 	if _, err := resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
+	if _, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
 	return errors.Join(errs...)
 }
 
@@ -754,6 +948,106 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx
 // calling ResolveKonnectReferences.
 func (obj *EventGatewayVirtualClusterProducePolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualClusterProducePolicy"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayStaticKey"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayStaticKey"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewaySchemaRegistry"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayVirtualClusterProducePolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 
@@ -773,12 +1067,12 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	if len(resolvedParentPolicyRef) > 0 {
 		payload["parent_policy_id"] = resolvedParentPolicyRef[0]
 	}
-	// spec.apiSpec.encrypt.config.encryptionKey.static.key may carry CR references: replace each reference object set to
-	// "namespaced_ref" in the SDK payload with one wrapping its resolved
-	// Konnect value under "id", leaving reference objects set by
-	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
-	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key != nil {
+	// spec.apiSpec.encrypt.config.encryptionKey.static.key carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "id",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil {
 		encrypt, _ := payload["encrypt"].(map[string]any)
 		if encrypt != nil {
 			config, _ := encrypt["config"].(map[string]any)
@@ -791,15 +1085,8 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 						if err != nil {
 							return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: %w", err)
 						}
-						if el, ok := static["key"].(map[string]any); ok {
-							if _, has := el["namespaced_ref"]; has {
-								// The reference is set in the payload: it must have resolved,
-								// or it would reach Konnect unresolved.
-								if len(resolvedEncryptConfigEncryptionKeyStaticKey) == 0 {
-									return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: reference set in the payload but not resolved")
-								}
-								static["key"] = map[string]any{"id": resolvedEncryptConfigEncryptionKeyStaticKey[0]}
-							}
+						if len(resolvedEncryptConfigEncryptionKeyStaticKey) > 0 {
+							static["key"] = map[string]any{"id": resolvedEncryptConfigEncryptionKeyStaticKey[0]}
 						}
 						encryptionKey["static"] = static
 					}
@@ -812,8 +1099,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	}
 	// spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key carries a CR reference: inject the resolved Konnect values into
 	// each element of the "encrypt_fields" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors. A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
 		encryptFields, _ := payload["encrypt_fields"].(map[string]any)
 		if encryptFields != nil {
@@ -838,11 +1126,7 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 						if !ok {
 							continue
 						}
-						leaf, ok := static2["key"].(map[string]any)
-						if !ok {
-							continue
-						}
-						if _, has := leaf["namespaced_ref"]; !has {
+						if _, ok := static2["key"].(map[string]any); !ok {
 							continue
 						}
 						if rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey >= len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey) {
@@ -860,6 +1144,66 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 				encryptFields["config"] = config2
 			}
 			payload["encrypt_fields"] = encryptFields
+		}
+	}
+	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "name",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
+		schemaValidation, _ := payload["schema_validation"].(map[string]any)
+		if schemaValidation != nil {
+			config3, _ := schemaValidation["config"].(map[string]any)
+			if config3 != nil {
+				confluentSchemaRegistry, _ := config3["confluent_schema_registry"].(map[string]any)
+				if confluentSchemaRegistry != nil {
+					resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: %w", err)
+					}
+					if len(resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry) > 0 {
+						confluentSchemaRegistry["schema_registry"] = map[string]any{"name": resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry[0]}
+					}
+					config3["confluent_schema_registry"] = confluentSchemaRegistry
+				}
+				schemaValidation["config"] = config3
+			}
+			payload["schema_validation"] = schemaValidation
+		}
+	}
+	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "name",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc != nil {
+		transcode, _ := payload["transcode"].(map[string]any)
+		if transcode != nil {
+			config4, _ := transcode["config"].(map[string]any)
+			if config4 != nil {
+				avro, _ := config4["avro"].(map[string]any)
+				if avro != nil {
+					schemaSource, _ := avro["schema_source"].(map[string]any)
+					if schemaSource != nil {
+						reference, _ := schemaSource["reference"].(map[string]any)
+						if reference != nil {
+							resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx, cl, obj)
+							if err != nil {
+								return nil, fmt.Errorf("resolving spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry references: %w", err)
+							}
+							if len(resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry) > 0 {
+								reference["schema_registry"] = map[string]any{"name": resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry[0]}
+							}
+							schemaSource["reference"] = reference
+						}
+						avro["schema_source"] = schemaSource
+					}
+					config4["avro"] = avro
+				}
+				transcode["config"] = config4
+			}
+			payload["transcode"] = transcode
 		}
 	}
 	return spec.toCreateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload)
@@ -881,12 +1225,12 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	if len(resolvedParentPolicyRef) > 0 {
 		payload["parent_policy_id"] = resolvedParentPolicyRef[0]
 	}
-	// spec.apiSpec.encrypt.config.encryptionKey.static.key may carry CR references: replace each reference object set to
-	// "namespaced_ref" in the SDK payload with one wrapping its resolved
-	// Konnect value under "id", leaving reference objects set by
-	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
-	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key != nil {
+	// spec.apiSpec.encrypt.config.encryptionKey.static.key carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "id",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil {
 		encrypt, _ := payload["encrypt"].(map[string]any)
 		if encrypt != nil {
 			config, _ := encrypt["config"].(map[string]any)
@@ -899,15 +1243,8 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 						if err != nil {
 							return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: %w", err)
 						}
-						if el, ok := static["key"].(map[string]any); ok {
-							if _, has := el["namespaced_ref"]; has {
-								// The reference is set in the payload: it must have resolved,
-								// or it would reach Konnect unresolved.
-								if len(resolvedEncryptConfigEncryptionKeyStaticKey) == 0 {
-									return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: reference set in the payload but not resolved")
-								}
-								static["key"] = map[string]any{"id": resolvedEncryptConfigEncryptionKeyStaticKey[0]}
-							}
+						if len(resolvedEncryptConfigEncryptionKeyStaticKey) > 0 {
+							static["key"] = map[string]any{"id": resolvedEncryptConfigEncryptionKeyStaticKey[0]}
 						}
 						encryptionKey["static"] = static
 					}
@@ -920,8 +1257,9 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	}
 	// spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key carries a CR reference: inject the resolved Konnect values into
 	// each element of the "encrypt_fields" array in the SDK payload, preserving
-	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// sibling keys of its ancestors. A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
 	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
 		encryptFields, _ := payload["encrypt_fields"].(map[string]any)
 		if encryptFields != nil {
@@ -946,11 +1284,7 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 						if !ok {
 							continue
 						}
-						leaf, ok := static2["key"].(map[string]any)
-						if !ok {
-							continue
-						}
-						if _, has := leaf["namespaced_ref"]; !has {
+						if _, ok := static2["key"].(map[string]any); !ok {
 							continue
 						}
 						if rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey >= len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey) {
@@ -968,6 +1302,66 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 				encryptFields["config"] = config2
 			}
 			payload["encrypt_fields"] = encryptFields
+		}
+	}
+	// spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "name",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Config.SchemaRegistry.SchemaRegistry != nil {
+		schemaValidation, _ := payload["schema_validation"].(map[string]any)
+		if schemaValidation != nil {
+			config3, _ := schemaValidation["config"].(map[string]any)
+			if config3 != nil {
+				confluentSchemaRegistry, _ := config3["confluent_schema_registry"].(map[string]any)
+				if confluentSchemaRegistry != nil {
+					resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicySchemaValidationConfigConfluentSchemaRegistrySchemaRegistry(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.schemaValidation.config.confluentSchemaRegistry.schemaRegistry references: %w", err)
+					}
+					if len(resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry) > 0 {
+						confluentSchemaRegistry["schema_registry"] = map[string]any{"name": resolvedSchemaValidationConfigConfluentSchemaRegistrySchemaRegistry[0]}
+					}
+					config3["confluent_schema_registry"] = confluentSchemaRegistry
+				}
+				schemaValidation["config"] = config3
+			}
+			payload["schema_validation"] = schemaValidation
+		}
+	}
+	// spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "name",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Config.EventGatewayParsedRecordTranscodeProduceConfigAvro.SchemaSource.Referenc != nil {
+		transcode, _ := payload["transcode"].(map[string]any)
+		if transcode != nil {
+			config4, _ := transcode["config"].(map[string]any)
+			if config4 != nil {
+				avro, _ := config4["avro"].(map[string]any)
+				if avro != nil {
+					schemaSource, _ := avro["schema_source"].(map[string]any)
+					if schemaSource != nil {
+						reference, _ := schemaSource["reference"].(map[string]any)
+						if reference != nil {
+							resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry, err := resolveEventGatewayVirtualClusterProducePolicyTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry(ctx, cl, obj)
+							if err != nil {
+								return nil, fmt.Errorf("resolving spec.apiSpec.transcode.config.avro.schemaSource.reference.schemaRegistry references: %w", err)
+							}
+							if len(resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry) > 0 {
+								reference["schema_registry"] = map[string]any{"name": resolvedTranscodeConfigAvroSchemaSourceReferenceSchemaRegistry[0]}
+							}
+							schemaSource["reference"] = reference
+						}
+						avro["schema_source"] = schemaSource
+					}
+					config4["avro"] = avro
+				}
+				transcode["config"] = config4
+			}
+			payload["transcode"] = transcode
 		}
 	}
 	return spec.toUpdateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload)

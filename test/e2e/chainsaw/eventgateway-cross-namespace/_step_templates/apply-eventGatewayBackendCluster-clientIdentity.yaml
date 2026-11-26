@@ -1,0 +1,53 @@
+# Template for creating an EventGatewayBackendCluster of the gateway
+# authenticating to Kafka with a TLS client certificate, the one of the Secret
+# server-tls (see create-tls-secrets.yaml).
+#
+# Required bindings:
+#   - backend_cluster_name, backend_cluster_namespace: The backend cluster.
+#   - client_identity_secret_namespace: Namespace of the Secret server-tls, or
+#     null to leave it to default to the namespace of the object.
+#   - gateway_group, gateway_kind, gateway_name: The gateway.
+#   - gateway_ref_namespace: The namespace of the gateway, or null to leave
+#     it to default to the namespace of the object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-backend-cluster-client-identity
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayBackendCluster
+          metadata:
+            name: ($backend_cluster_name)
+            namespace: ($backend_cluster_namespace)
+          spec:
+            parentRef:
+              group: ($gateway_group)
+              kind: ($gateway_kind)
+              name: ($gateway_name)
+              namespace: ($gateway_ref_namespace)
+            apiSpec:
+              name: ($backend_cluster_name)
+              bootstrapServers:
+                - kafka-bootstrap.kafka-shared.svc:9092
+              authentication:
+                type: anonymous
+                anonymous: {}
+              insecureAllowAnonymousVirtualClusterAuth: Enabled
+              tls:
+                enabled: Enabled
+                clientIdentity:
+                  certificate:
+                    type: secretRef
+                    secretRef:
+                      name: server-tls
+                      namespace: ($client_identity_secret_namespace)
+                      key: tls.crt
+                  key:
+                    type: secretRef
+                    secretRef:
+                      name: server-tls
+                      namespace: ($client_identity_secret_namespace)
+                      key: tls.key

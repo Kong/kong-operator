@@ -5,7 +5,7 @@ metadata:
 spec:
   description: |
     EventGatewayTLSTrustBundle referenced by a TLS EventGatewayListenerPolicy
-    through clientAuthentication.tlsTrustBundles[].namespacedRef, against the
+    through clientAuthentication.tlsTrustBundles[], by object, against the
     real Konnect API:
 
     - the reference resolves to the trust bundle's Konnect ID, which is how
@@ -148,8 +148,7 @@ spec:
                       clientAuthentication:
                         mode: required
                         tlsTrustBundles:
-                          - namespacedRef:
-                              name: ($trust_bundle_name)
+                          - name: ($trust_bundle_name)
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1

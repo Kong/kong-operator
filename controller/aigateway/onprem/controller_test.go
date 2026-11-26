@@ -142,6 +142,15 @@ func TestConfigFromSpec(t *testing.T) {
 			want: multiinstanceai.Config{},
 		},
 		{
+			name: "minRuntimeVersion set",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				MinRuntimeVersion: new("2.2"),
+			},
+			want: multiinstanceai.Config{
+				MinRuntimeVersion: "2.2",
+			},
+		},
+		{
 			name: "nil interval and timeout",
 			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
 				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{},

@@ -51,19 +51,22 @@ type Target struct {
 // Certificate represents the certificate object in Kong.
 type Certificate struct {
 	kong.Certificate
+
+	// SNITags holds the tags of the SNIs of this certificate, keyed by SNI name.
+	// SNIs are generated from the certificate's SNIs field and carry no tags unless set here.
+	SNITags map[string][]*string
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *Certificate) SanitizedCopy() Certificate {
 	return Certificate{
-		kong.Certificate{
-			ID:        c.ID,
-			Cert:      c.Cert,
-			Key:       redactedString,
-			CreatedAt: c.CreatedAt,
-			SNIs:      c.SNIs,
-			Tags:      c.Tags,
-		},
+		ID:        c.ID,
+		Cert:      c.Cert,
+		Key:       redactedString,
+		CreatedAt: c.CreatedAt,
+		SNIs:      c.SNIs,
+		Tags:      c.Tags,
+		SNITags:   c.SNITags,
 	}
 }
 

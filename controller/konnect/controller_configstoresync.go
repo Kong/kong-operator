@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	corev1 "k8s.io/api/core/v1"
@@ -316,15 +317,15 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 			}
 			value = v
 		}
-		if len(value) > configstoresync.MaxValueBytes {
+		if characters := utf8.RuneCount(value); characters > configstoresync.MaxValueCharacters {
 			r.setConditionSynced(sync, metav1.ConditionFalse,
 				konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonValueTooLarge,
-				fmt.Sprintf("value for store key %q is %d bytes, exceeding the %d-byte Config Store cap",
-					e.StoreKey, len(value), configstoresync.MaxValueBytes))
+				fmt.Sprintf("value for store key %q is %d characters, exceeding the %d-character Config Store cap",
+					e.StoreKey, characters, configstoresync.MaxValueCharacters))
 			r.emitEventOnTransition(old, sync, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 				"ValueTooLarge",
-				fmt.Sprintf("value for store key %q exceeds the %d-byte cap; nothing was written",
-					e.StoreKey, configstoresync.MaxValueBytes))
+				fmt.Sprintf("value for store key %q exceeds the %d-character cap; nothing was written",
+					e.StoreKey, configstoresync.MaxValueCharacters))
 			return ctrl.Result{}, nil
 		}
 		values = append(values, entryValue{resolved: e, value: value, hash: configstoresync.ValueHash(value)})
@@ -1008,15 +1009,11 @@ func (r *KonnectConfigStoreSyncReconciler) configStoreSecretsSDK(
 	ctx context.Context,
 	store *konnectv1alpha1.KonnectConfigStore,
 ) (sdkkonnectgo.ConfigStoreSecretsSDK, error) {
-	ref := store.Spec.ControlPlaneRef
-	if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
-		// A store whose controlPlaneRef points directly at a Konnect ID has no
-		// in-cluster Control Plane object to read credentials from. The store
-		// controller itself cannot reconcile such a store either, so its
-		// status would never become programmed; this is a defensive branch.
+	ref := store.GetControlPlaneRef()
+	if ref.NamespacedRef == nil {
 		return nil, fmt.Errorf(
-			"KonnectConfigStore %s/%s uses controlPlaneRef type %q: cannot resolve API credentials without an in-cluster KonnectGatewayControlPlane",
-			store.Namespace, store.Name, ref.Type)
+			"KonnectConfigStore %s/%s has no controlPlaneRef.konnectNamespacedRef: cannot resolve API credentials",
+			store.Namespace, store.Name)
 	}
 	cpNN := resolveNamespacedRef(store.Namespace, *ref.NamespacedRef)
 	var cp konnectv1alpha2.KonnectGatewayControlPlane

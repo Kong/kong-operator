@@ -368,8 +368,7 @@ spec:
                     type: static
                     static:
                       key:
-                        namespacedRef:
-                          name: static-key
+                        name: static-key
       use:
         template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
     - name: Assert-EventGatewayVirtualClusterProducePolicy-produce-policy-in-Konnect
@@ -414,8 +413,7 @@ spec:
                   clientAuthentication:
                     mode: required
                     tlsTrustBundles:
-                      - namespacedRef:
-                          name: tls-trust-bundle
+                      - name: tls-trust-bundle
       use:
         template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
     - name: Assert-EventGatewayListenerPolicy-listener-policy-in-Konnect

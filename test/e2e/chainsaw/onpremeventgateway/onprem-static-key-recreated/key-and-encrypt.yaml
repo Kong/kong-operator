@@ -1,0 +1,41 @@
+# The static key and the encrypt policy of onprem-policies, without the Secret
+# of the key, so that applying them keeps the value the Secret has.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayStaticKey
+metadata:
+  name: encryption-key
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: encryption-key
+    value:
+      type: secretRef
+      secretRef:
+        name: encryption-key
+        key: key
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterProducePolicy
+metadata:
+  name: encrypt
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vcluster
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: encrypt
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              name: encryption-key

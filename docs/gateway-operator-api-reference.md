@@ -498,6 +498,59 @@ _Appears in:_
 
 - [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
 
+#### GWAdminLicense
+
+
+GWAdminLicense configures the license and entitlements of gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secretRef` _[GWAdminLicenseSecretRef](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicensesecretref)_ | SecretRef references the Secret key holding the original enveloped license (a compact JWS), without additional encoding. The Secret must be in the namespace of the GWAdmin and carry the operator's secret label selector (default "konghq.com/secret: \"true\""). |
+| `entitlements` _[][GWAdminLicenseEntitlement](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicenseentitlement)_ | Entitlements are the entitlements gw-admin requires the license to grant. Only event_gateway is currently supported. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminLicenseEntitlement
+
+_Underlying type:_ `string`
+
+GWAdminLicenseEntitlement is an entitlement gw-admin requires the license
+to grant.
+
+
+
+
+_Appears in:_
+
+- [GWAdminLicense](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicense)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `event_gateway` | GWAdminLicenseEntitlementEventGateway licenses the on-prem Event Gateway.<br /> |
+
+#### GWAdminLicenseSecretRef
+
+
+GWAdminLicenseSecretRef references a license key in a Secret in the
+namespace of the GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referenced Secret. |
+| `key` _string_ | Key is the key in the Secret holding the enveloped license. |
+
+_Appears in:_
+
+- [GWAdminLicense](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicense)
+
 #### GWAdminNetworkOptions
 
 
@@ -605,6 +658,7 @@ GWAdminSpec defines the desired state of GWAdmin.
 
 | Field | Description |
 | --- | --- |
+| `license` _[GWAdminLicense](#gateway-operator-konghq-com-v1alpha1-types-gwadminlicense)_ | License configures the enveloped license required by gw-admin. gw-admin, not Kong Operator, validates the license.<br /><br />Kong Operator mounts the referenced Secret key in the gw-admin pods and points gw-admin at it: a pod template overlay can't replace the license volume, mount a volume at its path, or set its env vars. A change to the Secret does not restart the pods: the kubelet updates the mounted file, and gw-admin reads it again on each of its periodic license checks. gw-admin refuses to start, or stops, without a valid license. The LicenseProvisioned condition reports a missing Secret, or a missing or empty key. While a GWAdmin references the Secret, the gateway-operator.konghq.com/gwadmin-license-in-use finalizer delays its deletion until no GWAdmin references it: update a license in place rather than deleting and creating its Secret again. |
 | `deployment` _[GWAdminDeploymentOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadmindeploymentoptions)_ | Deployment configures the gw-admin Deployment. |
 | `network` _[GWAdminNetworkOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminnetworkoptions)_ | Network configures the Services in front of gw-admin. |
 | `tls` _[GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)_ | TLS configures the certificates of gw-admin. By default Kong Operator creates a certificate authority for this GWAdmin and issues and rotates every certificate from it, so nothing has to be configured. |

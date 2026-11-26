@@ -104,8 +104,8 @@ stringData:
     -----END PRIVATE KEY-----
 ---
 # A TLS listener policy requiring client certificates signed by the CAs of the
-# EventGatewayTLSTrustBundle above, referenced through namespacedRef (resolved
-# to its Konnect ID). While the policy references it, deleting the trust
+# EventGatewayTLSTrustBundle above, referenced by object (resolved to its
+# Konnect ID). While the policy references it, deleting the trust
 # bundle is blocked.
 kind: EventGatewayListenerPolicy
 apiVersion: configuration.konghq.com/v1alpha1
@@ -132,11 +132,8 @@ spec:
         clientAuthentication:
           mode: required
           tlsTrustBundles:
-            # An EventGatewayTLSTrustBundle in the same namespace. A trust
-            # bundle created outside the cluster can be referenced by its
-            # Konnect id or name instead.
-            - namespacedRef:
-                name: cp-event-1-client-ca
+            # An EventGatewayTLSTrustBundle in the same namespace.
+            - name: cp-event-1-client-ca
   eventGatewayListenerRef:
     type: namespacedRef
     namespacedRef:

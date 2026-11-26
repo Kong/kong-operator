@@ -30,7 +30,7 @@ jobs:
       docs_only: ${{ steps.check-files.outputs.docs_only }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,11 +48,13 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
+      dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
+      dockerhub-pull-token: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}
       slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
     with:
-      username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
+      push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
+      pull-username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
       registry: docker.io
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
       # If we pushed then it means we want to build and push the image.
@@ -60,14 +62,37 @@ jobs:
       push: ${{ github.event.action == 'push' }}
       slack-send: ${{ github.event.action == 'push' }}
 
-  # This job exists to satisfy the required check when only docs change
+  # Builds the Red Hat certification image on each PR. This confirms that the image
+  # compiles for both architectures and passes preflight. The job does not push.
+  build-ubi:
+    needs: [check-docs-only]
+    if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+    uses: ./.github/workflows/__build-workflow.yaml
+    secrets:
+      dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
+      dockerhub-pull-token: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}
+      slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
+    with:
+      push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
+      pull-username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
+      registry: docker.io
+      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
+      target: ubi
+      tag-suffix: redhat
+      push: false
+      preflight: true
+
+  # Required check for this workflow. It stays green when only docs change, because
+  # both build jobs are skipped then. It fails when a job in its needs list fails or
+  # is cancelled.
   build-passed:
     runs-on: ubuntu-latest
-    needs: [check-docs-only]
+    needs: [check-docs-only, build, build-ubi]
     if: always()
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       - name: Check if docs-only changes

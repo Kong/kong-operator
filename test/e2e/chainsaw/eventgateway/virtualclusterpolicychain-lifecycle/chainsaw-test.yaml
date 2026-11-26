@@ -175,7 +175,7 @@ spec:
                 value: .policies == [$ENV.FIRST_ID, $ENV.SECOND_ID]
             content: |
               bash ../../common/scripts/konnect_api_request.sh
-        - description: Wait for periodic reconciliation to restore and hold the declared order.
+        - description: Wait for the next periodic sync to restore the declared order.
           script:
             env: *chain_env
             content: |

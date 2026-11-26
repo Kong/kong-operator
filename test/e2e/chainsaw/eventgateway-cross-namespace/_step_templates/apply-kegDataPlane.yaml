@@ -1,0 +1,24 @@
+# Template for creating a KegDataPlane of the gateway.
+#
+# Required bindings:
+#   - keg_data_plane_name, keg_data_plane_namespace: The data plane.
+#   - control_plane_ref: Its reference to the gateway.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-keg-data-plane
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: eventgateway.konghq.com/v1alpha1
+          kind: KegDataPlane
+          metadata:
+            name: ($keg_data_plane_name)
+            namespace: ($keg_data_plane_namespace)
+          spec:
+            # No pod: the tests only check how the data plane resolves its
+            # gateway.
+            deployment:
+              replicas: 0
+            controlPlaneRef: ($control_plane_ref)

@@ -1,0 +1,31 @@
+# Template for creating an EventGatewayVirtualClusterPolicyChain ordering the
+# single cluster policy of its virtual cluster.
+#
+# Required bindings:
+#   - chain_name, chain_namespace: The chain.
+#   - virtual_cluster_name, virtual_cluster_namespace: Its virtual cluster.
+#   - policy_name, policy_namespace: The cluster policy.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-virtual-cluster-policy-chain
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualClusterPolicyChain
+          metadata:
+            name: ($chain_name)
+            namespace: ($chain_namespace)
+          spec:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($virtual_cluster_name)
+                namespace: ($virtual_cluster_namespace)
+            apiSpec:
+              policies:
+                - kind: EventGatewayVirtualClusterPolicy
+                  name: ($policy_name)
+                  namespace: ($policy_namespace)

@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -173,10 +175,11 @@ func IsTLSSecretValid(secret *corev1.Secret) bool {
 	return true
 }
 
-// EnsureCertificate creates a namespace/name Secret for subject signed by the CA in the
-// mtlsCASecretNamespace/mtlsCASecretName Secret, or does nothing if a namespace/name Secret is
-// already present. It returns a boolean indicating if it created a Secret and an error indicating
-// any failures it encountered.
+// EnsureCertificate creates a Secret for subject, signed by the CA in mtlsCASecretNN. It reuses
+// the owner's single matching Secret, re-issuing the leaf into that Secret when the stored CA
+// bundle no longer matches. It re-creates the Secret when the stored certificate is unusable or
+// is for another subject. It returns the operation it performed and an error indicating any
+// failures it encountered.
 func EnsureCertificate[
 	T interface {
 		k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension
@@ -201,6 +204,12 @@ func EnsureCertificate[
 		return op.Noop, nil, fmt.Errorf("failed listing Secrets for %T %s/%s: %w", owner, owner.GetNamespace(), owner.GetName(), err)
 	}
 
+	// A Secret that a previous reconcile deleted can still be listed while other finalizers
+	// hold it. Counting it as a live Secret makes the reduce step delete the new Secret instead.
+	secrets = slices.DeleteFunc(secrets, func(s corev1.Secret) bool {
+		return !s.DeletionTimestamp.IsZero()
+	})
+
 	count := len(secrets)
 	if count > 1 {
 		if err := k8sreduce.ReduceSecrets(ctx, cl, secrets, getPreDeleteHooks(owner)...); err != nil {
@@ -223,7 +232,7 @@ func EnsureCertificate[
 	block, _ := pem.Decode(existingSecret.Data["tls.crt"])
 	if block == nil {
 		// The existing secret has a broken certificate, delete it and recreate it.
-		if err := cl.Delete(ctx, existingSecret); err != nil {
+		if err := deleteSecret(ctx, cl, existingSecret); err != nil {
 			return op.Noop, nil, err
 		}
 
@@ -237,11 +246,30 @@ func EnsureCertificate[
 		return op.Noop, nil, err
 	}
 	if cert.Subject.CommonName != subject {
-		if err := cl.Delete(ctx, existingSecret); err != nil {
+		if err := deleteSecret(ctx, cl, existingSecret); err != nil {
 			return op.Noop, nil, err
 		}
 
 		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl, certTTL)
+	}
+
+	// The reuse path only refreshes metadata, so a Secret that holds a stale CA bundle would
+	// keep it until the leaf expires. That bundle is stale after a CA gains a root, and after
+	// an operator upgrade to a version that appends the root. Re-issue the leaf into the
+	// existing Secret: deleting it first would leave the owner with no certificate Secret
+	// when the CA cannot issue.
+	ca, err := getCASecret(ctx, cl, mtlsCASecretNN)
+	if err != nil {
+		return op.Noop, existingSecret, err
+	}
+	if desired := caBundle(ca); len(desired) > 0 && !bytes.Equal(existingSecret.Data["ca.crt"], desired) {
+		if err := fillTLSData(existingSecret, owner, subject, ca, usages, certTTL); err != nil {
+			return op.Noop, existingSecret, err
+		}
+		if err := cl.Update(ctx, existingSecret); err != nil {
+			return op.Noop, existingSecret, fmt.Errorf("failed updating secret %s: %w", existingSecret.Name, err)
+		}
+		return op.Updated, existingSecret, nil
 	}
 
 	var updated bool
@@ -284,6 +312,17 @@ func GenerateCertificate[T interface {
 	secretOpts = append(secretOpts, matchingLabelsToSecretOpt(labels))
 	secret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
 	return generateTLSDataSecret(ctx, secret, owner, subject, ca, usages, cl, certTTL)
+}
+
+// deleteSecret deletes a generated certificate Secret. A DataPlane-owned Secret carries the
+// wait-for-owner finalizer, which no controller removes while the owner lives, so drop that
+// finalizer first or the Secret stays terminating instead of going away.
+func deleteSecret(ctx context.Context, cl client.Client, secret *corev1.Secret) error {
+	// The Secret was read earlier, so it can be gone before either call runs.
+	if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, cl, secret); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+	return client.IgnoreNotFound(cl.Delete(ctx, secret))
 }
 
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
@@ -334,18 +373,39 @@ func generateTLSDataSecret(
 	certTTL time.Duration,
 ) (op.Result, *corev1.Secret, error) {
 
-	var ca corev1.Secret
-	if err := k8sClient.Get(ctx, mtlsCASecret, &ca); err != nil {
-		return op.Noop, nil, err
-	}
-	keyConfig, err := DetectCertType(ca.Data["tls.crt"])
+	ca, err := getCASecret(ctx, k8sClient, mtlsCASecret)
 	if err != nil {
 		return op.Noop, nil, err
+	}
+	if err := fillTLSData(generatedSecret, owner, subject, ca, usages, certTTL); err != nil {
+		return op.Noop, nil, err
+	}
+
+	if err = k8sClient.Create(ctx, generatedSecret); err != nil {
+		return op.Noop, nil, err
+	}
+
+	return op.Created, generatedSecret, nil
+}
+
+// fillTLSData fills secret with a new private key, a leaf for subject signed by ca, and the
+// CA bundle. It does not write to the API.
+func fillTLSData(
+	secret *corev1.Secret,
+	owner client.Object,
+	subject string,
+	ca *corev1.Secret,
+	usages []certificatesv1.KeyUsage,
+	certTTL time.Duration,
+) error {
+	keyConfig, err := DetectCertType(ca.Data["tls.crt"])
+	if err != nil {
+		return err
 	}
 
 	priv, pemBlock, signatureAlgorithm, err := CreatePrivateKey(keyConfig)
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
 	template := x509.CertificateRequest{
@@ -360,7 +420,7 @@ func generateTLSDataSecret(
 
 	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
 	// This is effectively a placeholder so long as we handle signing internally. When actually creating CSR resources,
@@ -382,57 +442,109 @@ func generateTLSDataSecret(
 		},
 	}
 
-	signed, err := signCertificate(csr, &ca)
+	signed, err := signCertificate(csr, ca)
 	if err != nil {
-		return op.Noop, nil, err
+		return err
 	}
 
-	generatedSecret.Data = map[string][]byte{
-		"ca.crt":  ca.Data["tls.crt"],
+	secret.Data = map[string][]byte{
+		"ca.crt":  caBundle(ca),
 		"tls.crt": signed,
 		"tls.key": pem.EncodeToMemory(pemBlock),
 	}
 	// Preserve certificate expiration date as an annotation.
-	if generatedSecret.Annotations == nil {
-		generatedSecret.Annotations = make(map[string]string)
+	if secret.Annotations == nil {
+		secret.Annotations = make(map[string]string)
 	}
 	if certBlock, _ := pem.Decode(signed); certBlock != nil {
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err == nil {
-			generatedSecret.Annotations[consts.CertExpiresAtAnnotation] = cert.NotAfter.UTC().Format(time.RFC3339)
+			secret.Annotations[consts.CertExpiresAtAnnotation] = cert.NotAfter.UTC().Format(time.RFC3339)
 		}
 	}
+	return nil
+}
 
-	if err = k8sClient.Create(ctx, generatedSecret); err != nil {
-		return op.Noop, nil, err
+// getCASecret returns the CA Secret at the provided namespaced name.
+func getCASecret(
+	ctx context.Context,
+	cl client.Client,
+	nn types.NamespacedName,
+) (*corev1.Secret, error) {
+	var ca corev1.Secret
+	if err := cl.Get(ctx, nn, &ca); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf(
+				"CA certificate Secret %s not found (it must exist and carry the operator's secret-label-selector label to be visible): %w",
+				nn,
+				err,
+			)
+		}
+		return nil, fmt.Errorf("failed to get CA certificate Secret %s: %w", nn, err)
 	}
+	return &ca, nil
+}
 
-	return op.Created, generatedSecret, nil
+// caBundle returns the ca.crt value for a certificate issued by ca: the CA certificate,
+// followed by every certificate in the CA Secret's ca.crt key that the chain does not
+// already hold. A self-signed CA Secret repeats its certificate in tls.crt and ca.crt.
+func caBundle(ca *corev1.Secret) []byte {
+	bundle := ca.Data["tls.crt"]
+	chain := pemCerts(bundle)
+	var missing [][]byte
+	for _, cert := range pemCerts(ca.Data["ca.crt"]) {
+		if !slices.ContainsFunc(chain, func(c []byte) bool {
+			return bytes.Equal(c, cert)
+		}) {
+			missing = append(missing, bytes.TrimSpace(pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: cert,
+			})))
+		}
+	}
+	if len(missing) == 0 {
+		return bundle
+	}
+	return append(bytes.Join(
+		append(
+			[][]byte{
+				bytes.TrimSpace(bundle),
+			},
+			missing...,
+		),
+		[]byte("\n"),
+	), '\n')
+}
+
+// pemCerts returns the DER bytes of every certificate in the PEM data.
+func pemCerts(data []byte) [][]byte {
+	var certs [][]byte
+	for rest := data; len(rest) > 0; {
+		block, r := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = r
+		if block.Type == "CERTIFICATE" {
+			certs = append(certs, block.Bytes)
+		}
+	}
+	return certs
 }
 
 // DetectCertType inspects a PEM-encoded certificate and returns its KeyConfig.
+// It uses the first block only: a CA Secret may carry its full chain in tls.crt, and
+// that first certificate is the one that signs the issued certificates.
 func DetectCertType(certPEM []byte) (KeyConfig, error) {
-	pemBlocks := make([][]byte, 0, 1)
-	for rest := bytes.TrimSpace(certPEM); len(rest) > 0; {
-		block, r := pem.Decode(rest)
-		if block == nil {
-			return KeyConfig{}, errors.New("invalid PEM block")
-		}
-		if block.Type != "CERTIFICATE" {
-			return KeyConfig{}, errors.New("invalid PEM block type")
-		}
-		pemBlocks = append(pemBlocks, block.Bytes)
-		rest = bytes.TrimSpace(r)
-	}
-
-	if len(pemBlocks) == 0 {
+	block, _ := pem.Decode(bytes.TrimSpace(certPEM))
+	if block == nil {
 		return KeyConfig{}, errors.New("invalid PEM block")
 	}
-	if len(pemBlocks) > 1 {
-		return KeyConfig{}, errors.New("multiple PEM certificates found")
+	if block.Type != "CERTIFICATE" {
+		return KeyConfig{}, errors.New("invalid PEM block type")
 	}
 
-	cert, err := x509.ParseCertificate(pemBlocks[0])
+	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return KeyConfig{}, err
 	}

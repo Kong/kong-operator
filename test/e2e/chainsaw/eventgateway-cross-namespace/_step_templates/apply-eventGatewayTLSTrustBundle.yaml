@@ -1,0 +1,40 @@
+# Template for creating an EventGatewayTLSTrustBundle attached to the gateway,
+# trusting the certificate authority of the Secret client-ca (see
+# create-tls-secrets.yaml).
+#
+# Required bindings:
+#   - tls_trust_bundle_name, tls_trust_bundle_namespace: The TLS trust bundle.
+#   - api_name: Its name in the API of the gateway, which keeps it unique.
+#   - secret_ref_namespace: Namespace of the Secret client-ca, or null to leave it
+#     to default to the namespace of the object.
+#   - gateway_group, gateway_kind, gateway_name: The gateway.
+#   - gateway_ref_namespace: The namespace of the gateway, or null to leave
+#     it to default to the namespace of the object.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-event-gateway-tls-trust-bundle
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayTLSTrustBundle
+          metadata:
+            name: ($tls_trust_bundle_name)
+            namespace: ($tls_trust_bundle_namespace)
+          spec:
+            parentRef:
+              group: ($gateway_group)
+              kind: ($gateway_kind)
+              name: ($gateway_name)
+              namespace: ($gateway_ref_namespace)
+            apiSpec:
+              name: ($api_name)
+              config:
+                trustedCa:
+                  type: secretRef
+                  secretRef:
+                    name: client-ca
+                    namespace: ($secret_ref_namespace)
+                    key: tls.crt

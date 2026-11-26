@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: aigatewayauthstrategies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -136,16 +136,8 @@ spec:
                     description: KeyAuth configuration.
                     properties:
                       config:
-                        description: AIGWKeyAuthGeneratedConfig is a type alias.
+                        description: Configuration for the key-auth auth strategy.
                         properties:
-                          anonymous:
-                            description: |-
-                              An optional string (consumer UUID or username) value to use as an
-                              “anonymous” consumer if authentication fails.
-                              If empty (default null), the request will fail with an authentication
-                              failure `4xx`.
-                            maxLength: 253
-                            type: string
                           hideCredentials:
                             description: |-
                               An optional boolean value telling the plugin to show or hide the credential
@@ -161,8 +153,8 @@ spec:
                               consumer from.
                             items:
                               description: |-
-                                AIGWKeyAuthGeneratedConfigIdentityRealms A configuration of Konnect Identity
-                                Realms that indicate where to source a consumer from.
+                                AIGatewayAuthStrategyKeyAuthConfigIdentityRealms A configuration of Konnect
+                                Identity Realms that indicate where to source a consumer from.
                               properties:
                                 region:
                                   maxLength: 253
@@ -209,13 +201,14 @@ spec:
                               type: string
                             type: array
                           principals:
-                            description: AIGWKeyAuthGeneratedConfigPrincipals is a
-                              type alias.
+                            description: AIGatewayAuthStrategyKeyAuthConfigPrincipals
+                              is a type alias.
                             properties:
                               directory:
                                 description: The Kong Identity directory instance
                                   to authenticate against.
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 description: When true, authenticate against Kong
@@ -312,16 +305,18 @@ spec:
                       managedBy:
                         additionalProperties:
                           description: ManagedByValue is the value type for ManagedBy.
-                          maxLength: 63
+                          maxLength: 127
                           minLength: 1
-                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          pattern: ^[^\s\x00-\x1F\x7F-\x9F]+$
                           type: string
                         description: |-
                           Stores information about what manages this entity, such as the tool or
                           system responsible for its lifecycle (for example, `terraform`).
 
-                          Keys must be 1–63 characters long and start with an alphanumeric
-                          character.
+                          Keys must be 1–63 characters long, start and end with an alphanumeric
+                          character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+                          Values must be 1–127 characters long and must not be empty.
+                          Keys and values must not contain spaces or control characters.
                         maxProperties: 5
                         type: object
                       name:
@@ -341,7 +336,7 @@ spec:
                     description: OpenIDConnect configuration.
                     properties:
                       config:
-                        description: AIGWOpenIDConnectGeneratedConfig is a type alias.
+                        description: Configuration for the OpenID Connect auth strategy.
                         properties:
                           anonymous:
                             description: |-
@@ -594,7 +589,7 @@ spec:
                             description: The JWK used for the private_key_jwt authentication.
                             items:
                               description: |-
-                                AIGWOpenIDConnectGeneratedConfigClientJwk The JWK used for the
+                                AIGatewayAuthStrategyOpenIDConnectConfigClientJwk The JWK used for the
                                 private_key_jwt authentication.
                               properties:
                                 alg:
@@ -740,7 +735,7 @@ spec:
                                 rule: '!(has(self.value) && has(self.secretRef))'
                             type: array
                           clusterCacheRedis:
-                            description: AIGWOpenIDConnectGeneratedConfigClusterCacheRedis
+                            description: AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis
                               is a type alias.
                             properties:
                               cloudAuthentication:
@@ -837,7 +832,7 @@ spec:
                                   The minimum length of the array is 1 element.
                                 items:
                                   description: |-
-                                    AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes Cluster
+                                    AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes Cluster
                                     addresses to use for Redis connections when the `redis` strategy is defined.
                                     Defining this field implies using a Redis Cluster.
                                     The minimum length of the array is 1 element.
@@ -1002,8 +997,9 @@ spec:
                                   The minimum length of the array is 1 element.
                                 items:
                                   description: |-
-                                    AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes Sentinel node
-                                    addresses to use for Redis connections when the `redis` strategy is defined.
+                                    AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes
+                                    Sentinel node addresses to use for Redis connections when the `redis`
+                                    strategy is defined.
                                     Defining this field implies using a Redis Sentinel.
                                     The minimum length of the array is 1 element.
                                   properties:
@@ -1243,8 +1239,8 @@ spec:
                             description: The downstream claim to header mappings.
                             items:
                               description: |-
-                                AIGWOpenIDConnectGeneratedConfigDownstreamHeaders The downstream claim to
-                                header mappings.
+                                AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders The downstream
+                                claim to header mappings.
                               properties:
                                 header:
                                   description: The name of the header.
@@ -1587,6 +1583,7 @@ spec:
                             description: |-
                               Defines leeway time (in seconds) for `auth_time`, `exp`, `iat`, and `nbf`
                               claims
+                            minimum: 0
                             type: number
                           loginAction:
                             description: |-
@@ -1739,6 +1736,7 @@ spec:
                                 description: The Kong Identity directory instance
                                   to look up against.
                                 maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 description: When true, query Kong Identity to map
@@ -1931,8 +1929,8 @@ spec:
                               type: string
                             type: array
                           redis:
-                            description: AIGWOpenIDConnectGeneratedConfigRedis is
-                              a type alias.
+                            description: AIGatewayAuthStrategyOpenIDConnectConfigRedis
+                              is a type alias.
                             properties:
                               cloudAuthentication:
                                 description: |-
@@ -2028,8 +2026,8 @@ spec:
                                   The minimum length of the array is 1 element.
                                 items:
                                   description: |-
-                                    AIGWOpenIDConnectGeneratedConfigRedisClusterNodes Cluster addresses to use
-                                    for Redis connections when the `redis` strategy is defined.
+                                    AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes Cluster addresses
+                                    to use for Redis connections when the `redis` strategy is defined.
                                     Defining this field implies using a Redis Cluster.
                                     The minimum length of the array is 1 element.
                                   properties:
@@ -2197,8 +2195,8 @@ spec:
                                   The minimum length of the array is 1 element.
                                 items:
                                   description: |-
-                                    AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes Sentinel node addresses to
-                                    use for Redis connections when the `redis` strategy is defined.
+                                    AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes Sentinel node
+                                    addresses to use for Redis connections when the `redis` strategy is defined.
                                     Defining this field implies using a Redis Sentinel.
                                     The minimum length of the array is 1 element.
                                   properties:
@@ -2718,6 +2716,7 @@ spec:
                             type: string
                           timeout:
                             description: Network IO timeout in milliseconds.
+                            minimum: 0
                             type: number
                           tlsClientAuthCertID:
                             description: |-
@@ -2966,8 +2965,9 @@ spec:
                                   the token will be exchanged.
                                 items:
                                   description: |-
-                                    AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers Trusted
-                                    token issuers from which the upstream may accept tokens to be exchanged.
+                                    AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers
+                                    Trusted token issuers from which the upstream may accept tokens to be
+                                    exchanged.
                                     If a JWT bearer matches all the conditions of a subject token issuer item,
                                     the token will be exchanged.
                                   properties:
@@ -3166,8 +3166,8 @@ spec:
                             description: The upstream claim to header mappings.
                             items:
                               description: |-
-                                AIGWOpenIDConnectGeneratedConfigUpstreamHeaders The upstream claim to header
-                                mappings.
+                                AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders The upstream claim to
+                                header mappings.
                               properties:
                                 header:
                                   description: The name of the header.
@@ -3386,16 +3386,18 @@ spec:
                       managedBy:
                         additionalProperties:
                           description: ManagedByValue is the value type for ManagedBy.
-                          maxLength: 63
+                          maxLength: 127
                           minLength: 1
-                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          pattern: ^[^\s\x00-\x1F\x7F-\x9F]+$
                           type: string
                         description: |-
                           Stores information about what manages this entity, such as the tool or
                           system responsible for its lifecycle (for example, `terraform`).
 
-                          Keys must be 1–63 characters long and start with an alphanumeric
-                          character.
+                          Keys must be 1–63 characters long, start and end with an alphanumeric
+                          character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+                          Values must be 1–127 characters long and must not be empty.
+                          Keys and values must not contain spaces or control characters.
                         maxProperties: 5
                         type: object
                       name:

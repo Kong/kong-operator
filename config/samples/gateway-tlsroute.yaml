@@ -73,7 +73,6 @@ apiVersion: gateway-operator.konghq.com/v2beta1
 kind: GatewayConfiguration
 metadata:
   name: example-tlsroute
-  namespace: default
 spec:
   dataPlaneOptions:
     deployment:

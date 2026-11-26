@@ -1,9 +1,17 @@
 # gw-admin is the on-prem control plane of the next-generation Kong data
 # planes, such as the Kong Event Gateway, when they run without Konnect. Kong
-# Gateway 3.x data planes are not supported. With an empty spec Kong Operator deploys it
-# and creates its certificate authorities, from which it issues and rotates
-# every certificate gw-admin and Kong Operator need. The empty spec is the
-# same as:
+# Gateway 3.x data planes are not supported. The license Secret reference is
+# required; the Secret key must hold the original enveloped license (JWS).
+# Only event_gateway is supported and it is the default entitlement.
+# Create the Secret separately, in the same namespace, with the
+# konghq.com/secret: "true" label. Do not commit the license to source control.
+# Kong Operator mounts the key in the gw-admin pods: a license updated in place
+# reaches them without a restart. The LicenseProvisioned condition reports a
+# missing license; gw-admin validates it.
+#
+# Kong Operator creates the certificate authorities by default, from which
+# it issues and rotates every certificate gw-admin and Kong Operator need.
+# Omitting tls is the same as:
 #
 #   spec:
 #     tls:
@@ -24,4 +32,8 @@ apiVersion: gateway-operator.konghq.com/v1alpha1
 kind: GWAdmin
 metadata:
   name: gw-admin
-spec: {}
+spec:
+  license:
+    secretRef:
+      name: gw-admin-license
+      key: license

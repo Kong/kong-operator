@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -372,14 +373,7 @@ func RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrust
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.Type != EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen {
 		return nil
 	}
-	var refs []EventGatewayTLSTrustBundleRef
-	for i := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles {
-		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles[i].NamespacedRef == nil {
-			continue
-		}
-		refs = append(refs, *obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles[i].NamespacedRef)
-	}
-	return refs
+	return obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles
 }
 
 // resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles resolves the CR references in spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles
@@ -399,10 +393,6 @@ func resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrus
 		}
 		if ref.Name == "" {
 			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
 		var referenced EventGatewayTLSTrustBundle
@@ -444,12 +434,114 @@ func resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrus
 	return resolved, nil
 }
 
+// RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination returns the references at spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj *EventGatewayListenerPolicy) []EventGatewayVirtualClusterRef {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.Type != EventGatewayListenerPolicyConfigTypeForwardToVirtualClust {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.Type != ForwardToVirtualClusterPolicyConfigTypePortMapping {
+		return nil
+	}
+	// The field is required: an unset name is returned, for the resolver to
+	// report it rather than leave the reference in the payload.
+	return []EventGatewayVirtualClusterRef{obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping.Destination}
+}
+
+// resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination resolves the CR references in spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination
+// to Konnect IDs.
+func resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx context.Context, cl client.Client, obj *EventGatewayListenerPolicy) ([]string, error) {
+	refs := RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualCluster"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		var referenced EventGatewayVirtualCluster
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayVirtualCluster %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// Nor does an object under an ancestor it does not manage, e.g. a
+		// virtual cluster of a backend cluster attached to an on-prem gateway.
+		if referenced.GetKonnectID() == "" && ancestorSkipsKonnectReconciliation(ctx, cl, &referenced) {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewayVirtualCluster objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayVirtualCluster", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle returns the keys of the EventGatewayTLSTrustBundle
 // objects obj references through spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles, with the default namespace applied.
 func EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(obj *EventGatewayListenerPolicy) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj) {
-		if ref.Kind != "" && ref.Kind != "EventGatewayTLSTrustBundle" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewayTLSTrustBundle") {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster returns the keys of the EventGatewayVirtualCluster
+// objects obj references through spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination, with the default namespace applied.
+func EventGatewayListenerPolicyRefsToEventGatewayVirtualCluster(obj *EventGatewayListenerPolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj) {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "EventGatewayVirtualCluster") {
 			continue
 		}
 		ns := ref.Namespace
@@ -468,6 +560,9 @@ func (obj *EventGatewayListenerPolicy) ResolveKonnectReferences(ctx context.Cont
 	if _, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
+	if _, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
 	return errors.Join(errs...)
 }
 
@@ -477,6 +572,46 @@ func (obj *EventGatewayListenerPolicy) ResolveKonnectReferences(ctx context.Cont
 // calling ResolveKonnectReferences.
 func (obj *EventGatewayListenerPolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
+	for _, ref := range RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayTLSTrustBundle"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayListenerPolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualCluster"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "EventGatewayListenerPolicy"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 
@@ -491,11 +626,11 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 	if err != nil {
 		return nil, err
 	}
-	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles may carry CR references: replace each reference object set to
-	// "namespaced_ref" in the SDK payload with one wrapping its resolved
-	// Konnect value under "id", leaving reference objects set by
-	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "id". A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 		tlsServer, _ := payload["tls_server"].(map[string]any)
 		if tlsServer != nil {
@@ -507,33 +642,44 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 					if err != nil {
 						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %w", err)
 					}
-					rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles := 0
-					if arr, ok := clientAuthentication["tls_trust_bundles"].([]any); ok {
-						for i, e := range arr {
-							el, ok := e.(map[string]any)
-							if !ok {
-								continue
-							}
-							if _, has := el["namespaced_ref"]; !has {
-								continue
-							}
-							if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
-								return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: more references set than the %d resolved", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
-							}
-							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles]}
-							rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles++
-						}
+					wrappedTLSServerConfigClientAuthenticationTLSTrustBundles := make([]map[string]string, 0, len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
+					for _, v := range resolvedTLSServerConfigClientAuthenticationTLSTrustBundles {
+						wrappedTLSServerConfigClientAuthenticationTLSTrustBundles = append(wrappedTLSServerConfigClientAuthenticationTLSTrustBundles, map[string]string{"id": v})
 					}
-					// Every resolved reference must have been rewritten: a mismatch means
-					// the references and the payload disagree on which items carry one.
-					if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles != len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
-						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %d resolved but %d set in the payload", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles), rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles)
+					if len(wrappedTLSServerConfigClientAuthenticationTLSTrustBundles) > 0 {
+						clientAuthentication["tls_trust_bundles"] = wrappedTLSServerConfigClientAuthenticationTLSTrustBundles
 					}
 					config["client_authentication"] = clientAuthentication
 				}
 				tlsServer["config"] = config
 			}
 			payload["tls_server"] = tlsServer
+		}
+	}
+	// spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "id",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping != nil {
+		forwardToVirtualCluster, _ := payload["forward_to_virtual_cluster"].(map[string]any)
+		if forwardToVirtualCluster != nil {
+			config2, _ := forwardToVirtualCluster["config"].(map[string]any)
+			if config2 != nil {
+				portMapping, _ := config2["port_mapping"].(map[string]any)
+				if portMapping != nil {
+					resolvedForwardToVirtualClusterConfigPortMappingDestination, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: %w", err)
+					}
+					if len(resolvedForwardToVirtualClusterConfigPortMappingDestination) > 0 {
+						portMapping["destination"] = map[string]any{"id": resolvedForwardToVirtualClusterConfigPortMappingDestination[0]}
+					}
+					config2["port_mapping"] = portMapping
+				}
+				forwardToVirtualCluster["config"] = config2
+			}
+			payload["forward_to_virtual_cluster"] = forwardToVirtualCluster
 		}
 	}
 	return spec.toCreateEventGatewayListenerPolicyRequestFromPayload(payload)
@@ -550,11 +696,11 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 	if err != nil {
 		return nil, err
 	}
-	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles may carry CR references: replace each reference object set to
-	// "namespaced_ref" in the SDK payload with one wrapping its resolved
-	// Konnect value under "id", leaving reference objects set by
-	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
-	// of the config wasn't set, so the payload is left untouched.
+	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "id". A
+	// nil CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 		tlsServer, _ := payload["tls_server"].(map[string]any)
 		if tlsServer != nil {
@@ -566,33 +712,44 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 					if err != nil {
 						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %w", err)
 					}
-					rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles := 0
-					if arr, ok := clientAuthentication["tls_trust_bundles"].([]any); ok {
-						for i, e := range arr {
-							el, ok := e.(map[string]any)
-							if !ok {
-								continue
-							}
-							if _, has := el["namespaced_ref"]; !has {
-								continue
-							}
-							if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
-								return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: more references set than the %d resolved", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
-							}
-							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles]}
-							rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles++
-						}
+					wrappedTLSServerConfigClientAuthenticationTLSTrustBundles := make([]map[string]string, 0, len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
+					for _, v := range resolvedTLSServerConfigClientAuthenticationTLSTrustBundles {
+						wrappedTLSServerConfigClientAuthenticationTLSTrustBundles = append(wrappedTLSServerConfigClientAuthenticationTLSTrustBundles, map[string]string{"id": v})
 					}
-					// Every resolved reference must have been rewritten: a mismatch means
-					// the references and the payload disagree on which items carry one.
-					if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles != len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
-						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %d resolved but %d set in the payload", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles), rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles)
+					if len(wrappedTLSServerConfigClientAuthenticationTLSTrustBundles) > 0 {
+						clientAuthentication["tls_trust_bundles"] = wrappedTLSServerConfigClientAuthenticationTLSTrustBundles
 					}
 					config["client_authentication"] = clientAuthentication
 				}
 				tlsServer["config"] = config
 			}
 			payload["tls_server"] = tlsServer
+		}
+	}
+	// spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination carries a CR reference: overwrite it in the SDK payload with an
+	// object wrapping the resolved Konnect value under "id",
+	// preserving sibling keys of its ancestors. A nil
+	// CRD ancestor pointer means that part of the config wasn't set, so the
+	// payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.ForwardToVirtualClust.Config.PortMapping != nil {
+		forwardToVirtualCluster, _ := payload["forward_to_virtual_cluster"].(map[string]any)
+		if forwardToVirtualCluster != nil {
+			config2, _ := forwardToVirtualCluster["config"].(map[string]any)
+			if config2 != nil {
+				portMapping, _ := config2["port_mapping"].(map[string]any)
+				if portMapping != nil {
+					resolvedForwardToVirtualClusterConfigPortMappingDestination, err := resolveEventGatewayListenerPolicyForwardToVirtualClusterConfigPortMappingDestination(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.forwardToVirtualCluster.config.portMapping.destination references: %w", err)
+					}
+					if len(resolvedForwardToVirtualClusterConfigPortMappingDestination) > 0 {
+						portMapping["destination"] = map[string]any{"id": resolvedForwardToVirtualClusterConfigPortMappingDestination[0]}
+					}
+					config2["port_mapping"] = portMapping
+				}
+				forwardToVirtualCluster["config"] = config2
+			}
+			payload["forward_to_virtual_cluster"] = forwardToVirtualCluster
 		}
 	}
 	return spec.toUpdateEventGatewayListenerPolicyRequestFromPayload(payload)

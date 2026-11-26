@@ -42,6 +42,14 @@ func EventGatewayListenerPolicyReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.EventGatewayVirtualCluster{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewayListenerPolicyForEventGatewayVirtualCluster(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayListenerPolicyList](cl),
@@ -88,6 +96,24 @@ func enqueueEventGatewayListenerPolicyForEventGatewayTLSTrustBundle(
 		var l configurationv1alpha1.EventGatewayListenerPolicyList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueEventGatewayListenerPolicyForEventGatewayVirtualCluster(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*configurationv1alpha1.EventGatewayVirtualCluster)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.EventGatewayListenerPolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayVirtualClusterRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

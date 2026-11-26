@@ -2,9 +2,11 @@ package kongstate
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -18,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
@@ -104,7 +107,12 @@ func (ks *KongState) FillConsumersAndCredentials(
 	credentialsConflictDetector := NewCredentialConflictsDetector()
 
 	// build consumer index
-	for _, consumer := range s.ListKongConsumers() {
+	// The KongConsumers owning a username or custom_id are chosen before, and independently of, the credential
+	// conflict detection below. An owner can still be dropped later because of conflicting credentials, and the
+	// KongConsumers rejected as its duplicates are not translated in its place. This is intentional: it keeps the
+	// owner of a username or custom_id stable, so changes to credentials of unrelated objects never move it to another
+	// KongConsumer.
+	for _, consumer := range rejectConsumersWithDuplicateIdentifiers(s.ListKongConsumers(), failuresCollector) {
 		var c Consumer
 		// This is now enforce that the CRD level but we're keeping this just for those
 		// rare cases where the CRD Validation Expressions are disabled.
@@ -234,6 +242,57 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, c := range consumerIndex {
 		ks.Consumers = append(ks.Consumers, c)
 	}
+}
+
+// compareKongConsumers orders `KongConsumer`s by their priority when they share a username or custom_id:
+// - The one created earlier (earlier `creationTimestamp`) takes precedence.
+// - If the creationTimestamp equals, the one with smaller lexical order of namespace, then name, takes precedence.
+func compareKongConsumers(c1, c2 *configurationv1.KongConsumer) int {
+	return cmp.Or(
+		c1.CreationTimestamp.Compare(c2.CreationTimestamp.Time),
+		cmp.Compare(c1.Namespace, c2.Namespace),
+		cmp.Compare(c1.Name, c2.Name),
+	)
+}
+
+// rejectConsumersWithDuplicateIdentifiers returns the KongConsumers that can be translated without
+// violating Kong's uniqueness of consumer username and custom_id.
+// KongConsumers are processed in the order given by compareKongConsumers and each of them claims its username
+// and custom_id. A KongConsumer whose username or custom_id is already claimed is rejected with a translation failure.
+// Rejected KongConsumers do not claim their identifiers.
+func rejectConsumersWithDuplicateIdentifiers(
+	consumers []*configurationv1.KongConsumer,
+	failuresCollector *failures.ResourceFailuresCollector,
+) []*configurationv1.KongConsumer {
+	sorted := slices.SortedFunc(slices.Values(consumers), compareKongConsumers)
+
+	usernameOwners := make(map[string]*configurationv1.KongConsumer, len(sorted))
+	customIDOwners := make(map[string]*configurationv1.KongConsumer, len(sorted))
+	accepted := make([]*configurationv1.KongConsumer, 0, len(sorted))
+	for _, consumer := range sorted {
+		if owner, ok := usernameOwners[consumer.Username]; consumer.Username != "" && ok {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("username %q is already used by KongConsumer %s", consumer.Username, client.ObjectKeyFromObject(owner)),
+				consumer,
+			)
+			continue
+		}
+		if owner, ok := customIDOwners[consumer.CustomID]; consumer.CustomID != "" && ok {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("custom_id %q is already used by KongConsumer %s", consumer.CustomID, client.ObjectKeyFromObject(owner)),
+				consumer,
+			)
+			continue
+		}
+		if consumer.Username != "" {
+			usernameOwners[consumer.Username] = consumer
+		}
+		if consumer.CustomID != "" {
+			customIDOwners[consumer.CustomID] = consumer
+		}
+		accepted = append(accepted, consumer)
+	}
+	return accepted
 }
 
 func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
@@ -507,11 +566,40 @@ type pluginReference struct {
 	Name      string
 }
 
+// pluginInheritedTags holds the tags inherited by plugins bound to Kong routes and services, keyed
+// by the route's and service's name respectively (which are the identifiers used in plugin relations).
+type pluginInheritedTags struct {
+	routes   map[string]util.InheritedTags
+	services map[string]util.InheritedTags
+}
+
+// inheritedTagsForPlugins collects the tags the Kong routes and services inherit from the parent
+// Gateways (and their GatewayClasses) of the Gateway API routes they were translated from, so that
+// plugins bound to them inherit them too.
+func (ks *KongState) inheritedTagsForPlugins() pluginInheritedTags {
+	inherited := pluginInheritedTags{
+		routes:   map[string]util.InheritedTags{},
+		services: map[string]util.InheritedTags{},
+	}
+	for i := range ks.Services {
+		if svc := ks.Services[i]; svc.Name != nil && !svc.InheritedTags.IsEmpty() {
+			inherited.services[*svc.Name] = svc.InheritedTags
+		}
+		for j := range ks.Services[i].Routes {
+			if route := ks.Services[i].Routes[j]; route.Name != nil && !route.InheritedTags.IsEmpty() {
+				inherited.routes[*route.Name] = route.InheritedTags
+			}
+		}
+	}
+	return inherited
+}
+
 func buildPlugins(
 	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 	pluginRels map[string]rels.ForeignRelations,
+	inheritedTags pluginInheritedTags,
 ) []Plugin {
 	var plugins []Plugin
 
@@ -562,17 +650,29 @@ func buildPlugins(
 			var toHash bytes.Buffer
 
 			// ID is populated because that is read by decK and in_memory translator too
+			var routeInheritedTags, serviceInheritedTags util.InheritedTags
 			if !rel.Service.IsEmpty() {
 				relSvc := rel.Service.Identifier
 				plugin.Service = &kong.Service{ID: new(relSvc)}
 				toHash.WriteString("_service-")
 				toHash.WriteString(relSvc)
+				serviceInheritedTags = inheritedTags.services[relSvc]
 			}
 			if !rel.Route.IsEmpty() {
 				relRoute := rel.Route.Identifier
 				plugin.Route = &kong.Route{ID: new(relRoute)}
 				toHash.WriteString("_route-")
 				toHash.WriteString(relRoute)
+				routeInheritedTags = inheritedTags.routes[relRoute]
+			}
+			// A plugin bound to a route or service translated from a Gateway API route inherits the tags
+			// of the route's parent Gateways (and their GatewayClasses), after the KongPlugin's own tags.
+			if !routeInheritedTags.IsEmpty() || !serviceInheritedTags.IsEmpty() {
+				// Every Gateway's tags (the bound route's, then the bound service's) come before every
+				// GatewayClass's tags.
+				plugin.Tags = util.MergeTags(plugin.Tags,
+					routeInheritedTags.Gateway, serviceInheritedTags.Gateway,
+					routeInheritedTags.GatewayClass, serviceInheritedTags.GatewayClass)
 			}
 			if !rel.Consumer.IsEmpty() {
 				relConsumer := rel.Consumer.Identifier
@@ -660,8 +760,44 @@ func (ks *KongState) FillPlugins(
 	log logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
 ) {
-	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations(s, log, failuresCollector))
+	ks.Plugins = buildPlugins(log, s, failuresCollector, ks.getPluginRelations(s, log, failuresCollector), ks.inheritedTagsForPlugins())
+	ks.dropPluginsWithUnsupportedCondition(failuresCollector, kongVersion)
+}
+
+// dropPluginsWithUnsupportedCondition removes the plugins that set a condition when the gateway does not
+// support it. The whole plugin is dropped rather than only its condition: a plugin without its condition
+// runs on every request, which is not the behavior the user asked for.
+func (ks *KongState) dropPluginsWithUnsupportedCondition(
+	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
+) {
+	if kongVersion.GTE(versions.KongPluginConditionCutoff) {
+		return
+	}
+
+	// A plugin is copied once per entity it is attached to; report each parent only once.
+	reported := sets.New[client.ObjectKey]()
+	ks.Plugins = lo.Filter(ks.Plugins, func(plugin Plugin, _ int) bool {
+		if plugin.Condition == nil {
+			return true
+		}
+		if plugin.K8sParent == nil {
+			return false
+		}
+		if key := client.ObjectKeyFromObject(plugin.K8sParent); !reported.Has(key) {
+			reported.Insert(key)
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf(
+					"plugin condition is not supported with Kong Gateway versions < %s",
+					versions.KongPluginConditionCutoff,
+				),
+				plugin.K8sParent,
+			)
+		}
+		return false
+	})
 }
 
 // FillIDs iterates over the KongState and fills in the ID field for each entity

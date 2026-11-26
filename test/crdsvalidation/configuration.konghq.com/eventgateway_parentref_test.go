@@ -254,14 +254,23 @@ func runGatewayParentRefTestCases[
 			ExpectedUpdateErrorMessage: new(sameGatewayOnly),
 		},
 		{
-			// A konnectID names no object a parentRef could be compared with.
-			Name: "gatewayRef with a konnectID cannot be replaced by a parentRef when programmed",
-			TestObject: programmed(withRefs(nil, commonv1alpha1.ObjectRef{
+			// A konnectID was never resolved: the gateway is found from the
+			// cluster only.
+			Name: "gatewayRef with a konnectID fails",
+			TestObject: withRefs(nil, commonv1alpha1.ObjectRef{
 				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 				KonnectID: new("8ae65120-cdec-4310-84c1-4b19caf67967"),
-			})),
-			Update:                     setRefs(konnectRef(gatewayName), commonv1alpha1.ObjectRef{}),
-			ExpectedUpdateErrorMessage: new(sameGatewayOnly),
+			}),
+			ExpectedErrorMessage: new("spec.gatewayRef must use namespacedRef"),
+		},
+		{
+			Name:       "gatewayRef can't be changed to a konnectID",
+			TestObject: valid.DeepCopy(),
+			Update: setRefs(nil, commonv1alpha1.ObjectRef{
+				Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+				KonnectID: new("8ae65120-cdec-4310-84c1-4b19caf67967"),
+			}),
+			ExpectedUpdateErrorMessage: new("spec.gatewayRef must use namespacedRef"),
 		},
 		{
 			Name:       "gatewayRef can be replaced by a parentRef to another gateway when not programmed",

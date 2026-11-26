@@ -211,6 +211,7 @@ func gatewayParentStatusForRoute[routeT gatewayapi.RouteT](
 					ObservedGeneration: route.GetGeneration(),
 					LastTransitionTime: metav1.Now(),
 					Reason:             parentGateway.condition.Reason,
+					Message:            parentGateway.condition.Message,
 				},
 			},
 		}

@@ -40,6 +40,9 @@ spec:
       value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
 
   steps:
+    - name: License-input
+      use:
+        template: ../../common/_step_templates/apply-gwadmin-license.yaml
     - name: 1-Each-data-plane-proxies-its-gateway
       try:
         - apply:

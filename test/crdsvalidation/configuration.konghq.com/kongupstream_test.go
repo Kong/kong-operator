@@ -466,6 +466,49 @@ func TestKongUpstream(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
+			{
+				Name: "tags entries must not start with reserved prefix k8s-version:",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							HashOn:         new(sdkkonnectcomp.HashOnQueryArg),
+							HashOnQueryArg: new("arg"),
+							Tags: []string{
+								"k8s-version:value",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							HashOn:         new(sdkkonnectcomp.HashOnQueryArg),
+							HashOnQueryArg: new("arg"),
+							Tags: []string{
+								"k8s-team:value",
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

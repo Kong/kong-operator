@@ -1075,6 +1075,19 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 	{
 		Path: []string{
+			"gemini",
+			"config",
+			"auth",
+			"gcp",
+			"workload_identity_federation",
+			"aws_iam",
+			"aws",
+		},
+		Key:   "type",
+		Value: "aws",
+	},
+	{
+		Path: []string{
 			"huggingface",
 			"config",
 			"auth",
@@ -6582,7 +6595,7 @@ func resolveAIGatewayModelProviderXaiDatastores(ctx context.Context, cl client.C
 func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider) []client.ObjectKey {
 	var keys []client.ObjectKey
 	for _, ref := range RefsAtAIGatewayModelProviderAnthropicDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6592,7 +6605,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderAzureDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6602,7 +6615,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderBasetenDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6612,7 +6625,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderBedrockDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6622,7 +6635,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderCerebrasDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6632,7 +6645,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderCohereDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6642,7 +6655,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderDashscopeDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6652,7 +6665,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderDatabricksDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6662,7 +6675,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderDeepseekDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6672,7 +6685,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderGeminiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6682,7 +6695,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderHuggingfaceDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6692,7 +6705,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderKimiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6702,7 +6715,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderLlama2Datastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6712,7 +6725,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderMistralDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6722,7 +6735,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderOllamaDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6732,7 +6745,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderOpenaiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6742,7 +6755,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderSagemakerDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6752,7 +6765,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderTypesafeDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6762,7 +6775,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderVercelDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6772,7 +6785,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderVllmDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6782,7 +6795,7 @@ func AIGatewayModelProviderRefsToAIGatewayDatastore(obj *AIGatewayModelProvider)
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
 	for _, ref := range RefsAtAIGatewayModelProviderXaiDatastores(obj) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+		if ref.Name == "" || (ref.Kind != "" && ref.Kind != "AIGatewayDatastore") {
 			continue
 		}
 		ns := ref.Namespace
@@ -6886,9 +6899,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.anthropic.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic != nil {
 		anthropic, _ := payload["anthropic"].(map[string]any)
 		if anthropic == nil {
@@ -6907,9 +6918,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.azure.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
 		azure, _ := payload["azure"].(map[string]any)
 		if azure == nil {
@@ -6928,9 +6937,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.baseten.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
 		baseten, _ := payload["baseten"].(map[string]any)
 		if baseten == nil {
@@ -6949,9 +6956,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.bedrock.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
 		bedrock, _ := payload["bedrock"].(map[string]any)
 		if bedrock == nil {
@@ -6970,9 +6975,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.cerebras.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras != nil {
 		cerebras, _ := payload["cerebras"].(map[string]any)
 		if cerebras == nil {
@@ -6991,9 +6994,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.cohere.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere != nil {
 		cohere, _ := payload["cohere"].(map[string]any)
 		if cohere == nil {
@@ -7012,9 +7013,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.dashscope.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope != nil {
 		dashscope, _ := payload["dashscope"].(map[string]any)
 		if dashscope == nil {
@@ -7033,9 +7032,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.databricks.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks != nil {
 		databricks, _ := payload["databricks"].(map[string]any)
 		if databricks == nil {
@@ -7054,9 +7051,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.deepseek.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek != nil {
 		deepseek, _ := payload["deepseek"].(map[string]any)
 		if deepseek == nil {
@@ -7075,9 +7070,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.gemini.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
 		gemini, _ := payload["gemini"].(map[string]any)
 		if gemini == nil {
@@ -7096,9 +7089,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.huggingface.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
 		huggingface, _ := payload["huggingface"].(map[string]any)
 		if huggingface == nil {
@@ -7117,9 +7108,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.kimi.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi != nil {
 		kimi, _ := payload["kimi"].(map[string]any)
 		if kimi == nil {
@@ -7138,9 +7127,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.llama2.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2 != nil {
 		llama2, _ := payload["llama2"].(map[string]any)
 		if llama2 == nil {
@@ -7159,9 +7146,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.mistral.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 		mistral, _ := payload["mistral"].(map[string]any)
 		if mistral == nil {
@@ -7180,9 +7165,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.ollama.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama != nil {
 		ollama, _ := payload["ollama"].(map[string]any)
 		if ollama == nil {
@@ -7201,9 +7184,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.openai.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
 		openai, _ := payload["openai"].(map[string]any)
 		if openai == nil {
@@ -7222,9 +7203,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.sagemaker.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 		sagemaker, _ := payload["sagemaker"].(map[string]any)
 		if sagemaker == nil {
@@ -7243,9 +7222,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.typesafe.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
 		typesafe, _ := payload["typesafe"].(map[string]any)
 		if typesafe == nil {
@@ -7264,9 +7241,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.vercel.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 		vercel, _ := payload["vercel"].(map[string]any)
 		if vercel == nil {
@@ -7285,9 +7260,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.vllm.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm != nil {
 		vllm, _ := payload["vllm"].(map[string]any)
 		if vllm == nil {
@@ -7306,9 +7279,7 @@ func (obj *AIGatewayModelProvider) ToCreateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.xai.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai != nil {
 		xai, _ := payload["xai"].(map[string]any)
 		if xai == nil {
@@ -7341,9 +7312,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.anthropic.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic != nil {
 		anthropic, _ := payload["anthropic"].(map[string]any)
 		if anthropic == nil {
@@ -7362,9 +7331,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.azure.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
 		azure, _ := payload["azure"].(map[string]any)
 		if azure == nil {
@@ -7383,9 +7350,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.baseten.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
 		baseten, _ := payload["baseten"].(map[string]any)
 		if baseten == nil {
@@ -7404,9 +7369,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.bedrock.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
 		bedrock, _ := payload["bedrock"].(map[string]any)
 		if bedrock == nil {
@@ -7425,9 +7388,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.cerebras.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras != nil {
 		cerebras, _ := payload["cerebras"].(map[string]any)
 		if cerebras == nil {
@@ -7446,9 +7407,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.cohere.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Cohere != nil {
 		cohere, _ := payload["cohere"].(map[string]any)
 		if cohere == nil {
@@ -7467,9 +7426,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.dashscope.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Dashscope != nil {
 		dashscope, _ := payload["dashscope"].(map[string]any)
 		if dashscope == nil {
@@ -7488,9 +7445,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.databricks.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Databricks != nil {
 		databricks, _ := payload["databricks"].(map[string]any)
 		if databricks == nil {
@@ -7509,9 +7464,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.deepseek.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Deepseek != nil {
 		deepseek, _ := payload["deepseek"].(map[string]any)
 		if deepseek == nil {
@@ -7530,9 +7483,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.gemini.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini != nil {
 		gemini, _ := payload["gemini"].(map[string]any)
 		if gemini == nil {
@@ -7551,9 +7502,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.huggingface.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Huggingface != nil {
 		huggingface, _ := payload["huggingface"].(map[string]any)
 		if huggingface == nil {
@@ -7572,9 +7521,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.kimi.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Kimi != nil {
 		kimi, _ := payload["kimi"].(map[string]any)
 		if kimi == nil {
@@ -7593,9 +7540,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.llama2.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Llama2 != nil {
 		llama2, _ := payload["llama2"].(map[string]any)
 		if llama2 == nil {
@@ -7614,9 +7559,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.mistral.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Mistral != nil {
 		mistral, _ := payload["mistral"].(map[string]any)
 		if mistral == nil {
@@ -7635,9 +7578,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.ollama.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Ollama != nil {
 		ollama, _ := payload["ollama"].(map[string]any)
 		if ollama == nil {
@@ -7656,9 +7597,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.openai.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
 		openai, _ := payload["openai"].(map[string]any)
 		if openai == nil {
@@ -7677,9 +7616,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.sagemaker.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 		sagemaker, _ := payload["sagemaker"].(map[string]any)
 		if sagemaker == nil {
@@ -7698,9 +7635,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.typesafe.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
 		typesafe, _ := payload["typesafe"].(map[string]any)
 		if typesafe == nil {
@@ -7719,9 +7654,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.vercel.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 		vercel, _ := payload["vercel"].(map[string]any)
 		if vercel == nil {
@@ -7740,9 +7673,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.vllm.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm != nil {
 		vllm, _ := payload["vllm"].(map[string]any)
 		if vllm == nil {
@@ -7761,9 +7692,7 @@ func (obj *AIGatewayModelProvider) ToUpdateAIGatewayModelProviderRequest(ctx con
 	}
 	// spec.apiSpec.xai.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
-	// wrapping that value under "name". A nil CRD ancestor
-	// pointer means that part of the config wasn't set, so the payload is left
-	// untouched.
+	// wrapping that value under "name".
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil && obj.Spec.APISpec.AIGatewayModelProviderConfig.Xai != nil {
 		xai, _ := payload["xai"].(map[string]any)
 		if xai == nil {

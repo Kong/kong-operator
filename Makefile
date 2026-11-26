@@ -38,6 +38,17 @@ LDFLAGS_METADATA ?= \
 	-X $(GO_METADATA_PACKAGE).repo=$(REPO_INFO) \
 	-X $(GO_METADATA_PACKAGE).repoURL=$(REPO_URL)
 
+CGO_ENABLED ?= $(shell go env CGO_ENABLED)
+TARGETOS ?= $(shell go env GOOS)
+TARGETARCH ?= $(shell go env GOARCH)
+OPERATOR_BUILD_ENV = \
+	CGO_ENABLED=$(CGO_ENABLED) \
+	GOOS=$(TARGETOS) \
+	GOARCH=$(TARGETARCH) \
+	TAG=$(TAG) \
+	COMMIT=$(COMMIT) \
+	REPO_INFO=$(REPO_INFO)
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -259,7 +270,8 @@ build.operator.debug:
 
 .PHONY: _build.operator
 _build.operator:
-	go build -o bin/manager $(GCFLAGS) \
+	env $(OPERATOR_BUILD_ENV) \
+		go build -o bin/manager $(GCFLAGS) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		cmd/main.go
 
@@ -329,7 +341,8 @@ verify: verify.go-fix verify.manifests verify.generators verify.crd-breaking-cha
 
 .PHONY: verify.diff
 verify.diff:
-	@$(PROJECT_DIR)/scripts/verify-diff.sh $(PROJECT_DIR)
+	@$(PROJECT_DIR)/scripts/verify-diff.sh $(PROJECT_DIR) \
+		$(PROJECT_DIR)/test/e2e/chainsaw/eventgateway-cross-namespace
 
 .PHONY: verify.repo
 verify.repo:
@@ -360,7 +373,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.controllers-aigw manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.controllers-aigw generate.chainsaw-eventgateway-cross-namespace manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -429,6 +442,10 @@ generate.cli-arguments-docs:
 		$(PROJECT_DIR)/docs/cli-arguments-for-developer-konghq-com.md \
 		$(PROJECT_DIR)/docs/cli-arguments.md
 
+.PHONY: generate.chainsaw-eventgateway-cross-namespace
+generate.chainsaw-eventgateway-cross-namespace: ## Generate the chainsaw tests of test/e2e/chainsaw/eventgateway-cross-namespace.
+	go run ./hack/generators/chainsaw-eventgateway-cross-namespace
+
 .PHONY: generate.controllers-aigw
 generate.controllers-aigw:
 	go run ./hack/generators/controllers/aigw/
@@ -462,7 +479,7 @@ manifests.validating-webhook: controller-gen kustomize
 
 .PHONY: manifests.validating-policy
 manifests.validating-policy: kustomize
-	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-policy/main.go
+	KUSTOMIZE_BIN=$(KUSTOMIZE) go run ./hack/generators/validating-policy
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
@@ -563,10 +580,45 @@ manifests.charts.kong-operator.chart.yaml:
 # Build - Container Images
 # ------------------------------------------------------------------------------
 
+PREBUILT ?= false
+GO_MOD_CACHE ?= $(shell go env GOMODCACHE)
+GO_BUILD_CACHE ?= $(shell go env GOCACHE)
+GO_BUILD_CONTAINER_USER ?= $(shell id -u):$(shell id -g)
+GO_BUILDER_IMAGE = $(shell awk '/^FROM --platform=\$$BUILDPLATFORM golang:/ { print $$3; exit }' $(PROJECT_DIR)/Dockerfile)
+
+.PHONY: _build.operator.container
+_build.operator.container: TARGETOS = linux
+_build.operator.container: CGO_ENABLED = 0
+_build.operator.container:
+	@if [ -z "$(GO_BUILDER_IMAGE)" ]; then \
+		echo "Go builder image not found in $(PROJECT_DIR)/Dockerfile" >&2; \
+		exit 1; \
+	fi
+	mkdir -p "$(PROJECT_DIR)/bin" "$(GO_MOD_CACHE)" "$(GO_BUILD_CACHE)"
+	docker run --rm \
+		--user "$(GO_BUILD_CONTAINER_USER)" \
+		--volume "$(PROJECT_DIR):/workspace" \
+		--volume "$(GO_MOD_CACHE):/go/pkg/mod" \
+		--volume "$(GO_BUILD_CACHE):/go-build" \
+		--workdir /workspace \
+		--env HOME=/tmp \
+		--env GOPATH=/go \
+		--env GOCACHE=/go-build \
+		$(GO_BUILDER_IMAGE) \
+		env $(OPERATOR_BUILD_ENV) \
+		make build.operator
+	mv -f "$(PROJECT_DIR)/bin/manager" "$(PROJECT_DIR)/bin/manager-linux-$(TARGETARCH)"
+
+ifeq ($(PREBUILT),true)
+_docker.build: _build.operator.container
+endif
+
 .PHONY: _docker.build
 _docker.build:
 	docker build -t $(IMG):$(TAG) \
+		--platform linux/$(TARGETARCH) \
 		--target $(TARGET) \
+		--build-arg PREBUILT=$(PREBUILT) \
 		--build-arg GOPATH=$(shell go env GOPATH) \
 		--build-arg GOCACHE=$(shell go env GOCACHE) \
 		--build-arg TAG=$(TAG) \
@@ -604,11 +656,10 @@ docker.run.openssf:
 
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
-# The hybrid flavor of the conformance suite needs ~20m for the tests alone.
-# The timeout must also cover the up-to-5m post-suite wait for the conformance
-# namespaces to terminate (suite_test.go), or the test binary gets SIGQUIT'd
-# mid-cleanup and the job fails even when every conformance test passed.
-CONFORMANCE_TEST_TIMEOUT ?= "30m"
+# Allow for the hybrid suite's 30s test isolation interval and the up-to-5m
+# post-suite wait for conformance namespaces to terminate (suite_test.go),
+# so the test binary is not interrupted before tests and cleanup complete.
+CONFORMANCE_TEST_TIMEOUT ?= "90m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
@@ -624,8 +675,8 @@ tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in 
 test: test.unit
 
 UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
-	./test/mocks/sdkmocks ./scripts/apitypes-funcs \
-	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
+	./test/mocks/sdkmocks ./test/e2e/chainsaw/fixtures ./scripts/apitypes-funcs ./hack/generators/validating-policy \
+	./ingress-controller/test/helpers ./ingress-controller/test/testenv ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit
@@ -661,9 +712,11 @@ TEST_DIR ?= $(PROJECT_DIR)
 ENVTEST_GOTESTSUM_FORMAT ?= standard-verbose
 
 .PHONY: _test.envtest
-_test.envtest: gotestsum setup-envtest
+_test.envtest: gotestsum setup-envtest ensure.go.pkg.downloaded.gateway-api
 	$(MAKE) use-setup-envtest CLUSTER_VERSION=$(CLUSTER_VERSION)
 	cd $(TEST_DIR) && \
+	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+	TEST_GATEWAY_API_CRDS_CHANNEL=$(TEST_GATEWAY_API_CRDS_CHANNEL) \
 	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
 	GOTESTSUM_FORMAT=$(ENVTEST_GOTESTSUM_FORMAT) \
@@ -724,7 +777,9 @@ test.api: gotestsum
 	./api/test/...
 
 .PHONY: _test.integration
-_test.integration: gotestsum download.telepresence download.helm
+_test.integration: gotestsum download.telepresence download.helm ensure.go.pkg.downloaded.gateway-api
+	GATEWAY_API_VERSION=$(GATEWAY_API_VERSION) \
+	TEST_GATEWAY_API_CRDS_CHANNEL=$(TEST_GATEWAY_API_CRDS_CHANNEL) \
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
@@ -742,6 +797,12 @@ test.integration-ko:
 		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration.ko.out" \
 		GOTESTPATH=./test/integration/ko/
+
+.PHONY: test.integration-ko-isolated
+test.integration-ko-isolated:
+	@$(MAKE) _test.integration \
+		COVERPROFILE="coverage.integration.ko-isolated.out" \
+		GOTESTPATH=./test/integration/isolated/
 
 .PHONY: test.integration-konnect
 test.integration-konnect:
@@ -878,6 +939,18 @@ test.e2e:
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw
 CHAINSAW_CONFIG ?= ./test/e2e/chainsaw/.chainsaw.yaml
 CHAINSAW_FIXTURES_DIR ?= ./test/e2e/chainsaw/fixtures
+# CHAINSAW_SELECTOR, when set, runs only the tests whose labels match it, e.g.
+# gateway=onprem.
+CHAINSAW_SELECTOR ?=
+# Extra flags passed to `chainsaw test` (e.g. --exclude-test-regex to skip
+# tests requiring route CRDs absent from the cluster, as on standard-channel
+# Gateway API installs). The recipe expands this variable unquoted, so values
+# containing shell metacharacters (e.g. regex `(|)`) must be passed pre-quoted.
+CHAINSAW_TEST_FLAGS ?=
+
+.PHONY: test.e2e.chainsaw.gwadmin-license
+test.e2e.chainsaw.gwadmin-license: ## Check GW_ADMIN_LICENSE_FILE without contacting Kubernetes.
+	bash $(CHAINSAW_FIXTURES_DIR)/gwadmin-license.sh check
 
 # DIRNAME is passed to the dispatcher via the environment (never substituted into the
 # recipe), so its value can never be parsed as a shell command.
@@ -898,7 +971,8 @@ test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	KEG_DP_IMAGE=$(shell $(YQ) -r '.chainsaw.keg-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
 	GW_ADMIN_IMAGE=$(or $(GW_ADMIN_IMAGE),$(shell $(YQ) -r '.chainsaw.gw-admin | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE))) \
 	GRPCURL_BIN=$(GRPCURL) \
-		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
+		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR) $(CHAINSAW_TEST_FLAGS) \
+		$(if $(CHAINSAW_SELECTOR),--selector '$(CHAINSAW_SELECTOR)')
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 GO_TEST_PARALLEL := $(if $(GO_TEST_PARALLEL),$(GO_TEST_PARALLEL),$(NCPU))
@@ -1033,6 +1107,10 @@ GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACK
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_CRDS_KUSTOMIZE_STANDARD_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/
 GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental
+# Channel of Gateway API CRDs installed by tests (experimental|standard).
+# Standard matches clusters that don't install the experimental channel.
+# Exported to tests, which read it via the same-named env (kcfg.GatewayAPICRDsPath).
+TEST_GATEWAY_API_CRDS_CHANNEL ?= experimental
 
 
 # NOTE: we also need --server-side because some CRDs exceed the size limit for annotations:

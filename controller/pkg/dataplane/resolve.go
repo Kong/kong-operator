@@ -29,6 +29,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
 
 // errControlPlaneNotProgrammed is returned by resolveControlPlane when the
@@ -102,10 +103,31 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 			cpKindCfg.Kind, ref.Name, errControlPlaneKindDisabled)
 	}
 
+	namespace := dp.GetNamespace()
+	if ref.Namespace != "" {
+		namespace = ref.Namespace
+	}
+	if namespace != dp.GetNamespace() {
+		err := crossnamespace.CheckKongReferenceGrantForResource(ctx, r.Client, dp.GetNamespace(), namespace, ref.Name,
+			r.Config.GVK, cpKindCfg.GVK)
+		if crossnamespace.IsReferenceNotGranted(err) {
+			log.Debug(logger, "no KongReferenceGrant allows the reference to the "+cpKindCfg.Kind, "ref", ref.Name, "namespace", namespace)
+
+			r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotPermittedReason,
+				fmt.Sprintf("No KongReferenceGrant allows the reference to the %s %s/%s", cpKindCfg.Kind, namespace, ref.Name))
+
+			return ResolvedControlPlane{}, fmt.Errorf("referenced %s %s/%s: %w: %w",
+				cpKindCfg.Kind, namespace, ref.Name, errControlPlaneNotReady, err)
+		}
+		if err != nil {
+			return ResolvedControlPlane{}, err
+		}
+	}
+
 	cp := cpKindCfg.NewObject()
 	err := r.Get(ctx, types.NamespacedName{
 		Name:      ref.Name,
-		Namespace: dp.GetNamespace(),
+		Namespace: namespace,
 	}, cp)
 
 	if apierrors.IsNotFound(err) {
@@ -149,7 +171,7 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 	// cannot use: holding it here keeps a data plane from booting against the
 	// wrong Konnect endpoint.
 	if cpKindCfg.EndpointCheck != nil {
-		if err := cpKindCfg.EndpointCheck(cp); err != nil {
+		if err := cpKindCfg.EndpointCheck(dp, cp); err != nil {
 			log.Debug(logger, "referenced "+cpKindCfg.Kind+" has unusable endpoints",
 				"ref", ref.Name, "error", err.Error())
 

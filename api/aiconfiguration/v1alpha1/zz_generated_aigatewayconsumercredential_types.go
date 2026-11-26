@@ -19,7 +19,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayConsumerRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayConsumerRef == self.spec.aiGatewayConsumerRef", message="spec.aiGatewayConsumerRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayConsumerRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayConsumerRef == self.spec.aiGatewayConsumerRef", message="spec.aiGatewayConsumerRef is immutable when an entity is already Programmed"
 type AIGatewayConsumerCredential struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -84,8 +84,10 @@ type AIGatewayConsumerCredentialAPISpec struct {
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
 	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
 	//
 	//
 	// +optional

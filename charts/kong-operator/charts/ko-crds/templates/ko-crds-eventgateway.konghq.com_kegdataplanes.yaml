@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0
   name: kegdataplanes.eventgateway.konghq.com
 spec:
   group: eventgateway.konghq.com
@@ -139,6 +139,10 @@ spec:
                         maxLength: 253
                         minLength: 1
                         type: string
+                      namespace:
+                        maxLength: 63
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -146,6 +150,10 @@ spec:
                     properties:
                       name:
                         maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 63
                         minLength: 1
                         type: string
                     required:

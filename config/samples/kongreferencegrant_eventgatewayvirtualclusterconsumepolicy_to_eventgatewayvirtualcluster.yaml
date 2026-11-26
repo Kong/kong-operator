@@ -55,11 +55,11 @@ metadata:
   namespace: event-gateways
 spec:
   from:
-    - group: konnect.konghq.com
+    - group: configuration.konghq.com
       kind: EventGatewayVirtualCluster
       namespace: event-virtual-clusters
   to:
-    - group: konnect.konghq.com
+    - group: configuration.konghq.com
       kind: EventGatewayBackendCluster
 ---
 # Allow the ConsumePolicy in event-policies to reference the VirtualCluster in
@@ -71,11 +71,11 @@ metadata:
   namespace: event-virtual-clusters
 spec:
   from:
-    - group: konnect.konghq.com
+    - group: configuration.konghq.com
       kind: EventGatewayVirtualClusterConsumePolicy
       namespace: event-policies
   to:
-    - group: konnect.konghq.com
+    - group: configuration.konghq.com
       kind: EventGatewayVirtualCluster
 ---
 kind: KonnectEventGateway

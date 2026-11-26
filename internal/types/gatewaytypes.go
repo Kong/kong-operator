@@ -70,6 +70,12 @@ type (
 	UDPRouteRule           = gatewayv1.UDPRouteRule
 )
 
+type (
+	Duration                 = gatewayv1.Duration
+	HTTPRouteRetry           = gatewayv1.HTTPRouteRetry
+	HTTPRouteRetryStatusCode = gatewayv1.HTTPRouteRetryStatusCode
+)
+
 var GroupVersion = gatewayv1.GroupVersion
 
 const (
@@ -96,6 +102,7 @@ const (
 	RouteReasonNotAllowedByListeners      = gatewayv1.RouteReasonNotAllowedByListeners
 	RouteReasonRefNotPermitted            = gatewayv1.RouteReasonRefNotPermitted
 	RouteReasonResolvedRefs               = gatewayv1.RouteReasonResolvedRefs
+	RouteReasonUnsupportedValue           = gatewayv1.RouteReasonUnsupportedValue
 	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
 	TLSModePassthrough                    = gatewayv1.TLSModePassthrough
 )

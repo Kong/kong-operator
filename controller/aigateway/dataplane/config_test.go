@@ -61,11 +61,6 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 			serverURL:     privateServerURL,
 			configuration: privateCPPath,
 			telemetry:     privateTPPath,
-			wantErr:       true,
-			// The private rendering of the AI Gateway is not implemented yet
-			// (#6105): a path in the endpoint would be rendered into an
-			// address Kong rejects.
-			wantErrContains: privateCPPath,
 		},
 		{
 			name:            "private server URL, public endpoints",
@@ -76,12 +71,12 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 			wantErrContains: publicCP,
 		},
 		{
-			name:            "public server URL, private endpoints with a path",
-			serverURL:       publicServerURL,
-			configuration:   privateCPPath,
-			telemetry:       privateTPPath,
-			wantErr:         true,
-			wantErrContains: privateCPPath,
+			// The check is asymmetric, as for the classic DataPlane: only a
+			// private server URL demands private endpoints, never the reverse.
+			name:          "public server URL, private endpoints with a path",
+			serverURL:     publicServerURL,
+			configuration: privateCPPath,
+			telemetry:     privateTPPath,
 		},
 		{
 			name:          "public server URL, private endpoints without a path",
@@ -107,7 +102,7 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 				}
 			}
 
-			err := checkKonnectAIGatewayEndpoints(aigw)
+			err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.AIGatewayDataPlane{}, aigw)
 			if !tc.wantErr {
 				require.NoError(t, err)
 				return
@@ -121,6 +116,6 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 // TestCheckKonnectAIGatewayEndpointsUnexpectedObject asserts the check fails closed
 // on a control plane object of another kind instead of reporting usable endpoints.
 func TestCheckKonnectAIGatewayEndpointsUnexpectedObject(t *testing.T) {
-	err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.OnPremAIGateway{})
+	err := checkKonnectAIGatewayEndpoints(&aigatewayv1alpha1.AIGatewayDataPlane{}, &aigatewayv1alpha1.OnPremAIGateway{})
 	require.ErrorContains(t, err, "unexpected control plane object")
 }
