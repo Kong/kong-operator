@@ -28,6 +28,12 @@ on:
       kong-license-data:
         required: false
         description: "The cached Kong Enterprise License, used in preference to fetching it from 1Password. Refreshed by the kong-license-refresh workflow"
+      pyxis-api-token:
+        required: false
+        description: "The Red Hat Pyxis API token for certification submission. If empty, the submission is skipped"
+      pyxis-certification-component-id:
+        required: false
+        description: "The Partner Connect component ID of the operator container image. If empty, the submission is skipped"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -223,6 +229,116 @@ jobs:
       tag: ${{ inputs.tag }}
       verify-image-script: ${{ inputs.verify-image-script }}
 
+  # Publishes the Red Hat certified variant next to the default image: same repository,
+  # "-redhat" suffix, which the chart already strips
+  # (charts/kong-operator/templates/_helpers.tpl:220).
+  build-push-ubi:
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/__build-workflow.yaml
+    secrets:
+      dockerhub-push-token: ${{ secrets.dockerhub-push-token }}
+      dockerhub-pull-token: ${{ secrets.dockerhub-pull-token }}
+    needs:
+    - semver
+    with:
+      registry: ${{ inputs.registry }}
+      push-username: ${{ inputs.dockerhub-push-username }}
+      pull-username: ${{ inputs.dockerhub-pull-username }}
+      image-name: ${{ inputs.image-name }}
+      additional-build-contexts: ${{ inputs.additional-build-contexts }}
+      ref: ${{ inputs.base }}
+      push: true
+      slack-send: true
+      # Never the latest tag: the default image owns it.
+      latest: false
+      tag: ${{ inputs.tag }}
+      verify-image-script: ${{ inputs.verify-image-script }}
+      target: ubi
+      tag-suffix: redhat
+
+  # Submits each architecture to Red Hat. A submission pairs the tag with the digest and
+  # cannot be undone, so it runs only for a tagged release.
+  submit-certified-images:
+    # A submission pairs the tag with a digest, so it waits for every gate that can cause a
+    # rebuild: a re-cut release would give the same version a second digest.
+    needs:
+      - semver
+      - build-push-images
+      - build-push-ubi
+      - sign-image
+      - image-provenance
+      - sign-ubi-image
+      - image-provenance-ubi
+      - attest-security-artifacts
+      - test-integration-current-kubernetes
+      - test-e2e-current-kubernetes
+    if: ${{ inputs.tag != '' && needs.build-push-ubi.outputs.full_tag != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      # preflight only reads the published image, and it cannot use --insecure together
+      # with --submit, so the registry login must be a real TLS registry. Pull-scoped
+      # credentials are enough, and this job hands the credential file to a third-party
+      # container.
+      - name: Log in to the Container registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.dockerhub-pull-username }}
+          password: ${{ secrets.dockerhub-pull-token }}
+
+      # A missing credential must not fail the release: it is reported and the step stops.
+      - name: Submit the image for Red Hat certification
+        env:
+          IMAGE: ${{ needs.build-push-ubi.outputs.full_tag }}-${{ matrix.arch }}
+          ARCH: ${{ matrix.arch }}
+          PYXIS_API_TOKEN: ${{ secrets.pyxis-api-token }}
+          COMPONENT_ID: ${{ secrets.pyxis-certification-component-id }}
+        run: |
+          set -euo pipefail
+          artifacts="${RUNNER_TEMP}/certification-results"
+          mkdir -p "${artifacts}"
+          if [ -z "${PYXIS_API_TOKEN}" ] || [ -z "${COMPONENT_ID}" ]; then
+            echo "::warning::Pyxis credentials are not set. The certification submission is skipped."
+            exit 0
+          fi
+          docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              -v "${HOME}/.docker:/docker" \
+              -v "${artifacts}:/artifacts" \
+              quay.io/opdev/preflight:1.22.0@sha256:cb198b3bb3b5fc8969f4af2e7bef22533f46eae185c586c7077cbc33612f0ba5 \
+              check container "${IMAGE}" \
+              --docker-config=/docker/config.json \
+              --platform "${ARCH}" \
+              --artifacts /artifacts \
+              --submit \
+              --certification-component-id "${COMPONENT_ID}" \
+              --pyxis-api-token "${PYXIS_API_TOKEN}"
+          # preflight exits with 0 when a check fails. Do not use the exit code as a gate.
+          jq -e '.passed' "${artifacts}/${ARCH}/results.json"
+
+      # The results are the evidence of what was submitted for this architecture. Keep
+      # them when the submission fails, because that is when they are needed.
+      - name: Upload the certification results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: certification-results-${{ matrix.arch }}
+          path: ${{ runner.temp }}/certification-results
+          if-no-files-found: ignore
+
   # Kept out of __build-workflow.yaml: a reusable workflow requesting id-token fails validation
   # on callers that cannot grant it, and fork PRs always get none.
   sign-image:
@@ -298,10 +414,81 @@ jobs:
     secrets:
       registry-password: ${{ secrets.dockerhub-push-token }}
 
+  # The certified image is published to Red Hat and pulled by OpenShift users, so it needs the
+  # same signature as the default image. A reader who sees only one signed index would assume
+  # the other is signed too.
+  sign-ubi-image:
+    needs: [build-push-ubi]
+    if: ${{ needs.build-push-ubi.outputs.index_digest != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # keyless cosign signing via the GitHub OIDC token
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.dockerhub-push-username }}
+          password: ${{ secrets.dockerhub-push-token }}
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Sign the image index
+        env:
+          IMAGE: ${{ inputs.registry }}/${{ inputs.image-name }}
+          DIGEST: ${{ needs.build-push-ubi.outputs.index_digest }}
+          COMMIT: ${{ github.sha }}
+          WORKFLOW: ${{ github.workflow }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes --recursive --new-bundle-format=true \
+            -a "sha=${COMMIT}" \
+            -a "workflow=${WORKFLOW}" \
+            -a "repo=${REPO}" \
+            "${IMAGE}@${DIGEST}"
+
+      - name: Verify the image index signature
+        env:
+          IMAGE: ${{ inputs.registry }}/${{ inputs.image-name }}
+          DIGEST: ${{ needs.build-push-ubi.outputs.index_digest }}
+        run: |
+          set -euo pipefail
+          cosign verify \
+            --certificate-identity-regexp "^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${IMAGE}@${DIGEST}"
+
+  image-provenance-ubi:
+    needs: [build-push-ubi]
+    if: ${{ needs.build-push-ubi.outputs.index_digest != '' }}
+    permissions:
+      contents: read
+      actions: read # the generator reads workflow run info to build provenance
+      packages: write # required for publishing provenance, see the generator's known issues
+      id-token: write # keyless signing of the provenance
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      # Must carry neither a tag nor a digest.
+      image: ${{ inputs.registry }}/${{ inputs.image-name }}
+      digest: ${{ needs.build-push-ubi.outputs.index_digest }}
+      registry-username: ${{ inputs.dockerhub-push-username }}
+    secrets:
+      registry-password: ${{ secrets.dockerhub-push-token }}
+
   # The scans produced by __build-workflow.yaml are workflow artifacts, which expire. Collecting
   # them here is what lets the attest job publish them on the image itself.
   create-security-report-artifact:
-    needs: [build-push-images]
+    # Waits for both variants: the scan downloads use patterns, so the reports must all be
+    # present or the bundle contents depend on which build finished first.
+    needs: [build-push-images, build-push-ubi]
     if: ${{ needs.build-push-images.outputs.index_digest != '' }}
     runs-on: ubuntu-latest
     permissions:
@@ -532,6 +719,10 @@ jobs:
       # are never skipped while `push: true` below stays hardcoded: `needs:` propagates a skip.
       - sign-image
       - image-provenance
+      - sign-ubi-image
+      - image-provenance-ubi
+      # Security attestations cover the default image only; the certified image gets a
+      # signature and provenance from the two jobs above.
       - attest-security-artifacts
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
