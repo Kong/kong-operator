@@ -642,7 +642,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: "12345",
 			},
 		}, nil)
-	_, err = Update(ctx, sdk.SDK, 0, fakeClient, &metricsmocks.MockRecorder{}, cp)
+	_, err = Update(ctx, sdk.SDK, 0, fakeClient, &metricsmocks.MockRecorder{}, cp, nil)
 	require.NoError(t, err)
 }
 

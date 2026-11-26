@@ -63,6 +63,7 @@ func updateCACertificate(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.CACertificatesSDK,
+	g *syncGuard,
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -77,11 +78,20 @@ func updateCACertificate(
 		return err
 	}
 
-	_, err = sdk.UpsertCaCertificate(ctx,
-		sdkkonnectops.UpsertCaCertificateRequest{
-			ControlPlaneID:  cpID,
-			CACertificateID: cert.GetKonnectStatus().GetKonnectID(),
-			CACertificate:   input,
+	id := cert.GetKonnectStatus().GetKonnectID()
+	req := sdkkonnectops.UpsertCaCertificateRequest{
+		ControlPlaneID:  cpID,
+		CACertificateID: id,
+		CACertificate:   input,
+	}
+	err = upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.CACertificate, error) {
+			resp, err := sdk.GetCaCertificate(ctx, id, cpID)
+			return resp.GetCACertificate(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.CACertificate, error) {
+			resp, err := sdk.UpsertCaCertificate(ctx, req)
+			return resp.GetCACertificate(), err
 		},
 	)
 
@@ -151,7 +161,7 @@ func adoptCACertificate(
 	case commonv1alpha1.AdoptModeOverride:
 		certCopy := cert.DeepCopy()
 		certCopy.SetKonnectID(konnectID)
-		if err = updateCACertificate(ctx, cl, sdk, certCopy); err != nil {
+		if err = updateCACertificate(ctx, cl, sdk, nil, certCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

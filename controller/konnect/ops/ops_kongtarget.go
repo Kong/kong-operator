@@ -49,6 +49,7 @@ func createTarget(
 func updateTarget(
 	ctx context.Context,
 	sdk sdkkonnectgo.TargetsSDK,
+	g *syncGuard,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -59,12 +60,28 @@ func updateTarget(
 		return fmt.Errorf("can't update %T %s without a Konnect Upstream ID", target, client.ObjectKeyFromObject(target))
 	}
 
-	_, err := sdk.UpsertTargetWithUpstream(ctx, sdkkonnectops.UpsertTargetWithUpstreamRequest{
+	id := target.GetKonnectID()
+	upstreamID := target.Status.Konnect.UpstreamID
+	req := sdkkonnectops.UpsertTargetWithUpstreamRequest{
 		ControlPlaneID:       cpID,
-		UpstreamIDForTarget:  target.Status.Konnect.UpstreamID,
-		TargetID:             target.GetKonnectID(),
+		UpstreamIDForTarget:  upstreamID,
+		TargetID:             id,
 		TargetWithoutParents: kongTargetToTargetWithoutParents(target),
-	})
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.Target, error) {
+			resp, err := sdk.GetTargetWithUpstream(ctx, sdkkonnectops.GetTargetWithUpstreamRequest{
+				ControlPlaneID:      cpID,
+				UpstreamIDForTarget: upstreamID,
+				TargetID:            id,
+			})
+			return resp.GetTarget(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Target, error) {
+			resp, err := sdk.UpsertTargetWithUpstream(ctx, req)
+			return resp.GetTarget(), err
+		},
+	)
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, UpdateOp, target); errWrapped != nil {
 		return errWrapped
@@ -143,7 +160,7 @@ func adoptTarget(
 	case commonv1alpha1.AdoptModeOverride:
 		targetCopy := target.DeepCopy()
 		targetCopy.SetKonnectID(konnectID)
-		if err = updateTarget(ctx, sdk, targetCopy); err != nil {
+		if err = updateTarget(ctx, sdk, nil, targetCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
