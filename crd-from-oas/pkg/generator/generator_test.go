@@ -1145,6 +1145,53 @@ func TestGenerateCRDType_EmitsInlineAPISpecTypes(t *testing.T) {
 	assert.Contains(t, content, "Title string `json:\"title,omitzero\"`")
 }
 
+func TestGenerateCRDType_ImportsForUnionInInlineObject(t *testing.T) {
+	inlineConfig := func(nested *parser.Property) *parser.Schema {
+		return &parser.Schema{
+			Name: "CreateAIGatewayAgentRequest",
+			Properties: []*parser.Property{
+				{
+					Name:       "config",
+					Type:       "object",
+					Properties: []*parser.Property{{Name: "url", Type: "string"}, nested},
+				},
+			},
+		}
+	}
+
+	g := NewGenerator(Config{
+		APIGroup:   "aiconfiguration.konghq.com",
+		APIVersion: "v1alpha1",
+	})
+
+	t.Run("union in inline object", func(t *testing.T) {
+		content, err := g.generateCRDType("CreateAIGatewayAgentRequest", inlineConfig(&parser.Property{
+			Name: "balancer",
+			OneOf: []*parser.Property{
+				{RefName: "AIGatewayUpstreamBalancerRoundRobinConfig"},
+				{RefName: "AIGatewayUpstreamBalancerLeastConnectionsConfig"},
+			},
+			Discriminator: "algorithm",
+			DiscriminatorMapping: map[string]string{
+				"round-robin":       "AIGatewayUpstreamBalancerRoundRobinConfig",
+				"least-connections": "AIGatewayUpstreamBalancerLeastConnectionsConfig",
+			},
+		}))
+		require.NoError(t, err)
+		assert.Contains(t, content, "func (u ConfigBalancer) MarshalJSON() ([]byte, error) {")
+		assert.Contains(t, content, "\t\"encoding/json\"\n\t\"fmt\"\n")
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+	})
+
+	t.Run("inline object without union", func(t *testing.T) {
+		content, err := g.generateCRDType("CreateAIGatewayAgentRequest", inlineConfig(&parser.Property{Name: "path", Type: "string"}))
+		require.NoError(t, err)
+		assert.NotContains(t, content, "\"encoding/json\"")
+		assert.NotContains(t, content, "\"fmt\"")
+	})
+}
+
 func TestGenerateCRDFuncs_GeneratesKonnectLabelAccessors(t *testing.T) {
 	t.Run("referenced labels map type", func(t *testing.T) {
 		schema := &parser.Schema{
