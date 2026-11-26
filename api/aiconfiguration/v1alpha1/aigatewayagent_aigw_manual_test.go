@@ -145,7 +145,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 						},
 						Config: AIGatewayAgentConfig{
 							URL:                "http://upstream:8080",
-							MaxRequestBodySize: 1024,
+							MaxRequestBodySize: new(1024),
 							Logging: AIGatewayAgentConfigLogging{
 								Payloads:       "Enabled",
 								MaxPayloadSize: 512,
@@ -535,7 +535,7 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 		},
 		Config: AIGatewayAgentConfig{
 			URL:                "http://upstream:8080",
-			MaxRequestBodySize: 1024,
+			MaxRequestBodySize: new(1024),
 			CaCertificates:     []AIGatewayCACertificateRef{{Name: "ai-gw-ca-cert"}},
 			Certificates:       []AIGatewayCertificateRef{{Name: "ai-gw-cert"}},
 			Logging: AIGatewayAgentConfigLogging{

@@ -1190,6 +1190,35 @@ func TestGetRefEntityName(t *testing.T) {
 	}
 }
 
+func TestParseSchema_AllOfRefinesNonObjectBase(t *testing.T) {
+	p := NewParser(&openapi3.T{})
+
+	schemaValue := &openapi3.Schema{
+		AllOf: openapi3.SchemaRefs{
+			{
+				Ref: "#/components/schemas/OIDCIdentityProviderScopes",
+				Value: &openapi3.Schema{
+					Type: &openapi3.Types{"array"},
+					Items: &openapi3.SchemaRef{
+						Value: &openapi3.Schema{Type: &openapi3.Types{"string"}},
+					},
+				},
+			},
+			{
+				// A constraint-only sibling (e.g. minItems) has no type of
+				// its own and must not shadow the refined base.
+				Value: &openapi3.Schema{},
+			},
+		},
+	}
+
+	schema := p.parseSchema("CreateOIDCIdentityProviderScopes", schemaValue)
+
+	assert.Equal(t, "array", schema.Type)
+	require.NotNil(t, schema.Items)
+	assert.Equal(t, "string", schema.Items.Type)
+}
+
 func TestParseSchema_AllOfMergesProperties(t *testing.T) {
 	p := NewParser(&openapi3.T{})
 

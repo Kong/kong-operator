@@ -2098,6 +2098,162 @@ func TestGenerateSchemaTypes_FieldConfigOmitZeroThroughRootUnion(t *testing.T) {
 	assert.Contains(t, content, "IdentityRealms []string `json:\"identityRealms,omitzero\"`")
 }
 
+func TestAllowZeroGoType(t *testing.T) {
+	testCases := []struct {
+		goType string
+		fc     *config.FieldConfig
+		want   string
+	}{
+		{goType: "int", fc: nil, want: "int"},
+		{goType: "int", fc: &config.FieldConfig{}, want: "int"},
+		{goType: "int", fc: &config.FieldConfig{AllowZero: true}, want: "*int"},
+		{goType: "float64", fc: &config.FieldConfig{AllowZero: true}, want: "*float64"},
+		{goType: "SomeEnum", fc: &config.FieldConfig{AllowZero: true}, want: "*SomeEnum"},
+		{goType: "*int", fc: &config.FieldConfig{AllowZero: true}, want: "*int"},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%s/%v", tc.goType, tc.fc), func(t *testing.T) {
+			assert.Equal(t, tc.want, allowZeroGoType(tc.goType, tc.fc))
+		})
+	}
+}
+
+func TestGenerateSchemaTypes_FieldConfigAllowZero(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"ListenerConfig": {
+				Name: "ListenerConfig",
+				Properties: []*parser.Property{
+					{Name: "max_request_body_size", Type: "integer", Minimum: new(float64(0))},
+					{Name: "ttl", Type: "integer", Format: "int64"},
+					{Name: "ratio", Type: "number"},
+					{Name: "prefix", Type: "string"},
+					{Name: "timeout", Type: "integer"},
+				},
+			},
+		},
+	}
+	schemaCursors := map[string]*config.FieldConfig{
+		"ListenerConfig": {
+			Fields: map[string]*config.FieldConfig{
+				"maxRequestBodySize": {AllowZero: true},
+				"ttl":                {AllowZero: true},
+				"ratio":              {AllowZero: true},
+				"prefix":             {AllowZero: true},
+			},
+		},
+	}
+
+	content := g.generateSchemaTypes(map[string]bool{"ListenerConfig": true}, parsed, schemaCursors)
+
+	assert.Contains(t, content, "MaxRequestBodySize *int `json:\"maxRequestBodySize,omitempty\"`")
+	assert.Contains(t, content, "+kubebuilder:validation:Minimum=0")
+	assert.Contains(t, content, "Ttl *int64 `json:\"ttl,omitempty\"`")
+	assert.Contains(t, content, "Ratio *float64 `json:\"ratio,omitempty\"`")
+	assert.Contains(t, content, "Prefix *string `json:\"prefix,omitempty\"`")
+	// Fields without _allowZero keep the default omitzero behavior.
+	assert.Contains(t, content, "Timeout int `json:\"timeout,omitzero\"`")
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+// allowZeroRootUnionSpec returns a root-union request body whose "listener"
+// variant has a config schema with fields of several types, so cursors can be
+// built (and validated) the same way buildSchemaCursors walks real entities.
+func allowZeroRootUnionSpec() *parser.ParsedSpec {
+	return &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"CreateAIGatewayMCPServer": {
+				Name:                 "CreateAIGatewayMCPServer",
+				Discriminator:        "type",
+				DiscriminatorMapping: map[string]string{"listener": "AIGatewayMCPServerListener"},
+				OneOf: []*parser.Property{
+					{Name: "AIGatewayMCPServerListener", RefName: "AIGatewayMCPServerListener"},
+				},
+			},
+		},
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayMCPServerListener": {
+				Name:       "AIGatewayMCPServerListener",
+				Properties: []*parser.Property{{Name: "config", RefName: "AIGatewayMCPServerListenerConfig"}},
+			},
+			"AIGatewayMCPServerListenerConfig": {
+				Name: "AIGatewayMCPServerListenerConfig",
+				Properties: []*parser.Property{
+					{Name: "max_request_body_size", Type: "integer"},
+					{Name: "url", Type: "string", Required: true},
+					{Name: "hosts", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "enabled", Type: "boolean"},
+					{Name: "logging", Type: "object", Properties: []*parser.Property{{Name: "level", Type: "string"}}},
+				},
+			},
+		},
+	}
+}
+
+func allowZeroGenerator(field string, fc *config.FieldConfig) *Generator {
+	return NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"AIGatewayMCPServer": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"listener": {Fields: map[string]*config.FieldConfig{
+									"config": {Fields: map[string]*config.FieldConfig{
+										field: fc,
+									}},
+								}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+}
+
+func TestGenerateSchemaTypes_FieldConfigAllowZeroThroughRootUnion(t *testing.T) {
+	parsed := allowZeroRootUnionSpec()
+	g := allowZeroGenerator("maxRequestBodySize", &config.FieldConfig{AllowZero: true})
+
+	cursors, err := g.buildSchemaCursors(parsed)
+	require.NoError(t, err)
+	content := g.generateSchemaTypes(map[string]bool{"AIGatewayMCPServerListenerConfig": true}, parsed, cursors)
+
+	assert.Contains(t, content, "MaxRequestBodySize *int `json:\"maxRequestBodySize,omitempty\"`")
+}
+
+func TestBuildSchemaCursors_AllowZeroValidation(t *testing.T) {
+	testCases := []struct {
+		name    string
+		field   string
+		fc      *config.FieldConfig
+		wantErr string
+	}{
+		{name: "optional integer", field: "maxRequestBodySize", fc: &config.FieldConfig{AllowZero: true}},
+		{name: "required field", field: "url", fc: &config.FieldConfig{AllowZero: true}, wantErr: "only supported on optional fields"},
+		{name: "array field", field: "hosts", fc: &config.FieldConfig{AllowZero: true}, wantErr: `got "array"`},
+		{name: "object field", field: "logging", fc: &config.FieldConfig{AllowZero: true}, wantErr: `got "object"`},
+		{name: "boolean field", field: "enabled", fc: &config.FieldConfig{AllowZero: true}, wantErr: `got "boolean"`},
+		{name: "combined with omitZero", field: "maxRequestBodySize", fc: &config.FieldConfig{AllowZero: true, OmitZero: true}, wantErr: "mutually exclusive"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			g := allowZeroGenerator(tc.field, tc.fc)
+			_, err := g.buildSchemaCursors(allowZeroRootUnionSpec())
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+			require.ErrorContains(t, err, "spec.apiSpec.listener.config."+tc.field)
+		})
+	}
+}
+
 func TestEntityFilePrefix(t *testing.T) {
 	tests := []struct {
 		name     string
