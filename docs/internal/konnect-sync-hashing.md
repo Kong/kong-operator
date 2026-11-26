@@ -29,7 +29,9 @@ The sync state guard (`upsertUnlessInSync`) covers the 17 Kong Gateway configura
 Hashing in `controller/konnect/ops/configversion_hash.go` is split into two layers:
 
 1. **Canonical JSON encoding** (`canonicalPayloadJSON`, `canonicalRepresentationJSON`): turns strongly-typed SDK request/response structs into deterministic canonical JSON bytes.
-2. **Digest computation** (`entityPayloadHash`, `representationHash`): hashes the canonical bytes (currently `sha256:<hex>`). Keyed HMAC digests for secret-bearing payloads can plug into this digest layer without changing canonicalization rules or canonical golden fixtures.
+2. **Digest computation** (`entityPayloadHash`, `representationHash`): hashes the canonical bytes (currently `sha256:<hex>`).
+   Keyed HMAC digests for secret-bearing payloads can plug into this digest layer without changing the canonicalization rules or the SHA-256 golden hashes of other entity types.
+   The keyed digests of the affected types are new values, which need their own golden hashes and must be told apart from SHA-256 digests in `status.sync`, for example by a distinct prefix.
 
 ## Canonicalization Rules
 
@@ -37,20 +39,20 @@ Both desired payloads and Konnect representations go through JSON serialization 
 
 - **Recursive key sorting**: Every JSON object at every depth (including Go structs, SDK unions, nested maps such as `Plugin.Config`, and header maps) is decoded into `map[string]any` and re-encoded with `encoding/json`, which sorts object keys lexicographically.
 - **Exact numeric preservation**: `json.Decoder.UseNumber()` preserves exact JSON number tokens so large `int64` values do not lose precision via `float64`.
-- **Unordered string-set normalization**: Outside opaque plugin `config` maps, known set-like string slices are sorted lexicographically:
-  - `tags`: Kong entity tags (order is not semantically meaningful).
-  - `protocols`: Route and Plugin protocols (Konnect actively reorders values such as `["https","http"]` to `["http","https"]` in responses).
-  - `ca_certificates`: Service trusted CA certificate UUIDs.
-  - `group_ids`: Resolved consumer group Konnect IDs on `consumerSyncPayload` (along with `invalid_groups` sorted by `(name, reason)`).
-- **Order-sensitive arrays preserved**: All other slices (for example `Route.Paths`, `Upstream.Healthchecks` slices, and arrays inside `Plugin.Config`) keep their exact order.
-- **Opaque plugin `config` preservation**: Inside `"config"` maps on `KongPluginBinding`, keys are recursively sorted, but fields are never stripped and arrays are never reordered because plugin config schemas are plugin-defined.
-- **Volatile representation fields**: When hashing Konnect entity representations (outside `"config"`), server-managed timestamps (`created_at`, `updated_at`) are stripped recursively.
+- **Arrays keep their order**: No array is reordered, at any depth. A different order means a different payload or representation:
+  - Payloads are built deterministically, so equal desired states produce equal arrays. For example, `GenerateTagsForObject` sorts tags, and `consumerSyncPayload` sorts the resolved consumer group IDs and invalid references.
+  - Representations are compared with representations only, and Konnect returns arrays in the same order on PUT and GET (see below).
+- **Opaque plugin `config` preservation**: Inside `"config"` maps on `KongPluginBinding`, keys are recursively sorted, but fields are never stripped because plugin config schemas are plugin-defined.
+- **Volatile representation fields**: When hashing Konnect entity representations (outside `"config"`), the fields listed in `volatileRepresentationFields` (`created_at`, `updated_at`) are stripped recursively.
+  A field missing from the list costs a PUT whenever the entity is verified with a GET, not a missed change.
 
 ### Verified Konnect PUT vs GET Behavior
 
 Empirical PUT vs GET checks against Konnect across all 17 entity types confirm:
 
-- After stripping `created_at` and `updated_at` and sorting `protocols`, PUT and GET responses have identical canonical representations for all 17 entity types.
+- After stripping `created_at` and `updated_at`, PUT and GET responses have identical canonical representations for all 17 entity types. No other field changes between them.
+- Konnect normalizes some arrays on write, for example `protocols` sent as `["https","http"]` is stored as `["http","https"]`, and returns the normalized order on both PUT and GET.
+  Other arrays, such as `tags` and `paths`, keep the request order on both. Hashes never compare a request with a response, so arrays need no sorting.
 - `KeyAuth.ttl` is a live server-side countdown when set (for example `3600` on PUT, `3598` on GET two seconds later).
   Because `KongCredentialAPIKeySpec` does not expose `ttl`, operator-managed API keys omit `ttl` on both PUT and GET and match cleanly.
   Keeping `ttl` hashed ensures external TTL modifications in Konnect are detected as drift.

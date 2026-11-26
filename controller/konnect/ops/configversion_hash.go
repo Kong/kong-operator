@@ -73,8 +73,7 @@ func representationHash(v any) (hash, error) {
 
 // canonicalPayloadJSON encodes the desired Konnect request envelope into
 // canonical JSON: every JSON object at every depth has its keys recursively
-// sorted, numbers keep exact JSON encoding, and known unordered string-set
-// fields are sorted.
+// sorted, and numbers keep their exact JSON encoding.
 func canonicalPayloadJSON(controlPlaneID, konnectID string, payload any) ([]byte, error) {
 	envelope := struct {
 		ControlPlaneID string `json:"control_plane_id"`
@@ -89,8 +88,8 @@ func canonicalPayloadJSON(controlPlaneID, konnectID string, payload any) ([]byte
 }
 
 // canonicalRepresentationJSON encodes a Konnect entity representation into
-// canonical JSON: object keys are sorted recursively, volatile server-managed
-// fields are removed, and known unordered string-set fields are sorted.
+// canonical JSON: object keys are sorted recursively, and volatile
+// server-managed fields are removed.
 func canonicalRepresentationJSON(v any) ([]byte, error) {
 	return canonicalizeJSON(v, canonicalizeModeRepresentation)
 }
@@ -123,19 +122,13 @@ func canonicalizeValue(v any, mode canonicalizeMode, inOpaqueConfig bool) any {
 	case map[string]any:
 		out := make(map[string]any, len(value))
 		for k, child := range value {
-			if mode == canonicalizeModeRepresentation && !inOpaqueConfig && isVolatileRepresentationField(k) {
+			if mode == canonicalizeModeRepresentation && !inOpaqueConfig && slices.Contains(volatileRepresentationFields, k) {
 				continue
 			}
 			// Plugin "config" maps hold arbitrary plugin-specific schemas: keep
-			// recursive key sorting, but do not strip fields or reorder arrays
-			// inside them because array order and field semantics are plugin-defined.
+			// recursive key sorting, but do not strip fields inside them, as a
+			// plugin config key named like a volatile field is regular data.
 			childOpaque := inOpaqueConfig || k == "config"
-			if !childOpaque && isUnorderedStringSetField(k) {
-				if sorted, ok := sortStringSlice(child); ok {
-					out[k] = sorted
-					continue
-				}
-			}
 			out[k] = canonicalizeValue(child, mode, childOpaque)
 		}
 		return out
@@ -150,44 +143,14 @@ func canonicalizeValue(v any, mode canonicalizeMode, inOpaqueConfig bool) any {
 	}
 }
 
-func isVolatileRepresentationField(key string) bool {
-	switch key {
-	case "created_at", "updated_at":
-		return true
-	default:
-		return false
-	}
-}
-
-// isUnorderedStringSetField reports whether key names a Kong Gateway entity
-// field whose elements form an unordered set of strings (for example, Konnect
-// actively reorders "protocols" on Route and Plugin responses).
-func isUnorderedStringSetField(key string) bool {
-	switch key {
-	case "tags", "protocols", "ca_certificates", "group_ids":
-		return true
-	default:
-		return false
-	}
-}
-
-func sortStringSlice(v any) ([]any, bool) {
-	items, ok := v.([]any)
-	if !ok {
-		return nil, false
-	}
-	strs := make([]string, len(items))
-	for i, item := range items {
-		s, ok := item.(string)
-		if !ok {
-			return nil, false
-		}
-		strs[i] = s
-	}
-	slices.Sort(strs)
-	out := make([]any, len(strs))
-	for i, s := range strs {
-		out[i] = s
-	}
-	return out, true
+// volatileRepresentationFields are the fields of a Konnect entity
+// representation that Konnect changes without the entity changing. They are
+// removed, at any depth outside plugin configs, before hashing a representation.
+//
+// Comparing the PUT and GET responses of every guarded entity type against
+// Konnect showed no other such field. A missing entry costs a PUT whenever the
+// entity is verified with a GET, not a missed change.
+var volatileRepresentationFields = []string{
+	"created_at",
+	"updated_at",
 }

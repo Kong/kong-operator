@@ -88,7 +88,7 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 					UpdatedAt:         new(int64(1700000100)),
 				}
 			},
-			expectedPayloadHash: "sha256:15fcf0c168d5fdd76f7707a1e40efcf738bf4970267b32cda931a0d1de748b14",
+			expectedPayloadHash: "sha256:d999f34f61593ebbe06fd06e29a1d41085897f4eb044f6daa1658354173af5c6",
 			expectedReprHash:    "sha256:01f23fec2ddbaeaf1f4de1bbfdb6c9b9aed115c1fb21fd2c70f38794350cd35a",
 		},
 		{
@@ -145,7 +145,7 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 					},
 				}
 			},
-			expectedPayloadHash: "sha256:38b2b5c8b17f194b362081eca9dde046af9af97ab7e48f4d1302c40dbfec2bb8",
+			expectedPayloadHash: "sha256:848d37390e36c9572e6444e08254663b11620ef994a8552a213cd33a09aac3af",
 			expectedReprHash:    "sha256:a9c5a07fd789bbe786575b0701488316711cac035ecdadcb8ec6b6af768b9bcb",
 		},
 		{
@@ -182,7 +182,7 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 					},
 				}
 			},
-			expectedPayloadHash: "sha256:9959b1d6ac55cf71eaff49e74b0943ce43c3cdb97ca86b92a69cc87268c3e888",
+			expectedPayloadHash: "sha256:1bd0e23c6b77b6db255c500eec43dedd9e0444fe0cad83429df4ba32847063ad",
 			expectedReprHash:    "sha256:3e8f084b75060c40b4d3a51eeb1e168515edb93794df91571c5292fe34d5d38f",
 		},
 		{
@@ -236,7 +236,7 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 					UpdatedAt: new(int64(1700000100)),
 				}
 			},
-			expectedPayloadHash: "sha256:7881e452ff791184ba9c45b17c075b5b11a8e7b0df11198407e1412bbdc41eae",
+			expectedPayloadHash: "sha256:a5f4c709855a29b146531b39ff9adee4941664738c44aaf5234a8b313daa6e7f",
 			expectedReprHash:    "sha256:2b58ec5838deb93d880672c6a0da25bd45f5623bf867eaa4874b678f67b49520",
 		},
 		{
@@ -767,55 +767,10 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 		assert.Equal(t, h1, h2)
 	})
 
-	t.Run("unordered string sets are normalized for tags, protocols, ca_certificates, and consumer groups", func(t *testing.T) {
-		svc1 := sdkkonnectops.UpsertServiceRequest{
-			ControlPlaneID: cpID,
-			ServiceID:      id,
-			ServiceRequest: sdkkonnectcomp.CreateServiceRequestServiceWithHost(
-				sdkkonnectcomp.ServiceWithHost{
-					Host:           "example.com",
-					CaCertificates: []string{"ca-2", "ca-1"},
-					Tags:           []string{"z", "a"},
-				},
-			),
-		}
-		svc2 := sdkkonnectops.UpsertServiceRequest{
-			ControlPlaneID: cpID,
-			ServiceID:      id,
-			ServiceRequest: sdkkonnectcomp.CreateServiceRequestServiceWithHost(
-				sdkkonnectcomp.ServiceWithHost{
-					Host:           "example.com",
-					CaCertificates: []string{"ca-1", "ca-2"},
-					Tags:           []string{"a", "z"},
-				},
-			),
-		}
-		hs1, err := entityPayloadHash(cpID, id, svc1)
-		require.NoError(t, err)
-		hs2, err := entityPayloadHash(cpID, id, svc2)
-		require.NoError(t, err)
-		assert.Equal(t, hs1, hs2)
-
-		r1 := sdkkonnectops.UpsertRouteRequest{
-			ControlPlaneID: cpID,
-			RouteID:        id,
-			Route: sdkkonnectcomp.CreateRouteRouteJSON(sdkkonnectcomp.RouteJSON{
-				Protocols: []sdkkonnectcomp.RouteJSONProtocols{sdkkonnectcomp.RouteJSONProtocolsHTTPS, sdkkonnectcomp.RouteJSONProtocolsHTTP},
-			}),
-		}
-		r2 := sdkkonnectops.UpsertRouteRequest{
-			ControlPlaneID: cpID,
-			RouteID:        id,
-			Route: sdkkonnectcomp.CreateRouteRouteJSON(sdkkonnectcomp.RouteJSON{
-				Protocols: []sdkkonnectcomp.RouteJSONProtocols{sdkkonnectcomp.RouteJSONProtocolsHTTP, sdkkonnectcomp.RouteJSONProtocolsHTTPS},
-			}),
-		}
-		hr1, err := entityPayloadHash(cpID, id, r1)
-		require.NoError(t, err)
-		hr2, err := entityPayloadHash(cpID, id, r2)
-		require.NoError(t, err)
-		assert.Equal(t, hr1, hr2)
-
+	t.Run("consumer group assignments are built in a deterministic order", func(t *testing.T) {
+		// Hashing keeps array order, so payload builders must produce
+		// deterministic arrays: newConsumerSyncPayload sorts the resolved
+		// consumer groups and invalid references.
 		c1 := newConsumerSyncPayload(
 			sdkkonnectops.UpsertConsumerRequest{ControlPlaneID: cpID, ConsumerID: id},
 			[]string{"cg-b", "cg-a"},
@@ -842,7 +797,30 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 		assert.Equal(t, hNil, hEmpty)
 	})
 
-	t.Run("order-sensitive arrays preserve order", func(t *testing.T) {
+	t.Run("arrays keep their order", func(t *testing.T) {
+		// Arrays are never reordered: payloads are built deterministically
+		// (for example, GenerateTagsForObject sorts tags), so a different
+		// order means a different request.
+		svc1 := sdkkonnectops.UpsertServiceRequest{
+			ControlPlaneID: cpID,
+			ServiceID:      id,
+			ServiceRequest: sdkkonnectcomp.CreateServiceRequestServiceWithHost(
+				sdkkonnectcomp.ServiceWithHost{Host: "example.com", Tags: []string{"z", "a"}},
+			),
+		}
+		svc2 := sdkkonnectops.UpsertServiceRequest{
+			ControlPlaneID: cpID,
+			ServiceID:      id,
+			ServiceRequest: sdkkonnectcomp.CreateServiceRequestServiceWithHost(
+				sdkkonnectcomp.ServiceWithHost{Host: "example.com", Tags: []string{"a", "z"}},
+			),
+		}
+		hs1, err := entityPayloadHash(cpID, id, svc1)
+		require.NoError(t, err)
+		hs2, err := entityPayloadHash(cpID, id, svc2)
+		require.NoError(t, err)
+		assert.NotEqual(t, hs1, hs2, "tags order must remain significant")
+
 		r1 := sdkkonnectops.UpsertRouteRequest{
 			ControlPlaneID: cpID,
 			RouteID:        id,
@@ -883,8 +861,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 	})
 
 	t.Run("large int64 values preserve exact precision", func(t *testing.T) {
-		// Both values exceed float64's 2^53 exact integer boundary and would
-		// collapse if decoded as float64 instead of json.Number.
+		// The first value is 2^53+1, above float64's exact integer limit, so it
+		// would collapse onto the second value (2^53) if decoded as float64
+		// instead of json.Number, and the two hashes would then match.
 		h1, err := entityPayloadHash(cpID, id, map[string]int64{"n": 9007199254740993})
 		require.NoError(t, err)
 		h2, err := entityPayloadHash(cpID, id, map[string]int64{"n": 9007199254740992})
@@ -894,12 +873,12 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 }
 
 func TestCanonicalRepresentationNormalization(t *testing.T) {
-	t.Run("reordered protocols and tags between PUT and GET match", func(t *testing.T) {
+	t.Run("volatile timestamps are ignored", func(t *testing.T) {
 		putRoute := &sdkkonnectcomp.Route{
 			Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
 			RouteJSON: &sdkkonnectcomp.RouteJSON{
 				ID:        new("r-1"),
-				Protocols: []sdkkonnectcomp.RouteJSONProtocols{sdkkonnectcomp.RouteJSONProtocolsHTTPS, sdkkonnectcomp.RouteJSONProtocolsHTTP},
+				Protocols: []sdkkonnectcomp.RouteJSONProtocols{sdkkonnectcomp.RouteJSONProtocolsHTTP, sdkkonnectcomp.RouteJSONProtocolsHTTPS},
 				Tags:      []string{"b", "a"},
 				CreatedAt: new(int64(100)),
 				UpdatedAt: new(int64(100)),
@@ -910,7 +889,7 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 			RouteJSON: &sdkkonnectcomp.RouteJSON{
 				ID:        new("r-1"),
 				Protocols: []sdkkonnectcomp.RouteJSONProtocols{sdkkonnectcomp.RouteJSONProtocolsHTTP, sdkkonnectcomp.RouteJSONProtocolsHTTPS},
-				Tags:      []string{"a", "b"},
+				Tags:      []string{"b", "a"},
 				CreatedAt: new(int64(100)),
 				UpdatedAt: new(int64(200)),
 			},
@@ -920,6 +899,31 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 		hGet, err := representationHash(getRoute)
 		require.NoError(t, err)
 		assert.Equal(t, hPut, hGet)
+	})
+
+	t.Run("reordered arrays are detected as drift", func(t *testing.T) {
+		// Konnect normalizes protocols on write and returns them, and tags, in
+		// the same order on PUT and GET, so a different order means the entity
+		// changed in Konnect.
+		stored := &sdkkonnectcomp.Route{
+			Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
+			RouteJSON: &sdkkonnectcomp.RouteJSON{
+				ID:   new("r-1"),
+				Tags: []string{"b", "a"},
+			},
+		}
+		reordered := &sdkkonnectcomp.Route{
+			Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
+			RouteJSON: &sdkkonnectcomp.RouteJSON{
+				ID:   new("r-1"),
+				Tags: []string{"a", "b"},
+			},
+		}
+		hStored, err := representationHash(stored)
+		require.NoError(t, err)
+		hReordered, err := representationHash(reordered)
+		require.NoError(t, err)
+		assert.NotEqual(t, hStored, hReordered)
 	})
 
 	t.Run("opaque plugin config fields named created_at or updated_at are not stripped", func(t *testing.T) {
