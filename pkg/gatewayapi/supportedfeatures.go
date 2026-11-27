@@ -61,6 +61,9 @@ func GetSupportedFeatures(routerType consts.RouterFlavor, isHybrid bool) ([]feat
 		supportedFeatures := slices.Clone(traditionalCompatibleRouterSupportedFeatures)
 		if isHybrid {
 			supportedFeatures = append(supportedFeatures, features.SupportHTTPRouteMethodMatching)
+		} else {
+			// BackendTLSPolicy v1 is implemented by the embedded ingress controller, so it is only supported in non-hybrid mode.
+			supportedFeatures = append(supportedFeatures, features.SupportBackendTLSPolicy)
 		}
 		return supportedFeatures, nil
 	case consts.RouterFlavorExpressions:
