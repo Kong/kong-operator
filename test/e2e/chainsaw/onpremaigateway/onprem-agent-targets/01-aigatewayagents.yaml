@@ -1,8 +1,10 @@
 # Two AIGatewayAgent routes to the shared go-echo backend, addressed through
 # targets (load-balanced upstream addresses) instead of url: the http agent
-# balances two targets with the round-robin balancer, the a2a agent reaches
-# the backend's /a2a surface through the path field. One target carries an
-# explicit failover: Disabled to pin the boolean-enum normalization.
+# sets the round-robin balancer, the a2a agent reaches the backend's /a2a
+# surface through the path field. The http agent's single target carries an
+# explicit failover: Disabled to pin the boolean-enum normalization
+# (addresses must be unique within an agent, and the backend is one
+# endpoint).
 apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayAgent
 metadata:
@@ -23,7 +25,6 @@ spec:
       targets:
         - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
           weight: 100
-        - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
           failover: Disabled
       balancer:
         algorithm: round-robin

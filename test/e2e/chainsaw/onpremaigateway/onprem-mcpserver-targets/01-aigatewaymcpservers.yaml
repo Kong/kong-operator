@@ -29,7 +29,6 @@ spec:
         targets:
           - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
             weight: 100
-          - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
             failover: Disabled
         balancer:
           algorithm: round-robin
