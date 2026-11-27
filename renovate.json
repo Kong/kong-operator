@@ -274,6 +274,14 @@
       "enabled": false
     },
     {
+      "description": "Disable sdk-konnect-go require bumps on the default branch: go.mod replaces it with sdk-konnect-go-internal, which Renovate bumps through the replace directive",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["require"],
+      "matchPackageNames": ["github.com/Kong/sdk-konnect-go", "github.com/kong/sdk-konnect-go"],
+      "matchBaseBranches": ["$default"],
+      "enabled": false
+    },
+    {
       "description": "Disable KO image bumps in kustomize (done at release time)",
       "matchManagers": ["kustomize"],
       "matchDepNames": ["docker.io/kong/kong-operator"],
