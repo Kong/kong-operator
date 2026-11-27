@@ -7,7 +7,7 @@ spec:
     Stands up an OnPremAIGateway, starts the shared go-echo backend, and
     creates HTTP and A2A AIGatewayAgent routes to it addressed through
     targets (load-balanced upstream addresses) instead of url: the http
-    agent balances two targets with the round-robin balancer, the a2a agent
+    agent sets the round-robin balancer, the a2a agent
     reaches the backend's /a2a surface through the path field. Mirrors the
     `onprem-agent-types` test.
 
