@@ -39,8 +39,14 @@ spec:
       value: (join('-', [($test_name), 'mcp-upstream-server']))
   steps:
     - name: Create-onprem-aigateway
+      # Targets need a 2.4 runtime: the render drops 2.4 features from a
+      # control plane pinned below that (the default is 2.1).
       use:
         template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+        with:
+          bindings:
+            - name: onprem_aigw_spec
+              value: "({minRuntimeVersion: '2.4'})"
     - name: Start-echo-backend
       use:
         template: ../../common/_step_templates/apply-assert-echoService.yaml
