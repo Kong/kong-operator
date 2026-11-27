@@ -20857,7 +20857,7 @@ It is typically sourced from a Kubernetes Secret.
 | Field | Description |
 | --- | --- |
 | `type` _[DBBackedHybridControlPlaneDatabasePasswordType](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepasswordtype)_ | Type indicates the source type of the database password. |
-| `secretRef` _[DBBackedHybridControlPlaneDatabasePasswordSecretRef](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepasswordsecretref)_ | SecretRef represents the reference to the Kubernetes Secret containing the database password. It is required if the Type is set to "Secret". |
+| `secretRef` _[DBBackedHybridControlPlaneDatabasePasswordSecretRef](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepasswordsecretref)_ | SecretRef represents the reference to the Kubernetes Secret containing the database password. It is required if the Type is set to "secretRef". |
 
 _Appears in:_
 
@@ -21018,7 +21018,7 @@ Admin GUI ("Kong manager") of the DBBackedHybridControlPlane.
 | --- | --- |
 | `enabled` _[AdminGUIState](#gateway-operator-konghq-com-v1beta1-types-adminguistate)_ | Enabled represents whether the Admin GUI is enabled or disabled for the DBBackedHybridControlPlane. |
 | `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type represents the type of the service for the Admin GUI of the DBBackedHybridControlPlane. |
-| `port` _int32_ |  |
+| `port` _int32_ | Port represents the port of the service for the Admin GUI of the DBBackedHybridControlPlane. |
 
 _Appears in:_
 

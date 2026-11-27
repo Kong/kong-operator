@@ -86,6 +86,7 @@ const (
 )
 
 // DBBackedHybridControlPlaneLicense represents the license information for the DBBackedHybridControlPlane.
+// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' || has(self.secretRef)",message="secretRef is required when type is 'secretRef'"
 type DBBackedHybridControlPlaneLicense struct {
 	// Type represents the type of specifying the license for the DBBackedHybridControlPlane.
 	// Now only `secretRef` is supported, which means the license is specified by a Kubernetes Secret reference.
@@ -94,7 +95,6 @@ type DBBackedHybridControlPlaneLicense struct {
 	Type DBBackedHybridControlPlaneLicenseType `json:"type"`
 
 	// SecretRef represents a reference to a Kubernetes Secret that contains the license for the DBBackedHybridControlPlane.
-	// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' || has(self.secretRef)",message="spec.secretRef is required when type is 'secretRef'"
 	// +optional
 	SecretRef *DBBackedHybridControlPlaneLicenseSecretRef `json:"secretRef,omitempty"`
 }
@@ -103,9 +103,11 @@ type DBBackedHybridControlPlaneLicense struct {
 type DBBackedHybridControlPlaneLicenseSecretRef struct {
 	// Name represents the name of the Kubernetes Secret that contains the license for the DBBackedHybridControlPlane.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 	// Key represents the key in the Kubernetes Secret that contains the license for the DBBackedHybridControlPlane.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 }
 
@@ -126,6 +128,7 @@ type DBBackedHybridControlPlaneDatabaseConnectionOptions struct {
 	// DatabaseUser represents the username of the database for the DBBackedHybridControlPlane.
 	// Filled to `KONG_PG_USER` environment variable.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Username string `json:"username"`
 	// Password represents the password of the database for the DBBackedHybridControlPlane.
 	// Filled to `KONG_PG_PASSWORD` environment variable as a Kubernetes Secret reference.
@@ -195,7 +198,7 @@ type DBBackedHybridControlPlaneDatabaseTLS struct {
 	// +optional
 	// +kubebuilder:default="tlsv1_2"
 	// +kubebuilder:validation:Enum=tlsv1_1;tlsv1_2;tlsv1_3;any
-	Version DatabaseTLSVersion `json:"version"`
+	Version DatabaseTLSVersion `json:"version,omitempty"`
 	// TrustedCertificates represents the list of trusted TLS certificates for the database connection.
 	// The secrets referenced here should contain the trusted TLS certificates for the database connection.
 	// These secrets are mounted to the pod and the mounting path is filled in `KONG_LUA_SSL_TRUSTED_CERTIFICATES` environment variable.
@@ -209,7 +212,7 @@ type DBBackedHybridControlPlaneDatabaseTLS struct {
 	// +kubebuilder:default=5
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=10
-	VerifyDepth int `json:"verifyDepth"`
+	VerifyDepth int `json:"verifyDepth,omitempty"`
 	// ClientCertificate represents the reference to the Kubernetes Secret containing the client TLS certificate for the database connection.
 	// These secrets are mounted to the pod and the mounting path is filled in `KONG_PG_SSL_CERT` and `KONG_PG_SSL_KEY` environment variables.
 	ClientCertificate *corev1.SecretReference `json:"clientCertificate,omitempty"`
@@ -217,6 +220,7 @@ type DBBackedHybridControlPlaneDatabaseTLS struct {
 
 // DBBackedHybridControlPlaneDatabasePassword represents the password for the database of the DBBackedHybridControlPlane.
 // It is typically sourced from a Kubernetes Secret.
+// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' || has(self.secretRef)",message="secretRef is required when type is 'secretRef'"
 type DBBackedHybridControlPlaneDatabasePassword struct {
 	// Type indicates the source type of the database password.
 	// +required
@@ -224,7 +228,7 @@ type DBBackedHybridControlPlaneDatabasePassword struct {
 	Type DBBackedHybridControlPlaneDatabasePasswordType `json:"type"`
 
 	// SecretRef represents the reference to the Kubernetes Secret containing the database password.
-	// It is required if the Type is set to "Secret".
+	// It is required if the Type is set to "secretRef".
 	// +optional
 	SecretRef *DBBackedHybridControlPlaneDatabasePasswordSecretRef `json:"secretRef,omitempty"`
 }
@@ -241,10 +245,12 @@ const (
 type DBBackedHybridControlPlaneDatabasePasswordSecretRef struct {
 	// Name represents the name of the Kubernetes Secret containing the database password.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Key represents the key within the Kubernetes Secret that holds the database password.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Key string `json:"key"`
 }
 
@@ -291,8 +297,12 @@ type DBBackedHybridControlPlaneServiceAdminGUIOptions struct {
 	// +optional
 	// +kubebuilder:default=LoadBalancer
 	Type corev1.ServiceType `json:"type,omitempty"`
+
+	// Port represents the port of the service for the Admin GUI of the DBBackedHybridControlPlane.
 	// +optional
 	// +kubebuilder:default=8445
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
 	Port int32 `json:"port,omitempty"`
 }
 

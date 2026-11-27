@@ -62723,8 +62723,10 @@ spec:
                           secretRef:
                             properties:
                               key:
+                                minLength: 1
                                 type: string
                               name:
+                                minLength: 1
                                 type: string
                             required:
                             - key
@@ -62737,6 +62739,9 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: secretRef is required when type is 'secretRef'
+                          rule: self.type != 'secretRef' || has(self.secretRef)
                       port:
                         default: 5432
                         format: int32
@@ -62792,6 +62797,7 @@ spec:
                         - verify
                         type: object
                       username:
+                        minLength: 1
                         type: string
                     required:
                     - databaseName
@@ -62816,16 +62822,15 @@ spec:
                       secretRef:
                         properties:
                           key:
+                            minLength: 1
                             type: string
                           name:
+                            minLength: 1
                             type: string
                         required:
                         - key
                         - name
                         type: object
-                        x-kubernetes-validations:
-                        - message: spec.secretRef is required when type is 'secretRef'
-                          rule: self.type != 'secretRef' || has(self.secretRef)
                       type:
                         enum:
                         - secretRef
@@ -62833,6 +62838,9 @@ spec:
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: secretRef is required when type is 'secretRef'
+                      rule: self.type != 'secretRef' || has(self.secretRef)
                   podTemplateSpec:
                     properties:
                       metadata:
@@ -67153,6 +67161,8 @@ spec:
                           port:
                             default: 8445
                             format: int32
+                            maximum: 65535
+                            minimum: 1
                             type: integer
                           type:
                             default: LoadBalancer

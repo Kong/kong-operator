@@ -99,15 +99,17 @@ spec:
                           secretRef:
                             description: |-
                               SecretRef represents the reference to the Kubernetes Secret containing the database password.
-                              It is required if the Type is set to "Secret".
+                              It is required if the Type is set to "secretRef".
                             properties:
                               key:
                                 description: Key represents the key within the Kubernetes
                                   Secret that holds the database password.
+                                minLength: 1
                                 type: string
                               name:
                                 description: Name represents the name of the Kubernetes
                                   Secret containing the database password.
+                                minLength: 1
                                 type: string
                             required:
                             - key
@@ -122,6 +124,9 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: secretRef is required when type is 'secretRef'
+                          rule: self.type != 'secretRef' || has(self.secretRef)
                       port:
                         default: 5432
                         description: |-
@@ -217,6 +222,7 @@ spec:
                         description: |-
                           DatabaseUser represents the username of the database for the DBBackedHybridControlPlane.
                           Filled to `KONG_PG_USER` environment variable.
+                        minLength: 1
                         type: string
                     required:
                     - databaseName
@@ -258,18 +264,17 @@ spec:
                           key:
                             description: Key represents the key in the Kubernetes
                               Secret that contains the license for the DBBackedHybridControlPlane.
+                            minLength: 1
                             type: string
                           name:
                             description: Name represents the name of the Kubernetes
                               Secret that contains the license for the DBBackedHybridControlPlane.
+                            minLength: 1
                             type: string
                         required:
                         - key
                         - name
                         type: object
-                        x-kubernetes-validations:
-                        - message: spec.secretRef is required when type is 'secretRef'
-                          rule: self.type != 'secretRef' || has(self.secretRef)
                       type:
                         description: |-
                           Type represents the type of specifying the license for the DBBackedHybridControlPlane.
@@ -280,6 +285,9 @@ spec:
                     required:
                     - type
                     type: object
+                    x-kubernetes-validations:
+                    - message: secretRef is required when type is 'secretRef'
+                      rule: self.type != 'secretRef' || has(self.secretRef)
                   podTemplateSpec:
                     description: |-
                       PodTemplateSpec defines PodTemplateSpec for Deployment's pods.
@@ -9896,7 +9904,11 @@ spec:
                             type: string
                           port:
                             default: 8445
+                            description: Port represents the port of the service for
+                              the Admin GUI of the DBBackedHybridControlPlane.
                             format: int32
+                            maximum: 65535
+                            minimum: 1
                             type: integer
                           type:
                             default: LoadBalancer
