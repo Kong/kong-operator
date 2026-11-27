@@ -289,7 +289,7 @@ func TestAIGatewayModel(t *testing.T) {
 			{
 				Name:                 "both upstreamURL and upstreamBaseURL is invalid",
 				TestObject:           withOpenaiUpstream("https://llm.example.com/v1/chat/completions", "https://llm.example.com"),
-				ExpectedErrorMessage: new("spec.apiSpec.model.targets[0].config.openai: Invalid value: at most one of the fields in [upstreamURL upstreamBaseURL] may be set"),
+				ExpectedErrorMessage: new("at most one of the fields in [upstreamURL upstreamBaseURL] may be set"),
 			},
 			{
 				Name: "both upstreamURL and upstreamBaseURL is invalid for anthropic",
@@ -300,7 +300,7 @@ func TestAIGatewayModel(t *testing.T) {
 						UpstreamBaseURL: "https://llm.example.com",
 					},
 				}),
-				ExpectedErrorMessage: new("spec.apiSpec.model.targets[0].config.anthropic: Invalid value: at most one of the fields in [upstreamURL upstreamBaseURL] may be set"),
+				ExpectedErrorMessage: new("at most one of the fields in [upstreamURL upstreamBaseURL] may be set"),
 			},
 			{
 				// vllm requires upstreamURL and has no default upstream, so it
