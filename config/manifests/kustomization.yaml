@@ -1,0 +1,5 @@
+# Input for the OLM bundle generation (make bundle). The CSV base carries the
+# metadata; operator-sdk merges the rest of the resources into the bundle.
+resources:
+- bases/kong-operator.clusterserviceversion.yaml
+- ../olm

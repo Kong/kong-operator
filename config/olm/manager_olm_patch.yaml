@@ -1,0 +1,25 @@
+# OLM-specific settings for the operator Deployment. The bundle carries this
+# Deployment inside the CSV install strategy; these are the settings that
+# differ from the kustomize/Helm deployment.
+#
+# - The validating webhook reads its certificate from the directory OLM mounts
+#   it in (one certificate per Deployment, no subfolder).
+# - RELATED_IMAGE_KONG pins the Kong Gateway image the operator deploys; the
+#   digest must be the certified -rhel build (issue #6420).
+# - OLM provisions the webhook certificate itself, so the chart's webhook
+#   certificate volume is not added here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        env:
+        - name: KONG_OPERATOR_VALIDATING_WEBHOOK_CERT_DIR
+          value: /tmp/k8s-webhook-server/serving-certs
+        - name: RELATED_IMAGE_KONG
+          value: docker.io/kong/kong-gateway@sha256:3b96b8d98fca6e5d0841e9f3f66885f7f921acd57c8a9ce39bd03b9ccfaaadda # TODO(certification): certified digest, see #6420

@@ -1,0 +1,356 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  labels:
+    gateway.networking.k8s.io/policy: direct
+  name: kongupstreampolicies.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+      - kong
+    kind: KongUpstreamPolicy
+    listKind: KongUpstreamPolicyList
+    plural: kongupstreampolicies
+    shortNames:
+      - kup
+    singular: kongupstreampolicy
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1beta1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                algorithm:
+                  enum:
+                    - round-robin
+                    - consistent-hashing
+                    - least-connections
+                    - latency
+                    - sticky-sessions
+                  type: string
+                hashOn:
+                  properties:
+                    cookie:
+                      type: string
+                    cookiePath:
+                      type: string
+                    header:
+                      type: string
+                    input:
+                      enum:
+                        - ip
+                        - consumer
+                        - path
+                        - none
+                      type: string
+                    queryArg:
+                      type: string
+                    uriCapture:
+                      type: string
+                  type: object
+                hashOnFallback:
+                  properties:
+                    cookie:
+                      type: string
+                    cookiePath:
+                      type: string
+                    header:
+                      type: string
+                    input:
+                      enum:
+                        - ip
+                        - consumer
+                        - path
+                        - none
+                      type: string
+                    queryArg:
+                      type: string
+                    uriCapture:
+                      type: string
+                  type: object
+                healthchecks:
+                  properties:
+                    active:
+                      properties:
+                        concurrency:
+                          minimum: 1
+                          type: integer
+                        headers:
+                          additionalProperties:
+                            items:
+                              type: string
+                            type: array
+                          type: object
+                        healthy:
+                          properties:
+                            httpStatuses:
+                              items:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              type: array
+                            interval:
+                              minimum: 0
+                              type: integer
+                            successes:
+                              minimum: 0
+                              type: integer
+                          type: object
+                        httpPath:
+                          pattern: ^/.*$
+                          type: string
+                        httpsSni:
+                          type: string
+                        httpsVerifyCertificate:
+                          type: boolean
+                        timeout:
+                          minimum: 0
+                          type: integer
+                        type:
+                          enum:
+                            - http
+                            - https
+                            - tcp
+                            - grpc
+                            - grpcs
+                          type: string
+                        unhealthy:
+                          properties:
+                            httpFailures:
+                              minimum: 0
+                              type: integer
+                            httpStatuses:
+                              items:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              type: array
+                            interval:
+                              minimum: 0
+                              type: integer
+                            tcpFailures:
+                              minimum: 0
+                              type: integer
+                            timeouts:
+                              minimum: 0
+                              type: integer
+                          type: object
+                      type: object
+                    passive:
+                      properties:
+                        healthy:
+                          properties:
+                            httpStatuses:
+                              items:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              type: array
+                            interval:
+                              minimum: 0
+                              type: integer
+                            successes:
+                              minimum: 0
+                              type: integer
+                          type: object
+                        type:
+                          enum:
+                            - http
+                            - https
+                            - tcp
+                            - grpc
+                            - grpcs
+                          type: string
+                        unhealthy:
+                          properties:
+                            httpFailures:
+                              minimum: 0
+                              type: integer
+                            httpStatuses:
+                              items:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              type: array
+                            interval:
+                              minimum: 0
+                              type: integer
+                            tcpFailures:
+                              minimum: 0
+                              type: integer
+                            timeouts:
+                              minimum: 0
+                              type: integer
+                          type: object
+                      type: object
+                    threshold:
+                      maximum: 100
+                      minimum: 0
+                      type: integer
+                  type: object
+                slots:
+                  maximum: 65536
+                  minimum: 10
+                  type: integer
+                stickySessions:
+                  properties:
+                    cookie:
+                      minLength: 1
+                      type: string
+                    cookiePath:
+                      default: /
+                      type: string
+                  required:
+                    - cookie
+                  type: object
+              type: object
+            status:
+              properties:
+                ancestors:
+                  items:
+                    properties:
+                      ancestorRef:
+                        properties:
+                          group:
+                            default: gateway.networking.k8s.io
+                            maxLength: 253
+                            pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                          kind:
+                            default: Gateway
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                            type: string
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                          port:
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          sectionName:
+                            maxLength: 253
+                            minLength: 1
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                            type: string
+                        required:
+                          - name
+                        type: object
+                      conditions:
+                        items:
+                          properties:
+                            lastTransitionTime:
+                              format: date-time
+                              type: string
+                            message:
+                              maxLength: 32768
+                              type: string
+                            observedGeneration:
+                              format: int64
+                              minimum: 0
+                              type: integer
+                            reason:
+                              maxLength: 1024
+                              minLength: 1
+                              pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                              type: string
+                            status:
+                              enum:
+                                - "True"
+                                - "False"
+                                - Unknown
+                              type: string
+                            type:
+                              maxLength: 316
+                              pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                              type: string
+                          required:
+                            - lastTransitionTime
+                            - message
+                            - reason
+                            - status
+                            - type
+                          type: object
+                        maxItems: 8
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                          - type
+                        x-kubernetes-list-type: map
+                      controllerName:
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$
+                        type: string
+                    required:
+                      - ancestorRef
+                      - conditions
+                      - controllerName
+                    type: object
+                  maxItems: 16
+                  type: array
+                  x-kubernetes-list-type: atomic
+              required:
+                - ancestors
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set.
+              rule: 'has(self.spec.hashOn) ? [has(self.spec.hashOn.input), has(self.spec.hashOn.cookie), has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true'
+            - message: When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required.
+              rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath) : true'
+            - message: When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required.
+              rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie) : true'
+            - message: spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set.
+              rule: 'has(self.spec.hashOn) ? has(self.spec.algorithm) && (self.spec.algorithm == "consistent-hashing" || self.spec.algorithm == "sticky-sessions") : true'
+            - message: Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set.
+              rule: 'has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input), has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture), has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true'
+            - message: spec.algorithm must be set to "consistent-hashing" when spec.hashOnFallback is set.
+              rule: 'has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm == "consistent-hashing" : true'
+            - message: spec.hashOnFallback must not be set when spec.hashOn.cookie is set.
+              rule: 'has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback) : true'
+            - message: spec.healthchecks.passive.healthy.interval must not be set.
+              rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.healthy) ? !has(self.spec.healthchecks.passive.healthy.interval) : true'
+            - message: spec.healthchecks.passive.unhealthy.interval must not be set.
+              rule: 'has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval) : true'
+            - message: When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed).
+              rule: 'has(self.spec.stickySessions) ? (has(self.spec.hashOn) && has(self.spec.hashOn.input) && self.spec.hashOn.input == ''none'' && !has(self.spec.hashOn.cookie) && !has(self.spec.hashOn.cookiePath) && !has(self.spec.hashOn.header) && !has(self.spec.hashOn.uriCapture) && !has(self.spec.hashOn.queryArg)) : true'
+            - message: spec.stickySessions.cookie is required when spec.stickySessions is set.
+              rule: 'has(self.spec.stickySessions) ? has(self.spec.stickySessions.cookie) : true'
+            - message: spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set.
+              rule: 'has(self.spec.stickySessions) ? (has(self.spec.algorithm) && self.spec.algorithm == "sticky-sessions") : true'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

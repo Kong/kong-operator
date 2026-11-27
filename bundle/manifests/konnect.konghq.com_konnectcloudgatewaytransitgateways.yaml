@@ -1,0 +1,302 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: konnectcloudgatewaytransitgateways.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+      - kong
+      - konnect
+    kind: KonnectCloudGatewayTransitGateway
+    listKind: KonnectCloudGatewayTransitGatewayList
+    plural: konnectcloudgatewaytransitgateways
+    singular: konnectcloudgatewaytransitgateway
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.state
+          name: State
+          type: string
+        - jsonPath: .status.id
+          name: ID
+          type: string
+        - jsonPath: .status.networkID
+          name: NetworkID
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                adopt:
+                  properties:
+                    from:
+                      enum:
+                        - konnect
+                      type: string
+                    konnect:
+                      properties:
+                        id:
+                          maxLength: 36
+                          minLength: 1
+                          type: string
+                      required:
+                        - id
+                      type: object
+                    mode:
+                      enum:
+                        - match
+                        - override
+                      type: string
+                  required:
+                    - from
+                  type: object
+                  x-kubernetes-validations:
+                    - message: '''from''(adopt source) is immutable'
+                      rule: self.from == oldSelf.from
+                    - message: Must specify Konnect options when from='konnect'
+                      rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                    - message: konnect.id is immutable
+                      rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
+                awsTransitGateway:
+                  properties:
+                    attachment_config:
+                      properties:
+                        ram_share_arn:
+                          minLength: 1
+                          type: string
+                        transit_gateway_id:
+                          minLength: 1
+                          type: string
+                      required:
+                        - ram_share_arn
+                      type: object
+                    cidr_blocks:
+                      items:
+                        type: string
+                      type: array
+                    dns_config:
+                      items:
+                        properties:
+                          domain_proxy_list:
+                            items:
+                              type: string
+                            type: array
+                          remote_dns_server_ip_addresses:
+                            items:
+                              type: string
+                            type: array
+                        required:
+                          - domain_proxy_list
+                          - remote_dns_server_ip_addresses
+                        type: object
+                      type: array
+                    name:
+                      maxLength: 120
+                      minLength: 1
+                      type: string
+                  required:
+                    - attachment_config
+                    - cidr_blocks
+                    - name
+                  type: object
+                azureTransitGateway:
+                  properties:
+                    attachment_config:
+                      properties:
+                        resource_group_name:
+                          minLength: 1
+                          type: string
+                        subscription_id:
+                          minLength: 1
+                          type: string
+                        tenant_id:
+                          minLength: 1
+                          type: string
+                        vnet_name:
+                          minLength: 1
+                          type: string
+                      required:
+                        - resource_group_name
+                        - subscription_id
+                        - tenant_id
+                        - vnet_name
+                      type: object
+                    dns_config:
+                      items:
+                        properties:
+                          domain_proxy_list:
+                            items:
+                              type: string
+                            type: array
+                          remote_dns_server_ip_addresses:
+                            items:
+                              type: string
+                            type: array
+                        required:
+                          - domain_proxy_list
+                          - remote_dns_server_ip_addresses
+                        type: object
+                      type: array
+                    name:
+                      maxLength: 120
+                      minLength: 1
+                      type: string
+                  required:
+                    - attachment_config
+                    - name
+                  type: object
+                networkRef:
+                  properties:
+                    konnectID:
+                      maxLength: 36
+                      type: string
+                    namespacedRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    type:
+                      enum:
+                        - konnectID
+                        - namespacedRef
+                      type: string
+                  required:
+                    - type
+                  type: object
+                  x-kubernetes-validations:
+                    - message: when type is namespacedRef, namespacedRef must be set
+                      rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                    - message: when type is namespacedRef, konnectID must not be set
+                      rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                    - message: when type is konnectID, konnectID must be set
+                      rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                    - message: when type is konnectID, namespacedRef must not be set
+                      rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                type:
+                  enum:
+                    - AWSTransitGateway
+                    - AzureTransitGateway
+                  type: string
+              required:
+                - networkRef
+                - type
+              type: object
+              x-kubernetes-validations:
+                - message: only namespacedRef is supported currently
+                  rule: self.networkRef.type == 'namespacedRef'
+                - message: spec.type is immutable
+                  rule: self.type == oldSelf.type
+                - message: must set spec.awsTransitGateway when spec.type is 'AWSTransitGateway'
+                  rule: 'self.type == ''AWSTransitGateway'' ? has(self.awsTransitGateway) : true'
+                - message: must not set spec.awsTransitGateway when spec.type is not 'AWSTransitGateway'
+                  rule: 'self.type != ''AWSTransitGateway'' ? !has(self.awsTransitGateway) : true'
+                - message: must set spec.azureTransitGateway when spec.type is 'AzureTransitGateway'
+                  rule: 'self.type == ''AzureTransitGateway'' ? has(self.azureTransitGateway) : true'
+                - message: must not set spec.azureTransitGateway when spec.type is not 'AzureTransitGateway'
+                  rule: 'self.type != ''AzureTransitGateway'' ? !has(self.azureTransitGateway) : true'
+            status:
+              properties:
+                conditions:
+                  default:
+                    - lastTransitionTime: "1970-01-01T00:00:00Z"
+                      message: Waiting for controller
+                      reason: Pending
+                      status: Unknown
+                      type: Programmed
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                id:
+                  maxLength: 256
+                  type: string
+                networkID:
+                  type: string
+                organizationID:
+                  maxLength: 256
+                  type: string
+                serverURL:
+                  maxLength: 512
+                  type: string
+                state:
+                  type: string
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: spec.awsTransitGateway.name is immutable when transit gateway is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : (!has(self.spec.awsTransitGateway) ? true : oldSelf.spec.awsTransitGateway.name == self.spec.awsTransitGateway.name)'
+            - message: spec.azureTransitGateway.name is immutable when transit gateway is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : (!has(self.spec.azureTransitGateway) ? true : oldSelf.spec.azureTransitGateway.name == self.spec.azureTransitGateway.name)'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

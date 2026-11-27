@@ -1,0 +1,14 @@
+# Aggregates the manifests that the OLM bundle carries. The bundle is built
+# from here (make bundle), not from config/default, because OLM has different
+# needs: no Gateway API CRDs (OpenShift ships its own and refuses bundles that carry them),
+# no cert-manager resources, and OLM provisions the webhook certificates.
+resources:
+- ../crd/kong-operator
+- ../rbac
+- ../manager/manager.yaml
+- webhook_service.yaml
+patches:
+- path: manager_olm_patch.yaml
+  target:
+    kind: Deployment
+    name: controller-manager

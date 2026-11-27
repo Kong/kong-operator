@@ -1,0 +1,525 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: konnectextensions.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+      - kong
+      - konnect
+    kind: KonnectExtension
+    listKind: KonnectExtensionList
+    plural: konnectextensions
+    singular: konnectextension
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: Ready
+          type: string
+      deprecated: true
+      deprecationWarning: This API has been deprecated in favor of v1alpha2 konnectextensions.konnect.konghq.com and it will be removed in future version.
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                clientAuth:
+                  default:
+                    certificateSecret:
+                      provisioning: Automatic
+                  properties:
+                    certificateSecret:
+                      properties:
+                        provisioning:
+                          default: Automatic
+                          enum:
+                            - Manual
+                            - Automatic
+                          type: string
+                        secretRef:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                            - name
+                          type: object
+                      type: object
+                  required:
+                    - certificateSecret
+                  type: object
+                  x-kubernetes-validations:
+                    - message: secretRef must be set when provisioning is set to Manual.
+                      rule: 'self.certificateSecret.provisioning == ''Manual'' ? has(self.certificateSecret.secretRef) : true'
+                    - message: secretRef must not be set when provisioning is set to Automatic.
+                      rule: 'self.certificateSecret.provisioning == ''Automatic'' ? !has(self.certificateSecret.secretRef) : true'
+                konnect:
+                  properties:
+                    configuration:
+                      properties:
+                        authRef:
+                          properties:
+                            name:
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            namespace:
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                            - name
+                          type: object
+                      required:
+                        - authRef
+                      type: object
+                    controlPlane:
+                      properties:
+                        ref:
+                          properties:
+                            konnectNamespacedRef:
+                              properties:
+                                name:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  maxLength: 253
+                                  type: string
+                              required:
+                                - name
+                              type: object
+                            type:
+                              default: kic
+                              enum:
+                                - konnectNamespacedRef
+                                - kic
+                              type: string
+                          type: object
+                          x-kubernetes-validations:
+                            - message: kic type not supported as controlPlaneRef.
+                              rule: self.type != 'kic'
+                            - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
+                              rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
+                            - message: when type is kic, konnectNamespacedRef must not be set
+                              rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
+                            - message: when type is unset, konnectNamespacedRef must not be set
+                              rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                      required:
+                        - ref
+                      type: object
+                    dataPlane:
+                      properties:
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$
+                            type: string
+                          maxProperties: 5
+                          type: object
+                          x-kubernetes-validations:
+                            - message: keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'.
+                              rule: self.all(key, key.matches('^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'))
+                            - message: keys must not start with 'kong', 'konnect', 'insomnia', 'mesh', 'kic', or '_'.
+                              rule: self.all(key, !(key.startsWith('kong') || key.startsWith('konnect') || key.startsWith('insomnia') || key.startsWith('mesh') || key.startsWith('kic') || key.startsWith('_')))
+                            - message: 'Too long: may not be more than 63 bytes'
+                              rule: self.all(key, size(key) > 0 && size(key) < 64)
+                      type: object
+                  required:
+                    - controlPlane
+                  type: object
+              required:
+                - konnect
+              type: object
+            status:
+              default:
+                conditions:
+                  - lastTransitionTime: "1970-01-01T00:00:00Z"
+                    message: Waiting for controller
+                    reason: Pending
+                    status: Unknown
+                    type: Ready
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                controlPlaneRefs:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  maxItems: 16
+                  type: array
+                dataPlaneClientAuth:
+                  properties:
+                    certificateSecretRef:
+                      properties:
+                        name:
+                          type: string
+                      required:
+                        - name
+                      type: object
+                  type: object
+                dataPlaneRefs:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  maxItems: 16
+                  type: array
+                konnect:
+                  properties:
+                    clusterType:
+                      enum:
+                        - ControlPlane
+                        - K8SIngressController
+                      type: string
+                    controlPlaneID:
+                      type: string
+                    endpoints:
+                      properties:
+                        controlPlane:
+                          minLength: 1
+                          type: string
+                        telemetry:
+                          minLength: 1
+                          type: string
+                      required:
+                        - controlPlane
+                        - telemetry
+                      type: object
+                  required:
+                    - clusterType
+                    - controlPlaneID
+                    - endpoints
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: spec.konnect.controlPlane.ref is immutable.
+              rule: oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref
+            - message: konnect must be set when ControlPlaneRef is set to KonnectID.
+              rule: 'self.spec.konnect.controlPlane.ref.type == ''konnectID'' ? has(self.spec.konnect.configuration) : true'
+            - message: konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef.
+              rule: 'self.spec.konnect.controlPlane.ref.type == ''konnectNamespacedRef'' ? !has(self.spec.konnect.configuration) : true'
+      served: false
+      storage: false
+      subresources:
+        status: {}
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Ready')].status
+          name: Ready
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                clientAuth:
+                  default:
+                    certificateSecret:
+                      provisioning: Automatic
+                  properties:
+                    certificateSecret:
+                      properties:
+                        provisioning:
+                          default: Automatic
+                          enum:
+                            - Manual
+                            - Automatic
+                          type: string
+                        secretRef:
+                          properties:
+                            name:
+                              type: string
+                          required:
+                            - name
+                          type: object
+                      type: object
+                  required:
+                    - certificateSecret
+                  type: object
+                  x-kubernetes-validations:
+                    - message: secretRef must be set when provisioning is set to Manual.
+                      rule: 'self.certificateSecret.provisioning == ''Manual'' ? has(self.certificateSecret.secretRef) : true'
+                    - message: secretRef must not be set when provisioning is set to Automatic.
+                      rule: 'self.certificateSecret.provisioning == ''Automatic'' ? !has(self.certificateSecret.secretRef) : true'
+                konnect:
+                  properties:
+                    controlPlane:
+                      properties:
+                        ref:
+                          properties:
+                            konnectNamespacedRef:
+                              properties:
+                                name:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                namespace:
+                                  maxLength: 253
+                                  type: string
+                              required:
+                                - name
+                              type: object
+                            type:
+                              default: konnectNamespacedRef
+                              enum:
+                                - konnectNamespacedRef
+                              type: string
+                          type: object
+                          x-kubernetes-validations:
+                            - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
+                              rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
+                      required:
+                        - ref
+                      type: object
+                    dataPlane:
+                      properties:
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$
+                            type: string
+                          maxProperties: 5
+                          type: object
+                          x-kubernetes-validations:
+                            - message: keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'.
+                              rule: self.all(key, key.matches('^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'))
+                            - message: keys must not start with 'kong', 'konnect', 'insomnia', 'mesh', 'kic', or '_'.
+                              rule: self.all(key, !(key.startsWith('kong') || key.startsWith('konnect') || key.startsWith('insomnia') || key.startsWith('mesh') || key.startsWith('kic') || key.startsWith('_')))
+                            - message: 'Too long: may not be more than 63 bytes'
+                              rule: self.all(key, size(key) > 0 && size(key) < 64)
+                      type: object
+                  required:
+                    - controlPlane
+                  type: object
+              required:
+                - konnect
+              type: object
+            status:
+              default:
+                conditions:
+                  - lastTransitionTime: "1970-01-01T00:00:00Z"
+                    message: Waiting for controller
+                    reason: Pending
+                    status: Unknown
+                    type: Ready
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                controlPlaneRefs:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  maxItems: 16
+                  type: array
+                dataPlaneClientAuth:
+                  properties:
+                    certificateSecretRef:
+                      properties:
+                        name:
+                          type: string
+                      required:
+                        - name
+                      type: object
+                  type: object
+                dataPlaneRefs:
+                  items:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                      - name
+                    type: object
+                  maxItems: 16
+                  type: array
+                konnect:
+                  properties:
+                    authRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    clusterType:
+                      enum:
+                        - ControlPlane
+                        - K8SIngressController
+                        - ControlPlaneGroup
+                      type: string
+                    controlPlaneID:
+                      minLength: 1
+                      type: string
+                    endpoints:
+                      properties:
+                        controlPlane:
+                          minLength: 1
+                          type: string
+                        telemetry:
+                          minLength: 1
+                          type: string
+                      required:
+                        - controlPlane
+                        - telemetry
+                      type: object
+                  required:
+                    - clusterType
+                    - controlPlaneID
+                    - endpoints
+                  type: object
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: spec.konnect.controlPlane.ref is immutable.
+              rule: oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

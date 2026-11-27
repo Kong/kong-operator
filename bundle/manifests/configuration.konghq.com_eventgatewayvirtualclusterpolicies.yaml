@@ -1,0 +1,747 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: eventgatewayvirtualclusterpolicies.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+      - kong
+    kind: EventGatewayVirtualClusterPolicy
+    listKind: EventGatewayVirtualClusterPolicyList
+    plural: eventgatewayvirtualclusterpolicies
+    singular: eventgatewayvirtualclusterpolicy
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.id
+          name: ID
+          type: string
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                apiSpec:
+                  properties:
+                    acls:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            rules:
+                              items:
+                                properties:
+                                  action:
+                                    enum:
+                                      - allow
+                                      - deny
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  operations:
+                                    items:
+                                      properties:
+                                        name:
+                                          enum:
+                                            - all
+                                            - alter
+                                            - alter_configs
+                                            - create
+                                            - delete
+                                            - describe
+                                            - describe_configs
+                                            - idempotent_write
+                                            - read
+                                            - write
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                        - name
+                                      type: object
+                                    type: array
+                                  resourceNames:
+                                    properties:
+                                      dynam:
+                                        type: string
+                                      stat:
+                                        items:
+                                          properties:
+                                            match:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - match
+                                          type: object
+                                        maxItems: 50
+                                        type: array
+                                      type:
+                                        enum:
+                                          - stat
+                                          - dynam
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                      - type
+                                    type: object
+                                  resourceType:
+                                    enum:
+                                      - topic
+                                      - group
+                                      - transactional_id
+                                      - cluster
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                  - action
+                                  - operations
+                                  - resourceNames
+                                  - resourceType
+                                type: object
+                              minItems: 1
+                              type: array
+                          required:
+                            - rules
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    requestRuleValidator:
+                      properties:
+                        condition:
+                          maxLength: 1000
+                          type: string
+                        config:
+                          properties:
+                            requests:
+                              items:
+                                properties:
+                                  alterClientQuotas:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  alterConfigs:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  alterUserScramCredentials:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  consumerGroupHeartbeat:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  createPartitions:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  createTopics:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  fetch:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  incrementalAlterConfigs:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  joinGroup:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  offsetCommit:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  offsetFetch:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  produce:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  txnOffsetCommit:
+                                    properties:
+                                      rules:
+                                        items:
+                                          properties:
+                                            action:
+                                              enum:
+                                                - reject
+                                                - passthrough
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            description:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                            rule:
+                                              maxLength: 1000
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                            - action
+                                            - description
+                                            - rule
+                                          type: object
+                                        maxItems: 10
+                                        minItems: 1
+                                        type: array
+                                    required:
+                                      - rules
+                                    type: object
+                                  type:
+                                    enum:
+                                      - alterClientQuotas
+                                      - alterConfigs
+                                      - alterUserScramCredentials
+                                      - consumerGroupHeartbeat
+                                      - createPartitions
+                                      - createTopics
+                                      - fetch
+                                      - incrementalAlterConfigs
+                                      - joinGroup
+                                      - offsetCommit
+                                      - offsetFetch
+                                      - produce
+                                      - txnOffsetCommit
+                                    minLength: 1
+                                    type: string
+                                required:
+                                  - type
+                                type: object
+                              maxItems: 100
+                              minItems: 1
+                              type: array
+                          required:
+                            - requests
+                          type: object
+                        description:
+                          maxLength: 512
+                          type: string
+                        enabled:
+                          enum:
+                            - Enabled
+                            - Disabled
+                          type: string
+                        labels:
+                          additionalProperties:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                            type: string
+                          maxProperties: 50
+                          type: object
+                        name:
+                          maxLength: 255
+                          type: string
+                      required:
+                        - config
+                      type: object
+                    type:
+                      enum:
+                        - acls
+                        - requestRuleValidator
+                      minLength: 1
+                      type: string
+                  required:
+                    - type
+                  type: object
+                eventGatewayVirtualClusterRef:
+                  properties:
+                    konnectID:
+                      maxLength: 36
+                      type: string
+                    namespacedRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    type:
+                      enum:
+                        - konnectID
+                        - namespacedRef
+                      type: string
+                  required:
+                    - type
+                  type: object
+                  x-kubernetes-validations:
+                    - message: when type is namespacedRef, namespacedRef must be set
+                      rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                    - message: when type is namespacedRef, konnectID must not be set
+                      rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                    - message: when type is konnectID, konnectID must be set
+                      rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                    - message: when type is konnectID, namespacedRef must not be set
+                      rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+              required:
+                - eventGatewayVirtualClusterRef
+              type: object
+            status:
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                gatewayID:
+                  properties:
+                    id:
+                      maxLength: 256
+                      type: string
+                  type: object
+                id:
+                  maxLength: 256
+                  type: string
+                observedGeneration:
+                  format: int64
+                  type: integer
+                organizationID:
+                  maxLength: 256
+                  type: string
+                serverURL:
+                  maxLength: 512
+                  type: string
+                virtualClusterID:
+                  properties:
+                    id:
+                      maxLength: 256
+                      type: string
+                  type: object
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
+              rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+            - fieldPath: .spec.eventGatewayVirtualClusterRef
+              message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+              optionalOldSelf: true
+              rule: '!has(self.spec.eventGatewayVirtualClusterRef) || self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef'' || (oldSelf.hasValue() && has(oldSelf.value().spec.eventGatewayVirtualClusterRef) && oldSelf.value().spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef)'
+            - fieldPath: .spec.eventGatewayVirtualClusterRef
+              message: spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect
+              rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

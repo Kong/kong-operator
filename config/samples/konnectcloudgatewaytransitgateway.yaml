@@ -1,0 +1,46 @@
+# The transit gateway attaches to a Konnect Cloud Gateway Network, which needs
+# an API auth and a network: this sample is self-contained.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: eu.api.konghq.com
+---
+kind: KonnectCloudGatewayNetwork
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: mynetwork1
+  namespace: default
+spec:
+  name: mynetwork1
+  cloud_gateway_provider_account_id: "11111111-1111-1111-1111-111111111111"
+  availability_zones:
+  - euc2-az1
+  - euc2-az2
+  cidr_block: "10.1.0.0/16"
+  region: eu-central-2
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectCloudGatewayTransitGateway
+metadata:
+  name: cloud-gateway-transit-gateway
+spec:
+  type: AWSTransitGateway
+  networkRef:
+    type: namespacedRef
+    namespacedRef:
+      name: mynetwork1
+  awsTransitGateway:
+    name: my-transit-gateway
+    attachment_config:
+      ram_share_arn: arn:aws:ram:us-east-1:123456789012:resource-share/1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+      transit_gateway_id: tgw-0123456789abcdef0
+    cidr_blocks:
+      - 10.0.0.0/16

@@ -1,0 +1,116 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: kongreferencegrants.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+      - kong
+    kind: KongReferenceGrant
+    listKind: KongReferenceGrantList
+    plural: kongreferencegrants
+    singular: kongreferencegrant
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                from:
+                  items:
+                    properties:
+                      group:
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      namespace:
+                        maxLength: 63
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                      - group
+                      - kind
+                      - namespace
+                    type: object
+                    x-kubernetes-validations:
+                      - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding, KongSNI and Event Gateway entity kinds are supported for 'configuration.konghq.com' group
+                        rule: self.group != 'configuration.konghq.com' || self.kind in [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault', 'KongPluginBinding', 'KongSNI', 'EventGatewayBackendCluster', 'EventGatewayDataPlaneCertificate', 'EventGatewayListener', 'EventGatewayListenerPolicy', 'EventGatewayListenerPolicyChain', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterConsumePolicyChain', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterPolicyChain', 'EventGatewayVirtualClusterProducePolicy', 'EventGatewayVirtualClusterProducePolicyChain']
+                      - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com' group
+                        rule: self.group != 'gateway-operator.konghq.com' || self.kind in [ 'GatewayConfiguration' ]
+                      - message: namespace must be empty for KongVault and non-empty for other kinds
+                        rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" : self.__namespace__ != ""'
+                  maxItems: 16
+                  minItems: 1
+                  type: array
+                  x-kubernetes-list-type: atomic
+                to:
+                  items:
+                    properties:
+                      group:
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                      - group
+                      - kind
+                    type: object
+                    x-kubernetes-validations:
+                      - message: Only 'Secret' kind is supported for 'core' group
+                        rule: .self.group != 'core' || .self.kind == 'Secret'
+                      - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'KonnectConfigStore' and 'KonnectAIGateway' kinds are supported for 'konnect.konghq.com' group; Event Gateway entities are in the 'configuration.konghq.com' group
+                        rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'KonnectConfigStore', 'KonnectAIGateway']
+                      - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream' and Event Gateway entity kinds other policies and entities reference are supported for 'configuration.konghq.com' group
+                        rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayListenerPolicy', 'EventGatewaySchemaRegistry', 'EventGatewayStaticKey', 'EventGatewayTLSTrustBundle', 'EventGatewayVirtualCluster', 'EventGatewayVirtualClusterConsumePolicy', 'EventGatewayVirtualClusterPolicy', 'EventGatewayVirtualClusterProducePolicy']
+                      - message: Only 'AIGatewayConsumerGroup', 'AIGatewayCACertificate' and 'AIGatewayCertificate' kinds are supported for 'aiconfiguration.konghq.com' group
+                        rule: .self.group != 'aiconfiguration.konghq.com' || .self.kind in ['AIGatewayConsumerGroup', 'AIGatewayCACertificate', 'AIGatewayCertificate']
+                  maxItems: 16
+                  minItems: 1
+                  type: array
+                  x-kubernetes-list-type: atomic
+              required:
+                - from
+                - to
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

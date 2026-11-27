@@ -35,3 +35,6 @@ go.work.sum
 
 # Conformance tests report
 *-report.yaml
+
+# Local catalog image built by make catalog.build
+catalog-test/

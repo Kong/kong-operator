@@ -1,0 +1,206 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: konnectcloudgatewaynetworks.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+      - kong
+      - konnect
+    kind: KonnectCloudGatewayNetwork
+    listKind: KonnectCloudGatewayNetworkList
+    plural: konnectcloudgatewaynetworks
+    singular: konnectcloudgatewaynetwork
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.state
+          name: State
+          type: string
+        - jsonPath: .status.id
+          name: ID
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                adopt:
+                  properties:
+                    from:
+                      enum:
+                        - konnect
+                      type: string
+                    konnect:
+                      properties:
+                        id:
+                          maxLength: 36
+                          minLength: 1
+                          type: string
+                      required:
+                        - id
+                      type: object
+                    mode:
+                      enum:
+                        - match
+                        - override
+                      type: string
+                  required:
+                    - from
+                  type: object
+                  x-kubernetes-validations:
+                    - message: '''from''(adopt source) is immutable'
+                      rule: self.from == oldSelf.from
+                    - message: Must specify Konnect options when from='konnect'
+                      rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                    - message: konnect.id is immutable
+                      rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
+                availability_zones:
+                  items:
+                    type: string
+                  maxItems: 5
+                  minItems: 1
+                  type: array
+                cidr_block:
+                  type: string
+                cloud_gateway_provider_account_id:
+                  type: string
+                konnect:
+                  properties:
+                    authRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                        - name
+                      type: object
+                  required:
+                    - authRef
+                  type: object
+                name:
+                  type: string
+                region:
+                  type: string
+                state:
+                  type: string
+              required:
+                - availability_zones
+                - cidr_block
+                - cloud_gateway_provider_account_id
+                - konnect
+                - name
+                - region
+              type: object
+              x-kubernetes-validations:
+                - message: Cannot set or unset spec.adopt in updates
+                  rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))
+            status:
+              properties:
+                conditions:
+                  default:
+                    - lastTransitionTime: "1970-01-01T00:00:00Z"
+                      message: Waiting for controller
+                      reason: Pending
+                      status: Unknown
+                      type: Programmed
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                id:
+                  maxLength: 256
+                  type: string
+                organizationID:
+                  maxLength: 256
+                  type: string
+                serverURL:
+                  maxLength: 512
+                  type: string
+                state:
+                  type: string
+              type: object
+          required:
+            - spec
+          type: object
+          x-kubernetes-validations:
+            - message: spec.name is immutable when an entity is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.name == self.spec.name'
+            - message: spec.cloud_gateway_provider_account_id is immutable when an entity is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.cloud_gateway_provider_account_id == self.spec.cloud_gateway_provider_account_id'
+            - message: spec.region is immutable when an entity is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.region == self.spec.region'
+            - message: spec.availability_zones is immutable when an entity is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.availability_zones == self.spec.availability_zones'
+            - message: spec.cidr_block is immutable when an entity is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.cidr_block == self.spec.cidr_block'
+            - message: spec.state is immutable when an entity is already Programmed
+              rule: '(!has(self.status) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : (!has(self.spec.state) && !has(oldSelf.spec.state)) || self.spec.state == oldSelf.spec.state'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

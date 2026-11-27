@@ -1,0 +1,25 @@
+apiVersion: konnect.konghq.com/v1alpha1
+kind: PortalIdentityProviderRequest
+metadata:
+  name: portal-oidc-idp
+spec:
+  portalRef:
+    type: konnectID
+    konnectID: 9E11A3C8-5A62-4F9B-8D74-2C6E0A1B7F33
+  apiSpec:
+    type: oidc
+    enabled: Enabled
+    config:
+      type: oidc
+      oidc:
+        issuerURL: https://idp.example.com/realms/kong
+        clientID: kong-portal
+        clientSecret:
+          type: secretRef
+          secretRef:
+            name: portal-idp-credentials
+            key: client-secret
+        claimMappings:
+          name: preferred_username
+          email: email
+          groups: groups

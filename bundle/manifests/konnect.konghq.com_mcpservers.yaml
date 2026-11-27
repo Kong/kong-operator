@@ -1,0 +1,180 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: mcpservers.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+      - kong
+      - konnect
+    kind: MCPServer
+    listKind: MCPServerList
+    plural: mcpservers
+    singular: mcpserver
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.id
+          name: ID
+          type: string
+        - jsonPath: .status.konnectSpec.name
+          name: Konnect Name
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                controlPlaneRef:
+                  properties:
+                    konnectNamespacedRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    type:
+                      default: kic
+                      enum:
+                        - konnectNamespacedRef
+                        - kic
+                      type: string
+                  type: object
+                  x-kubernetes-validations:
+                    - message: '''konnectID'' type is not supported'
+                      rule: self.type != 'konnectID'
+                    - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
+                      rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
+                    - message: when type is kic, konnectNamespacedRef must not be set
+                      rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
+                    - message: when type is unset, konnectNamespacedRef must not be set
+                      rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                mirror:
+                  properties:
+                    konnect:
+                      properties:
+                        id:
+                          maxLength: 36
+                          minLength: 1
+                          pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
+                          type: string
+                      required:
+                        - id
+                      type: object
+                  required:
+                    - konnect
+                  type: object
+                source:
+                  default: Mirror
+                  enum:
+                    - Mirror
+                  type: string
+              required:
+                - controlPlaneRef
+                - mirror
+              type: object
+            status:
+              properties:
+                conditions:
+                  default:
+                    - lastTransitionTime: "1970-01-01T00:00:00Z"
+                      message: Waiting for controller
+                      reason: Pending
+                      status: Unknown
+                      type: Programmed
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                controlPlaneID:
+                  type: string
+                id:
+                  maxLength: 256
+                  type: string
+                konnectSpec:
+                  properties:
+                    name:
+                      type: string
+                    version:
+                      type: string
+                  type: object
+                organizationID:
+                  maxLength: 256
+                  type: string
+                serverURL:
+                  maxLength: 512
+                  type: string
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: spec.controlPlaneRef is immutable.
+              rule: oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null

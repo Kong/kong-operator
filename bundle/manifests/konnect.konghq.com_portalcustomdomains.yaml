@@ -1,0 +1,218 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0
+  creationTimestamp: null
+  name: portalcustomdomains.konnect.konghq.com
+spec:
+  group: konnect.konghq.com
+  names:
+    categories:
+      - konnect
+      - kong
+    kind: PortalCustomDomain
+    listKind: PortalCustomDomainList
+    plural: portalcustomdomains
+    singular: portalcustomdomain
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=='Programmed')].status
+          name: Programmed
+          type: string
+        - jsonPath: .status.organizationID
+          name: OrgID
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                apiSpec:
+                  properties:
+                    enabled:
+                      enum:
+                        - Enabled
+                        - Disabled
+                      type: string
+                    hostname:
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    ssl:
+                      properties:
+                        standard:
+                          properties:
+                            domainVerificationMethod:
+                              enum:
+                                - http
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                            - domainVerificationMethod
+                          type: object
+                        type:
+                          enum:
+                            - withCustomCertificate
+                            - standard
+                          minLength: 1
+                          type: string
+                        withCustomCertificate:
+                          properties:
+                            customCertificate:
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                            customPrivateKey:
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                            domainVerificationMethod:
+                              enum:
+                                - custom_certificate
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            skipCaCheck:
+                              enum:
+                                - Enabled
+                                - Disabled
+                              type: string
+                          required:
+                            - customCertificate
+                            - customPrivateKey
+                            - domainVerificationMethod
+                          type: object
+                      required:
+                        - type
+                      type: object
+                  required:
+                    - enabled
+                    - hostname
+                    - ssl
+                  type: object
+                portalRef:
+                  properties:
+                    konnectID:
+                      maxLength: 36
+                      type: string
+                    namespacedRef:
+                      properties:
+                        name:
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        namespace:
+                          maxLength: 253
+                          type: string
+                      required:
+                        - name
+                      type: object
+                    type:
+                      enum:
+                        - konnectID
+                        - namespacedRef
+                      type: string
+                  required:
+                    - type
+                  type: object
+                  x-kubernetes-validations:
+                    - message: when type is namespacedRef, namespacedRef must be set
+                      rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                    - message: when type is namespacedRef, konnectID must not be set
+                      rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                    - message: when type is konnectID, konnectID must be set
+                      rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                    - message: when type is konnectID, namespacedRef must not be set
+                      rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+              required:
+                - portalRef
+              type: object
+            status:
+              properties:
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  maxItems: 8
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                id:
+                  maxLength: 256
+                  type: string
+                observedGeneration:
+                  format: int64
+                  type: integer
+                organizationID:
+                  maxLength: 256
+                  type: string
+                portalID:
+                  properties:
+                    id:
+                      maxLength: 256
+                      type: string
+                  type: object
+                serverURL:
+                  maxLength: 512
+                  type: string
+              type: object
+          type: object
+          x-kubernetes-validations:
+            - message: spec.portalRef is immutable when an entity is already Programmed
+              rule: '!has(self.spec.portalRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null
