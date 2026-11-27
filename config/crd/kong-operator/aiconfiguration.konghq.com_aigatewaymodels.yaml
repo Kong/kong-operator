@@ -2554,6 +2554,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 azure:
                                   description: Azure configuration.
                                   properties:
@@ -2833,6 +2838,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 baseten:
                                   description: Baseten configuration.
                                   properties:
@@ -3088,6 +3098,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 bedrock:
                                   description: Bedrock configuration.
                                   properties:
@@ -3398,6 +3413,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cerebras:
                                   description: Cerebras configuration.
                                   properties:
@@ -3653,6 +3673,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cohere:
                                   description: Cohere configuration.
                                   properties:
@@ -3935,6 +3960,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 dashscope:
                                   description: Dashscope configuration.
                                   properties:
@@ -4197,6 +4227,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 databricks:
                                   description: Databricks configuration.
                                   properties:
@@ -4460,6 +4495,11 @@ spec:
                                   required:
                                   - workspaceInstanceID
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 deepseek:
                                   description: Deepseek configuration.
                                   properties:
@@ -4715,6 +4755,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 fireworks:
                                   description: Fireworks configuration.
                                   properties:
@@ -4970,6 +5015,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 gemini:
                                   description: Gemini configuration.
                                   properties:
@@ -5252,6 +5302,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 huggingface:
                                   description: Huggingface configuration.
                                   properties:
@@ -5521,6 +5576,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 kimi:
                                   description: Kimi configuration.
                                   properties:
@@ -5784,6 +5844,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 llama2:
                                   description: Llama2 configuration.
                                   properties:
@@ -6308,6 +6373,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 mistral:
                                   description: Mistral configuration.
                                   properties:
@@ -6574,6 +6644,11 @@ spec:
                                   required:
                                   - format
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 ollama:
                                   description: Ollama configuration.
                                   properties:
@@ -6829,6 +6904,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 openai:
                                   description: Openai configuration.
                                   properties:
@@ -7084,6 +7164,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 sagemaker:
                                   description: Sagemaker configuration.
                                   properties:
@@ -7387,6 +7472,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 togetherai:
                                   description: Togetherai configuration.
                                   properties:
@@ -7642,6 +7732,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
@@ -7945,6 +8040,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 vllm:
                                   description: Vllm configuration.
                                   properties:
@@ -8458,6 +8558,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                               required:
                               - type
                               type: object
@@ -8512,6 +8617,7 @@ spec:
                           - name
                           - provider
                           type: object
+                        maxItems: 64
                         type: array
                     required:
                     - capabilities
@@ -10956,6 +11062,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 azure:
                                   description: Azure configuration.
                                   properties:
@@ -11235,6 +11346,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 baseten:
                                   description: Baseten configuration.
                                   properties:
@@ -11490,6 +11606,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 bedrock:
                                   description: Bedrock configuration.
                                   properties:
@@ -11800,6 +11921,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cerebras:
                                   description: Cerebras configuration.
                                   properties:
@@ -12055,6 +12181,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cohere:
                                   description: Cohere configuration.
                                   properties:
@@ -12337,6 +12468,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 dashscope:
                                   description: Dashscope configuration.
                                   properties:
@@ -12599,6 +12735,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 databricks:
                                   description: Databricks configuration.
                                   properties:
@@ -12862,6 +13003,11 @@ spec:
                                   required:
                                   - workspaceInstanceID
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 deepseek:
                                   description: Deepseek configuration.
                                   properties:
@@ -13117,6 +13263,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 fireworks:
                                   description: Fireworks configuration.
                                   properties:
@@ -13372,6 +13523,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 gemini:
                                   description: Gemini configuration.
                                   properties:
@@ -13654,6 +13810,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 huggingface:
                                   description: Huggingface configuration.
                                   properties:
@@ -13923,6 +14084,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 kimi:
                                   description: Kimi configuration.
                                   properties:
@@ -14186,6 +14352,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 llama2:
                                   description: Llama2 configuration.
                                   properties:
@@ -14710,6 +14881,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 mistral:
                                   description: Mistral configuration.
                                   properties:
@@ -14976,6 +15152,11 @@ spec:
                                   required:
                                   - format
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 ollama:
                                   description: Ollama configuration.
                                   properties:
@@ -15231,6 +15412,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 openai:
                                   description: Openai configuration.
                                   properties:
@@ -15486,6 +15672,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 sagemaker:
                                   description: Sagemaker configuration.
                                   properties:
@@ -15789,6 +15980,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 togetherai:
                                   description: Togetherai configuration.
                                   properties:
@@ -16044,6 +16240,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 type:
                                   description: Type designates the type of configuration.
                                   enum:
@@ -16347,6 +16548,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 vllm:
                                   description: Vllm configuration.
                                   properties:
@@ -16860,6 +17066,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                               required:
                               - type
                               type: object
@@ -16914,6 +17125,7 @@ spec:
                           - name
                           - provider
                           type: object
+                        maxItems: 64
                         type: array
                     required:
                     - capabilities

@@ -75,6 +75,11 @@
 
 ### Breaking changes
 
+- `AIGatewayModel` `spec.apiSpec.api.targets` and `spec.apiSpec.model.targets`
+  hold at most 64 entries, which keeps the CRD's CEL validation within the
+  Kubernetes cost budget. Split a model with more targets into several models
+  before upgrading.
+  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
 - `PortalIdentityProviderRequest` `spec.apiSpec.config.oidc.clientSecret` is
   now required and is an object, not a string. Change
   `clientSecret: <secret>` to `clientSecret: {type: inline, value: <secret>}`,
@@ -138,6 +143,11 @@
 
 ### Fixes
 
+- `AIGatewayModel` refuses a target that sets both `upstreamURL` and
+  `upstreamBaseURL`, which are mutually exclusive, instead of failing when it
+  is sent to Konnect. `llama2` and `vllm` targets, which require `upstreamURL`
+  and ignore `upstreamBaseURL`, are unaffected.
+  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
 - Event Gateway CRDs refuse the lists Konnect and gw-admin refuse: an empty
   list where an item is required (e.g. `bootstrapServers: []` or ACL
   `rules: []`), more items than allowed, and items outside the enum, pattern

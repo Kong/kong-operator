@@ -151,6 +151,7 @@ func (r *Runner) Run(
 			ManualGetForUIDEntities:    manualGetForUIDEntities,
 			Categories:                 agvConfig.Categories,
 			Validation:                 agvConfig.Validation,
+			MutuallyExclusiveFields:    agvConfig.MutuallyExclusiveFields,
 			References:                 agvConfig.ReferencesConfig(pathToEntityName),
 			Associations:               agvConfig.AssociationsConfig(pathToEntityName),
 			SourceConfig:               agvConfig.SourceConfigs(pathToEntityName),

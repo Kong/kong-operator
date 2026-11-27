@@ -1273,6 +1273,87 @@ apiGroupVersions:
 	})
 }
 
+func TestAPIGroupVersionConfig_MutuallyExclusiveFields(t *testing.T) {
+	load := func(t *testing.T, rules string) (*ProjectConfig, error) {
+		t.Helper()
+		content := `
+apiGroupVersions:
+  test/v1:
+    mutuallyExclusiveFields:
+` + rules + `
+    types:
+      - path: /v1/gateways
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+		return LoadProjectConfig(path)
+	}
+
+	t.Run("parsed from YAML", func(t *testing.T) {
+		cfg, err := load(t, `
+      - schemas: ["Target*Config", "OtherConfig"]
+        fields: [upstreamURL, upstreamBaseURL]`)
+		require.NoError(t, err)
+		assert.Equal(t, []MutuallyExclusiveFieldsConfig{{
+			Schemas: []string{"Target*Config", "OtherConfig"},
+			Fields:  []string{"upstreamURL", "upstreamBaseURL"},
+		}}, cfg.APIGroupVersions["test/v1"].MutuallyExclusiveFields)
+	})
+
+	for _, tc := range []struct {
+		name    string
+		rules   string
+		wantErr string
+	}{
+		{
+			name: "no schemas",
+			rules: `
+      - fields: [a, b]`,
+			wantErr: "mutuallyExclusiveFields[0]: schemas is required",
+		},
+		{
+			name: "empty schema pattern",
+			rules: `
+      - schemas: [""]
+        fields: [a, b]`,
+			wantErr: "mutuallyExclusiveFields[0]: schemas: empty pattern",
+		},
+		{
+			name: "malformed schema pattern",
+			rules: `
+      - schemas: ["Target[Config"]
+        fields: [a, b]`,
+			wantErr: `mutuallyExclusiveFields[0]: schemas: invalid pattern "Target[Config"`,
+		},
+		{
+			name: "single field",
+			rules: `
+      - schemas: [Target]
+        fields: [a]`,
+			wantErr: "mutuallyExclusiveFields[0]: fields: at least 2 fields are required, got 1",
+		},
+		{
+			name: "duplicate field",
+			rules: `
+      - schemas: [Target]
+        fields: [a, b, a]`,
+			wantErr: `mutuallyExclusiveFields[0]: fields: duplicate field "a"`,
+		},
+		{
+			name: "empty field",
+			rules: `
+      - schemas: [Target]
+        fields: [a, ""]`,
+			wantErr: "mutuallyExclusiveFields[0]: fields: empty field name",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := load(t, tc.rules)
+			assert.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
 func TestReconcilerConfig_IsRootInference(t *testing.T) {
 	tests := []struct {
 		name       string
