@@ -661,3 +661,75 @@ func TestAIGatewayModel_ToAIGWModel_ACLWhen(t *testing.T) {
 		})
 	}
 }
+
+// TestAIGatewayModel_ToAIGWModel_IntelligentBalancer pins that the intelligent
+// model router reaches the ai-deck-converter document with its classifier and
+// cost/quality tradeoff at the balancer level: unlike the semantic balancer,
+// whose member keys are renamed and reshaped, the intelligent block only needs
+// its member flattened, so a drop there would silently downgrade the gateway to
+// the default algorithm.
+func TestAIGatewayModel_ToAIGWModel_IntelligentBalancer(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+
+	obj := &AIGatewayModel{
+		Name: "sample-ai-gw-intelligent-model", Namespace: "default",
+		Spec: AIGatewayModelSpec{
+			APISpec: AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &AIGatewayModelConfig{
+					Type: AIGatewayModelConfigTypeModel,
+					Model: &AIGatewayModelModel{
+						Name:         "intelligent-model",
+						DisplayName:  "Intelligent Model",
+						Formats:      []AIGatewayModelFormat{{Type: "openai"}},
+						Capabilities: []string{"generate"},
+						Config: AIGatewayModelModelConfig{
+							Route: AIGatewayModelRouteConfig{Paths: []string{"/lcl/assistant"}},
+							Balancer: &AIGatewayModelModelConfigBalancer{
+								Algorithm: AIGatewayModelModelConfigBalancerTypeIntelligent,
+								Intelligent: &AIGatewayModelBalancerIntelligentConfig{
+									CostQualityTradeoff: "quality",
+									Classifier: &AIGatewayModelBalancerIntelligentConfigClassifier{
+										Type: AIGatewayModelBalancerIntelligentConfigClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom,
+										AIGatewayModelBalancerIntelligentClassifierCustom: &AIGatewayModelBalancerIntelligentClassifierCustom{
+											ContextWindow: 8192,
+											Name:          "classifier-model",
+											URL:           "https://classifier.example.com",
+										},
+									},
+								},
+							},
+						},
+						Targets: []AIGatewayTarget{
+							{
+								Name:     "gpt-4o",
+								Provider: AIGatewayModelProviderRef{Name: "ai-gw-provider-openai"},
+								Config: &AIGatewayTargetConfig{
+									Type:   AIGatewayTargetConfigTypeOpenai,
+									Openai: &AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1/chat/completions"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwFixtureReferences()...).Build()
+	got, err := obj.ToAIGWModel(t.Context(), cl)
+	require.NoError(t, err)
+
+	require.NotNil(t, got.Config.Balancer)
+	require.Equal(t, "intelligent", got.Config.Balancer.Algorithm)
+
+	balancer := got.Config.Balancer.Fields
+	require.Equal(t, "quality", balancer["cost_quality_tradeoff"])
+	classifier, ok := balancer["classifier"].(map[string]any)
+	require.True(t, ok, "balancer.classifier is not a map: %#v", balancer["classifier"])
+	require.Equal(t, "custom", classifier["type"])
+	require.Equal(t, "classifier-model", classifier["name"])
+	require.Equal(t, "https://classifier.example.com", classifier["url"])
+}

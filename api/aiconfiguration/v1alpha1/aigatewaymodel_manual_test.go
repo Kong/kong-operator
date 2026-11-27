@@ -155,3 +155,91 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &decoded))
 	require.JSONEq(t, `{"path_param":"model","values":["gpt-4o-mini"]}`, string(decoded.Config.Route.Model))
 }
+
+// TestAIGatewayModel_IntelligentBalancer_WireShape pins that the AI GW 2.5
+// intelligent model router reaches the Konnect create request: the balancer
+// discriminator, the classifier model it asks, and the cost/quality tradeoff
+// are generated from the OAS and must survive the SDK conversion, where the
+// algorithm's settings are flattened out of their member key.
+func TestAIGatewayModel_IntelligentBalancer_WireShape(t *testing.T) {
+	t.Parallel()
+
+	obj := &AIGatewayModel{
+		Name: "sample-ai-gw-model", Namespace: "default",
+		Spec: AIGatewayModelSpec{
+			APISpec: AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &AIGatewayModelConfig{
+					Type: AIGatewayModelConfigTypeModel,
+					Model: &AIGatewayModelModel{
+						Name:         "intelligent-model",
+						DisplayName:  "Intelligent Model",
+						Capabilities: []string{"generate"},
+						Formats:      []AIGatewayModelFormat{{Type: "openai"}},
+						Config: AIGatewayModelModelConfig{
+							Route: AIGatewayModelRouteConfig{Paths: []string{"/v1/chat/completions"}},
+							Balancer: &AIGatewayModelModelConfigBalancer{
+								Algorithm: AIGatewayModelModelConfigBalancerTypeIntelligent,
+								Intelligent: &AIGatewayModelBalancerIntelligentConfig{
+									CostQualityTradeoff: "balanced",
+									Classifier: &AIGatewayModelBalancerIntelligentConfigClassifier{
+										Type: AIGatewayModelBalancerIntelligentConfigClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom,
+										AIGatewayModelBalancerIntelligentClassifierCustom: &AIGatewayModelBalancerIntelligentClassifierCustom{
+											ContextWindow: 8192,
+											Name:          "classifier-model",
+											URL:           "https://classifier.example.com",
+										},
+									},
+								},
+							},
+						},
+						Targets: []AIGatewayTarget{{
+							Name:     "intelligent-model",
+							Provider: AIGatewayModelProviderRef{Name: "ai-gw-provider-openai"},
+							Config: &AIGatewayTargetConfig{
+								Type:   AIGatewayTargetConfigTypeOpenai,
+								Openai: &AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1/chat/completions"},
+							},
+						}},
+					},
+				},
+			},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	provider := &AIGatewayModelProvider{Name: "ai-gw-provider-openai", Namespace: "default"}
+	provider.SetKonnectID("provider-kid")
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(provider).Build()
+
+	req, err := obj.ToCreateAIGatewayModelRequest(t.Context(), cl)
+	require.NoError(t, err)
+
+	data, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	var decoded struct {
+		Config struct {
+			Balancer struct {
+				Algorithm  string `json:"algorithm"`
+				Classifier struct {
+					Type          string `json:"type"`
+					ContextWindow int    `json:"context_window"`
+					Name          string `json:"name"`
+					URL           string `json:"url"`
+				} `json:"classifier"`
+				CostQualityTradeoff string `json:"cost_quality_tradeoff"`
+				Version             string `json:"version"`
+			} `json:"balancer"`
+		} `json:"config"`
+	}
+	require.NoError(t, json.Unmarshal(data, &decoded))
+
+	balancer := decoded.Config.Balancer
+	require.Equal(t, "intelligent", balancer.Algorithm)
+	require.Equal(t, "custom", balancer.Classifier.Type)
+	require.Equal(t, "classifier-model", balancer.Classifier.Name)
+	require.Equal(t, "https://classifier.example.com", balancer.Classifier.URL)
+	require.Equal(t, 8192, balancer.Classifier.ContextWindow)
+	require.Equal(t, "balanced", balancer.CostQualityTradeoff)
+}
