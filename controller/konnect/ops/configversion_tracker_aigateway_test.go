@@ -243,6 +243,18 @@ func TestAIGatewayConsumerGuardedUpdate(t *testing.T) {
 		assert.ElementsMatch(t, []string{"konnect-group-a", "konnect-group-b"}, s.consumers.groups)
 	})
 
+	t.Run("a group referenced twice is not rewritten at every verification", func(t *testing.T) {
+		s := newAIGatewayConsumerSync(t)
+		s.consumer.Spec.ConsumerGroups = append(s.consumer.Spec.ConsumerGroups, aiconfigurationv1alpha1.AIGatewayConsumerGroupRef{Name: "group-a"})
+		s.update(true)
+		s.version.version = "2"
+		s.clock.Advance(testVersionTTL)
+
+		g, calls := s.update(true)
+		assert.Equal(t, syncOutcomeVerified, g.outcome)
+		assert.Equal(t, aiGatewayConsumerCalls{gets: 1, groupLists: 1}, calls, "the membership is already in sync")
+	})
+
 	t.Run("drift check verifies the membership without a version change", func(t *testing.T) {
 		s := newAIGatewayConsumerSync(t)
 		s.update(true)
@@ -309,6 +321,17 @@ func TestConfigVersionTrackerAIGatewayScope(t *testing.T) {
 		g, calls := s.update(true)
 		assert.Equal(t, syncOutcomeSkipped, g.outcome)
 		assert.Equal(t, aiGatewayConsumerCalls{}, calls)
+	})
+
+	t.Run("the sync state is tracked in memory only", func(t *testing.T) {
+		s := newAIGatewayConsumerSync(t)
+		g := s.tracker.aiGatewayGuard(s.version.sdk, s.consumer.GetUID(), testAIGatewayID, true)
+		require.NoError(t, updateAIGatewayConsumer(t.Context(), s.cl, s.consumers.sdk, g, s.consumer))
+		require.Equal(t, syncOutcomeSent, g.outcome)
+		assert.False(t, g.persistable)
+		assert.Nil(t, g.pendingStatus(), "AI Gateway entities have no status.sync to persist")
+		_, ok := g.pendingRecord()
+		assert.True(t, ok, "the record is still committed to memory after the status patch")
 	})
 
 	t.Run("nil guard always sends", func(t *testing.T) {

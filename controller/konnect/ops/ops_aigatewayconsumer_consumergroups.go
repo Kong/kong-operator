@@ -126,10 +126,12 @@ func enforceAIGatewayConsumerConsumerGroupsIfDrifted(
 			Err:       err,
 		}
 	}
+	// spec.consumerGroups can reference a group more than once, while Konnect
+	// holds each membership once: compare both sides as sets.
 	desired := slices.Clone(resolvedNames)
 	slices.Sort(desired)
 	slices.Sort(actualNames)
-	if !slices.Equal(desired, slices.Compact(actualNames)) || len(invalid) > 0 {
+	if !slices.Equal(slices.Compact(desired), slices.Compact(actualNames)) || len(invalid) > 0 {
 		return enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, gatewayID)
 	}
 	setAIGatewayConsumerGroupRefsValidCondition(obj, invalid)

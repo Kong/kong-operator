@@ -31,7 +31,7 @@ const (
 // tracks the expected config version, which changes whenever the configuration of the scope changes.
 //
 // A periodic update of an entity is skipped when the request is unchanged and no external change to its
-// control plane was observed since the entity was last checked. When an external change was observed, the
+// config scope was observed since the entity was last checked. When an external change was observed, the
 // entity is fetched from Konnect and only updated when its representation differs.
 //
 // Writes performed by the operator itself also change the config version. They are reported through BeforeWrite and
@@ -460,7 +460,9 @@ type syncGuard struct {
 	// secret material, so only keyed hashes may be persisted in status.
 	secretBearing bool
 	// persistable is false when the hashes of the update must not be persisted
-	// in status: a secret-bearing entity without a configured sync hash key.
+	// in status: an entity whose sync state is tracked in memory only, such as
+	// an AI Gateway entity, or a secret-bearing entity without a configured
+	// sync hash key. The pending record is still committed to memory.
 	persistable bool
 	// pending is the record produced by a real PUT, or by a GET verification
 	// of hashes persisted with the previous key. It is persisted in status by
@@ -509,7 +511,7 @@ func (t *ConfigVersionTracker) aiGatewayGuard(
 		uid:         uid,
 		scope:       sdkops.AIGatewayWriteScope(gatewayID),
 		periodic:    periodic,
-		persistable: true,
+		persistable: false,
 	}
 }
 
