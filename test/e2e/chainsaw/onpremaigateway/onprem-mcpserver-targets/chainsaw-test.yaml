@@ -1,0 +1,107 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-mcpserver-targets
+spec:
+  description: |
+    Stands up an OnPremAIGateway and creates one AIGatewayMCPServer per
+    apiSpec.type variant that carries targets (conversion-listener,
+    passthrough-listener, upstream-server), addressed through targets
+    instead of url, and asserts all of them reach Programmed=True against an
+    in-cluster AIGatewayDataPlane — the real render+push pipeline. Mirrors
+    the `onprem-mcpserver-types` test; conversion-only and listener (no
+    targets field) are covered there.
+
+    Targets require an AI Gateway data plane with targets support (AI Gateway 2.4+). The chainsaw suites are not run by PR CI (they are only
+    run by the `validate AIGateway dataplane image` dispatch workflow, which
+    passes an explicit AIGW_DP_IMAGE), so validate this test with a 2.4
+    image there.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: mcp_conversion_listener_name
+      value: (join('-', [($test_name), 'mcp-conversion-listener']))
+    - name: mcp_passthrough_listener_name
+      value: (join('-', [($test_name), 'mcp-passthrough-listener']))
+    - name: mcp_upstream_server_name
+      value: (join('-', [($test_name), 'mcp-upstream-server']))
+  steps:
+    - name: Create-onprem-aigateway
+      # Targets need a 2.4 runtime: the render drops 2.4 features from a
+      # control plane pinned below that (the default is 2.1).
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+        with:
+          bindings:
+            - name: onprem_aigw_spec
+              value: "({minRuntimeVersion: '2.4'})"
+    - name: Start-echo-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: Create-aigateway-mcpservers
+      try:
+        - apply:
+            file: 01-aigatewaymcpservers.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-mcpservers-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_conversion_listener_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_passthrough_listener_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_upstream_server_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-mcpserver-targets
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

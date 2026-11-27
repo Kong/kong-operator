@@ -3593,6 +3593,10 @@ type AIGatewayMCPServerConversionListener struct {
 	// server.
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.targets)",message="exactly one of url and targets must be set"
+	// +kubebuilder:validation:XValidation:rule="!has(self.targets) || size(self.targets) > 0",message="targets must not be empty"
+	// +kubebuilder:validation:XValidation:rule="(!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)",message="balancer, protocol, and path are only valid with targets"
+	// +kubebuilder:validation:XValidation:rule="!has(self.balancer) || self.balancer.algorithm != 'consistent-hashing' || !self.targets.exists(t, has(t.failover) && t.failover == 'Enabled')",message="failover targets are not supported with the consistent-hashing algorithm"
 	Config AIGatewayMCPServerConversionListenerConfig `json:"config,omitzero"`
 	// The Token Vault Datastore holding this entity's credential storage: the
 	// directory credentials
@@ -5169,6 +5173,10 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.targets)",message="exactly one of url and targets must be set"
+	// +kubebuilder:validation:XValidation:rule="!has(self.targets) || size(self.targets) > 0",message="targets must not be empty"
+	// +kubebuilder:validation:XValidation:rule="(!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)",message="balancer, protocol, and path are only valid with targets"
+	// +kubebuilder:validation:XValidation:rule="!has(self.balancer) || self.balancer.algorithm != 'consistent-hashing' || !self.targets.exists(t, has(t.failover) && t.failover == 'Enabled')",message="failover targets are not supported with the consistent-hashing algorithm"
 	Config AIGatewayMCPServerWithUpstreamConfig `json:"config,omitzero"`
 	// The Token Vault Datastore holding this entity's credential storage: the
 	// directory credentials
@@ -5770,6 +5778,10 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.targets)",message="exactly one of url and targets must be set"
+	// +kubebuilder:validation:XValidation:rule="!has(self.targets) || size(self.targets) > 0",message="targets must not be empty"
+	// +kubebuilder:validation:XValidation:rule="(!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)",message="balancer, protocol, and path are only valid with targets"
+	// +kubebuilder:validation:XValidation:rule="!has(self.balancer) || self.balancer.algorithm != 'consistent-hashing' || !self.targets.exists(t, has(t.failover) && t.failover == 'Enabled')",message="failover targets are not supported with the consistent-hashing algorithm"
 	Config AIGatewayMCPServerUpstreamServerConfig `json:"config,omitzero"`
 	// The Token Vault Datastore holding this entity's credential storage: the
 	// directory credentials

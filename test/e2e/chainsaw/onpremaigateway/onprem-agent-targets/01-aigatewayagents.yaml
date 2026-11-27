@@ -1,0 +1,76 @@
+# Two AIGatewayAgent routes to the shared go-echo backend, addressed through
+# targets (load-balanced upstream addresses) instead of url: the http agent
+# sets the round-robin balancer, the a2a agent reaches the backend's /a2a
+# surface through the path field. The http agent's single target carries an
+# explicit failover: Disabled to pin the boolean-enum normalization
+# (addresses must be unique within an agent, and the backend is one
+# endpoint).
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($http_agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($http_agent_name)
+    displayName: ($http_agent_name)
+    type: http
+    enabled: Enabled
+    config:
+      targets:
+        - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+          weight: 100
+          failover: Disabled
+      balancer:
+        algorithm: round-robin
+        round-robin: {}
+      protocol: http
+      route:
+        paths:
+          - ($http_agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($a2a_agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($a2a_agent_name)
+    displayName: ($a2a_agent_name)
+    type: a2a
+    enabled: Enabled
+    config:
+      targets:
+        - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+      balancer:
+        algorithm: round-robin
+        round-robin: {}
+      protocol: http
+      path: /a2a
+      route:
+        paths:
+          - ($a2a_agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https

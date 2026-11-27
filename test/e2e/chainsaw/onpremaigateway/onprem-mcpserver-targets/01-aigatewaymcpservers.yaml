@@ -1,0 +1,121 @@
+# The three AIGatewayMCPServer variants that carry targets (conversion-listener,
+# passthrough-listener, upstream-server), addressed through targets instead of
+# url. conversion-only and listener have no targets field and are covered by
+# onprem-mcpserver-types. The echo backend does not speak MCP, but the
+# Programmed assertions exercise the render+push pipeline (the DP accepts the
+# document with the targets lowered into a Kong Upstream); MCP traffic itself
+# is covered by the harness criteria outside this suite.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_conversion_listener_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: conversion-listener
+    conversion-listener:
+      name: ($mcp_conversion_listener_name)
+      displayName: ($mcp_conversion_listener_name)
+      enabled: Enabled
+      access:
+        aclAttributeType: consumer
+      config:
+        targets:
+          - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+            weight: 100
+            failover: Disabled
+        balancer:
+          algorithm: round-robin
+          round-robin: {}
+        protocol: http
+        route:
+          paths:
+            - /mcp/flights-conversion-listener-targets
+          methods:
+            - GET
+            - POST
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
+      labels:
+        domain: flights
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_passthrough_listener_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: passthrough-listener
+    passthrough-listener:
+      name: ($mcp_passthrough_listener_name)
+      displayName: ($mcp_passthrough_listener_name)
+      enabled: Enabled
+      access:
+        aclAttributeType: oauthAccessToken
+        oauthAccessToken:
+          accessTokenClaimField: .user.email
+      config:
+        targets:
+          - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+        balancer:
+          algorithm: round-robin
+          round-robin: {}
+        protocol: http
+        path: /mcp
+        route:
+          paths:
+            - /mcp/flights-passthrough-targets
+      labels:
+        domain: flights
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_upstream_server_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: upstream-server
+    upstream-server:
+      name: ($mcp_upstream_server_name)
+      displayName: ($mcp_upstream_server_name)
+      enabled: Enabled
+      config:
+        targets:
+          - address: (join('', [($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+        balancer:
+          algorithm: round-robin
+          round-robin: {}
+        protocol: http
+        route:
+          paths:
+            - /mcp/flights-upstream-server-targets
+        toolsCacheTtlSeconds: 300
+      labels:
+        domain: flights

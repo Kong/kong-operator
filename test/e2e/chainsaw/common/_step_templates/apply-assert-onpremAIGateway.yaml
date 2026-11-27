@@ -4,8 +4,11 @@
 #   - aigw_cp_name: Name of the OnPremAIGateway to create.
 #   - namespace: Namespace where the OnPremAIGateway will be created.
 #
-# The OnPremAIGateway spec is empty: the controller reports readiness of the
-# embedded control-plane instance. LicenseValid is informational and never
+# Optional bindings (override with use.with.bindings):
+#   - onprem_aigw_spec: The OnPremAIGateway spec. Empty by default.
+#
+# The OnPremAIGateway spec is empty by default: the controller reports readiness
+# of the embedded control-plane instance. LicenseValid is informational and never
 # gates Ready: without a KongLicense it reports False (LicenseMissing), and
 # with one it reports True (LicenseProvided). This template asserts Ready only.
 apiVersion: chainsaw.kyverno.io/v1alpha1
@@ -13,6 +16,9 @@ kind: StepTemplate
 metadata:
   name: apply-assert-onprem-aigateway
 spec:
+  bindings:
+    - name: onprem_aigw_spec
+      value: (`{}`)
   try:
     - apply:
         resource:
@@ -21,7 +27,7 @@ spec:
           metadata:
             name: ($aigw_cp_name)
             namespace: ($namespace)
-          spec: {}
+          spec: ($onprem_aigw_spec)
     - assert:
         resource:
           apiVersion: aigateway.konghq.com/v1alpha1

@@ -114,6 +114,14 @@
   accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
   a parent of another namespace is matched by namespace and name.
   [#6746](https://github.com/Kong/kong-operator/pull/6746)
+- `AIGatewayAgent`s and `AIGatewayMCPServer`s can address their upstream with
+  `targets` (load-balanced upstream addresses) instead of `url`, on both
+  Konnect and on-prem gateways. With `targets`, the `balancer` (including
+  consistent hashing), `protocol` and `path` fields are also available, and
+  exactly one of `url` and `targets` must be set. Failover targets are not
+  supported with the `consistent-hashing` balancer. Requires AI Gateway 2.4
+  or later.
+  [#6869](https://github.com/Kong/kong-operator/pull/6869)
 
 ### Changed
 

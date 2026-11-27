@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -149,5 +151,118 @@ func TestAIGatewayAgent(t *testing.T) {
 				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("url and targets validation", func(t *testing.T) {
+		agent := func(mutate func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig)) *aiconfigurationv1alpha1.AIGatewayAgent {
+			obj := validAIGatewayAgent(ns.Name)
+			mutate(&obj.Spec.APISpec.Config)
+			return obj
+		}
+		targets := []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+			{Address: "agent-one:8080", Weight: new(100)},
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayAgent]{
+			{
+				Name: "targets only is accepted",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = targets
+				}),
+			},
+			{
+				Name: "both url and targets is rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.Targets = targets
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
+				Name: "neither url nor targets is rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					// config is required: set an unrelated field so the config
+					// object is present and the CEL rule can fire (an empty
+					// config struct is dropped by omitzero).
+					cfg.MaxRequestBodySize = new(1024)
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
+				Name: "an empty targets list is rejected",
+				// The typed client drops an empty list (omitempty), so the
+				// create re-enters with neither field set and the
+				// exactly-one rule fires first.
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{}
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
+				Name: "protocol without targets is rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.Protocol = "https"
+				}),
+				ExpectedErrorMessage: new("balancer, protocol, and path are only valid with targets"),
+			},
+			{
+				Name: "failover targets with consistent-hashing are rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+						{Address: "agent-one:8080", Failover: new("Enabled")},
+					}
+					cfg.Balancer = &aiconfigurationv1alpha1.AIGatewayAgentConfigBalancer{
+						Algorithm:         aiconfigurationv1alpha1.AIGatewayAgentConfigBalancerTypeConsistentHashing,
+						ConsistentHashing: &aiconfigurationv1alpha1.AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+					}
+				}),
+				ExpectedErrorMessage: new("failover targets are not supported with the consistent-hashing algorithm"),
+			},
+			{
+				Name: "failover disabled with consistent-hashing is accepted",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+						{Address: "agent-one:8080", Failover: new("Disabled")},
+					}
+					cfg.Balancer = &aiconfigurationv1alpha1.AIGatewayAgentConfigBalancer{
+						Algorithm:         aiconfigurationv1alpha1.AIGatewayAgentConfigBalancerTypeConsistentHashing,
+						ConsistentHashing: &aiconfigurationv1alpha1.AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+					}
+				}),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+
+		// The typed client drops an empty list (omitempty), so an explicit
+		// empty targets list only reaches the API from a raw object:
+		// exercise the non-empty rule there.
+		cl, err := client.New(cfg, client.Options{Scheme: scheme})
+		require.NoError(t, err)
+		rawAgent := &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": aiconfigurationv1alpha1.GroupVersion.String(),
+			"kind":       "AIGatewayAgent",
+			"metadata": map[string]any{
+				"name":      "agent-empty-targets",
+				"namespace": ns.Name,
+			},
+			"spec": map[string]any{
+				"aiGatewayRef": map[string]any{
+					"namespacedRef": map[string]any{"name": "test-ai-gw-cp"},
+				},
+				"apiSpec": map[string]any{
+					"name":        "empty-targets-agent",
+					"displayName": "Empty Targets Agent",
+					"type":        "http",
+					"config": map[string]any{
+						"targets": []any{},
+					},
+				},
+			},
+		}}
+		err = cl.Create(t.Context(), rawAgent)
+		require.ErrorContains(t, err, "targets must not be empty")
 	})
 }
