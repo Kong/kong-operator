@@ -11307,7 +11307,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(obj)) > 0 {
 		listener9, _ := payload["listener"].(map[string]any)
 		if listener9 == nil {
 			listener9 = map[string]any{}
@@ -11336,7 +11336,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(obj)) > 0 {
 		listener10, _ := payload["listener"].(map[string]any)
 		if listener10 == nil {
 			listener10 = map[string]any{}
@@ -11365,7 +11365,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(obj)) > 0 {
 		listener11, _ := payload["listener"].(map[string]any)
 		if listener11 == nil {
 			listener11 = map[string]any{}
@@ -11394,7 +11394,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(obj)) > 0 {
 		listener12, _ := payload["listener"].(map[string]any)
 		if listener12 == nil {
 			listener12 = map[string]any{}
@@ -11423,7 +11423,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)) > 0 {
 		listener13, _ := payload["listener"].(map[string]any)
 		if listener13 == nil {
 			listener13 = map[string]any{}
@@ -11452,7 +11452,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)) > 0 {
 		listener14, _ := payload["listener"].(map[string]any)
 		if listener14 == nil {
 			listener14 = map[string]any{}
@@ -11481,7 +11481,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)) > 0 {
 		listener15, _ := payload["listener"].(map[string]any)
 		if listener15 == nil {
 			listener15 = map[string]any{}
@@ -11510,7 +11510,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)) > 0 {
 		listener16, _ := payload["listener"].(map[string]any)
 		if listener16 == nil {
 			listener16 = map[string]any{}
@@ -11539,7 +11539,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(obj)) > 0 {
 		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener11 == nil {
 			conversionListener11 = map[string]any{}
@@ -11568,7 +11568,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(obj)) > 0 {
 		conversionListener12, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener12 == nil {
 			conversionListener12 = map[string]any{}
@@ -11597,7 +11597,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(obj)) > 0 {
 		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener13 == nil {
 			conversionListener13 = map[string]any{}
@@ -11626,7 +11626,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(obj)) > 0 {
 		conversionListener14, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener14 == nil {
 			conversionListener14 = map[string]any{}
@@ -11655,7 +11655,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)) > 0 {
 		conversionListener15, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener15 == nil {
 			conversionListener15 = map[string]any{}
@@ -11684,7 +11684,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)) > 0 {
 		conversionListener16, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener16 == nil {
 			conversionListener16 = map[string]any{}
@@ -11713,7 +11713,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)) > 0 {
 		conversionListener17, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener17 == nil {
 			conversionListener17 = map[string]any{}
@@ -11742,7 +11742,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)) > 0 {
 		conversionListener18, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener18 == nil {
 			conversionListener18 = map[string]any{}
@@ -11771,7 +11771,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(obj)) > 0 {
 		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener11 == nil {
 			passthroughListener11 = map[string]any{}
@@ -11800,7 +11800,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(obj)) > 0 {
 		passthroughListener12, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener12 == nil {
 			passthroughListener12 = map[string]any{}
@@ -11829,7 +11829,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(obj)) > 0 {
 		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener13 == nil {
 			passthroughListener13 = map[string]any{}
@@ -11858,7 +11858,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(obj)) > 0 {
 		passthroughListener14, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener14 == nil {
 			passthroughListener14 = map[string]any{}
@@ -11887,7 +11887,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)) > 0 {
 		passthroughListener15, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener15 == nil {
 			passthroughListener15 = map[string]any{}
@@ -11916,7 +11916,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)) > 0 {
 		passthroughListener16, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener16 == nil {
 			passthroughListener16 = map[string]any{}
@@ -11945,7 +11945,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)) > 0 {
 		passthroughListener17, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener17 == nil {
 			passthroughListener17 = map[string]any{}
@@ -11974,7 +11974,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)) > 0 {
 		passthroughListener18, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener18 == nil {
 			passthroughListener18 = map[string]any{}
@@ -13584,7 +13584,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsAllow(obj)) > 0 {
 		listener9, _ := payload["listener"].(map[string]any)
 		if listener9 == nil {
 			listener9 = map[string]any{}
@@ -13613,7 +13613,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultPromptAclsDeny(obj)) > 0 {
 		listener10, _ := payload["listener"].(map[string]any)
 		if listener10 == nil {
 			listener10 = map[string]any{}
@@ -13642,7 +13642,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsAllow(obj)) > 0 {
 		listener11, _ := payload["listener"].(map[string]any)
 		if listener11 == nil {
 			listener11 = map[string]any{}
@@ -13671,7 +13671,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultResourceAclsDeny(obj)) > 0 {
 		listener12, _ := payload["listener"].(map[string]any)
 		if listener12 == nil {
 			listener12 = map[string]any{}
@@ -13700,7 +13700,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)) > 0 {
 		listener13, _ := payload["listener"].(map[string]any)
 		if listener13 == nil {
 			listener13 = map[string]any{}
@@ -13729,7 +13729,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)) > 0 {
 		listener14, _ := payload["listener"].(map[string]any)
 		if listener14 == nil {
 			listener14 = map[string]any{}
@@ -13758,7 +13758,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)) > 0 {
 		listener15, _ := payload["listener"].(map[string]any)
 		if listener15 == nil {
 			listener15 = map[string]any{}
@@ -13787,7 +13787,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)) > 0 {
 		listener16, _ := payload["listener"].(map[string]any)
 		if listener16 == nil {
 			listener16 = map[string]any{}
@@ -13816,7 +13816,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsAllow(obj)) > 0 {
 		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener11 == nil {
 			conversionListener11 = map[string]any{}
@@ -13845,7 +13845,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultPromptAclsDeny(obj)) > 0 {
 		conversionListener12, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener12 == nil {
 			conversionListener12 = map[string]any{}
@@ -13874,7 +13874,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsAllow(obj)) > 0 {
 		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener13 == nil {
 			conversionListener13 = map[string]any{}
@@ -13903,7 +13903,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultResourceAclsDeny(obj)) > 0 {
 		conversionListener14, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener14 == nil {
 			conversionListener14 = map[string]any{}
@@ -13932,7 +13932,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)) > 0 {
 		conversionListener15, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener15 == nil {
 			conversionListener15 = map[string]any{}
@@ -13961,7 +13961,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)) > 0 {
 		conversionListener16, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener16 == nil {
 			conversionListener16 = map[string]any{}
@@ -13990,7 +13990,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)) > 0 {
 		conversionListener17, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener17 == nil {
 			conversionListener17 = map[string]any{}
@@ -14019,7 +14019,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)) > 0 {
 		conversionListener18, _ := payload["conversion-listener"].(map[string]any)
 		if conversionListener18 == nil {
 			conversionListener18 = map[string]any{}
@@ -14048,7 +14048,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsAllow(obj)) > 0 {
 		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener11 == nil {
 			passthroughListener11 = map[string]any{}
@@ -14077,7 +14077,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultPromptAclsDeny(obj)) > 0 {
 		passthroughListener12, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener12 == nil {
 			passthroughListener12 = map[string]any{}
@@ -14106,7 +14106,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsAllow(obj)) > 0 {
 		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener13 == nil {
 			passthroughListener13 = map[string]any{}
@@ -14135,7 +14135,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultResourceAclsDeny(obj)) > 0 {
 		passthroughListener14, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener14 == nil {
 			passthroughListener14 = map[string]any{}
@@ -14164,7 +14164,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsAllow(obj)) > 0 {
 		passthroughListener15, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener15 == nil {
 			passthroughListener15 = map[string]any{}
@@ -14193,7 +14193,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultPromptAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultPromptAclsDeny(obj)) > 0 {
 		passthroughListener16, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener16 == nil {
 			passthroughListener16 = map[string]any{}
@@ -14222,7 +14222,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsAllow(obj)) > 0 {
 		passthroughListener17, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener17 == nil {
 			passthroughListener17 = map[string]any{}
@@ -14251,7 +14251,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultResourceAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && len(RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultResourceAclsDeny(obj)) > 0 {
 		passthroughListener18, _ := payload["passthrough-listener"].(map[string]any)
 		if passthroughListener18 == nil {
 			passthroughListener18 = map[string]any{}

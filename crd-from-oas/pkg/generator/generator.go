@@ -5996,6 +5996,12 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			conds = append(conds, "obj.Spec.APISpec."+strings.Join(names, ".")+" != nil")
 		}
 	}
+	// A skipWhenEmpty reference must leave the payload untouched when the CR
+	// declares none: navigating to its parent would otherwise create the
+	// owning object, and an empty list still counts as the property being set.
+	if ref.SkipWhenEmpty {
+		conds = append(conds, "len("+ref.RefsExpr+") > 0")
+	}
 	groupKey := strings.Join(names, ".")
 	if idx, ok := groupIndex[groupKey]; ok {
 		for _, existing := range groups[idx].Variants {

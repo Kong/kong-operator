@@ -509,3 +509,67 @@ func TestAIGatewayMCPServer_PromptAndResourceACLs(t *testing.T) {
 		})
 	}
 }
+
+// TestAIGatewayMCPServer_NoPromptOrResourceACLsEmitsNoDefaults guards the
+// payload shape for a server that sets an access block but no prompt or
+// resource ACLs: those two properties must be absent, not empty. Konnect
+// rejects the property itself below the runtime version that introduced it, so
+// sending an empty default_prompt_acls (or default_resource_acls) fails the
+// create even though the user never set the field. The surrounding access
+// block keeps its pre-existing default_tool_acls, which Konnect accepts on
+// every runtime.
+func TestAIGatewayMCPServer_NoPromptOrResourceACLsEmitsNoDefaults(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	obj := &AIGatewayMCPServer{
+		Name: "mcp", Namespace: "default",
+		Spec: AIGatewayMCPServerSpec{
+			APISpec: AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+					Type: AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+						Name:        "mcp",
+						DisplayName: "MCP",
+						Access: &AIGatewayMCPServerPassthroughListenerAccess{
+							AclAttributeType: AIGatewayMCPServerPassthroughListenerAccessTypeOauth,
+							Oauth: &AIGatewayMCPServerListenerOauth{
+								AccessTokenClaimField: ".user.email",
+							},
+						},
+						Config: AIGatewayMCPServerWithUpstreamConfig{
+							URL:   "https://example.com/mcp",
+							Route: AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, op := range []struct {
+		name string
+		fn   func(*testing.T) any
+	}{
+		{"create", func(t *testing.T) any {
+			req, err := obj.ToCreateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+			return req
+		}},
+		{"update", func(t *testing.T) any {
+			req, err := obj.ToUpdateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+			return req
+		}},
+	} {
+		t.Run(op.name, func(t *testing.T) {
+			data, err := json.Marshal(op.fn(t))
+			require.NoError(t, err)
+			require.NotContains(t, string(data), "default_prompt_acls")
+			require.NotContains(t, string(data), "default_resource_acls")
+		})
+	}
+}

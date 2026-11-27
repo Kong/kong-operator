@@ -127,6 +127,12 @@ type ReferenceConfig struct {
 	// false: a mismatched namespace is rejected with
 	// ReferenceCrossNamespaceError, exactly as today.
 	SupportCrossNamespaceReference bool `yaml:"supportCrossNamespaceReference,omitempty"`
+	// SkipWhenEmpty leaves the field out of the SDK payload entirely when the
+	// CR declares no reference, instead of writing an empty list. Use it for a
+	// field whose owning API rejects the property on older runtime versions:
+	// an empty list still counts as present, so sending one fails the request
+	// even though the user never set the field.
+	SkipWhenEmpty bool `yaml:"skipWhenEmpty,omitempty"`
 	// InjectInto makes this an additive, optional reference: Path names a new
 	// top-level apiSpec field that does not exist in the OAS (e.g.
 	// "spec.apiSpec.customPolicyRef"), and the resolved value is sent in the
