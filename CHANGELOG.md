@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [unreleased](#unreleased)
 - [v2.4.0](#v240)
 - [v2.4.0-rapid.3.1](#v240-rapid31)
 - [v2.4.0-rapid.3.0](#v240-rapid30)
@@ -71,7 +72,7 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [Unreleased]
 
 ### Breaking changes
 
@@ -114,6 +115,10 @@
   accepts both kinds in `spec.from`. A child policy's `parentPolicyRef` naming
   a parent of another namespace is matched by namespace and name.
   [#6746](https://github.com/Kong/kong-operator/pull/6746)
+- On-prem (self-managed) gateways: Add a `DBBackedHybridControlPlane` CRD to
+  represent the Kong gateway instance running as the control plane role in the
+  DB backed hybrid mode of on-prem Kong API gateways.
+  [#5702](https://github.com/Kong/kong-operator/pull/5702/)
 
 ### Changed
 
@@ -5188,6 +5193,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0..main
 [v2.4.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.1..v2.4.0
 [v2.4.0-rapid.3.1]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.0..v2.4.0-rapid.3.1
 [v2.4.0-rapid.3.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..v2.4.0-rapid.3.0
