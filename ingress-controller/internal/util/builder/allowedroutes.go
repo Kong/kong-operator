@@ -3,23 +3,23 @@ package builder
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func NewAllowedRoutesFromSameNamespaces() *gatewayapi.AllowedRoutes {
-	return &gatewayapi.AllowedRoutes{
+func NewAllowedRoutesFromSameNamespaces() *gwtypes.AllowedRoutes {
+	return &gwtypes.AllowedRoutes{
 		Namespaces: NewRouteNamespaces().FromSame().Build(),
 	}
 }
 
-func NewAllowedRoutesFromAllNamespaces() *gatewayapi.AllowedRoutes {
-	return &gatewayapi.AllowedRoutes{
+func NewAllowedRoutesFromAllNamespaces() *gwtypes.AllowedRoutes {
+	return &gwtypes.AllowedRoutes{
 		Namespaces: NewRouteNamespaces().FromAll().Build(),
 	}
 }
 
-func NewAllowedRoutesFromSelectorNamespace(selector *metav1.LabelSelector) *gatewayapi.AllowedRoutes {
-	return &gatewayapi.AllowedRoutes{
+func NewAllowedRoutesFromSelectorNamespace(selector *metav1.LabelSelector) *gwtypes.AllowedRoutes {
+	return &gwtypes.AllowedRoutes{
 		Namespaces: NewRouteNamespaces().FromSelector(selector).Build(),
 	}
 }

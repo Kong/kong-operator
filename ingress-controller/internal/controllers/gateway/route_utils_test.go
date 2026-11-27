@@ -19,9 +19,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 )
 
@@ -37,68 +37,68 @@ func init() {
 }
 
 func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
-	udpListener := gatewayapi.Listener{
+	udpListener := gwtypes.Listener{
 		Name:     "udp",
-		Protocol: gatewayapi.UDPProtocolType,
+		Protocol: gwtypes.UDPProtocolType,
 		Port:     9999,
 	}
 
 	testCases := []struct {
 		name                  string
-		gateway               *gatewayapi.Gateway
+		gateway               *gwtypes.Gateway
 		listener              string
-		attachedListenerNames []gatewayapi.SectionName
+		attachedListenerNames []gwtypes.SectionName
 		wantReady             bool
 	}{
 		{
 			name: "gateway programmed and matching listener programmed",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{udpListener},
-				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
+				[]gwtypes.Listener{udpListener},
+				[]gwtypes.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
 			),
 			listener:              "udp",
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             true,
 		},
 		{
 			name: "gateway programmed but matching listener status missing",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{udpListener},
+				[]gwtypes.Listener{udpListener},
 				nil,
 			),
 			listener:              "udp",
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             false,
 		},
 		{
 			name: "gateway programmed but matching listener not programmed",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{udpListener},
-				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionFalse)},
+				[]gwtypes.Listener{udpListener},
+				[]gwtypes.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionFalse)},
 			),
 			listener:              "udp",
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             false,
 		},
 		{
 			name: "gateway not programmed even when matching listener is programmed",
-			gateway: &gatewayapi.Gateway{
+			gateway: &gwtypes.Gateway{
 				Generation: 1,
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{udpListener},
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{udpListener},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp", metav1.ConditionTrue)},
 				},
 			},
 			listener:              "udp",
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             false,
 		},
 		{
 			name: "specified listener absent from spec is terminal not transient",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{{Name: "other", Protocol: gatewayapi.UDPProtocolType, Port: 9999}},
+				[]gwtypes.Listener{{Name: "other", Protocol: gwtypes.UDPProtocolType, Port: 9999}},
 				nil,
 			),
 			listener:  "udp",
@@ -107,30 +107,30 @@ func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 		{
 			name: "no section name waits for matching route protocol listener, ignoring unrelated programmed listener",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{
-					{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+				[]gwtypes.Listener{
+					{Name: "http", Protocol: gwtypes.HTTPProtocolType, Port: 80},
 					udpListener,
 				},
-				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("http", metav1.ConditionTrue)},
+				[]gwtypes.ListenerStatus{programmedListenerStatusForRouteReadinessTest("http", metav1.ConditionTrue)},
 			),
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             false,
 		},
 		{
 			name: "matching listener not programmed because ResolvedRefs is permanently false is not transient",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{udpListener},
-				[]gatewayapi.ListenerStatus{{
+				[]gwtypes.Listener{udpListener},
+				[]gwtypes.ListenerStatus{{
 					Name: "udp",
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(gatewayapi.ListenerConditionResolvedRefs),
+							Type:               string(gwtypes.ListenerConditionResolvedRefs),
 							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 1,
-							Reason:             string(gatewayapi.ListenerReasonInvalidCertificateRef),
+							Reason:             string(gwtypes.ListenerReasonInvalidCertificateRef),
 						},
 						{
-							Type:               string(gatewayapi.ListenerConditionProgrammed),
+							Type:               string(gwtypes.ListenerConditionProgrammed),
 							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 1,
 							Reason:             "Pending",
@@ -140,70 +140,70 @@ func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 				}},
 			),
 			listener:              "udp",
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             true,
 		},
 		{
 			name: "no section name ignores same protocol listener that did not attach",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{
-					{Name: "udp-attached", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
-					{Name: "udp-unattached", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				[]gwtypes.Listener{
+					{Name: "udp-attached", Protocol: gwtypes.UDPProtocolType, Port: 9999},
+					{Name: "udp-unattached", Protocol: gwtypes.UDPProtocolType, Port: 9998},
 				},
-				[]gatewayapi.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp-unattached", metav1.ConditionTrue)},
+				[]gwtypes.ListenerStatus{programmedListenerStatusForRouteReadinessTest("udp-unattached", metav1.ConditionTrue)},
 			),
-			attachedListenerNames: []gatewayapi.SectionName{"udp-attached"},
+			attachedListenerNames: []gwtypes.SectionName{"udp-attached"},
 			wantReady:             false,
 		},
 		{
 			name: "two attached listeners, one programmed and one still transiently pending proceeds via the programmed one",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{
-					{Name: "udp-ready", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
-					{Name: "udp-pending", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				[]gwtypes.Listener{
+					{Name: "udp-ready", Protocol: gwtypes.UDPProtocolType, Port: 9999},
+					{Name: "udp-pending", Protocol: gwtypes.UDPProtocolType, Port: 9998},
 				},
-				[]gatewayapi.ListenerStatus{
+				[]gwtypes.ListenerStatus{
 					programmedListenerStatusForRouteReadinessTest("udp-ready", metav1.ConditionTrue),
 					programmedListenerStatusForRouteReadinessTest("udp-pending", metav1.ConditionFalse),
 				},
 			),
-			attachedListenerNames: []gatewayapi.SectionName{"udp-ready", "udp-pending"},
+			attachedListenerNames: []gwtypes.SectionName{"udp-ready", "udp-pending"},
 			wantReady:             true,
 		},
 		{
 			name: "two attached listeners, pending one first and programmed one second still proceeds",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{
-					{Name: "udp-pending", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
-					{Name: "udp-ready", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
+				[]gwtypes.Listener{
+					{Name: "udp-pending", Protocol: gwtypes.UDPProtocolType, Port: 9998},
+					{Name: "udp-ready", Protocol: gwtypes.UDPProtocolType, Port: 9999},
 				},
-				[]gatewayapi.ListenerStatus{
+				[]gwtypes.ListenerStatus{
 					programmedListenerStatusForRouteReadinessTest("udp-pending", metav1.ConditionFalse),
 					programmedListenerStatusForRouteReadinessTest("udp-ready", metav1.ConditionTrue),
 				},
 			),
-			attachedListenerNames: []gatewayapi.SectionName{"udp-pending", "udp-ready"},
+			attachedListenerNames: []gwtypes.SectionName{"udp-pending", "udp-ready"},
 			wantReady:             true,
 		},
 		{
 			name: "two attached listeners, one permanently broken and one still transiently pending waits for the pending one",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{
-					{Name: "udp-broken", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
-					{Name: "udp-pending", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				[]gwtypes.Listener{
+					{Name: "udp-broken", Protocol: gwtypes.UDPProtocolType, Port: 9999},
+					{Name: "udp-pending", Protocol: gwtypes.UDPProtocolType, Port: 9998},
 				},
-				[]gatewayapi.ListenerStatus{
+				[]gwtypes.ListenerStatus{
 					{
 						Name: "udp-broken",
 						Conditions: []metav1.Condition{
 							{
-								Type:               string(gatewayapi.ListenerConditionResolvedRefs),
+								Type:               string(gwtypes.ListenerConditionResolvedRefs),
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
-								Reason:             string(gatewayapi.ListenerReasonInvalidCertificateRef),
+								Reason:             string(gwtypes.ListenerReasonInvalidCertificateRef),
 							},
 							{
-								Type:               string(gatewayapi.ListenerConditionProgrammed),
+								Type:               string(gwtypes.ListenerConditionProgrammed),
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
 								Reason:             "Pending",
@@ -213,29 +213,29 @@ func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 					programmedListenerStatusForRouteReadinessTest("udp-pending", metav1.ConditionFalse),
 				},
 			),
-			attachedListenerNames: []gatewayapi.SectionName{"udp-broken", "udp-pending"},
+			attachedListenerNames: []gwtypes.SectionName{"udp-broken", "udp-pending"},
 			wantReady:             false,
 		},
 		{
 			name: "two attached listeners, one programmed and one permanently broken proceeds via the programmed one",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{
-					{Name: "udp-ready", Protocol: gatewayapi.UDPProtocolType, Port: 9999},
-					{Name: "udp-broken", Protocol: gatewayapi.UDPProtocolType, Port: 9998},
+				[]gwtypes.Listener{
+					{Name: "udp-ready", Protocol: gwtypes.UDPProtocolType, Port: 9999},
+					{Name: "udp-broken", Protocol: gwtypes.UDPProtocolType, Port: 9998},
 				},
-				[]gatewayapi.ListenerStatus{
+				[]gwtypes.ListenerStatus{
 					programmedListenerStatusForRouteReadinessTest("udp-ready", metav1.ConditionTrue),
 					{
 						Name: "udp-broken",
 						Conditions: []metav1.Condition{
 							{
-								Type:               string(gatewayapi.ListenerConditionResolvedRefs),
+								Type:               string(gwtypes.ListenerConditionResolvedRefs),
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
-								Reason:             string(gatewayapi.ListenerReasonInvalidCertificateRef),
+								Reason:             string(gwtypes.ListenerReasonInvalidCertificateRef),
 							},
 							{
-								Type:               string(gatewayapi.ListenerConditionProgrammed),
+								Type:               string(gwtypes.ListenerConditionProgrammed),
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
 								Reason:             "Pending",
@@ -244,27 +244,27 @@ func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 					},
 				},
 			),
-			attachedListenerNames: []gatewayapi.SectionName{"udp-ready", "udp-broken"},
+			attachedListenerNames: []gwtypes.SectionName{"udp-ready", "udp-broken"},
 			wantReady:             true,
 		},
 		{
 			name: "matching listener not programmed for a settled non-ResolvedRefs reason is not transient",
 			gateway: programmedGatewayForRouteReadinessTest(
-				[]gatewayapi.Listener{udpListener},
-				[]gatewayapi.ListenerStatus{{
+				[]gwtypes.Listener{udpListener},
+				[]gwtypes.ListenerStatus{{
 					Name: "udp",
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(gatewayapi.ListenerConditionProgrammed),
+							Type:               string(gwtypes.ListenerConditionProgrammed),
 							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 1,
-							Reason:             string(gatewayapi.ListenerReasonInvalid),
+							Reason:             string(gwtypes.ListenerReasonInvalid),
 						},
 					},
 				}},
 			),
 			listener:              "udp",
-			attachedListenerNames: []gatewayapi.SectionName{"udp"},
+			attachedListenerNames: []gwtypes.SectionName{"udp"},
 			wantReady:             true,
 		},
 	}
@@ -282,20 +282,20 @@ func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 }
 
 func programmedGatewayForRouteReadinessTest(
-	listeners []gatewayapi.Listener,
-	listenerStatuses []gatewayapi.ListenerStatus,
-) *gatewayapi.Gateway {
-	return &gatewayapi.Gateway{
+	listeners []gwtypes.Listener,
+	listenerStatuses []gwtypes.ListenerStatus,
+) *gwtypes.Gateway {
+	return &gwtypes.Gateway{
 		Generation: 1,
-		Spec: gatewayapi.GatewaySpec{
+		Spec: gwtypes.GatewaySpec{
 			Listeners: listeners,
 		},
-		Status: gatewayapi.GatewayStatus{
+		Status: gwtypes.GatewayStatus{
 			Conditions: []metav1.Condition{{
-				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Type:               string(gwtypes.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 1,
-				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+				Reason:             string(gwtypes.GatewayReasonProgrammed),
 			}},
 			Listeners: listenerStatuses,
 		},
@@ -303,17 +303,17 @@ func programmedGatewayForRouteReadinessTest(
 }
 
 func programmedListenerStatusForRouteReadinessTest(
-	name gatewayapi.SectionName,
+	name gwtypes.SectionName,
 	conditionStatus metav1.ConditionStatus,
-) gatewayapi.ListenerStatus {
-	reason := string(gatewayapi.ListenerReasonProgrammed)
+) gwtypes.ListenerStatus {
+	reason := string(gwtypes.ListenerReasonProgrammed)
 	if conditionStatus != metav1.ConditionTrue {
-		reason = string(gatewayapi.ListenerReasonPending)
+		reason = string(gwtypes.ListenerReasonPending)
 	}
-	return gatewayapi.ListenerStatus{
+	return gwtypes.ListenerStatus{
 		Name: name,
 		Conditions: []metav1.Condition{{
-			Type:               string(gatewayapi.ListenerConditionProgrammed),
+			Type:               string(gwtypes.ListenerConditionProgrammed),
 			Status:             conditionStatus,
 			ObservedGeneration: 1,
 			Reason:             reason,
@@ -322,20 +322,20 @@ func programmedListenerStatusForRouteReadinessTest(
 }
 
 func TestFilterHostnames(t *testing.T) {
-	commonGateway := &gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			Listeners: []gatewayapi.Listener{
+	commonGateway := &gwtypes.Gateway{
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{
 				{
 					Name:     "listener-1",
-					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("very.specific.com"),
+					Hostname: util.StringToTypedPtr[*gwtypes.Hostname]("very.specific.com"),
 				},
 				{
 					Name:     "listener-2",
-					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.wildcard.io"),
+					Hostname: util.StringToTypedPtr[*gwtypes.Hostname]("*.wildcard.io"),
 				},
 				{
 					Name:     "listener-3",
-					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.anotherwildcard.io"),
+					Hostname: util.StringToTypedPtr[*gwtypes.Hostname]("*.anotherwildcard.io"),
 				},
 				{
 					Name: "listener-4",
@@ -347,8 +347,8 @@ func TestFilterHostnames(t *testing.T) {
 	testCases := []struct {
 		name              string
 		gateways          []supportedGatewayWithCondition
-		httpRoute         *gatewayapi.HTTPRoute
-		expectedHTTPRoute *gatewayapi.HTTPRoute
+		httpRoute         *gwtypes.HTTPRoute
+		expectedHTTPRoute *gwtypes.HTTPRoute
 		hasError          bool
 		errString         string
 	}{
@@ -360,18 +360,18 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-1",
 				},
 			},
-			httpRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			httpRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"*.anotherwildcard.io",
 						"*.nonmatchingwildcard.io",
 						"very.specific.com",
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			expectedHTTPRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"very.specific.com",
 					},
 				},
@@ -385,17 +385,17 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-1",
 				},
 			},
-			httpRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			httpRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"non.matching.com",
 						"*.specific.com",
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			expectedHTTPRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"very.specific.com",
 					},
 				},
@@ -409,9 +409,9 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-2",
 				},
 			},
-			httpRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			httpRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"non.matching.com",
 						"wildcard.io",
 						"foo.wildcard.io",
@@ -420,9 +420,9 @@ func TestFilterHostnames(t *testing.T) {
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			expectedHTTPRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"foo.wildcard.io",
 						"bar.wildcard.io",
 						"foo.bar.wildcard.io",
@@ -438,16 +438,16 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listener-3",
 				},
 			},
-			httpRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			httpRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"*.anotherwildcard.io",
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			expectedHTTPRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"*.anotherwildcard.io",
 					},
 				},
@@ -460,14 +460,14 @@ func TestFilterHostnames(t *testing.T) {
 					gateway: commonGateway,
 				},
 			},
-			httpRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{},
+			httpRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{},
 				},
 			},
-			expectedHTTPRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{},
+			expectedHTTPRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{},
 				},
 			},
 		},
@@ -479,17 +479,17 @@ func TestFilterHostnames(t *testing.T) {
 					listenerName: "listner-1",
 				},
 			},
-			httpRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+			httpRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"specific.but.wrong.com",
 						"wildcard.io",
 					},
 				},
 			},
-			expectedHTTPRoute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					Hostnames: []gatewayapi.Hostname{},
+			expectedHTTPRoute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					Hostnames: []gwtypes.Hostname{},
 				},
 			},
 			hasError:  true,
@@ -512,20 +512,20 @@ func TestFilterHostnames(t *testing.T) {
 func TestFilterHostnames_TLSRoute(t *testing.T) {
 	// Listeners modelled on the gateway-api TLSRouteHostnameIntersection conformance:
 	// abc.example.com, *.example.com, *.com, and an empty (match-any) listener.
-	commonGateway := &gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			Listeners: []gatewayapi.Listener{
+	commonGateway := &gwtypes.Gateway{
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{
 				{
 					Name:     "listener-exact-hostname",
-					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("abc.example.com"),
+					Hostname: util.StringToTypedPtr[*gwtypes.Hostname]("abc.example.com"),
 				},
 				{
 					Name:     "listener-more-specific-wc-hostname",
-					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.example.com"),
+					Hostname: util.StringToTypedPtr[*gwtypes.Hostname]("*.example.com"),
 				},
 				{
 					Name:     "listener-less-specific-wc-hostname",
-					Hostname: util.StringToTypedPtr[*gatewayapi.Hostname]("*.com"),
+					Hostname: util.StringToTypedPtr[*gwtypes.Hostname]("*.com"),
 				},
 				{
 					Name: "listener-empty-hostname",
@@ -537,8 +537,8 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 	testCases := []struct {
 		name             string
 		gateways         []supportedGatewayWithCondition
-		tlsRoute         *gatewayapi.TLSRoute
-		expectedTLSRoute *gatewayapi.TLSRoute
+		tlsRoute         *gwtypes.TLSRoute
+		expectedTLSRoute *gwtypes.TLSRoute
 		hasError         bool
 		errString        string
 	}{
@@ -547,14 +547,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 			gateways: []supportedGatewayWithCondition{
 				{gateway: commonGateway, listenerName: "listener-exact-hostname"},
 			},
-			tlsRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+			tlsRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.example.com"},
 				},
 			},
-			expectedTLSRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"abc.example.com"},
+			expectedTLSRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"abc.example.com"},
 				},
 			},
 		},
@@ -563,14 +563,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 			gateways: []supportedGatewayWithCondition{
 				{gateway: commonGateway, listenerName: "listener-more-specific-wc-hostname"},
 			},
-			tlsRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"abc.example.com"},
+			tlsRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"abc.example.com"},
 				},
 			},
-			expectedTLSRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"abc.example.com"},
+			expectedTLSRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"abc.example.com"},
 				},
 			},
 		},
@@ -579,14 +579,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 			gateways: []supportedGatewayWithCondition{
 				{gateway: commonGateway, listenerName: "listener-more-specific-wc-hostname"},
 			},
-			tlsRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.com"},
+			tlsRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.com"},
 				},
 			},
-			expectedTLSRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+			expectedTLSRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.example.com"},
 				},
 			},
 		},
@@ -595,14 +595,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 			gateways: []supportedGatewayWithCondition{
 				{gateway: commonGateway, listenerName: "listener-less-specific-wc-hostname"},
 			},
-			tlsRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+			tlsRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.example.com"},
 				},
 			},
-			expectedTLSRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.example.com"},
+			expectedTLSRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.example.com"},
 				},
 			},
 		},
@@ -611,14 +611,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 			gateways: []supportedGatewayWithCondition{
 				{gateway: commonGateway, listenerName: "listener-empty-hostname"},
 			},
-			tlsRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.com"},
+			tlsRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.com"},
 				},
 			},
-			expectedTLSRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"*.com"},
+			expectedTLSRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"*.com"},
 				},
 			},
 		},
@@ -627,14 +627,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 			gateways: []supportedGatewayWithCondition{
 				{gateway: commonGateway, listenerName: "listener-exact-hostname"},
 			},
-			tlsRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{"some.other.org"},
+			tlsRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{"some.other.org"},
 				},
 			},
-			expectedTLSRoute: &gatewayapi.TLSRoute{
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{},
+			expectedTLSRoute: &gwtypes.TLSRoute{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{},
 				},
 			},
 			hasError:  true,
@@ -657,10 +657,10 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 }
 
 func TestGetSupportedGatewayForRoute(t *testing.T) {
-	gatewayClass := &gatewayapi.GatewayClass{
+	gatewayClass := &gwtypes.GatewayClass{
 		Name: "test-gatewayclass",
-		Spec: gatewayapi.GatewayClassSpec{
-			ControllerName: gatewayapi.GatewayController("konghq.com/kic-gateway-controller"),
+		Spec: gwtypes.GatewayClassSpec{
+			ControllerName: gwtypes.GatewayController("konghq.com/kic-gateway-controller"),
 		},
 	}
 
@@ -668,9 +668,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		Name: "test-namespace",
 	}
 
-	routeConditionAccepted := func(status metav1.ConditionStatus, reason gatewayapi.RouteConditionReason) metav1.Condition {
+	routeConditionAccepted := func(status metav1.ConditionStatus, reason gwtypes.RouteConditionReason) metav1.Condition {
 		return metav1.Condition{
-			Type:   string(gatewayapi.RouteConditionAccepted),
+			Type:   string(gwtypes.RouteConditionAccepted),
 			Status: status,
 			Reason: string(reason),
 		}
@@ -680,19 +680,19 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		condition             metav1.Condition
 		message               string
 		listenerName          string
-		attachedListenerNames []gatewayapi.SectionName
+		attachedListenerNames []gwtypes.SectionName
 	}
 
-	goodGroup := gatewayapi.Group(gatewayv1.GroupName)
-	goodKind := gatewayapi.Kind("Gateway")
-	basicHTTPRoute := func() *gatewayapi.HTTPRoute {
-		return &gatewayapi.HTTPRoute{
-			TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+	goodGroup := gwtypes.Group(gatewayv1.GroupName)
+	goodKind := gwtypes.Kind("Gateway")
+	basicHTTPRoute := func() *gwtypes.HTTPRoute {
+		return &gwtypes.HTTPRoute{
+			TypeMeta:  gwtypes.V1GatewayTypeMeta,
 			Name:      "basic-httproute",
 			Namespace: "test-namespace",
-			Spec: gatewayapi.HTTPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{
-					ParentRefs: []gatewayapi.ParentReference{
+			Spec: gwtypes.HTTPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{
+					ParentRefs: []gwtypes.ParentReference{
 						{
 							Group: &goodGroup,
 							Kind:  &goodKind,
@@ -700,9 +700,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 						},
 					},
 				},
-				Rules: []gatewayapi.HTTPRouteRule{
+				Rules: []gwtypes.HTTPRouteRule{
 					{
-						BackendRefs: []gatewayapi.HTTPBackendRef{
+						BackendRefs: []gwtypes.HTTPBackendRef{
 							builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 						},
 					},
@@ -711,23 +711,23 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 	}
 	t.Run("HTTPRoute", func(t *testing.T) {
-		gatewayWithHTTP80Ready := func() *gatewayapi.Gateway {
-			return &gatewayapi.Gateway{
-				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+		gatewayWithHTTP80Ready := func() *gwtypes.Gateway {
+			return &gwtypes.Gateway{
+				TypeMeta:  gwtypes.V1GatewayTypeMeta,
 				Name:      "test-gateway",
 				Namespace: "test-namespace",
 				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
 							Name: "http",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -740,7 +740,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 
 		tests := []struct {
 			name     string
-			route    *gatewayapi.HTTPRoute
+			route    *gwtypes.HTTPRoute
 			expected []expected
 			objects  []client.Object
 		}{
@@ -754,7 +754,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
@@ -762,12 +762,12 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute with TLS configuration gets accepted",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.
 							NewListener("http").WithPort(443).HTTPS().
-							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-								Mode: new(gatewayapi.TLSModeTerminate),
+							WithTLSConfig(&gwtypes.GatewayTLSConfig{
+								Mode: new(gwtypes.TLSModeTerminate),
 							}).
 							IntoSlice()
 						return gw
@@ -777,15 +777,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute specifying existing section name gets Accepted",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("http"))
+					r.Spec.ParentRefs[0].SectionName = new(gwtypes.SectionName("http"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -796,15 +796,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						listenerName: "http",
-						condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition:    routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute specifying existing port gets Accepted",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
@@ -814,29 +814,29 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute without section name tracks only attached listeners",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
-						gw.Spec.Listeners = []gatewayapi.Listener{
-							{Name: "http", Port: 80, Protocol: gatewayapi.HTTPProtocolType},
-							{Name: "http-unattached", Port: 81, Protocol: gatewayapi.HTTPProtocolType},
+						gw.Spec.Listeners = []gwtypes.Listener{
+							{Name: "http", Port: 80, Protocol: gwtypes.HTTPProtocolType},
+							{Name: "http-unattached", Port: 81, Protocol: gwtypes.HTTPProtocolType},
 						}
-						gw.Status.Listeners = []gatewayapi.ListenerStatus{
+						gw.Status.Listeners = []gwtypes.ListenerStatus{
 							{
 								Name: "http",
 								Conditions: []metav1.Condition{{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								}},
 								SupportedKinds: supportedRouteGroupKinds,
@@ -844,7 +844,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 							{
 								Name: "http-unattached",
 								Conditions: []metav1.Condition{{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								}},
 								SupportedKinds: supportedRouteGroupKinds,
@@ -857,8 +857,8 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition:             routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
-						attachedListenerNames: []gatewayapi.SectionName{"http"},
+						condition:             routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
+						attachedListenerNames: []gwtypes.SectionName{"http"},
 					},
 				},
 			},
@@ -866,7 +866,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute whose only matching listener is not yet Programmed stays in attachedListenerNames",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Status.Listeners[0].Conditions[0].Status = metav1.ConditionFalse
 						return gw
@@ -876,20 +876,20 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition:             routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
-						attachedListenerNames: []gatewayapi.SectionName{"http"},
+						condition:             routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
+						attachedListenerNames: []gwtypes.SectionName{"http"},
 					},
 				},
 			},
 			{
 				name: "basic HTTPRoute specifying non-existing port does not get Accepted",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
 					return r
 				}(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").WithPort(81).HTTP().IntoSlice()
 						return gw
@@ -899,7 +899,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -907,7 +907,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute does not get accepted if it is not in the supported kinds",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -917,7 +917,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
@@ -925,13 +925,13 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute does not get accepted if it is not permitted by allowed routes",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").
 							WithPort(80).
 							HTTP().
 							WithAllowedRoutes(
-								&gatewayapi.AllowedRoutes{
+								&gwtypes.AllowedRoutes{
 									Kinds: builder.NewRouteGroupKind().TCPRoute().IntoSlice(),
 								},
 							).
@@ -943,7 +943,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
@@ -951,7 +951,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic HTTPRoute does get accepted if allowed routes only specified Same namespace",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").
 							WithPort(80).
@@ -965,19 +965,19 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "HTTPRoute does not get accepted if Listener hostnames do not match route hostnames",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.Hostnames = []gatewayapi.Hostname{"very.specific.com"}
+					r.Spec.Hostnames = []gwtypes.Hostname{"very.specific.com"}
 					return r
 				}(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.NewListener("http").
 							WithPort(80).
@@ -992,7 +992,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingListenerHostname),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingListenerHostname),
 					},
 				},
 			},
@@ -1000,12 +1000,12 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "HTTPRoute does not get accepted if Listener TLSConfig uses PassThrough",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						gw.Spec.Listeners = builder.
 							NewListener("https").WithPort(443).HTTPS().
-							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-								Mode: new(gatewayapi.TLSModePassthrough),
+							WithTLSConfig(&gwtypes.GatewayTLSConfig{
+								Mode: new(gwtypes.TLSModePassthrough),
 							}).
 							IntoSlice()
 						gw.Status.Listeners[0].Name = "https"
@@ -1016,7 +1016,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -1024,7 +1024,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "HTTPRoute does not get accepted if Listener doesn't match route's protocol",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						// Using matching Listener name, but wrong protocol.
 						gw.Spec.Listeners = builder.NewListener("http").WithPort(80).UDP().IntoSlice()
@@ -1035,7 +1035,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -1043,7 +1043,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "HTTPRoute does not get accepted if Listener doesn't match route's section name",
 				route: basicHTTPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithHTTP80Ready()
 						// Using Listener's name not matching Route's section name.
 						gw.Spec.Listeners = builder.NewListener("not-http").WithPort(80).HTTP().IntoSlice()
@@ -1054,15 +1054,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
 			{
 				name: "HTTPRoute with connection-error retries is accepted",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{Attempts: new(2)}
+					r.Spec.Rules[0].Retry = &gwtypes.HTTPRouteRetry{Attempts: new(2)}
 					return r
 				}(),
 				objects: []client.Object{
@@ -1072,16 +1072,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "HTTPRoute with retry codes is rejected as unsupported",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{
-						Codes: []gatewayapi.HTTPRouteRetryStatusCode{500},
+					r.Spec.Rules[0].Retry = &gwtypes.HTTPRouteRetry{
+						Codes: []gwtypes.HTTPRouteRetryStatusCode{500},
 					}
 					return r
 				}(),
@@ -1092,17 +1092,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonUnsupportedValue),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonUnsupportedValue),
 						message:   "rules[0].retry.codes is unsupported: Kong Gateway retries transport-level failures only and cannot retry on HTTP response status codes",
 					},
 				},
 			},
 			{
 				name: "HTTPRoute with retry backoff is rejected as unsupported",
-				route: func() *gatewayapi.HTTPRoute {
+				route: func() *gwtypes.HTTPRoute {
 					r := basicHTTPRoute()
-					r.Spec.Rules[0].Retry = &gatewayapi.HTTPRouteRetry{
-						Backoff: new(gatewayapi.Duration("100ms")),
+					r.Spec.Rules[0].Retry = &gwtypes.HTTPRouteRetry{
+						Backoff: new(gwtypes.Duration("100ms")),
 					}
 					return r
 				}(),
@@ -1113,7 +1113,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonUnsupportedValue),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonUnsupportedValue),
 						message:   "rules[0].retry.backoff is unsupported: Kong Gateway retries immediately and has no configurable backoff",
 					},
 				},
@@ -1148,14 +1148,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("TCPRoute", func(t *testing.T) {
-		basicTCPRoute := func() *gatewayapi.TCPRoute {
-			return &gatewayapi.TCPRoute{
-				TypeMeta:  gatewayapi.TCPRouteTypeMeta,
+		basicTCPRoute := func() *gwtypes.TCPRoute {
+			return &gwtypes.TCPRoute{
+				TypeMeta:  gwtypes.TCPRouteTypeMeta,
 				Name:      "basic-tcproute",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.TCPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.TCPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
@@ -1166,23 +1166,23 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			}
 		}
-		gatewayWithTCP80Ready := func() *gatewayapi.Gateway {
-			return &gatewayapi.Gateway{
-				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+		gatewayWithTCP80Ready := func() *gwtypes.Gateway {
+			return &gwtypes.Gateway{
+				TypeMeta:  gwtypes.V1GatewayTypeMeta,
 				Name:      "test-gateway",
 				Namespace: "test-namespace",
 				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
 							Name: "tcp",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1199,7 +1199,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		tests := []struct {
 			name     string
-			route    *gatewayapi.TCPRoute
+			route    *gwtypes.TCPRoute
 			expected expected
 			objects  []client.Object
 			wantErr  bool
@@ -1213,14 +1213,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name:  "basic TCPRoute does not get accepted because it is not in supported kinds",
 				route: basicTCPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithTCP80Ready()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -1229,15 +1229,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
 				},
 			},
 			{
 				name: "TCPRoute specifying existing port gets Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1250,15 +1250,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "TCPRoute specifying non existing port does not get Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(8000))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(8000))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1271,16 +1271,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 			{
 				name: "TCPRoute specifying in sectionName existing listener gets Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tcp"))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("tcp"))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1294,16 +1294,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "tcp",
-					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "TCPRoute specifying in sectionName non existing listener does not get Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("unknown-listener"))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1317,16 +1317,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "unknown-listener",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 			{
 				name: "TCPRoute specifying in sectionName existing listener with a matching port gets Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tcp"))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("tcp"))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1340,16 +1340,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "tcp",
-					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "TCPRoute specifying in sectionName existing listener with a non-matching port does not gets Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(8080))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tcp"))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(8080))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("tcp"))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1363,16 +1363,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "tcp",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 			{
 				name: "TCPRoute specifying in sectionName non existing listener with an existing port does not gets Accepted",
-				route: func() *gatewayapi.TCPRoute {
+				route: func() *gwtypes.TCPRoute {
 					r := basicTCPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(80))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
-					r.Spec.Rules = []gatewayapi.TCPRouteRule{
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(80))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("unknown-listener"))
+					r.Spec.Rules = []gwtypes.TCPRouteRule{
 						{
 							BackendRefs: builder.NewBackendRef("fake-service").WithPort(80).ToSlice(),
 						},
@@ -1386,7 +1386,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "unknown-listener",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 		}
@@ -1413,14 +1413,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("UDPRoute", func(t *testing.T) {
-		basicUDPRoute := func() *gatewayapi.UDPRoute {
-			return &gatewayapi.UDPRoute{
-				TypeMeta:  gatewayapi.UDPRouteTypeMeta,
+		basicUDPRoute := func() *gwtypes.UDPRoute {
+			return &gwtypes.UDPRoute{
+				TypeMeta:  gwtypes.UDPRouteTypeMeta,
 				Name:      "basic-udproute",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.UDPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.UDPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
@@ -1431,23 +1431,23 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			}
 		}
-		gatewayWithUDP53Ready := func() *gatewayapi.Gateway {
-			return &gatewayapi.Gateway{
-				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+		gatewayWithUDP53Ready := func() *gwtypes.Gateway {
+			return &gwtypes.Gateway{
+				TypeMeta:  gwtypes.V1GatewayTypeMeta,
 				Name:      "test-gateway",
 				Namespace: "test-namespace",
 				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("udp").WithPort(53).UDP().IntoSlice(),
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
 							Name: "udp",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1464,7 +1464,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		tests := []struct {
 			name     string
-			route    *gatewayapi.UDPRoute
+			route    *gwtypes.UDPRoute
 			expected expected
 			objects  []client.Object
 			wantErr  bool
@@ -1478,14 +1478,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name:  "basic UDPRoute does not get accepted because it is not in supported kinds",
 				route: basicUDPRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithUDP53Ready()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -1494,14 +1494,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
 				},
 			},
 			{
 				name: "UDPRoute specifying existing port gets Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(53))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1510,14 +1510,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "UDPRoute specifying non existing port does not get Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(8000))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(8000))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1526,15 +1526,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 					namespace,
 				},
 				expected: expected{
-					condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 			{
 				name: "UDPRoute specifying in sectionName existing listener gets Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1544,15 +1544,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "udp",
-					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "UDPRoute specifying in sectionName non existing listener does not get Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1562,15 +1562,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "unknown-listener",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 			{
 				name: "UDPRoute specifying in sectionName existing listener with a matching port gets Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1580,15 +1580,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "udp",
-					condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+					condition:    routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 				},
 			},
 			{
 				name: "UDPRoute specifying in sectionName existing listener with a non-matching port does not get Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(533))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("udp"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(533))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("udp"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1598,15 +1598,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "udp",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 			{
 				name: "UDPRoute specifying in sectionName non existing listener with an existing port does not get Accepted",
-				route: func() *gatewayapi.UDPRoute {
+				route: func() *gwtypes.UDPRoute {
 					r := basicUDPRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(53))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(53))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1616,7 +1616,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: expected{
 					listenerName: "unknown-listener",
-					condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+					condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 				},
 			},
 		}
@@ -1643,14 +1643,14 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("TLSRoute", func(t *testing.T) {
-		basicTLSRoute := func() *gatewayapi.TLSRoute {
-			return &gatewayapi.TLSRoute{
-				TypeMeta:  gatewayapi.TLSRouteTypeMeta,
+		basicTLSRoute := func() *gwtypes.TLSRoute {
+			return &gwtypes.TLSRoute{
+				TypeMeta:  gwtypes.TLSRouteTypeMeta,
 				Name:      "basic-tlsroute",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.TLSRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.TLSRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
@@ -1661,28 +1661,28 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 			}
 		}
-		gatewayWithTLS443PassthroughReady := func() *gatewayapi.Gateway {
-			return &gatewayapi.Gateway{
-				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+		gatewayWithTLS443PassthroughReady := func() *gwtypes.Gateway {
+			return &gwtypes.Gateway{
+				TypeMeta:  gwtypes.V1GatewayTypeMeta,
 				Name:      "test-gateway",
 				Namespace: "test-namespace",
 				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners: builder.NewListener("tls").
 						WithPort(443).
 						TLS().
-						WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-							Mode: new(gatewayapi.TLSModePassthrough),
+						WithTLSConfig(&gwtypes.GatewayTLSConfig{
+							Mode: new(gwtypes.TLSModePassthrough),
 						}).IntoSlice(),
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
 							Name: "tls",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1699,7 +1699,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		tests := []struct {
 			name     string
-			route    *gatewayapi.TLSRoute
+			route    *gwtypes.TLSRoute
 			expected []expected
 			objects  []client.Object
 			wantErr  bool
@@ -1714,7 +1714,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
@@ -1722,13 +1722,13 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "basic TLSRouteget accepted because there is a listener with TLS in terminate mode",
 				route: basicTLSRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithTLS443PassthroughReady()
 						gw.Spec.Listeners = builder.NewListener("tls").
 							WithPort(443).
 							TLS().
-							WithTLSConfig(&gatewayapi.GatewayTLSConfig{
-								Mode: new(gatewayapi.TLSModeTerminate),
+							WithTLSConfig(&gwtypes.GatewayTLSConfig{
+								Mode: new(gwtypes.TLSModeTerminate),
 							}).IntoSlice()
 						return gw
 					}(),
@@ -1737,7 +1737,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
@@ -1745,7 +1745,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				name:  "TLSRoute does not get accepted because it is not in supported kinds",
 				route: basicTLSRoute(),
 				objects: []client.Object{
-					func() *gatewayapi.Gateway {
+					func() *gwtypes.Gateway {
 						gw := gatewayWithTLS443PassthroughReady()
 						gw.Status.Listeners[0].SupportedKinds = nil
 						return gw
@@ -1755,15 +1755,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNotAllowedByListeners),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNotAllowedByListeners),
 					},
 				},
 			},
 			{
 				name: "TLSRoute specifying existing port gets Accepted",
-				route: func() *gatewayapi.TLSRoute {
+				route: func() *gwtypes.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(443))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1773,15 +1773,15 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			{
 				name: "TLSRoute specifying non existing port does not get Accepted",
-				route: func() *gatewayapi.TLSRoute {
+				route: func() *gwtypes.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(444))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(444))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1791,16 +1791,16 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition: routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 					},
 				},
 			},
 			{
 				name: "TLSRoute specifying in sectionName existing listener gets Accepted",
-				route: func() *gatewayapi.TLSRoute {
+				route: func() *gwtypes.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("tls"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("tls"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1811,17 +1811,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						listenerName: "tls",
-						condition:    routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition:    routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
 			// unmatched sectionName.
 			{
 				name: "TLSRoute specifying in sectionName non existing listener does not get Accepted",
-				route: func() *gatewayapi.TLSRoute {
+				route: func() *gwtypes.TLSRoute {
 					r := basicTLSRoute()
-					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gatewayapi.PortNumber(443))
-					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gatewayapi.SectionName("unknown-listener"))
+					r.Spec.CommonRouteSpec.ParentRefs[0].Port = new(gwtypes.PortNumber(443))
+					r.Spec.CommonRouteSpec.ParentRefs[0].SectionName = new(gwtypes.SectionName("unknown-listener"))
 					return r
 				}(),
 				objects: []client.Object{
@@ -1832,7 +1832,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				expected: []expected{
 					{
 						listenerName: "unknown-listener",
-						condition:    routeConditionAccepted(metav1.ConditionFalse, gatewayapi.RouteReasonNoMatchingParent),
+						condition:    routeConditionAccepted(metav1.ConditionFalse, gwtypes.RouteReasonNoMatchingParent),
 					},
 				},
 			},
@@ -1861,9 +1861,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	bustedParentHTTPRoute := basicHTTPRoute()
-	badGroup := gatewayapi.Group("kechavakunduz.cholpon.uz")
-	badKind := gatewayapi.Kind("razzoq")
-	bustedParentHTTPRoute.Spec.ParentRefs = []gatewayapi.ParentReference{
+	badGroup := gwtypes.Group("kechavakunduz.cholpon.uz")
+	badKind := gwtypes.Kind("razzoq")
+	bustedParentHTTPRoute.Spec.ParentRefs = []gwtypes.ParentReference{
 		{
 			Name:  "not-a-gateway",
 			Kind:  &badKind,
@@ -1884,23 +1884,23 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	})
 
 	t.Run("single Gateway", func(t *testing.T) {
-		namedGateway := func(name string) *gatewayapi.Gateway {
-			return &gatewayapi.Gateway{
-				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+		namedGateway := func(name string) *gwtypes.Gateway {
+			return &gwtypes.Gateway{
+				TypeMeta:  gwtypes.V1GatewayTypeMeta,
 				Name:      name,
 				Namespace: "test-namespace",
 				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				Spec: gatewayapi.GatewaySpec{
+				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
 							Name: "http",
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -1911,24 +1911,24 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			}
 		}
 
-		basicHTTPRoute := func(gateway string) *gatewayapi.HTTPRoute {
-			return &gatewayapi.HTTPRoute{
-				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+		basicHTTPRoute := func(gateway string) *gwtypes.HTTPRoute {
+			return &gwtypes.HTTPRoute{
+				TypeMeta:  gwtypes.V1GatewayTypeMeta,
 				Name:      "basic-httproute",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Group: &goodGroup,
 								Kind:  &goodKind,
-								Name:  gatewayapi.ObjectName(gateway),
+								Name:  gwtypes.ObjectName(gateway),
 							},
 						},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 							},
 						},
@@ -1939,7 +1939,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 
 		tests := []struct {
 			name        string
-			route       *gatewayapi.HTTPRoute
+			route       *gwtypes.HTTPRoute
 			expected    []expected
 			expectedErr error
 			objects     []client.Object
@@ -1954,7 +1954,7 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 				},
 				expected: []expected{
 					{
-						condition: routeConditionAccepted(metav1.ConditionTrue, gatewayapi.RouteReasonAccepted),
+						condition: routeConditionAccepted(metav1.ConditionTrue, gwtypes.RouteReasonAccepted),
 					},
 				},
 			},
@@ -2012,23 +2012,23 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 }
 
 func TestEnsureParentsProgrammedCondition(t *testing.T) {
-	createGateway := func(nn k8stypes.NamespacedName) *gatewayapi.Gateway {
-		return &gatewayapi.Gateway{
-			TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+	createGateway := func(nn k8stypes.NamespacedName) *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			TypeMeta:  gwtypes.V1GatewayTypeMeta,
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
 			UID:       k8stypes.UID(uuid.NewString()),
-			Spec: gatewayapi.GatewaySpec{
+			Spec: gwtypes.GatewaySpec{
 				GatewayClassName: "test-gatewayclass",
 				Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
 			},
-			Status: gatewayapi.GatewayStatus{
-				Listeners: []gatewayapi.ListenerStatus{
+			Status: gwtypes.GatewayStatus{
+				Listeners: []gwtypes.ListenerStatus{
 					{
 						Name: "http-1",
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.ListenerConditionProgrammed),
+								Type:   string(gwtypes.ListenerConditionProgrammed),
 								Status: metav1.ConditionTrue,
 							},
 						},
@@ -2038,7 +2038,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 						Name: "http-2",
 						Conditions: []metav1.Condition{
 							{
-								Type:   string(gatewayapi.ListenerConditionProgrammed),
+								Type:   string(gwtypes.ListenerConditionProgrammed),
 								Status: metav1.ConditionTrue,
 							},
 						},
@@ -2063,55 +2063,55 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 
 		tests := []struct {
 			name           string
-			httpRouteFunc  func() *gatewayapi.HTTPRoute
+			httpRouteFunc  func() *gwtypes.HTTPRoute
 			gatewayFunc    func() []supportedGatewayWithCondition
 			expectedUpdate bool
-			expectedStatus *gatewayapi.HTTPRouteStatus
+			expectedStatus *gwtypes.HTTPRouteStatus
 		}{
 			{
 				name: "Programmed condition gets properly set to Status True when parent status is already set in route",
-				httpRouteFunc: func() *gatewayapi.HTTPRoute {
-					return &gatewayapi.HTTPRoute{
-						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+				httpRouteFunc: func() *gwtypes.HTTPRoute {
+					return &gwtypes.HTTPRoute{
+						TypeMeta:   gwtypes.V1HTTPRouteTypeMeta,
 						Name:       "basic-httproute",
 						Namespace:  gatewayNN1.Namespace,
 						Generation: 42,
-						Spec: gatewayapi.HTTPRouteSpec{
-							CommonRouteSpec: gatewayapi.CommonRouteSpec{
-								ParentRefs: []gatewayapi.ParentReference{
+						Spec: gwtypes.HTTPRouteSpec{
+							CommonRouteSpec: gwtypes.CommonRouteSpec{
+								ParentRefs: []gwtypes.ParentReference{
 									{
-										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  new(gatewayapi.Kind("Gateway")),
+										Group: new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:  new(gwtypes.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayapi.HTTPRouteRule{
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
+									BackendRefs: []gwtypes.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayapi.HTTPRouteStatus{
-							RouteStatus: gatewayapi.RouteStatus{
-								Parents: []gatewayapi.RouteParentStatus{
+						Status: gwtypes.HTTPRouteStatus{
+							RouteStatus: gwtypes.RouteStatus{
+								Parents: []gwtypes.RouteParentStatus{
 									{
-										ParentRef: gatewayapi.ParentReference{
-											Kind:      new(gatewayapi.Kind("Gateway")),
-											Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+										ParentRef: gwtypes.ParentReference{
+											Kind:      new(gwtypes.Kind("Gateway")),
+											Group:     new(gwtypes.Group(gatewayv1.GroupName)),
+											Name:      gwtypes.ObjectName(gatewayNN1.Name),
+											Namespace: (*gwtypes.Namespace)(&gatewayNN1.Namespace),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions: []metav1.Condition{
 											{
-												Type:               string(gatewayapi.GatewayConditionAccepted),
+												Type:               string(gwtypes.GatewayConditionAccepted),
 												Message:            "",
 												ObservedGeneration: 1,
 												Status:             metav1.ConditionTrue,
-												Reason:             string(gatewayapi.RouteConditionAccepted),
+												Reason:             string(gwtypes.RouteConditionAccepted),
 												LastTransitionTime: metav1.Now(),
 											},
 											{
@@ -2130,23 +2130,23 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					Parents: []gatewayapi.RouteParentStatus{
+				expectedStatus: &gwtypes.HTTPRouteStatus{
+					Parents: []gwtypes.RouteParentStatus{
 						{
-							ParentRef: gatewayapi.ParentReference{
-								Kind:      new(gatewayapi.Kind("Gateway")),
-								Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-								Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-								Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+							ParentRef: gwtypes.ParentReference{
+								Kind:      new(gwtypes.Kind("Gateway")),
+								Group:     new(gwtypes.Group(gatewayv1.GroupName)),
+								Name:      gwtypes.ObjectName(gatewayNN1.Name),
+								Namespace: (*gwtypes.Namespace)(&gatewayNN1.Namespace),
 							},
 							ControllerName: "konghq.com/kic-gateway-controller",
 							Conditions: []metav1.Condition{
 								{
-									Type:               string(gatewayapi.GatewayConditionAccepted),
+									Type:               string(gwtypes.GatewayConditionAccepted),
 									Message:            "",
 									ObservedGeneration: 1,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 								{
@@ -2154,7 +2154,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									Message:            "",
 									ObservedGeneration: 42,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -2169,48 +2169,48 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status",
-				httpRouteFunc: func() *gatewayapi.HTTPRoute {
-					return &gatewayapi.HTTPRoute{
-						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+				httpRouteFunc: func() *gwtypes.HTTPRoute {
+					return &gwtypes.HTTPRoute{
+						TypeMeta:   gwtypes.V1HTTPRouteTypeMeta,
 						Name:       "basic-httproute",
 						Namespace:  gatewayNN1.Namespace,
 						Generation: 42,
-						Spec: gatewayapi.HTTPRouteSpec{
-							CommonRouteSpec: gatewayapi.CommonRouteSpec{
-								ParentRefs: []gatewayapi.ParentReference{
+						Spec: gwtypes.HTTPRouteSpec{
+							CommonRouteSpec: gwtypes.CommonRouteSpec{
+								ParentRefs: []gwtypes.ParentReference{
 									{
-										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  new(gatewayapi.Kind("Gateway")),
+										Group: new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:  new(gwtypes.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayapi.HTTPRouteRule{
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
+									BackendRefs: []gwtypes.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayapi.HTTPRouteStatus{
-							RouteStatus: gatewayapi.RouteStatus{
-								Parents: []gatewayapi.RouteParentStatus{
+						Status: gwtypes.HTTPRouteStatus{
+							RouteStatus: gwtypes.RouteStatus{
+								Parents: []gwtypes.RouteParentStatus{
 									{
-										ParentRef: gatewayapi.ParentReference{
-											Kind:      new(gatewayapi.Kind("Gateway")),
-											Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+										ParentRef: gwtypes.ParentReference{
+											Kind:      new(gwtypes.Kind("Gateway")),
+											Group:     new(gwtypes.Group(gatewayv1.GroupName)),
+											Name:      gwtypes.ObjectName(gatewayNN1.Name),
+											Namespace: (*gwtypes.Namespace)(&gatewayNN1.Namespace),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions: []metav1.Condition{
 											{
-												Type:               string(gatewayapi.GatewayConditionAccepted),
+												Type:               string(gwtypes.GatewayConditionAccepted),
 												Message:            "",
 												ObservedGeneration: 1,
 												Status:             metav1.ConditionTrue,
-												Reason:             string(gatewayapi.RouteConditionAccepted),
+												Reason:             string(gwtypes.RouteConditionAccepted),
 												LastTransitionTime: metav1.Now(),
 											},
 										},
@@ -2221,23 +2221,23 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					Parents: []gatewayapi.RouteParentStatus{
+				expectedStatus: &gwtypes.HTTPRouteStatus{
+					Parents: []gwtypes.RouteParentStatus{
 						{
-							ParentRef: gatewayapi.ParentReference{
-								Kind:      new(gatewayapi.Kind("Gateway")),
-								Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-								Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-								Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+							ParentRef: gwtypes.ParentReference{
+								Kind:      new(gwtypes.Kind("Gateway")),
+								Group:     new(gwtypes.Group(gatewayv1.GroupName)),
+								Name:      gwtypes.ObjectName(gatewayNN1.Name),
+								Namespace: (*gwtypes.Namespace)(&gatewayNN1.Namespace),
 							},
 							ControllerName: "konghq.com/kic-gateway-controller",
 							Conditions: []metav1.Condition{
 								{
-									Type:               string(gatewayapi.GatewayConditionAccepted),
+									Type:               string(gwtypes.GatewayConditionAccepted),
 									Message:            "",
 									ObservedGeneration: 1,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 								{
@@ -2245,7 +2245,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									Message:            "",
 									ObservedGeneration: 42,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -2260,41 +2260,41 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status and Parent Section is specified",
-				httpRouteFunc: func() *gatewayapi.HTTPRoute {
-					return &gatewayapi.HTTPRoute{
-						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+				httpRouteFunc: func() *gwtypes.HTTPRoute {
+					return &gwtypes.HTTPRoute{
+						TypeMeta:   gwtypes.V1HTTPRouteTypeMeta,
 						Name:       "basic-httproute",
 						Namespace:  gatewayNN1.Namespace,
 						Generation: 42,
-						Spec: gatewayapi.HTTPRouteSpec{
-							CommonRouteSpec: gatewayapi.CommonRouteSpec{
-								ParentRefs: []gatewayapi.ParentReference{
+						Spec: gwtypes.HTTPRouteSpec{
+							CommonRouteSpec: gwtypes.CommonRouteSpec{
+								ParentRefs: []gwtypes.ParentReference{
 									{
-										Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:        new(gatewayapi.Kind("Gateway")),
+										Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:        new(gwtypes.Kind("Gateway")),
 										Name:        "test-gateway",
-										SectionName: new(gatewayapi.SectionName("http-2")),
+										SectionName: new(gwtypes.SectionName("http-2")),
 									},
 								},
 							},
-							Rules: []gatewayapi.HTTPRouteRule{
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
+									BackendRefs: []gwtypes.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayapi.HTTPRouteStatus{
-							RouteStatus: gatewayapi.RouteStatus{
-								Parents: []gatewayapi.RouteParentStatus{
+						Status: gwtypes.HTTPRouteStatus{
+							RouteStatus: gwtypes.RouteStatus{
+								Parents: []gwtypes.RouteParentStatus{
 									{
-										ParentRef: gatewayapi.ParentReference{
-											Kind:        new(gatewayapi.Kind("Gateway")),
-											Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-											Name:        gatewayapi.ObjectName(gatewayNN1.Name),
-											Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-											SectionName: new(gatewayapi.SectionName("http-2")),
+										ParentRef: gwtypes.ParentReference{
+											Kind:        new(gwtypes.Kind("Gateway")),
+											Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+											Name:        gwtypes.ObjectName(gatewayNN1.Name),
+											Namespace:   (*gwtypes.Namespace)(&gatewayNN1.Namespace),
+											SectionName: new(gwtypes.SectionName("http-2")),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions:     []metav1.Condition{},
@@ -2305,15 +2305,15 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					Parents: []gatewayapi.RouteParentStatus{
+				expectedStatus: &gwtypes.HTTPRouteStatus{
+					Parents: []gwtypes.RouteParentStatus{
 						{
-							ParentRef: gatewayapi.ParentReference{
-								Kind:        new(gatewayapi.Kind("Gateway")),
-								Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-								Name:        gatewayapi.ObjectName(gatewayNN1.Name),
-								Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-								SectionName: new(gatewayapi.SectionName("http-2")),
+							ParentRef: gwtypes.ParentReference{
+								Kind:        new(gwtypes.Kind("Gateway")),
+								Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+								Name:        gwtypes.ObjectName(gatewayNN1.Name),
+								Namespace:   (*gwtypes.Namespace)(&gatewayNN1.Namespace),
+								SectionName: new(gwtypes.SectionName("http-2")),
 							},
 							ControllerName: "konghq.com/kic-gateway-controller",
 							Conditions: []metav1.Condition{
@@ -2322,7 +2322,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									Message:            "",
 									ObservedGeneration: 42,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -2340,50 +2340,50 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly set to Status True when route's parent status is not set and Parent Section is specified with 2 gateways both with section name specified",
-				httpRouteFunc: func() *gatewayapi.HTTPRoute {
-					return &gatewayapi.HTTPRoute{
-						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+				httpRouteFunc: func() *gwtypes.HTTPRoute {
+					return &gwtypes.HTTPRoute{
+						TypeMeta:   gwtypes.V1HTTPRouteTypeMeta,
 						Name:       "basic-httproute",
 						Namespace:  gatewayNN1.Namespace,
 						Generation: 42,
-						Spec: gatewayapi.HTTPRouteSpec{
-							CommonRouteSpec: gatewayapi.CommonRouteSpec{
-								ParentRefs: []gatewayapi.ParentReference{
+						Spec: gwtypes.HTTPRouteSpec{
+							CommonRouteSpec: gwtypes.CommonRouteSpec{
+								ParentRefs: []gwtypes.ParentReference{
 									{
-										Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:        new(gatewayapi.Kind("Gateway")),
-										Name:        gatewayapi.ObjectName(gateway1.Name),
-										SectionName: new(gatewayapi.SectionName("http-2")),
+										Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:        new(gwtypes.Kind("Gateway")),
+										Name:        gwtypes.ObjectName(gateway1.Name),
+										SectionName: new(gwtypes.SectionName("http-2")),
 									},
 									{
-										Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:        new(gatewayapi.Kind("Gateway")),
-										Name:        gatewayapi.ObjectName(gateway2.Name),
-										SectionName: new(gatewayapi.SectionName("http-1")),
+										Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:        new(gwtypes.Kind("Gateway")),
+										Name:        gwtypes.ObjectName(gateway2.Name),
+										SectionName: new(gwtypes.SectionName("http-1")),
 									},
 								},
 							},
-							Rules: []gatewayapi.HTTPRouteRule{
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
+									BackendRefs: []gwtypes.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayapi.HTTPRouteStatus{},
+						Status: gwtypes.HTTPRouteStatus{},
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					Parents: []gatewayapi.RouteParentStatus{
+				expectedStatus: &gwtypes.HTTPRouteStatus{
+					Parents: []gwtypes.RouteParentStatus{
 						{
-							ParentRef: gatewayapi.ParentReference{
-								Kind:        new(gatewayapi.Kind("Gateway")),
-								Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-								Name:        gatewayapi.ObjectName(gatewayNN1.Name),
-								Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-								SectionName: new(gatewayapi.SectionName("http-2")),
+							ParentRef: gwtypes.ParentReference{
+								Kind:        new(gwtypes.Kind("Gateway")),
+								Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+								Name:        gwtypes.ObjectName(gatewayNN1.Name),
+								Namespace:   (*gwtypes.Namespace)(&gatewayNN1.Namespace),
+								SectionName: new(gwtypes.SectionName("http-2")),
 							},
 							ControllerName: "konghq.com/kic-gateway-controller",
 							Conditions: []metav1.Condition{
@@ -2392,18 +2392,18 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									Message:            "",
 									ObservedGeneration: 42,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
 						},
 						{
-							ParentRef: gatewayapi.ParentReference{
-								Kind:        new(gatewayapi.Kind("Gateway")),
-								Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-								Name:        gatewayapi.ObjectName(gatewayNN2.Name),
-								Namespace:   (*gatewayapi.Namespace)(&gatewayNN2.Namespace),
-								SectionName: new(gatewayapi.SectionName("http-1")),
+							ParentRef: gwtypes.ParentReference{
+								Kind:        new(gwtypes.Kind("Gateway")),
+								Group:       new(gwtypes.Group(gatewayv1.GroupName)),
+								Name:        gwtypes.ObjectName(gatewayNN2.Name),
+								Namespace:   (*gwtypes.Namespace)(&gatewayNN2.Namespace),
+								SectionName: new(gwtypes.SectionName("http-1")),
 							},
 							ControllerName: "konghq.com/kic-gateway-controller",
 							Conditions: []metav1.Condition{
@@ -2412,7 +2412,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									Message:            "",
 									ObservedGeneration: 42,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -2434,25 +2434,25 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "Programmed condition gets properly added to route's parents status when no status for that parent is present yet",
-				httpRouteFunc: func() *gatewayapi.HTTPRoute {
-					return &gatewayapi.HTTPRoute{
-						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+				httpRouteFunc: func() *gwtypes.HTTPRoute {
+					return &gwtypes.HTTPRoute{
+						TypeMeta:   gwtypes.V1HTTPRouteTypeMeta,
 						Name:       "basic-httproute",
 						Namespace:  gatewayNN1.Namespace,
 						Generation: 42,
-						Spec: gatewayapi.HTTPRouteSpec{
-							CommonRouteSpec: gatewayapi.CommonRouteSpec{
-								ParentRefs: []gatewayapi.ParentReference{
+						Spec: gwtypes.HTTPRouteSpec{
+							CommonRouteSpec: gwtypes.CommonRouteSpec{
+								ParentRefs: []gwtypes.ParentReference{
 									{
-										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  new(gatewayapi.Kind("Gateway")),
+										Group: new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:  new(gwtypes.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayapi.HTTPRouteRule{
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
+									BackendRefs: []gwtypes.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
@@ -2461,14 +2461,14 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 					}
 				},
 				expectedUpdate: true,
-				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					Parents: []gatewayapi.RouteParentStatus{
+				expectedStatus: &gwtypes.HTTPRouteStatus{
+					Parents: []gwtypes.RouteParentStatus{
 						{
-							ParentRef: gatewayapi.ParentReference{
-								Kind:      new(gatewayapi.Kind("Gateway")),
-								Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-								Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-								Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+							ParentRef: gwtypes.ParentReference{
+								Kind:      new(gwtypes.Kind("Gateway")),
+								Group:     new(gwtypes.Group(gatewayv1.GroupName)),
+								Name:      gwtypes.ObjectName(gatewayNN1.Name),
+								Namespace: (*gwtypes.Namespace)(&gatewayNN1.Namespace),
 							},
 							ControllerName: "konghq.com/kic-gateway-controller",
 							Conditions: []metav1.Condition{
@@ -2477,7 +2477,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 									Message:            "",
 									ObservedGeneration: 42,
 									Status:             metav1.ConditionTrue,
-									Reason:             string(gatewayapi.RouteConditionAccepted),
+									Reason:             string(gwtypes.RouteConditionAccepted),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -2492,39 +2492,39 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 			},
 			{
 				name: "no update is being done when an expected Programmed condition is already in place",
-				httpRouteFunc: func() *gatewayapi.HTTPRoute {
-					return &gatewayapi.HTTPRoute{
-						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+				httpRouteFunc: func() *gwtypes.HTTPRoute {
+					return &gwtypes.HTTPRoute{
+						TypeMeta:   gwtypes.V1HTTPRouteTypeMeta,
 						Name:       "basic-httproute",
 						Namespace:  gatewayNN1.Namespace,
 						Generation: 42,
-						Spec: gatewayapi.HTTPRouteSpec{
-							CommonRouteSpec: gatewayapi.CommonRouteSpec{
-								ParentRefs: []gatewayapi.ParentReference{
+						Spec: gwtypes.HTTPRouteSpec{
+							CommonRouteSpec: gwtypes.CommonRouteSpec{
+								ParentRefs: []gwtypes.ParentReference{
 									{
-										Group: new(gatewayapi.Group(gatewayv1.GroupName)),
-										Kind:  new(gatewayapi.Kind("Gateway")),
+										Group: new(gwtypes.Group(gatewayv1.GroupName)),
+										Kind:  new(gwtypes.Kind("Gateway")),
 										Name:  "test-gateway",
 									},
 								},
 							},
-							Rules: []gatewayapi.HTTPRouteRule{
+							Rules: []gwtypes.HTTPRouteRule{
 								{
-									BackendRefs: []gatewayapi.HTTPBackendRef{
+									BackendRefs: []gwtypes.HTTPBackendRef{
 										builder.NewHTTPBackendRef("fake-service").WithPort(80).Build(),
 									},
 								},
 							},
 						},
-						Status: gatewayapi.HTTPRouteStatus{
-							RouteStatus: gatewayapi.RouteStatus{
-								Parents: []gatewayapi.RouteParentStatus{
+						Status: gwtypes.HTTPRouteStatus{
+							RouteStatus: gwtypes.RouteStatus{
+								Parents: []gwtypes.RouteParentStatus{
 									{
-										ParentRef: gatewayapi.ParentReference{
-											Kind:      new(gatewayapi.Kind("Gateway")),
-											Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-											Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-											Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+										ParentRef: gwtypes.ParentReference{
+											Kind:      new(gwtypes.Kind("Gateway")),
+											Group:     new(gwtypes.Group(gatewayv1.GroupName)),
+											Name:      gwtypes.ObjectName(gatewayNN1.Name),
+											Namespace: (*gwtypes.Namespace)(&gatewayNN1.Namespace),
 										},
 										ControllerName: "konghq.com/kic-gateway-controller",
 										Conditions: []metav1.Condition{
@@ -2533,7 +2533,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 												Message:            "",
 												ObservedGeneration: 42,
 												Status:             metav1.ConditionTrue,
-												Reason:             string(gatewayapi.RouteConditionAccepted),
+												Reason:             string(gwtypes.RouteConditionAccepted),
 												LastTransitionTime: metav1.Now(),
 											},
 										},
@@ -2570,7 +2570,7 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				updated, err := ensureParentsProgrammedCondition(ctx, fakeClient.Status(), httproute, httproute.Status.Parents, gateways,
 					metav1.Condition{
 						Status: metav1.ConditionTrue,
-						Reason: string(gatewayapi.RouteConditionAccepted),
+						Reason: string(gwtypes.RouteConditionAccepted),
 					},
 				)
 				require.NoError(t, err)
@@ -2599,53 +2599,53 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 func TestIsRouteAcceptedByListener(t *testing.T) {
 	testCases := []struct {
 		name          string
-		gateway       gatewayapi.Gateway
-		httpRoute     *gatewayapi.HTTPRoute
+		gateway       gwtypes.Gateway
+		httpRoute     *gwtypes.HTTPRoute
 		expectedValue bool
 	}{
 		{
 			name: "accepted, allowedRoutes from the same namespace",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gwtypes.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.HTTPProtocolType,
+							Protocol:      gwtypes.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2657,27 +2657,27 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "accepted, allowedRoutes from selected namespace",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "other-namespace",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gwtypes.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name: "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSelectorNamespace(&metav1.LabelSelector{
@@ -2685,23 +2685,23 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 									"konghq.com/allowed-namespace": "true",
 								},
 							}),
-							Protocol: gatewayapi.HTTPProtocolType,
+							Protocol: gwtypes.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2713,47 +2713,47 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "route accepted but listener not programmed",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gwtypes.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.HTTPProtocolType,
+							Protocol:      gwtypes.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionFalse,
 								},
 							},
@@ -2765,47 +2765,47 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, not in listener's supportedKinds",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gwtypes.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.HTTPProtocolType,
+							Protocol:      gwtypes.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "GRPCRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2817,47 +2817,47 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong sectionName",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("wrong-listener")),
+								SectionName: new(gwtypes.SectionName("wrong-listener")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.HTTPProtocolType,
+							Protocol:      gwtypes.HTTPProtocolType,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2869,49 +2869,49 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong port",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
-								Port:        new(gatewayapi.PortNumber(8080)),
+								SectionName: new(gwtypes.SectionName("listener-1")),
+								Port:        new(gwtypes.PortNumber(8080)),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.HTTPProtocolType,
+							Protocol:      gwtypes.HTTPProtocolType,
 							Port:          9090,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2923,47 +2923,47 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong protocol",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gwtypes.SectionName("listener-1")),
 							},
 						},
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.UDPProtocolType,
+							Protocol:      gwtypes.UDPProtocolType,
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -2975,51 +2975,51 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		},
 		{
 			name: "not accepted, wrong hostnames",
-			httpRoute: &gatewayapi.HTTPRoute{
+			httpRoute: &gwtypes.HTTPRoute{
 				Name:      "route",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
 								Name:        "gateway",
-								SectionName: new(gatewayapi.SectionName("listener-1")),
+								SectionName: new(gwtypes.SectionName("listener-1")),
 							},
 						},
 					},
-					Hostnames: []gatewayapi.Hostname{
+					Hostnames: []gwtypes.Hostname{
 						"wrong.hostname.com",
 					},
 				},
 			},
-			gateway: gatewayapi.Gateway{
+			gateway: gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "gateway",
 					Namespace: "default",
 				},
-				Spec: gatewayapi.GatewaySpec{
-					Listeners: []gatewayapi.Listener{
+				Spec: gwtypes.GatewaySpec{
+					Listeners: []gwtypes.Listener{
 						{
 							Name:          "listener-1",
 							AllowedRoutes: builder.NewAllowedRoutesFromSameNamespaces(),
-							Protocol:      gatewayapi.HTTPProtocolType,
-							Hostname:      new(gatewayapi.Hostname("foo.bar.com")),
+							Protocol:      gwtypes.HTTPProtocolType,
+							Hostname:      new(gwtypes.Hostname("foo.bar.com")),
 						},
 					},
 				},
-				Status: gatewayapi.GatewayStatus{
-					Listeners: []gatewayapi.ListenerStatus{
+				Status: gwtypes.GatewayStatus{
+					Listeners: []gwtypes.ListenerStatus{
 						{
-							Name: gatewayapi.SectionName("listener-1"),
-							SupportedKinds: []gatewayapi.RouteGroupKind{
+							Name: gwtypes.SectionName("listener-1"),
+							SupportedKinds: []gwtypes.RouteGroupKind{
 								{
-									Group: new(gatewayapi.Group("gateway.networking.k8s.io")),
+									Group: new(gwtypes.Group("gateway.networking.k8s.io")),
 									Kind:  "HTTPRoute",
 								},
 							},
 							Conditions: []metav1.Condition{
 								{
-									Type:   string(gatewayapi.ListenerConditionProgrammed),
+									Type:   string(gwtypes.ListenerConditionProgrammed),
 									Status: metav1.ConditionTrue,
 								},
 							},
@@ -3056,55 +3056,55 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 }
 
 func TestParentRefsForRoute(t *testing.T) {
-	gatewayGroup := gatewayapi.Group(gatewayv1.GroupName)
-	gatewayKind := gatewayapi.Kind("Gateway")
-	listenerSetKind := gatewayapi.Kind("ListenerSet")
-	otherGroup := gatewayapi.Group("example.com")
-	otherKind := gatewayapi.Kind("Frobnicator")
+	gatewayGroup := gwtypes.Group(gatewayv1.GroupName)
+	gatewayKind := gwtypes.Kind("Gateway")
+	listenerSetKind := gwtypes.Kind("ListenerSet")
+	otherGroup := gwtypes.Group("example.com")
+	otherKind := gwtypes.Kind("Frobnicator")
 
-	routeWithParents := func(refs ...gatewayapi.ParentReference) *gatewayapi.HTTPRoute {
-		return &gatewayapi.HTTPRoute{
-			TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+	routeWithParents := func(refs ...gwtypes.ParentReference) *gwtypes.HTTPRoute {
+		return &gwtypes.HTTPRoute{
+			TypeMeta:  gwtypes.V1GatewayTypeMeta,
 			Name:      "httproute",
 			Namespace: "test-namespace",
-			Spec: gatewayapi.HTTPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{ParentRefs: refs},
+			Spec: gwtypes.HTTPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{ParentRefs: refs},
 			},
 		}
 	}
 
 	testCases := []struct {
 		name     string
-		route    *gatewayapi.HTTPRoute
-		expected []gatewayapi.ParentReference
+		route    *gwtypes.HTTPRoute
+		expected []gwtypes.ParentReference
 	}{
 		{
 			name:     "a Gateway parentRef is kept",
-			route:    routeWithParents(gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}),
-			expected: []gatewayapi.ParentReference{{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}},
+			route:    routeWithParents(gwtypes.ParentReference{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}),
+			expected: []gwtypes.ParentReference{{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}},
 		},
 		{
 			name:     "an omitted Group and Kind default to a Gateway and are kept",
-			route:    routeWithParents(gatewayapi.ParentReference{Name: "gw"}),
-			expected: []gatewayapi.ParentReference{{Name: "gw"}},
+			route:    routeWithParents(gwtypes.ParentReference{Name: "gw"}),
+			expected: []gwtypes.ParentReference{{Name: "gw"}},
 		},
 		{
 			name:     "a ListenerSet parentRef is dropped",
-			route:    routeWithParents(gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &listenerSetKind, Name: "ls"}),
-			expected: []gatewayapi.ParentReference{},
+			route:    routeWithParents(gwtypes.ParentReference{Group: &gatewayGroup, Kind: &listenerSetKind, Name: "ls"}),
+			expected: []gwtypes.ParentReference{},
 		},
 		{
 			name:     "a parentRef from an unrelated group is dropped",
-			route:    routeWithParents(gatewayapi.ParentReference{Group: &otherGroup, Kind: &otherKind, Name: "other"}),
-			expected: []gatewayapi.ParentReference{},
+			route:    routeWithParents(gwtypes.ParentReference{Group: &otherGroup, Kind: &otherKind, Name: "other"}),
+			expected: []gwtypes.ParentReference{},
 		},
 		{
 			name: "an unsupported parentRef does not discard the supported ones alongside it",
 			route: routeWithParents(
-				gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &listenerSetKind, Name: "ls"},
-				gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"},
+				gwtypes.ParentReference{Group: &gatewayGroup, Kind: &listenerSetKind, Name: "ls"},
+				gwtypes.ParentReference{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"},
 			),
-			expected: []gatewayapi.ParentReference{{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}},
+			expected: []gwtypes.ParentReference{{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}},
 		},
 	}
 

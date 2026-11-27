@@ -10,9 +10,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,14 +54,14 @@ func (t *Translator) ingressRulesFromTLSRoutes() ingressRules {
 	return result
 }
 
-func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gatewayapi.TLSRoute) error {
+func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *gwtypes.TLSRoute) error {
 	spec := tlsroute.Spec
 
 	if len(spec.Hostnames) == 0 {
 		return fmt.Errorf("no hostnames provided")
 	}
 	if t.kongVersion.LT(versions.KongWildcardSNICutoff) &&
-		lo.ContainsBy(spec.Hostnames, func(hostname gatewayapi.Hostname) bool {
+		lo.ContainsBy(spec.Hostnames, func(hostname gwtypes.Hostname) bool {
 			return strings.HasPrefix(string(hostname), "*.")
 		}) {
 		return fmt.Errorf("wildcard TLS SNIs are not supported in TLSRoute with Kong versions below %s", versions.KongWildcardSNICutoff.String())
@@ -110,7 +110,7 @@ func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *ga
 // isTLSRoutePassthrough returns true if we need to configure TLS passthrough to kong
 // for the tlsroute object.
 // returns a non-nil error if we failed to get the supported gateway.
-func (t *Translator) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool, error) {
+func (t *Translator) isTLSRoutePassthrough(tlsroute *gwtypes.TLSRoute) (bool, error) {
 	// reconcile loop will push TLSRoute object with updated status when
 	// gateway is ready and TLSRoute object becomes stable.
 	// so we get the supported gateways from status.parents.
@@ -149,7 +149,7 @@ func (t *Translator) isTLSRoutePassthrough(tlsroute *gatewayapi.TLSRoute) (bool,
 		for _, listener := range gateway.Spec.Listeners {
 			if parentRef.SectionName == nil || listener.Name == *parentRef.SectionName {
 				if listener.TLS != nil && listener.TLS.Mode != nil &&
-					*listener.TLS.Mode == gatewayapi.TLSModePassthrough {
+					*listener.TLS.Mode == gwtypes.TLSModePassthrough {
 					return true, nil
 				}
 			}

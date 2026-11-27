@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	gatewaycontroller "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // maxNAncestors is the maximum number of ancestors that can be stored in the KongUpstreamPolicy status.
@@ -129,8 +129,8 @@ func (r *KongUpstreamPolicyReconciler) getIngressesReferencingService(
 func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingService(
 	ctx context.Context,
 	serviceNN k8stypes.NamespacedName,
-) ([]gatewayapi.HTTPRoute, error) {
-	httpRoutes := &gatewayapi.HTTPRouteList{}
+) ([]gwtypes.HTTPRoute, error) {
+	httpRoutes := &gwtypes.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
 		client.MatchingFields{routeBackendRefServiceNameIndexKey: serviceNN.String()},
 	); err != nil {
@@ -143,8 +143,8 @@ func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingService(
 func (r *KongUpstreamPolicyReconciler) getHTTPRoutesReferencingServiceFacade(
 	ctx context.Context,
 	serviceFacadeNN k8stypes.NamespacedName,
-) ([]gatewayapi.HTTPRoute, error) {
-	httpRoutes := &gatewayapi.HTTPRouteList{}
+) ([]gwtypes.HTTPRoute, error) {
+	httpRoutes := &gwtypes.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
 		client.MatchingFields{routeBackendRefServiceFacadeIndexKey: serviceFacadeNN.String()},
 	); err != nil {
@@ -240,8 +240,8 @@ func (r *KongUpstreamPolicyReconciler) upstreamPolicyUsedByBackendsOfMatchingCla
 }
 
 // isRouteAttachedToReconciledGateway returns true if HTTPRoute is attached to any reconciled gateway.
-func (r *KongUpstreamPolicyReconciler) isRouteAttachedToReconciledGateway(httpRoute *gatewayapi.HTTPRoute) bool {
-	return gatewaycontroller.IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](
+func (r *KongUpstreamPolicyReconciler) isRouteAttachedToReconciledGateway(httpRoute *gwtypes.HTTPRoute) bool {
+	return gatewaycontroller.IsRouteAttachedToReconciledGateway[*gwtypes.HTTPRoute](
 		r.Client, r.Log,
 		controllers.NewOptionalNamespacedName(mo.Option[k8stypes.NamespacedName]{}),
 		httpRoute,
@@ -263,15 +263,15 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 
 	// Prepare conditions.
 	acceptedCondition := metav1.Condition{
-		Type:               string(gatewayapi.PolicyConditionAccepted),
+		Type:               string(gwtypes.PolicyConditionAccepted),
 		Status:             metav1.ConditionTrue,
-		Reason:             string(gatewayapi.PolicyReasonAccepted),
+		Reason:             string(gwtypes.PolicyReasonAccepted),
 		LastTransitionTime: metav1.Now(),
 	}
 	programmedCondition := metav1.Condition{
-		Type:               string(gatewayapi.GatewayConditionProgrammed),
+		Type:               string(gwtypes.GatewayConditionProgrammed),
 		Status:             metav1.ConditionTrue,
-		Reason:             string(gatewayapi.GatewayReasonProgrammed),
+		Reason:             string(gwtypes.GatewayReasonProgrammed),
 		LastTransitionTime: metav1.Now(),
 	}
 
@@ -284,15 +284,15 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 		if _, isConflicted := conflictedServices[buildServiceReference(service.Namespace, service.Name)]; isConflicted {
 			// If the Service is conflicted, we change both conditions to False.
 			acceptedCondition.Status = metav1.ConditionFalse
-			acceptedCondition.Reason = string(gatewayapi.PolicyReasonConflicted)
+			acceptedCondition.Reason = string(gwtypes.PolicyReasonConflicted)
 			programmedCondition.Status = metav1.ConditionFalse
-			programmedCondition.Reason = string(gatewayapi.GatewayReasonPending)
+			programmedCondition.Reason = string(gwtypes.GatewayReasonPending)
 		}
 
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(&service) {
 			// If the Service is not configured, we change it to False.
 			programmedCondition.Status = metav1.ConditionFalse
-			programmedCondition.Reason = string(gatewayapi.GatewayReasonPending)
+			programmedCondition.Reason = string(gwtypes.GatewayReasonPending)
 		}
 
 		ancestorsStatus = append(ancestorsStatus, ancestorStatus{
@@ -311,7 +311,7 @@ func (r *KongUpstreamPolicyReconciler) buildAncestorsStatus(
 		if !r.DataplaneClient.KubernetesObjectIsConfigured(&serviceFacade) {
 			// If the KongServiceFacade is not configured, we change it to False.
 			programmedCondition.Status = metav1.ConditionFalse
-			programmedCondition.Reason = string(gatewayapi.GatewayReasonPending)
+			programmedCondition.Reason = string(gwtypes.GatewayReasonPending)
 		}
 
 		ancestorsStatus = append(ancestorsStatus, ancestorStatus{
@@ -344,7 +344,7 @@ func (r *KongUpstreamPolicyReconciler) getConflictedServices(ctx context.Context
 	conflictedServices := make(servicesSet)
 	for serviceKey := range upstreamPolicyServices {
 		// We fetch all the HTTPRoutes that reference this service.
-		httpRoutes := &gatewayapi.HTTPRouteList{}
+		httpRoutes := &gwtypes.HTTPRouteList{}
 		err := r.List(ctx, httpRoutes,
 			client.MatchingFields{
 				routeBackendRefServiceNameIndexKey: string(serviceKey),
@@ -353,7 +353,7 @@ func (r *KongUpstreamPolicyReconciler) getConflictedServices(ctx context.Context
 		if err != nil {
 			return nil, err
 		}
-		hasConflict := lo.ContainsBy(httpRoutes.Items, func(httpRoute gatewayapi.HTTPRoute) bool {
+		hasConflict := lo.ContainsBy(httpRoutes.Items, func(httpRoute gwtypes.HTTPRoute) bool {
 			return httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(httpRoute, upstreamPolicyServices, serviceKey)
 		})
 		if hasConflict {
@@ -367,12 +367,12 @@ func (r *KongUpstreamPolicyReconciler) getConflictedServices(ctx context.Context
 // AND they're not all using the same KongUpstreamPolicy.
 // If so, that means that we have a conflict because we cannot apply multiple KongUpstreamPolicy to the same Kong Service.
 func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
-	httpRoute gatewayapi.HTTPRoute,
+	httpRoute gwtypes.HTTPRoute,
 	upstreamPolicyServices servicesSet,
 	serviceKey serviceKey,
 ) bool {
 	backendRefsUsedWithThisService := getAllBackendRefsUsedWithService(httpRoute, serviceKey)
-	hasAnyBackendRefNotUsingSameUpstreamPolicy := lo.ContainsBy(backendRefsUsedWithThisService, func(br gatewayapi.HTTPBackendRef) bool {
+	hasAnyBackendRefNotUsingSameUpstreamPolicy := lo.ContainsBy(backendRefsUsedWithThisService, func(br gwtypes.HTTPBackendRef) bool {
 		serviceRef := backendRefToServiceRef(httpRoute.Namespace, br.BackendRef)
 		if serviceRef == "" {
 			return false
@@ -385,8 +385,8 @@ func httpRouteHasUpstreamPolicyConflictedBackendRefsWithService(
 }
 
 // getAllBackendRefsUsedWithService returns HTTPRoute's backendRefs that use the given service (excluding the given service).
-func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey serviceKey) []gatewayapi.HTTPBackendRef {
-	var backendRefs []gatewayapi.HTTPBackendRef
+func getAllBackendRefsUsedWithService(httpRoute gwtypes.HTTPRoute, serviceKey serviceKey) []gwtypes.HTTPBackendRef {
+	var backendRefs []gwtypes.HTTPBackendRef
 	for _, rule := range httpRoute.Spec.Rules {
 		// We will look for a backendRef that matches the given service and keep its index if found.
 		backendRefMatchingServiceIdx := mo.None[int]()
@@ -415,7 +415,7 @@ func getAllBackendRefsUsedWithService(httpRoute gatewayapi.HTTPRoute, serviceKey
 func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 	upstreamPolicyNN k8stypes.NamespacedName,
 	ancestorsStatus []ancestorStatus,
-) (gatewayapi.PolicyStatus, error) {
+) (gwtypes.PolicyStatus, error) {
 	// Sort the ancestors by creation timestamp and keep only the oldest ones.
 	// If multiple ancestors have the same creation timestamp, sort by kind, namespace and name.
 	sort.Slice(ancestorsStatus, func(i, j int) bool {
@@ -440,17 +440,17 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 	}
 
 	// Populate the KongUpstreamPolicy status with the ancestors' statuses.
-	policyStatus := gatewayapi.PolicyStatus{}
+	policyStatus := gwtypes.PolicyStatus{}
 	if len(ancestorsStatus) > 0 {
-		policyStatus.Ancestors = make([]gatewayapi.PolicyAncestorStatus, 0, len(ancestorsStatus))
+		policyStatus.Ancestors = make([]gwtypes.PolicyAncestorStatus, 0, len(ancestorsStatus))
 	}
 	for _, ss := range ancestorsStatus {
 		ancestorRef, err := ancestorRef(ss.namespacedName, ss.ancestorKind)
 		if err != nil {
-			return gatewayapi.PolicyStatus{}, fmt.Errorf("failed to build ancestor reference: %w", err)
+			return gwtypes.PolicyStatus{}, fmt.Errorf("failed to build ancestor reference: %w", err)
 		}
 		policyStatus.Ancestors = append(policyStatus.Ancestors,
-			gatewayapi.PolicyAncestorStatus{
+			gwtypes.PolicyAncestorStatus{
 				AncestorRef:    ancestorRef,
 				ControllerName: gatewaycontroller.GetControllerName(),
 				Conditions: []metav1.Condition{
@@ -464,28 +464,28 @@ func (r *KongUpstreamPolicyReconciler) buildPolicyStatus(
 	return policyStatus, nil
 }
 
-func ancestorRef(nn k8stypes.NamespacedName, kind upstreamPolicyAncestorKind) (gatewayapi.ParentReference, error) {
+func ancestorRef(nn k8stypes.NamespacedName, kind upstreamPolicyAncestorKind) (gwtypes.ParentReference, error) {
 	switch kind {
 	case upstreamPolicyAncestorKindService:
-		return gatewayapi.ParentReference{
-			Group:     new(gatewayapi.Group("core")),
-			Kind:      new(gatewayapi.Kind("Service")),
-			Namespace: new(gatewayapi.Namespace(nn.Namespace)),
-			Name:      gatewayapi.ObjectName(nn.Name),
+		return gwtypes.ParentReference{
+			Group:     new(gwtypes.Group("core")),
+			Kind:      new(gwtypes.Kind("Service")),
+			Namespace: new(gwtypes.Namespace(nn.Namespace)),
+			Name:      gwtypes.ObjectName(nn.Name),
 		}, nil
 	case upstreamPolicyAncestorKindKongServiceFacade:
-		return gatewayapi.ParentReference{
-			Group:     new(gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group)),
-			Kind:      new(gatewayapi.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
-			Namespace: new(gatewayapi.Namespace(nn.Namespace)),
-			Name:      gatewayapi.ObjectName(nn.Name),
+		return gwtypes.ParentReference{
+			Group:     new(gwtypes.Group(incubatorv1alpha1.GroupVersion.Group)),
+			Kind:      new(gwtypes.Kind(incubatorv1alpha1.KongServiceFacadeKind)),
+			Namespace: new(gwtypes.Namespace(nn.Namespace)),
+			Name:      gwtypes.ObjectName(nn.Name),
 		}, nil
 	}
 
-	return gatewayapi.ParentReference{}, fmt.Errorf("unknown ancestor kind %q", kind)
+	return gwtypes.ParentReference{}, fmt.Errorf("unknown ancestor kind %q", kind)
 }
 
-func isPolicyStatusUpdated(oldStatus, newStatus gatewayapi.PolicyStatus) bool {
+func isPolicyStatusUpdated(oldStatus, newStatus gwtypes.PolicyStatus) bool {
 	if len(oldStatus.Ancestors) != len(newStatus.Ancestors) {
 		return false
 	}
@@ -515,7 +515,7 @@ func isPolicyStatusUpdated(oldStatus, newStatus gatewayapi.PolicyStatus) bool {
 	return true
 }
 
-func backendRefToServiceRef(routeNamespace string, br gatewayapi.BackendRef) serviceKey {
+func backendRefToServiceRef(routeNamespace string, br gwtypes.BackendRef) serviceKey {
 	if !isSupportedHTTPRouteBackendRef(br) {
 		return ""
 	}
@@ -530,7 +530,7 @@ func buildServiceReference(namespace, name string) serviceKey {
 	return serviceKey(fmt.Sprintf("%s/%s", namespace, name))
 }
 
-func isSupportedHTTPRouteBackendRef(br gatewayapi.BackendRef) bool {
+func isSupportedHTTPRouteBackendRef(br gwtypes.BackendRef) bool {
 	groupIsCoreOrNilOrEmpty := br.Group == nil || *br.Group == "core" || *br.Group == ""
 	kindIsServiceOrNil := br.Kind == nil || *br.Kind == "Service"
 
@@ -543,7 +543,7 @@ func isSupportedHTTPRouteBackendRef(br gatewayapi.BackendRef) bool {
 
 // backendRefToServiceFacadeRef returns the key of KongServiceFacade in namespace/name format
 // if the backendRef points to a ServiceFacade.
-func backendRefToServiceFacadeRef(routeNamespace string, br gatewayapi.BackendRef) serviceKey {
+func backendRefToServiceFacadeRef(routeNamespace string, br gwtypes.BackendRef) serviceKey {
 	if !backendRefIsServiceFacade(br) {
 		return ""
 	}
@@ -554,7 +554,7 @@ func backendRefToServiceFacadeRef(routeNamespace string, br gatewayapi.BackendRe
 	return buildServiceReference(namespace, string(br.Name))
 }
 
-func backendRefIsServiceFacade(br gatewayapi.BackendRef) bool {
-	return br.Group != nil && *br.Group == gatewayapi.Group(incubatorv1alpha1.GroupVersion.Group) &&
+func backendRefIsServiceFacade(br gwtypes.BackendRef) bool {
+	return br.Group != nil && *br.Group == gwtypes.Group(incubatorv1alpha1.GroupVersion.Group) &&
 		br.Kind != nil && *br.Kind == "KongServiceFacade"
 }

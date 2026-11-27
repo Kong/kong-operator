@@ -8,7 +8,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
+
+// TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+// This is currently a "BackendRefT" but it's used as a generic target object.
+// Needs to be renamed as such. It should be able to handle anything that satisfies
+// https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/client#Object
+// ReferenceGrants deal with anything that has a Group, Kind, Namespace, and sometimes a Name.
+// client.Object wraps two interfaces that have methods to surface all of those.
+
+// BackendRefT is the type constraint for references checked by RefChecker.
+type BackendRefT interface {
+	gwtypes.BackendRef |
+		gwtypes.SecretObjectReference |
+		PluginLabelReference
+}
+
+// PluginLabelReference is a reference to a KongPlugin, optionally in another namespace.
+type PluginLabelReference struct {
+	Namespace *string
+	Name      string
+}
+
+func (plr PluginLabelReference) String() string {
+	if plr.Namespace == nil {
+		return plr.Name
+	}
+	return fmt.Sprintf("%s:%s", *plr.Namespace, plr.Name)
+}
 
 // RefChecker is a wrapper type that facilitates checking whether a backendRef is allowed
 // by a referenceGrantTo set.
@@ -46,10 +74,10 @@ func NewRefCheckerForKongPlugin[T BackendRefT](log logr.Logger, target client.Ob
 // allowedRefs is assumed to contain Tos that only match the backendRef's parent's From, as returned by
 // GetPermittedForReferenceGrantFrom.
 func (rc RefChecker[T]) IsRefAllowedByGrant(
-	allowedRefs map[Namespace][]ReferenceGrantTo,
+	allowedRefs map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo,
 ) bool {
 	switch br := (any)(rc.backendRef).(type) {
-	case BackendRef:
+	case gwtypes.BackendRef:
 		// NOTE https://github.com/Kong/kubernetes-ingress-controller/issues/6000
 		// This is a catch-all that the plugins technically won't need as-is because they have their own
 		// inherent namespace check: if no namespace specified the ref is assumed allowed because it must be local.
@@ -72,7 +100,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			allowedRefs,
 		)
 
-	case SecretObjectReference:
+	case gwtypes.SecretObjectReference:
 		if br.Namespace == nil {
 			return true
 		}
@@ -144,7 +172,7 @@ func isRefAllowedByGrant(
 	name string,
 	group string,
 	kind string,
-	allowed map[Namespace][]ReferenceGrantTo,
+	allowed map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo,
 ) bool {
 	if namespace == nil {
 		// local references are always fine
@@ -156,8 +184,8 @@ func isRefAllowedByGrant(
 		"requested-kind", kind,
 		"requested-name", name,
 	)
-	scoped.V(logging.TraceLevel).Info(fmt.Sprintf("checking %d entries for namespace", len(allowed[Namespace(*namespace)])))
-	for i, to := range allowed[Namespace(*namespace)] {
+	scoped.V(logging.TraceLevel).Info(fmt.Sprintf("checking %d entries for namespace", len(allowed[gwtypes.Namespace(*namespace)])))
+	for i, to := range allowed[gwtypes.Namespace(*namespace)] {
 		toName := ""
 		if to.Name != nil {
 			toName = string(*to.Name)
@@ -192,10 +220,10 @@ func isRefAllowedByGrant(
 // ReferenceGrant with those Tos and the input From.
 func GetPermittedForReferenceGrantFrom(
 	log logr.Logger,
-	from ReferenceGrantFrom,
-	grants []*ReferenceGrant,
-) map[Namespace][]ReferenceGrantTo {
-	allowed := make(map[Namespace][]ReferenceGrantTo)
+	from gwtypes.ReferenceGrantFrom,
+	grants []*gwtypes.ReferenceGrant,
+) map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo {
+	allowed := make(map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo)
 	// loop over all From values in all grants. if we find a match, add all Tos to the list of Tos allowed for the
 	// grant namespace. this technically could add duplicate copies of the Tos if there are duplicate Froms (it makes
 	// no sense to add them, but it's allowed), but duplicate Tos are harmless (we only care about having at least one
@@ -214,7 +242,7 @@ func GetPermittedForReferenceGrantFrom(
 					"requested-from-group", from.Group,
 					"requested-from-kind", from.Kind,
 				)
-				allowed[Namespace(grant.Namespace)] = append(allowed[Namespace(grant.Namespace)], grant.Spec.To...)
+				allowed[gwtypes.Namespace(grant.Namespace)] = append(allowed[gwtypes.Namespace(grant.Namespace)], grant.Spec.To...)
 				for _, to := range grant.Spec.To {
 					name := ""
 					if to.Name != nil {

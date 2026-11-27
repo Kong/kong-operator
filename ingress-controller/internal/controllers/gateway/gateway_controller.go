@@ -33,8 +33,8 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -90,12 +90,12 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
-		For(&gatewayapi.Gateway{},
+		For(&gwtypes.Gateway{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayHasMatchingGatewayClass)),
 		).
 		// watch for updates to gatewayclasses, if any gateway classes change, enqueue
 		// reconciliation for all supported gateway objects which reference it.
-		Watches(&gatewayapi.GatewayClass{},
+		Watches(&gwtypes.GatewayClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayClass),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatchesController)),
 		).
@@ -108,7 +108,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		// if a HTTPRoute gets accepted by a Gateway, we need to make sure to trigger
 		// reconciliation on the gateway, as we need to update the number of attachedRoutes.
-		Watches(&gatewayapi.HTTPRoute{},
+		Watches(&gwtypes.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForHTTPRoute),
 		)
 
@@ -134,7 +134,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// start the required gatewayclass controller as well
 	gwcCTRL := &GatewayClassReconciler{
 		Client:           r.Client,
-		Log:              r.Log.WithName(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass"),
+		Log:              r.Log.WithName(strings.ToUpper(gwtypes.V1GroupVersion) + "GatewayClass"),
 		Scheme:           r.Scheme,
 		DataplaneClient:  r.DataplaneClient,
 		CacheSyncTimeout: r.CacheSyncTimeout,
@@ -155,12 +155,12 @@ func (r *GatewayReconciler) SetLogger(l logr.Logger) {
 // gatewayHasMatchingGatewayClass is a watch predicate which filters out reconciliation events for
 // gateway objects which aren't supported by this controller or not using an unmanaged GatewayClass.
 func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bool {
-	gateway, ok := obj.(*gatewayapi.Gateway)
+	gateway, ok := obj.(*gwtypes.Gateway)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"Gateway watch predicate received unexpected object type",
-			"expected", "*gatewayapi.Gateway", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.Gateway", "found", reflect.TypeOf(obj),
 		)
 		return false
 	}
@@ -171,7 +171,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		return false
 	}
 
-	gatewayClass := &gatewayapi.GatewayClass{}
+	gatewayClass := &gwtypes.GatewayClass{}
 	if err := r.Get(context.Background(), client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
@@ -182,12 +182,12 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 // gatewayClassMatchesController is a watch predicate which filters out events for gatewayclasses which
 // aren't configured with the required ControllerName or not annotated as unmanaged.
 func (r *GatewayReconciler) gatewayClassMatchesController(obj client.Object) bool {
-	gatewayClass, ok := obj.(*gatewayapi.GatewayClass)
+	gatewayClass, ok := obj.(*gwtypes.GatewayClass)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"Gatewayclass watch predicate received unexpected object type",
-			"expected", "*gatewayapi.GatewayClass", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.GatewayClass", "found", reflect.TypeOf(obj),
 		)
 		return false
 	}
@@ -201,7 +201,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
-		gw := gatewayapi.Gateway{}
+		gw := gwtypes.Gateway{}
 		if err := r.Get(ctx, gatewayToReconcile, &gw); err != nil {
 			r.Log.Error(err, "Failed to get gateways for gatewayclass in watch",
 				"gatewayclass", gatewayClass.GetName(), "gateway", gatewayToReconcile.String(),
@@ -209,10 +209,10 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 			return nil
 		}
 
-		return reconcileGatewaysIfClassMatches(gatewayClass, []gatewayapi.Gateway{gw})
+		return reconcileGatewaysIfClassMatches(gatewayClass, []gwtypes.Gateway{gw})
 	}
 
-	gateways := &gatewayapi.GatewayList{}
+	gateways := &gwtypes.GatewayList{}
 	if err := r.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
 		return nil
@@ -228,23 +228,23 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"Referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
 
-	var gateways gatewayapi.GatewayList
+	var gateways gwtypes.GatewayList
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
-		gw := gatewayapi.Gateway{}
+		gw := gwtypes.Gateway{}
 		if err := r.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
 			r.Log.Error(err, "Failed to get gateway for referencegrant in watch",
 				"referencegrant", client.ObjectKeyFromObject(grant), "gateway", gatewayToReconcileNN.String(),
 			)
 			return nil
 		}
-		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
+		gateways = gwtypes.GatewayList{Items: []gwtypes.Gateway{gw}}
 	} else {
 		if err := r.List(ctx, &gateways); err != nil {
 			r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
@@ -256,8 +256,8 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 	for _, gateway := range gateways.Items {
 		for _, from := range grant.Spec.From {
 			if string(from.Namespace) == gateway.Namespace &&
-				from.Kind == gatewayapi.Kind("Gateway") &&
-				from.Group == gatewayapi.Group("gateway.networking.k8s.io") {
+				from.Kind == gwtypes.Kind("Gateway") &&
+				from.Group == gwtypes.Group("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
 					Namespace: gateway.Namespace,
 					Name:      gateway.Name,
@@ -273,18 +273,18 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 // unmanaged mode and enqueues them for reconciliation. This is generally used to ensure
 // all gateways are updated when the service gets updated with new listeners.
 func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc client.Object) (recs []reconcile.Request) {
-	var gateways gatewayapi.GatewayList
+	var gateways gwtypes.GatewayList
 	// If the flag `--gateway-to-reconcile` is set, KIC will only reconcile the specified gateway.
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
-		gw := gatewayapi.Gateway{}
+		gw := gwtypes.Gateway{}
 		if err := r.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
 			r.Log.Error(err, "Failed to get gateway for service in watch",
 				"service", client.ObjectKeyFromObject(svc), "gateway", gatewayToReconcileNN.String(),
 			)
 			return nil
 		}
-		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
+		gateways = gwtypes.GatewayList{Items: []gwtypes.Gateway{gw}}
 	} else {
 		if err := r.List(ctx, &gateways); err != nil {
 			r.Log.Error(err, "Failed to list gateways for service in watch", "service", svc.GetName())
@@ -293,7 +293,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 	}
 
 	for _, gateway := range gateways.Items {
-		gatewayClass := &gatewayapi.GatewayClass{}
+		gatewayClass := &gwtypes.GatewayClass{}
 		if err := r.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			continue
@@ -310,12 +310,12 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 
 // listGatewaysForHTTPRoute retrieves all the gateways referenced as parents by the HTTPRoute.
 func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj client.Object) []reconcile.Request {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := obj.(*gwtypes.HTTPRoute)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
 			"HTTPRoute watch predicate received unexpected object type",
-			"expected", "*gatewayapi.HTTPRoute", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.HTTPRoute", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
@@ -398,7 +398,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// gather the gateway object based on the reconciliation trigger. It's possible for the object
 	// to be gone at this point in which case it will be ignored.
-	gateway := new(gatewayapi.Gateway)
+	gateway := new(gwtypes.Gateway)
 	if err := r.Get(ctx, req.NamespacedName, gateway); err != nil {
 		if apierrors.IsNotFound(err) {
 			gateway.Namespace = req.Namespace
@@ -421,7 +421,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// the interim while the object has been queued for reconciliation. This double check
 	// reduces reconciliation operations that would occur on old information.
 	debug(log, gateway, "Verifying gatewayclass")
-	gwc := &gatewayapi.GatewayClass{}
+	gwc := &gwtypes.GatewayClass{}
 	if err := r.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		debug(log, gateway, "Could not retrieve gatewayclass for gateway", "gatewayclass", string(gateway.Spec.GatewayClassName))
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
@@ -502,7 +502,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 // reconcileUnmanagedGateway reconciles a Gateway that is configured for unmanaged mode,
 // this mode will extract the Addresses and Listeners for the Gateway from the Kubernetes Service
 // used for the Kong Gateway in the pre-existing deployment.
-func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log logr.Logger, gateway *gatewayapi.Gateway) (ctrl.Result, error) {
+func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log logr.Logger, gateway *gwtypes.Gateway) (ctrl.Result, error) {
 	// currently this controller supports only unmanaged gateway mode, we need to verify
 	// any Gateway object that comes to us is configured appropriately, and if not reject it
 	// with a clear status condition and message.
@@ -557,20 +557,20 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	if !isGatewayAccepted(gateway) {
 		info(log, gateway, "Marking gateway as accepted")
 		acceptedCondition := metav1.Condition{
-			Type:               string(gatewayapi.GatewayConditionAccepted),
+			Type:               string(gwtypes.GatewayConditionAccepted),
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayapi.GatewayReasonAccepted),
+			Reason:             string(gwtypes.GatewayReasonAccepted),
 			Message:            "this unmanaged gateway has been picked up by the controller and will be processed",
 		}
 		setGatewayCondition(gateway, acceptedCondition)
 		programmedCondition := metav1.Condition{
-			Type:               string(gatewayapi.GatewayConditionProgrammed),
+			Type:               string(gwtypes.GatewayConditionProgrammed),
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: gateway.Generation,
 			LastTransitionTime: metav1.Now(),
-			Reason:             string(gatewayapi.GatewayReasonPending),
+			Reason:             string(gwtypes.GatewayReasonPending),
 		}
 		setGatewayCondition(gateway, programmedCondition)
 
@@ -585,8 +585,8 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// we can use that L4 information to derive the higher level TLS and HTTP,GRPC, e.t.c. information from
 	// the data-plane's metadata.
 	debug(log, gateway, "Determining listener configurations from publish services")
-	var combinedAddresses []gatewayapi.GatewayStatusAddress
-	var combinedListeners []gatewayapi.Listener
+	var combinedAddresses []gwtypes.GatewayStatusAddress
+	var combinedListeners []gwtypes.Listener
 	for _, svc := range gatewayServices {
 		kongAddresses, kongListeners, err := r.determineL4ListenersFromService(log, svc)
 		if err != nil {
@@ -614,14 +614,14 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// addresses associated with the proxy Service aren't actually where you want to direct external clients.
 	if len(r.AddressOverrides)+len(r.AddressOverridesUDP) > 0 {
 		combinedOverrideAddresses := slices.Concat(r.AddressOverrides, r.AddressOverridesUDP)
-		overrides := make([]gatewayapi.GatewayStatusAddress, len(combinedOverrideAddresses))
+		overrides := make([]gwtypes.GatewayStatusAddress, len(combinedOverrideAddresses))
 		for i, stringAddr := range combinedOverrideAddresses {
-			addr := gatewayapi.GatewayStatusAddress{
+			addr := gwtypes.GatewayStatusAddress{
 				Value: stringAddr,
-				Type:  new(gatewayapi.HostnameAddressType),
+				Type:  new(gwtypes.HostnameAddressType),
 			}
 			if ip := net.ParseIP(stringAddr); ip != nil {
-				addr.Type = new(gatewayapi.IPAddressType)
+				addr.Type = new(gwtypes.IPAddressType)
 			}
 			overrides[i] = addr
 		}
@@ -659,22 +659,22 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 var (
 	// supportedKinds indicates which gateway kinds are supported by this implementation.
-	supportedKinds = []gatewayapi.Kind{
-		gatewayapi.Kind("HTTPRoute"),
-		gatewayapi.Kind("TCPRoute"),
-		gatewayapi.Kind("UDPRoute"),
-		gatewayapi.Kind("TLSRoute"),
+	supportedKinds = []gwtypes.Kind{
+		gwtypes.Kind("HTTPRoute"),
+		gwtypes.Kind("TCPRoute"),
+		gwtypes.Kind("UDPRoute"),
+		gwtypes.Kind("TLSRoute"),
 	}
 
 	// supportedRouteGroupKinds indicates the full kinds with GVK that are supported by this implementation.
-	supportedRouteGroupKinds []gatewayapi.RouteGroupKind
+	supportedRouteGroupKinds []gwtypes.RouteGroupKind
 )
 
 func init() {
 	// gather the supported RouteGroupKinds for the Gateway listeners
-	group := gatewayapi.Group(gatewayv1beta1.GroupName)
+	group := gwtypes.Group(gatewayv1beta1.GroupName)
 	for _, supportedKind := range supportedKinds {
-		supportedRouteGroupKinds = append(supportedRouteGroupKinds, gatewayapi.RouteGroupKind{
+		supportedRouteGroupKinds = append(supportedRouteGroupKinds, gwtypes.RouteGroupKind{
 			Group: &group,
 			Kind:  supportedKind,
 		})
@@ -724,8 +724,8 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	log logr.Logger,
 	svc *corev1.Service,
 ) (
-	[]gatewayapi.GatewayStatusAddress,
-	[]gatewayapi.Listener,
+	[]gwtypes.GatewayStatusAddress,
+	[]gwtypes.Listener,
 	error,
 ) {
 	// if there are no clusterIPs available yet then this service
@@ -735,24 +735,24 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 	}
 
 	// take var copies of the address types so we can take pointers to them
-	gatewayIPAddrType := gatewayapi.IPAddressType
-	gatewayHostAddrType := gatewayapi.HostnameAddressType
+	gatewayIPAddrType := gwtypes.IPAddressType
+	gatewayHostAddrType := gwtypes.HostnameAddressType
 
 	// for all service types we're going to capture the ClusterIP
-	addresses := make([]gatewayapi.GatewayStatusAddress, 0, len(svc.Spec.ClusterIPs))
-	listeners := make([]gatewayapi.Listener, 0, len(svc.Spec.Ports))
-	protocolToRouteGroupKind := map[corev1.Protocol]gatewayapi.RouteGroupKind{
-		corev1.ProtocolTCP: {Group: new(gatewayapi.V1Group), Kind: gatewayapi.Kind("TCPRoute")},
-		corev1.ProtocolUDP: {Group: new(gatewayapi.V1Group), Kind: gatewayapi.Kind("UDPRoute")},
+	addresses := make([]gwtypes.GatewayStatusAddress, 0, len(svc.Spec.ClusterIPs))
+	listeners := make([]gwtypes.Listener, 0, len(svc.Spec.Ports))
+	protocolToRouteGroupKind := map[corev1.Protocol]gwtypes.RouteGroupKind{
+		corev1.ProtocolTCP: {Group: new(gwtypes.V1Group), Kind: gwtypes.Kind("TCPRoute")},
+		corev1.ProtocolUDP: {Group: new(gwtypes.V1Group), Kind: gwtypes.Kind("UDPRoute")},
 	}
 
 	for _, port := range svc.Spec.Ports {
-		listeners = append(listeners, gatewayapi.Listener{
-			Name:     (gatewayapi.SectionName)(port.Name),
-			Protocol: (gatewayapi.ProtocolType)(port.Protocol),
+		listeners = append(listeners, gwtypes.Listener{
+			Name:     (gwtypes.SectionName)(port.Name),
+			Protocol: (gwtypes.ProtocolType)(port.Protocol),
 			Port:     (port.Port),
-			AllowedRoutes: &gatewayapi.AllowedRoutes{
-				Kinds: []gatewayapi.RouteGroupKind{
+			AllowedRoutes: &gwtypes.AllowedRoutes{
+				Kinds: []gwtypes.RouteGroupKind{
 					protocolToRouteGroupKind[port.Protocol],
 				},
 			},
@@ -774,13 +774,13 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		// are often the most common address used for traffic.
 		for _, ingress := range svc.Status.LoadBalancer.Ingress {
 			if ingress.IP != "" {
-				addresses = append([]gatewayapi.GatewayStatusAddress{{
+				addresses = append([]gwtypes.GatewayStatusAddress{{
 					Type:  &gatewayIPAddrType,
 					Value: ingress.IP,
 				}}, addresses...)
 			}
 			if ingress.Hostname != "" {
-				addresses = append([]gatewayapi.GatewayStatusAddress{{
+				addresses = append([]gwtypes.GatewayStatusAddress{{
 					Type:  &gatewayHostAddrType,
 					Value: ingress.Hostname,
 				}}, addresses...)
@@ -804,8 +804,8 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 func (r *GatewayReconciler) determineListenersFromDataPlane(
 	ctx context.Context,
 	svc *corev1.Service,
-	listeners []gatewayapi.Listener,
-) ([]gatewayapi.Listener, error) {
+	listeners []gwtypes.Listener,
+) ([]gwtypes.Listener, error) {
 	// gather the proxy and stream listeners from the data-plane and map them
 	// to their respective ports (which will be the targetPorts of the proxy
 	// Service in Kubernetes).
@@ -831,31 +831,31 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 
 	// upgrade existing L4 listeners with any higher level protocols that
 	// are configured for them in the data-plane.
-	upgradedListeners := make([]gatewayapi.Listener, 0, len(listeners))
+	upgradedListeners := make([]gwtypes.Listener, 0, len(listeners))
 	for _, listener := range listeners {
 		if streamListener, ok := streamListenersMap[portMapper[int(listener.Port)]]; ok {
 			if streamListener.SSL {
-				listener.Protocol = gatewayapi.TLSProtocolType
-				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
-					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: new(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("TLSRoute")},
+				listener.Protocol = gwtypes.TLSProtocolType
+				listener.AllowedRoutes = &gwtypes.AllowedRoutes{
+					Kinds: []gwtypes.RouteGroupKind{
+						{Group: new(gwtypes.V1Group), Kind: (gwtypes.Kind)("TLSRoute")},
 					},
 				}
 			}
 		}
 		if proxyListener, ok := proxyListenersMap[portMapper[int(listener.Port)]]; ok {
 			if proxyListener.SSL {
-				listener.Protocol = gatewayapi.HTTPSProtocolType
-				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
-					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: new(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
+				listener.Protocol = gwtypes.HTTPSProtocolType
+				listener.AllowedRoutes = &gwtypes.AllowedRoutes{
+					Kinds: []gwtypes.RouteGroupKind{
+						{Group: new(gwtypes.V1Group), Kind: (gwtypes.Kind)("HTTPRoute")},
 					},
 				}
 			} else {
-				listener.Protocol = gatewayapi.HTTPProtocolType
-				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
-					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: new(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
+				listener.Protocol = gwtypes.HTTPProtocolType
+				listener.AllowedRoutes = &gwtypes.AllowedRoutes{
+					Kinds: []gwtypes.RouteGroupKind{
+						{Group: new(gwtypes.V1Group), Kind: (gwtypes.Kind)("HTTPRoute")},
 					},
 				}
 			}
@@ -876,9 +876,9 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	log logr.Logger,
-	gateway *gatewayapi.Gateway,
-	listenerStatuses []gatewayapi.ListenerStatus,
-	addresses []gatewayapi.GatewayStatusAddress,
+	gateway *gwtypes.Gateway,
+	listenerStatuses []gwtypes.ListenerStatus,
+	addresses []gwtypes.GatewayStatusAddress,
 ) (ctrl.Result, error) {
 	programmed := isGatewayProgrammed(gateway)
 	listenersChanged := !isEqualListenersStatus(gateway.Status.Listeners, listenerStatuses)
@@ -890,11 +890,11 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 
 		if !programmed {
 			programmedCondition := metav1.Condition{
-				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Type:               string(gwtypes.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: gateway.Generation,
 				LastTransitionTime: metav1.Now(),
-				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+				Reason:             string(gwtypes.GatewayReasonProgrammed),
 			}
 			setGatewayCondition(gateway, programmedCondition)
 			info(log, gateway, "Gateway status updated")

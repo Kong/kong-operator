@@ -22,9 +22,9 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -48,7 +48,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, gatewayClient)
 
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 
 			t.Log("deploying a minimal GRPC container deployment to test Ingress routes")
 			container := generators.NewContainer("grpcbin", test.GRPCBinImage, test.GRPCBinPort)
@@ -62,38 +62,38 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Logf("creating an GRPCRoute to access deployment %s via Kong", deployment.Name)
-			grpcRoute := &gatewayapi.GRPCRoute{
+			grpcRoute := &gwtypes.GRPCRoute{
 				Name: "cholpon-grpcroute",
-				Spec: gatewayapi.GRPCRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
-							Name: gatewayapi.ObjectName(gateway.Name),
+				Spec: gwtypes.GRPCRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
+							Name: gwtypes.ObjectName(gateway.Name),
 						}},
 					},
-					Hostnames: []gatewayapi.Hostname{
-						gatewayapi.Hostname(testHostname),
+					Hostnames: []gwtypes.Hostname{
+						gwtypes.Hostname(testHostname),
 					},
-					Rules: []gatewayapi.GRPCRouteRule{{
-						Matches: []gatewayapi.GRPCRouteMatch{
+					Rules: []gwtypes.GRPCRouteRule{{
+						Matches: []gwtypes.GRPCRouteMatch{
 							{
 								// this will match only the DummyUnary method without any headers
-								Method: &gatewayapi.GRPCMethodMatch{
+								Method: &gwtypes.GRPCMethodMatch{
 									Service: new("grpcbin.GRPCBin"),
 									Method:  new("DummyUnary"),
 								},
 							},
 							{
 								// this will match all methods with the x-hello header
-								Headers: []gatewayapi.GRPCHeaderMatch{
+								Headers: []gwtypes.GRPCHeaderMatch{
 									{
-										Name:  gatewayapi.GRPCHeaderName("x-hello"),
+										Name:  gwtypes.GRPCHeaderName("x-hello"),
 										Value: "bidi",
 									},
 								},
 							},
 						},
-						BackendRefs: []gatewayapi.GRPCBackendRef{{
-							Name: gatewayapi.ObjectName(service.Name),
+						BackendRefs: []gwtypes.GRPCBackendRef{{
+							Name: gwtypes.ObjectName(service.Name),
 							Port: new(test.GRPCBinPort),
 						}},
 					}},
@@ -111,14 +111,14 @@ func TestGRPCRouteEssentials(t *testing.T) {
 			grpcAddr := GetHTTPURLFromCtx(ctx).Host // For GRPC, we use the same address as for HTTP, but without the scheme (http://).
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayClient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			grpcRoute := GetFromCtxForT[*gatewayapi.GRPCRoute](ctx, t)
+			grpcRoute := GetFromCtxForT[*gwtypes.GRPCRoute](ctx, t)
 
 			t.Log("verifying that the Gateway gets linked to the route via status")
-			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, namespace, grpcRoute.Name)
+			callback := helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gwtypes.HTTPProtocolType, namespace, grpcRoute.Name)
 			assert.Eventually(t, callback, consts.IngressWait, consts.WaitTick)
 			t.Log("verifying that the GRPCRoute contains 'Programmed' condition")
 			assert.Eventually(t,
-				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gatewayapi.HTTPProtocolType, namespace, grpcRoute.Name, metav1.ConditionTrue),
+				helpers.GetVerifyProgrammedConditionCallback(t, gatewayClient, gwtypes.HTTPProtocolType, namespace, grpcRoute.Name, metav1.ConditionTrue),
 				consts.IngressWait, consts.WaitTick,
 			)
 

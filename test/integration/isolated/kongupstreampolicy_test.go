@@ -22,8 +22,8 @@ import (
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -178,22 +178,22 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			cleaner.Add(ingress)
 
 			t.Log("creating HTTPRoute")
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
-			httpRoute := &gatewayapi.HTTPRoute{
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
+			httpRoute := &gwtypes.HTTPRoute{
 				Name: "http-route",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{{
-							Name: gatewayapi.ObjectName(gateway.Name),
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{{
+							Name: gwtypes.ObjectName(gateway.Name),
 						}},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 									Name: "service-1",
-									Port: new(gatewayapi.PortNumber(80)),
+									Port: new(gwtypes.PortNumber(80)),
 								},
 							},
 						},
@@ -261,17 +261,17 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			clients := GetFromCtxForT[*clientset.Clientset](ctx, t)
 
 			t.Log("updating HTTPRoute to use Services with different KongUpstreamPolicies in a single rule")
-			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(namespace), "http-route", func(httpRoute *gatewayapi.HTTPRoute) {
-				httpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.HTTPBackendRef{
+			_, err := helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(namespace), "http-route", func(httpRoute *gwtypes.HTTPRoute) {
+				httpRoute.Spec.Rules[0].BackendRefs = []gwtypes.HTTPBackendRef{
 					{
-						Kind: new(gatewayapi.Kind("Service")),
+						Kind: new(gwtypes.Kind("Service")),
 						Name: "service-1",
-						Port: new(gatewayapi.PortNumber(80)),
+						Port: new(gwtypes.PortNumber(80)),
 					},
 					{
-						Kind: new(gatewayapi.Kind("Service")),
+						Kind: new(gwtypes.Kind("Service")),
 						Name: "service-2",
-						Port: new(gatewayapi.PortNumber(80)),
+						Port: new(gwtypes.PortNumber(80)),
 					},
 				}
 			})
@@ -317,12 +317,12 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 }
 
 func requireAncestorWithCondition(
-	ancestors []gatewayapi.PolicyAncestorStatus,
+	ancestors []gwtypes.PolicyAncestorStatus,
 	ancestorName string,
 	conditionType string,
 	expectedStatus metav1.ConditionStatus,
 ) error {
-	ancestor, ok := lo.Find(ancestors, func(ancestor gatewayapi.PolicyAncestorStatus) bool {
+	ancestor, ok := lo.Find(ancestors, func(ancestor gwtypes.PolicyAncestorStatus) bool {
 		return string(ancestor.AncestorRef.Name) == ancestorName
 	})
 	if !ok {

@@ -6,14 +6,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestResolveDependencies_HTTPRoute(t *testing.T) {
 	testCases := []resolveDependenciesTestCase{
 		{
 			name: "no dependencies",
-			object: &gatewayapi.HTTPRoute{
+			object: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 			},
@@ -29,20 +29,20 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute -> Service",
-			object: &gatewayapi.HTTPRoute{
+			object: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
 									Name: "1",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 								{
 									Name: "2",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 							},
 						},
@@ -60,7 +60,7 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute -> KongPlugin, KongClusterPlugin",
-			object: &gatewayapi.HTTPRoute{
+			object: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 				Annotations: map[string]string{
@@ -91,7 +91,7 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 	testCases := []resolveDependenciesTestCase{
 		{
 			name: "no dependencies",
-			object: &gatewayapi.TLSRoute{
+			object: &gwtypes.TLSRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 			},
@@ -107,20 +107,20 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 		},
 		{
 			name: "TLSRoute -> Service",
-			object: &gatewayapi.TLSRoute{
+			object: &gwtypes.TLSRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.TLSRouteSpec{
-					Rules: []gatewayapi.TLSRouteRule{
+				Spec: gwtypes.TLSRouteSpec{
+					Rules: []gwtypes.TLSRouteRule{
 						{
-							BackendRefs: []gatewayapi.BackendRef{
+							BackendRefs: []gwtypes.BackendRef{
 								{
 									Name: "1",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 								{
 									Name: "2",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 							},
 						},
@@ -138,7 +138,7 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 		},
 		{
 			name: "TLSRoute -> KongPlugin, KongClusterPlugin",
-			object: &gatewayapi.TLSRoute{
+			object: &gwtypes.TLSRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 				Annotations: map[string]string{
@@ -169,7 +169,7 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 	testCases := []resolveDependenciesTestCase{
 		{
 			name: "no dependencies",
-			object: &gatewayapi.TCPRoute{
+			object: &gwtypes.TCPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 			},
@@ -185,20 +185,20 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 		},
 		{
 			name: "TCPRoute -> Service",
-			object: &gatewayapi.TCPRoute{
+			object: &gwtypes.TCPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.TCPRouteSpec{
-					Rules: []gatewayapi.TCPRouteRule{
+				Spec: gwtypes.TCPRouteSpec{
+					Rules: []gwtypes.TCPRouteRule{
 						{
-							BackendRefs: []gatewayapi.BackendRef{
+							BackendRefs: []gwtypes.BackendRef{
 								{
 									Name: "1",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 								{
 									Name: "2",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 							},
 						},
@@ -216,7 +216,7 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 		},
 		{
 			name: "TCPRoute -> KongPlugin, KongClusterPlugin",
-			object: &gatewayapi.TCPRoute{
+			object: &gwtypes.TCPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 				Annotations: map[string]string{
@@ -247,7 +247,7 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 	testCases := []resolveDependenciesTestCase{
 		{
 			name: "no dependencies",
-			object: &gatewayapi.UDPRoute{
+			object: &gwtypes.UDPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 			},
@@ -263,20 +263,20 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 		},
 		{
 			name: "UDPRoute -> Service",
-			object: &gatewayapi.UDPRoute{
+			object: &gwtypes.UDPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.UDPRouteSpec{
-					Rules: []gatewayapi.UDPRouteRule{
+				Spec: gwtypes.UDPRouteSpec{
+					Rules: []gwtypes.UDPRouteRule{
 						{
-							BackendRefs: []gatewayapi.BackendRef{
+							BackendRefs: []gwtypes.BackendRef{
 								{
 									Name: "1",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 								{
 									Name: "2",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 							},
 						},
@@ -294,7 +294,7 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 		},
 		{
 			name: "UDPRoute -> KongPlugin, KongClusterPlugin",
-			object: &gatewayapi.UDPRoute{
+			object: &gwtypes.UDPRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 				Annotations: map[string]string{
@@ -325,7 +325,7 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 	testCases := []resolveDependenciesTestCase{
 		{
 			name: "no dependencies",
-			object: &gatewayapi.GRPCRoute{
+			object: &gwtypes.GRPCRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 			},
@@ -341,20 +341,20 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 		},
 		{
 			name: "GRPCRoute -> Service",
-			object: &gatewayapi.GRPCRoute{
+			object: &gwtypes.GRPCRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
-				Spec: gatewayapi.GRPCRouteSpec{
-					Rules: []gatewayapi.GRPCRouteRule{
+				Spec: gwtypes.GRPCRouteSpec{
+					Rules: []gwtypes.GRPCRouteRule{
 						{
-							BackendRefs: []gatewayapi.GRPCBackendRef{
+							BackendRefs: []gwtypes.GRPCBackendRef{
 								{
 									Name: "1",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 								{
 									Name: "2",
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 								},
 							},
 						},
@@ -372,7 +372,7 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 		},
 		{
 			name: "GRPCRoute -> KongPlugin, KongClusterPlugin",
-			object: &gatewayapi.GRPCRoute{
+			object: &gwtypes.GRPCRoute{
 				Name:      "test-route",
 				Namespace: "test-namespace",
 				Annotations: map[string]string{

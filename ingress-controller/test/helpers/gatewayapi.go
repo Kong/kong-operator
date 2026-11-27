@@ -11,8 +11,8 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (
@@ -22,13 +22,13 @@ const (
 
 // DeployGatewayClass creates a default gatewayClass, accepts a variadic set of options,
 // and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
-func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gatewayapi.GatewayClass)) (*gatewayapi.GatewayClass, error) {
-	gwc := &gatewayapi.GatewayClass{
+func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gwtypes.GatewayClass)) (*gwtypes.GatewayClass, error) {
+	gwc := &gwtypes.GatewayClass{
 		Name: gatewayClassName,
 		Annotations: map[string]string{
 			annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 		},
-		Spec: gatewayapi.GatewayClassSpec{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: mgrconsts.GetControllerName(),
 		},
 	}
@@ -50,17 +50,17 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 
 // DeployGateway creates a default gateway, accepts a variadic set of options,
 // and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
-func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gatewayapi.Gateway)) (*gatewayapi.Gateway, error) {
+func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gwtypes.Gateway)) (*gwtypes.Gateway, error) {
 	// Create a default gateway with a listener set to port 80 for HTTP traffic.
-	gw := &gatewayapi.Gateway{
+	gw := &gwtypes.Gateway{
 		Name: DefaultGatewayName,
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gatewayClassName),
-			Listeners: []gatewayapi.Listener{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gatewayClassName),
+			Listeners: []gwtypes.Listener{
 				{
 					Name:     "http",
-					Protocol: gatewayapi.HTTPProtocolType,
-					Port:     gatewayapi.PortNumber(ktfkong.DefaultProxyTCPServicePort),
+					Protocol: gwtypes.HTTPProtocolType,
+					Port:     gwtypes.PortNumber(ktfkong.DefaultProxyTCPServicePort),
 				},
 			},
 		},
@@ -87,7 +87,7 @@ func GetGatewayIsLinkedCallback(
 	ctx context.Context,
 	t *testing.T,
 	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
+	protocolType gwtypes.ProtocolType,
 	namespace,
 	name string,
 ) func() bool {
@@ -105,12 +105,12 @@ func gatewayLinkStatusMatches(
 	t *testing.T,
 	c *gatewayclient.Clientset,
 	verifyLinked bool,
-	protocolType gatewayapi.ProtocolType,
+	protocolType gwtypes.ProtocolType,
 	namespace, name string,
 ) bool {
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType {
-	case gatewayapi.HTTPProtocolType:
+	case gwtypes.HTTPProtocolType:
 		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
@@ -126,7 +126,7 @@ func gatewayLinkStatusMatches(
 					check(verifyLinked, string(mgrconsts.GetControllerName()))
 			}
 		}
-	case gatewayapi.TCPProtocolType:
+	case gwtypes.TCPProtocolType:
 		route, err := c.GatewayV1().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
@@ -134,7 +134,7 @@ func gatewayLinkStatusMatches(
 			return newRouteParentsStatus(route.Status.Parents).
 				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
-	case gatewayapi.UDPProtocolType:
+	case gwtypes.UDPProtocolType:
 		route, err := c.GatewayV1().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
@@ -142,7 +142,7 @@ func gatewayLinkStatusMatches(
 			return newRouteParentsStatus(route.Status.Parents).
 				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
-	case gatewayapi.TLSProtocolType:
+	case gwtypes.TLSProtocolType:
 		route, err := c.GatewayV1().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
@@ -150,7 +150,7 @@ func gatewayLinkStatusMatches(
 			return newRouteParentsStatus(route.Status.Parents).
 				check(verifyLinked, string(mgrconsts.GetControllerName()))
 		}
-	case gatewayapi.HTTPSProtocolType:
+	case gwtypes.HTTPSProtocolType:
 		t.Fatalf("protocol %s not supported", protocolType)
 	default:
 		t.Fatalf("protocol %s not supported", protocolType)
@@ -160,14 +160,14 @@ func gatewayLinkStatusMatches(
 	return false
 }
 
-func newRouteParentsStatus(parents []gatewayapi.RouteParentStatus) routeParents {
+func newRouteParentsStatus(parents []gwtypes.RouteParentStatus) routeParents {
 	return routeParents{
 		parents: parents,
 	}
 }
 
 type routeParents struct {
-	parents []gatewayapi.RouteParentStatus
+	parents []gwtypes.RouteParentStatus
 }
 
 func (rp routeParents) check(verifyLinked bool, controllerName string) bool {
@@ -186,7 +186,7 @@ func (rp routeParents) check(verifyLinked bool, controllerName string) bool {
 
 func GetVerifyProgrammedConditionCallback(t *testing.T,
 	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
+	protocolType gwtypes.ProtocolType,
 	namespace, name string,
 	expectedStatus metav1.ConditionStatus,
 ) func() bool {
@@ -197,7 +197,7 @@ func GetVerifyProgrammedConditionCallback(t *testing.T,
 
 func verifyProgrammedConditionStatus(t *testing.T,
 	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
+	protocolType gwtypes.ProtocolType,
 	namespace, name string,
 	expectedStatus metav1.ConditionStatus,
 ) bool {
@@ -205,7 +205,7 @@ func verifyProgrammedConditionStatus(t *testing.T,
 
 	// gather a fresh copy of the route, given the specific protocol type
 	switch protocolType {
-	case gatewayapi.HTTPProtocolType:
+	case gwtypes.HTTPProtocolType:
 		route, err := c.GatewayV1().HTTPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		groute, gerr := c.GatewayV1().GRPCRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil && gerr != nil {
@@ -219,28 +219,28 @@ func verifyProgrammedConditionStatus(t *testing.T,
 				return parentStatusContainsProgrammedCondition(groute.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 			}
 		}
-	case gatewayapi.TCPProtocolType:
+	case gwtypes.TCPProtocolType:
 		route, err := c.GatewayV1().TCPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tcp route: %v", err)
 		} else {
 			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
-	case gatewayapi.TLSProtocolType:
+	case gwtypes.TLSProtocolType:
 		route, err := c.GatewayV1().TLSRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting tls route: %v", err)
 		} else {
 			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
-	case gatewayapi.UDPProtocolType:
+	case gwtypes.UDPProtocolType:
 		route, err := c.GatewayV1().UDPRoutes(namespace).Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting udp route: %v", err)
 		} else {
 			return parentStatusContainsProgrammedCondition(route.Status.Parents, mgrconsts.GetControllerName(), expectedStatus)
 		}
-	case gatewayapi.HTTPSProtocolType:
+	case gwtypes.HTTPSProtocolType:
 		t.Fatalf("protocol %s not supported", string(protocolType))
 	default:
 		t.Fatalf("protocol %s not supported", string(protocolType))
@@ -250,8 +250,8 @@ func verifyProgrammedConditionStatus(t *testing.T,
 }
 
 func parentStatusContainsProgrammedCondition(
-	parentStatuses []gatewayapi.RouteParentStatus,
-	controllerName gatewayapi.GatewayController,
+	parentStatuses []gwtypes.RouteParentStatus,
+	controllerName gwtypes.GatewayController,
 	expectedStatus metav1.ConditionStatus,
 ) bool {
 	var conditions []metav1.Condition
@@ -281,7 +281,7 @@ func GetGatewayIsUnlinkedCallback(
 	ctx context.Context,
 	t *testing.T,
 	c *gatewayclient.Clientset,
-	protocolType gatewayapi.ProtocolType,
+	protocolType gwtypes.ProtocolType,
 	namespace,
 	name string,
 ) func() bool {

@@ -2,7 +2,7 @@ package gateway
 
 import (
 	internal "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
-	internalgatewayapi "github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 type GatewayReconciler = internal.GatewayReconciler
@@ -10,6 +10,6 @@ type HTTPRouteReconciler = internal.HTTPRouteReconciler
 type TLSRouteReconciler = internal.TLSRouteReconciler
 type UDPRouteReconciler = internal.UDPRouteReconciler
 
-func GetControllerName() internalgatewayapi.GatewayController {
+func GetControllerName() gwtypes.GatewayController {
 	return internal.GetControllerName()
 }

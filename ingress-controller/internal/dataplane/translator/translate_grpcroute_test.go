@@ -14,17 +14,17 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
-	grpcRouteTypeMeta := gatewayapi.GRPCRouteTypeMeta
+	grpcRouteTypeMeta := gwtypes.GRPCRouteTypeMeta
 
 	testCases := []struct {
 		name                 string
-		grpcRoutes           []*gatewayapi.GRPCRoute
+		grpcRoutes           []*gwtypes.GRPCRoute
 		expectedKongServices []kongstate.Service
 		services             []*corev1.Service
 		// service name -> routes
@@ -32,44 +32,44 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 	}{
 		{
 			name: "single GRPCRoute with multiple hostnames and multiple rules",
-			grpcRoutes: []*gatewayapi.GRPCRoute{
+			grpcRoutes: []*gwtypes.GRPCRoute{
 				{
 					TypeMeta:  grpcRouteTypeMeta,
 					Namespace: "default",
 					Name:      "grpcroute-1",
-					Spec: gatewayapi.GRPCRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
+					Spec: gwtypes.GRPCRouteSpec{
+						Hostnames: []gwtypes.Hostname{
 							"foo.com",
 							"*.bar.com",
 						},
-						Rules: []gatewayapi.GRPCRouteRule{
+						Rules: []gwtypes.GRPCRouteRule{
 							{
-								Matches: []gatewayapi.GRPCRouteMatch{
+								Matches: []gwtypes.GRPCRouteMatch{
 									{
-										Method: &gatewayapi.GRPCMethodMatch{
-											Type:    new(gatewayapi.GRPCMethodMatchExact),
+										Method: &gwtypes.GRPCMethodMatch{
+											Type:    new(gwtypes.GRPCMethodMatchExact),
 											Service: new("v1"),
 											Method:  new("foo"),
 										},
 									},
 								},
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service1").WithPort(80).Build(),
 									},
 								},
 							},
 							{
-								Matches: []gatewayapi.GRPCRouteMatch{
+								Matches: []gwtypes.GRPCRouteMatch{
 									{
-										Method: &gatewayapi.GRPCMethodMatch{
-											Type:    new(gatewayapi.GRPCMethodMatchExact),
+										Method: &gwtypes.GRPCMethodMatch{
+											Type:    new(gwtypes.GRPCMethodMatchExact),
 											Service: new("v1"),
 											Method:  new("foobar"),
 										},
 									},
 								},
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service2").WithPort(80).Build(),
 									},
@@ -156,34 +156,34 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple GRPCRoutes with multiple matches",
-			grpcRoutes: []*gatewayapi.GRPCRoute{
+			grpcRoutes: []*gwtypes.GRPCRoute{
 				{
 					TypeMeta:  grpcRouteTypeMeta,
 					Namespace: "default",
 					Name:      "grpcroute-1",
-					Spec: gatewayapi.GRPCRouteSpec{
-						Hostnames: []gatewayapi.Hostname{
+					Spec: gwtypes.GRPCRouteSpec{
+						Hostnames: []gwtypes.Hostname{
 							"foo.com",
 						},
-						Rules: []gatewayapi.GRPCRouteRule{
+						Rules: []gwtypes.GRPCRouteRule{
 							{
-								Matches: []gatewayapi.GRPCRouteMatch{
+								Matches: []gwtypes.GRPCRouteMatch{
 									{
-										Method: &gatewayapi.GRPCMethodMatch{
-											Type:    new(gatewayapi.GRPCMethodMatchExact),
+										Method: &gwtypes.GRPCMethodMatch{
+											Type:    new(gwtypes.GRPCMethodMatchExact),
 											Service: new("v1"),
 											Method:  new("foo"),
 										},
 									},
 									{
-										Method: &gatewayapi.GRPCMethodMatch{
-											Type:    new(gatewayapi.GRPCMethodMatchExact),
+										Method: &gwtypes.GRPCMethodMatch{
+											Type:    new(gwtypes.GRPCMethodMatchExact),
 											Service: new("v1"),
 											Method:  new("foobar"),
 										},
 									},
 								},
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service1").WithPort(80).Build(),
 									},
@@ -196,19 +196,19 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					TypeMeta:  grpcRouteTypeMeta,
 					Namespace: "default",
 					Name:      "grpcroute-2",
-					Spec: gatewayapi.GRPCRouteSpec{
-						Rules: []gatewayapi.GRPCRouteRule{
+					Spec: gwtypes.GRPCRouteSpec{
+						Rules: []gwtypes.GRPCRouteRule{
 							{
-								Matches: []gatewayapi.GRPCRouteMatch{
+								Matches: []gwtypes.GRPCRouteMatch{
 									{
-										Method: &gatewayapi.GRPCMethodMatch{
-											Type:    new(gatewayapi.GRPCMethodMatchExact),
+										Method: &gwtypes.GRPCMethodMatch{
+											Type:    new(gwtypes.GRPCMethodMatchExact),
 											Service: new("v2"),
 											Method:  new("foo"),
 										},
 									},
 								},
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service2").WithPort(80).Build(),
 									},
@@ -269,24 +269,24 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		},
 		{
 			name: "multiple GRPCRoutes with translation error",
-			grpcRoutes: []*gatewayapi.GRPCRoute{
+			grpcRoutes: []*gwtypes.GRPCRoute{
 				{
 					TypeMeta:  grpcRouteTypeMeta,
 					Namespace: "default",
 					Name:      "grpcroute-1",
-					Spec: gatewayapi.GRPCRouteSpec{
-						Rules: []gatewayapi.GRPCRouteRule{
+					Spec: gwtypes.GRPCRouteSpec{
+						Rules: []gwtypes.GRPCRouteRule{
 							{
-								Matches: []gatewayapi.GRPCRouteMatch{
+								Matches: []gwtypes.GRPCRouteMatch{
 									{
-										Method: &gatewayapi.GRPCMethodMatch{
-											Type:    new(gatewayapi.GRPCMethodMatchExact),
+										Method: &gwtypes.GRPCMethodMatch{
+											Type:    new(gwtypes.GRPCMethodMatchExact),
 											Service: new("v1"),
 											Method:  new("foo"),
 										},
 									},
 								},
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service2").WithPort(80).Build(),
 									},
@@ -299,16 +299,16 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					TypeMeta:  grpcRouteTypeMeta,
 					Namespace: "default",
 					Name:      "grpcroute-no-rules",
-					Spec:      gatewayapi.GRPCRouteSpec{},
+					Spec:      gwtypes.GRPCRouteSpec{},
 				},
 				{
 					TypeMeta:  grpcRouteTypeMeta,
 					Namespace: "default",
 					Name:      "grpcroute-no-hostnames-no-matches",
-					Spec: gatewayapi.GRPCRouteSpec{
-						Rules: []gatewayapi.GRPCRouteRule{
+					Spec: gwtypes.GRPCRouteSpec{
+						Rules: []gwtypes.GRPCRouteRule{
 							{
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										BackendRef: builder.NewBackendRef("service0").WithPort(80).Build(),
 									},
@@ -408,26 +408,26 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 func TestGetProtocolsForKongRoute(t *testing.T) {
 	testCases := []struct {
 		name              string
-		parentRefs        []gatewayapi.ParentReference
-		gateways          []*gatewayapi.Gateway
+		parentRefs        []gwtypes.ParentReference
+		gateways          []*gwtypes.Gateway
 		expectedProtocols []*string
 	}{
 		{
 			name: "http listener returns grpc",
-			parentRefs: []gatewayapi.ParentReference{
+			parentRefs: []gwtypes.ParentReference{
 				{
-					Name: gatewayapi.ObjectName("gw-http"),
+					Name: gwtypes.ObjectName("gw-http"),
 				},
 			},
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Namespace: "default",
 					Name:      "gw-http",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "http",
-								Protocol: gatewayapi.HTTPProtocolType,
+								Protocol: gwtypes.HTTPProtocolType,
 								Port:     80,
 							},
 						},
@@ -438,19 +438,19 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 		},
 		{
 			name: "https listener returns grpcs",
-			parentRefs: []gatewayapi.ParentReference{
+			parentRefs: []gwtypes.ParentReference{
 				{
-					Name: gatewayapi.ObjectName("gw-https"),
+					Name: gwtypes.ObjectName("gw-https"),
 				},
 			},
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Namespace: "default", Name: "gw-https",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "https",
-								Protocol: gatewayapi.HTTPSProtocolType,
+								Protocol: gwtypes.HTTPSProtocolType,
 								Port:     443,
 							},
 						},
@@ -461,24 +461,24 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 		},
 		{
 			name: "both listeners return grpc and grpcs",
-			parentRefs: []gatewayapi.ParentReference{
+			parentRefs: []gwtypes.ParentReference{
 				{
-					Name: gatewayapi.ObjectName("gw-both"),
+					Name: gwtypes.ObjectName("gw-both"),
 				},
 			},
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Namespace: "default", Name: "gw-both",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "http",
-								Protocol: gatewayapi.HTTPProtocolType,
+								Protocol: gwtypes.HTTPProtocolType,
 								Port:     80,
 							},
 							{
 								Name:     "https",
-								Protocol: gatewayapi.HTTPSProtocolType,
+								Protocol: gwtypes.HTTPSProtocolType,
 								Port:     443,
 							},
 						},
@@ -489,30 +489,30 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 		},
 		{
 			name: "missing gateway falls back to Kong Gateway default",
-			parentRefs: []gatewayapi.ParentReference{{
-				Name: gatewayapi.ObjectName("gw-missing"),
+			parentRefs: []gwtypes.ParentReference{{
+				Name: gwtypes.ObjectName("gw-missing"),
 			}},
 			expectedProtocols: nil,
 		},
 		{
 			name: "sectionName filters listener protocol",
-			parentRefs: []gatewayapi.ParentReference{{
-				Name:        gatewayapi.ObjectName("gw-section"),
-				SectionName: new(gatewayapi.SectionName("https")),
+			parentRefs: []gwtypes.ParentReference{{
+				Name:        gwtypes.ObjectName("gw-section"),
+				SectionName: new(gwtypes.SectionName("https")),
 			}},
-			gateways: []*gatewayapi.Gateway{
+			gateways: []*gwtypes.Gateway{
 				{
 					Namespace: "default", Name: "gw-section",
-					Spec: gatewayapi.GatewaySpec{
-						Listeners: []gatewayapi.Listener{
+					Spec: gwtypes.GatewaySpec{
+						Listeners: []gwtypes.Listener{
 							{
 								Name:     "http",
-								Protocol: gatewayapi.HTTPProtocolType,
+								Protocol: gwtypes.HTTPProtocolType,
 								Port:     80,
 							},
 							{
 								Name:     "https",
-								Protocol: gatewayapi.HTTPSProtocolType,
+								Protocol: gwtypes.HTTPSProtocolType,
 								Port:     443,
 							},
 						},
@@ -529,10 +529,10 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 			require.NoError(t, err)
 
 			translator := mustNewTranslator(t, fakestore)
-			grpcRoute := &gatewayapi.GRPCRoute{
+			grpcRoute := &gwtypes.GRPCRoute{
 				Namespace: "default", Name: "grpcroute",
-				Spec: gatewayapi.GRPCRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{ParentRefs: tc.parentRefs},
+				Spec: gwtypes.GRPCRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{ParentRefs: tc.parentRefs},
 				},
 			}
 

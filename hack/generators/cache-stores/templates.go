@@ -17,7 +17,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	kongv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	kongv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -117,7 +117,7 @@ package store_test
 import (
 	"testing"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	kongv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	kongv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/stretchr/testify/require"

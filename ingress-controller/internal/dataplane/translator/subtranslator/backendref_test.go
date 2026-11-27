@@ -10,32 +10,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestBackendRefsToKongStateBackends(t *testing.T) {
 	testcases := []struct {
 		name        string
 		route       client.Object
-		backendRefs []gatewayapi.BackendRef
-		allowed     map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo
+		backendRefs []gwtypes.BackendRef
+		allowed     map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo
 		objects     store.FakeObjects
 		expected    kongstate.ServiceBackends
 	}{
 		{
 			name: "correct ReferenceGrant and an existing Service as backendRef returns a KongStateBackend with a Service",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "basic-httproute",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
+				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-					Hostnames: []gatewayapi.Hostname{
+					Hostnames: []gwtypes.Hostname{
 						"konghq.com",
 						"www.konghq.com",
 					},
-					Rules: []gatewayapi.HTTPRouteRule{{
+					Rules: []gwtypes.HTTPRouteRule{{
 						// BackendRefs are taken from the backendRefs argument.
 						// This is done this way because the backendRefs are
 						// extracted from the route's spec before.
@@ -44,15 +44,15 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 					}},
 				},
 			},
-			backendRefs: []gatewayapi.BackendRef{
+			backendRefs: []gwtypes.BackendRef{
 				builder.NewBackendRef("fake-service").WithPort(80).Build(),
 			},
-			allowed: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
-				gatewayapi.Namespace(corev1.NamespaceDefault): {
+			allowed: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
+				gwtypes.Namespace(corev1.NamespaceDefault): {
 					{
 						Group: "",
 						Kind:  "Service",
-						Name:  new(gatewayapi.ObjectName("fake-service")),
+						Name:  new(gwtypes.ObjectName("fake-service")),
 					},
 				},
 			},
@@ -84,23 +84,23 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 		},
 		{
 			name: "no ReferenceGrant and an existing Service as backendRef doesn't return a KongStateBackend with the Service",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "basic-httproute",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
+				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-					Hostnames: []gatewayapi.Hostname{
+					Hostnames: []gwtypes.Hostname{
 						"konghq.com",
 						"www.konghq.com",
 					},
 				},
 			},
-			allowed: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
-				gatewayapi.Namespace(corev1.NamespaceDefault): {
+			allowed: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
+				gwtypes.Namespace(corev1.NamespaceDefault): {
 					{
 						Group: "",
 						Kind:  "ImaginaryKind",
-						Name:  new(gatewayapi.ObjectName("fake-service")),
+						Name:  new(gwtypes.ObjectName("fake-service")),
 					},
 				},
 			},
@@ -116,26 +116,26 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 		},
 		{
 			name: "ReferenceGrant and a non existing Service as backendRef doesn't return a KongStateBackend with the Service",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "basic-httproute",
 				Namespace: corev1.NamespaceDefault,
-				Spec: gatewayapi.HTTPRouteSpec{
+				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
-					Hostnames: []gatewayapi.Hostname{
+					Hostnames: []gwtypes.Hostname{
 						"konghq.com",
 						"www.konghq.com",
 					},
 				},
 			},
-			backendRefs: []gatewayapi.BackendRef{
+			backendRefs: []gwtypes.BackendRef{
 				builder.NewBackendRef("fake-service").WithPort(80).Build(),
 			},
-			allowed: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
-				gatewayapi.Namespace(corev1.NamespaceDefault): {
+			allowed: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
+				gwtypes.Namespace(corev1.NamespaceDefault): {
 					{
 						Group: "",
 						Kind:  "Service",
-						Name:  new(gatewayapi.ObjectName("fake-service")),
+						Name:  new(gwtypes.ObjectName("fake-service")),
 					},
 				},
 			},
@@ -154,10 +154,10 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 	}
 }
 
-func commonRouteSpecMock(parentReferentName string) gatewayapi.CommonRouteSpec { //nolint:unparam
-	return gatewayapi.CommonRouteSpec{
-		ParentRefs: []gatewayapi.ParentReference{{
-			Name: gatewayapi.ObjectName(parentReferentName),
+func commonRouteSpecMock(parentReferentName string) gwtypes.CommonRouteSpec { //nolint:unparam
+	return gwtypes.CommonRouteSpec{
+		ParentRefs: []gwtypes.ParentReference{{
+			Name: gwtypes.ObjectName(parentReferentName),
 		}},
 	}
 }

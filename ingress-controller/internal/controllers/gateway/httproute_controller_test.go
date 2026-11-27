@@ -13,10 +13,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
@@ -27,11 +29,11 @@ func init() {
 		fmt.Println("error while adding corev1 scheme")
 		os.Exit(1)
 	}
-	if err := gatewayapi.InstallV1(scheme.Scheme); err != nil {
+	if err := gatewayv1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1 scheme")
 		os.Exit(1)
 	}
-	if err := gatewayapi.InstallV1beta1(scheme.Scheme); err != nil {
+	if err := gatewayv1beta1.Install(scheme.Scheme); err != nil {
 		fmt.Println("error while adding gatewayv1beta1 scheme")
 		os.Exit(1)
 	}
@@ -44,16 +46,16 @@ func init() {
 func TestEnsureNoStaleParentStatus(t *testing.T) {
 	testCases := []struct {
 		name                     string
-		httproute                *gatewayapi.HTTPRoute
+		httproute                *gwtypes.HTTPRoute
 		expectedAnyStatusRemoved bool
-		expectedStatusesForRefs  []gatewayapi.ParentReference
+		expectedStatusesForRefs  []gwtypes.ParentReference
 	}{
 		{
 			name: "no stale status",
-			httproute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+			httproute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{Name: "defined-in-spec"},
 						},
 					},
@@ -64,46 +66,46 @@ func TestEnsureNoStaleParentStatus(t *testing.T) {
 		},
 		{
 			name: "no stale status with existing status for spec parent ref",
-			httproute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+			httproute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{Name: "defined-in-spec"},
 						},
 					},
 				},
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef:      gatewayapi.ParentReference{Name: "defined-in-spec"},
+								ParentRef:      gwtypes.ParentReference{Name: "defined-in-spec"},
 							},
 						},
 					},
 				},
 			},
-			expectedStatusesForRefs: []gatewayapi.ParentReference{
+			expectedStatusesForRefs: []gwtypes.ParentReference{
 				{Name: "defined-in-spec"},
 			},
 			expectedAnyStatusRemoved: false,
 		},
 		{
 			name: "stale status",
-			httproute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+			httproute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{Name: "defined-in-spec"},
 						},
 					},
 				},
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef:      gatewayapi.ParentReference{Name: "not-defined-in-spec"},
+								ParentRef:      gwtypes.ParentReference{Name: "not-defined-in-spec"},
 							},
 						},
 					},
@@ -114,60 +116,60 @@ func TestEnsureNoStaleParentStatus(t *testing.T) {
 		},
 		{
 			name: "stale status with existing status for spec parent ref",
-			httproute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+			httproute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{Name: "defined-in-spec"},
 						},
 					},
 				},
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef:      gatewayapi.ParentReference{Name: "not-defined-in-spec"},
+								ParentRef:      gwtypes.ParentReference{Name: "not-defined-in-spec"},
 							},
 							{
 								ControllerName: GetControllerName(),
-								ParentRef:      gatewayapi.ParentReference{Name: "defined-in-spec"},
+								ParentRef:      gwtypes.ParentReference{Name: "defined-in-spec"},
 							},
 						},
 					},
 				},
 			},
-			expectedStatusesForRefs: []gatewayapi.ParentReference{
+			expectedStatusesForRefs: []gwtypes.ParentReference{
 				{Name: "defined-in-spec"},
 			},
 			expectedAnyStatusRemoved: true,
 		},
 		{
 			name: "do not remove status for other controllers",
-			httproute: &gatewayapi.HTTPRoute{
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+			httproute: &gwtypes.HTTPRoute{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{Name: "defined-in-spec"},
 						},
 					},
 				},
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
-								ControllerName: gatewayapi.GatewayController("another-controller"),
-								ParentRef:      gatewayapi.ParentReference{Name: "not-defined-in-spec"},
+								ControllerName: gwtypes.GatewayController("another-controller"),
+								ParentRef:      gwtypes.ParentReference{Name: "not-defined-in-spec"},
 							},
 							{
 								ControllerName: GetControllerName(),
-								ParentRef:      gatewayapi.ParentReference{Name: "defined-in-spec"},
+								ParentRef:      gwtypes.ParentReference{Name: "defined-in-spec"},
 							},
 						},
 					},
 				},
 			},
-			expectedStatusesForRefs: []gatewayapi.ParentReference{
+			expectedStatusesForRefs: []gwtypes.ParentReference{
 				{Name: "not-defined-in-spec"},
 				{Name: "defined-in-spec"},
 			},
@@ -180,10 +182,10 @@ func TestEnsureNoStaleParentStatus(t *testing.T) {
 			wasAnyStatusRemoved := ensureNoStaleParentStatus(tc.httproute)
 			assert.Equal(t, tc.expectedAnyStatusRemoved, wasAnyStatusRemoved)
 
-			actualStatuses := lo.Map(tc.httproute.Status.Parents, func(status gatewayapi.RouteParentStatus, _ int) string {
+			actualStatuses := lo.Map(tc.httproute.Status.Parents, func(status gwtypes.RouteParentStatus, _ int) string {
 				return parentReferenceKey(tc.httproute.Namespace, status.ParentRef)
 			})
-			expectedStatuses := lo.Map(tc.expectedStatusesForRefs, func(ref gatewayapi.ParentReference, _ int) string {
+			expectedStatuses := lo.Map(tc.expectedStatusesForRefs, func(ref gwtypes.ParentReference, _ int) string {
 				return parentReferenceKey(tc.httproute.Namespace, ref)
 			})
 			assert.ElementsMatch(t, expectedStatuses, actualStatuses)
@@ -195,56 +197,56 @@ func TestParentReferenceKey(t *testing.T) {
 	const routeNamespace = "route-ns"
 	testCases := []struct {
 		name     string
-		ref      gatewayapi.ParentReference
+		ref      gwtypes.ParentReference
 		expected string
 	}{
 		{
 			name: "only name",
-			ref: gatewayapi.ParentReference{
+			ref: gwtypes.ParentReference{
 				Name: "foo",
 			},
 			expected: "route-ns/foo//",
 		},
 		{
 			name: "name with namespace",
-			ref: gatewayapi.ParentReference{
+			ref: gwtypes.ParentReference{
 				Name:      "foo",
-				Namespace: new(gatewayapi.Namespace("bar")),
+				Namespace: new(gwtypes.Namespace("bar")),
 			},
 			expected: "bar/foo//",
 		},
 		{
 			name: "name with port number",
-			ref: gatewayapi.ParentReference{
+			ref: gwtypes.ParentReference{
 				Name: "foo",
-				Port: new(gatewayapi.PortNumber(1234)),
+				Port: new(gwtypes.PortNumber(1234)),
 			},
 			expected: "route-ns/foo//1234",
 		},
 		{
 			name: "name with section name",
-			ref: gatewayapi.ParentReference{
+			ref: gwtypes.ParentReference{
 				Name:        "foo",
-				SectionName: new(gatewayapi.SectionName("section")),
+				SectionName: new(gwtypes.SectionName("section")),
 			},
 			expected: "route-ns/foo/section/",
 		},
 		{
 			name: "all fields",
-			ref: gatewayapi.ParentReference{
+			ref: gwtypes.ParentReference{
 				Name:        "foo",
-				Namespace:   new(gatewayapi.Namespace("bar")),
-				Port:        new(gatewayapi.PortNumber(1234)),
-				SectionName: new(gatewayapi.SectionName("section")),
+				Namespace:   new(gwtypes.Namespace("bar")),
+				Port:        new(gwtypes.PortNumber(1234)),
+				SectionName: new(gwtypes.SectionName("section")),
 			},
 			expected: "bar/foo/section/1234",
 		},
 		{
 			name: "group and kind are ignored",
-			ref: gatewayapi.ParentReference{
+			ref: gwtypes.ParentReference{
 				Name:  "foo",
-				Group: new(gatewayapi.Group("group")),
-				Kind:  new(gatewayapi.Kind("kind")),
+				Group: new(gwtypes.Group("group")),
+				Kind:  new(gwtypes.Kind("kind")),
 			},
 			expected: "route-ns/foo//",
 		},
@@ -262,15 +264,15 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 
-	baseRoute := gatewayapi.HTTPRoute{
+	baseRoute := gwtypes.HTTPRoute{
 		Name:      "route",
 		Namespace: "default",
-		Spec: gatewayapi.HTTPRouteSpec{
-			Rules: []gatewayapi.HTTPRouteRule{{
-				BackendRefs: []gatewayapi.HTTPBackendRef{{
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
 					Name:  "svc",
 					Kind:  util.StringToGatewayAPIKindPtr("Service"),
-					Group: util.StringToTypedPtr[*gatewayapi.Group](""),
+					Group: util.StringToTypedPtr[*gwtypes.Group](""),
 				}},
 			}},
 		},
@@ -285,8 +287,8 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 	tests := []struct {
 		name               string
 		objects            []client.Object
-		route              gatewayapi.HTTPRoute
-		wantReason         gatewayapi.RouteConditionReason
+		route              gwtypes.HTTPRoute
+		wantReason         gwtypes.RouteConditionReason
 		wantMessageContain string
 	}{
 		{
@@ -295,11 +297,11 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 				&corev1.Service{Name: "svc", Namespace: "default"},
 				&kongPlugin,
 			},
-			route: func() gatewayapi.HTTPRoute {
+			route: func() gwtypes.HTTPRoute {
 				r := baseRoute.DeepCopy()
-				r.Spec.Rules[0].Filters = []gatewayapi.HTTPRouteFilter{{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
+				r.Spec.Rules[0].Filters = []gwtypes.HTTPRouteFilter{{
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
 						Group: "configuration.konghq.com",
 						Kind:  "KongPlugin",
 						Name:  "rate-limit",
@@ -307,18 +309,18 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 				}}
 				return *r
 			}(),
-			wantReason: gatewayapi.RouteReasonResolvedRefs,
+			wantReason: gwtypes.RouteReasonResolvedRefs,
 		},
 		{
 			name: "extensionRef missing",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
-			route: func() gatewayapi.HTTPRoute {
+			route: func() gwtypes.HTTPRoute {
 				r := baseRoute.DeepCopy()
-				r.Spec.Rules[0].Filters = []gatewayapi.HTTPRouteFilter{{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
+				r.Spec.Rules[0].Filters = []gwtypes.HTTPRouteFilter{{
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
 						Group: "configuration.konghq.com",
 						Kind:  "KongPlugin",
 						Name:  "missing-plugin",
@@ -326,7 +328,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 				}}
 				return *r
 			}(),
-			wantReason:         gatewayapi.RouteReasonBackendNotFound,
+			wantReason:         gwtypes.RouteReasonBackendNotFound,
 			wantMessageContain: "extensionRef default/missing-plugin does not exist",
 		},
 		{
@@ -334,11 +336,11 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
-			route: func() gatewayapi.HTTPRoute {
+			route: func() gwtypes.HTTPRoute {
 				r := baseRoute.DeepCopy()
-				r.Spec.Rules[0].Filters = []gatewayapi.HTTPRouteFilter{{
-					Type: gatewayapi.HTTPRouteFilterExtensionRef,
-					ExtensionRef: &gatewayapi.LocalObjectReference{
+				r.Spec.Rules[0].Filters = []gwtypes.HTTPRouteFilter{{
+					Type: gwtypes.HTTPRouteFilterExtensionRef,
+					ExtensionRef: &gwtypes.LocalObjectReference{
 						Group: "configuration.konghq.com",
 						Kind:  "KongClusterPlugin",
 						Name:  "rate-limit",
@@ -346,7 +348,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 				}}
 				return *r
 			}(),
-			wantReason:         gatewayapi.RouteReasonInvalidKind,
+			wantReason:         gwtypes.RouteReasonInvalidKind,
 			wantMessageContain: "unsupported type configuration.konghq.com/KongClusterPlugin",
 		},
 		{
@@ -354,14 +356,14 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
-			route: func() gatewayapi.HTTPRoute {
+			route: func() gwtypes.HTTPRoute {
 				r := baseRoute.DeepCopy()
 				r.Annotations = map[string]string{
 					metadata.AnnotationKeyPlugins: "missing-plugin",
 				}
 				return *r
 			}(),
-			wantReason:         gatewayapi.RouteReasonBackendNotFound,
+			wantReason:         gwtypes.RouteReasonBackendNotFound,
 			wantMessageContain: "referenced KongPlugin default/missing-plugin does not exist",
 		},
 		{
@@ -373,14 +375,14 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 					PluginName: "rate-limiting",
 				},
 			},
-			route: func() gatewayapi.HTTPRoute {
+			route: func() gwtypes.HTTPRoute {
 				r := baseRoute.DeepCopy()
 				r.Annotations = map[string]string{
 					metadata.AnnotationKeyPlugins: "plugins:rate-limit",
 				}
 				return *r
 			}(),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
+			wantReason:         gwtypes.RouteReasonRefNotPermitted,
 			wantMessageContain: "and no ReferenceGrant allowing reference is configured",
 		},
 		{
@@ -391,29 +393,29 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 					Name: "rate-limit", Namespace: "plugins",
 					PluginName: "rate-limiting",
 				},
-				&gatewayapi.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					Name: "grant", Namespace: "plugins",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{{
-							Group:     gatewayapi.V1Group,
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
+							Group:     gwtypes.V1Group,
 							Kind:      "HTTPRoute",
 							Namespace: "default",
 						}},
-						To: []gatewayapi.ReferenceGrantTo{{
+						To: []gwtypes.ReferenceGrantTo{{
 							Group: "configuration.konghq.com",
 							Kind:  "KongPlugin",
 						}},
 					},
 				},
 			},
-			route: func() gatewayapi.HTTPRoute {
+			route: func() gwtypes.HTTPRoute {
 				r := baseRoute.DeepCopy()
 				r.Annotations = map[string]string{
 					metadata.AnnotationKeyPlugins: "plugins:rate-limit",
 				}
 				return *r
 			}(),
-			wantReason: gatewayapi.RouteReasonResolvedRefs,
+			wantReason: gwtypes.RouteReasonResolvedRefs,
 		},
 	}
 

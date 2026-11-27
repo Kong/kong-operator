@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestHandleUpdateError(t *testing.T) {
-	obj := &gatewayapi.HTTPRoute{}
+	obj := &gwtypes.HTTPRoute{}
 
 	conflict := apierrors.NewConflict(schema.GroupResource{}, "test-obj", errors.New("resource version conflict"))
 	other := errors.New("some other error")

@@ -9,39 +9,39 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func getGRPCMatchDefaults() (
-	map[gatewayapi.GRPCMethodMatchType]string,
-	map[gatewayapi.GRPCMethodMatchType]string,
+	map[gwtypes.GRPCMethodMatchType]string,
+	map[gwtypes.GRPCMethodMatchType]string,
 ) {
 	// Kong routes derived from a GRPCRoute use a path composed of the match's gRPC service and method
 	// If either the service or method is omitted, there is a default regex determined by the match type
 	// https://gateway-api.sigs.k8s.io/geps/gep-1016/#matcher-types describes the defaults
 
 	// default path components for the GRPC service
-	return map[gatewayapi.GRPCMethodMatchType]string{
-			gatewayapi.GRPCMethodMatchType(""):          ".+",
-			gatewayapi.GRPCMethodMatchExact:             ".+",
-			gatewayapi.GRPCMethodMatchRegularExpression: ".+",
+	return map[gwtypes.GRPCMethodMatchType]string{
+			gwtypes.GRPCMethodMatchType(""):          ".+",
+			gwtypes.GRPCMethodMatchExact:             ".+",
+			gwtypes.GRPCMethodMatchRegularExpression: ".+",
 		},
 		// default path components for the GRPC method
-		map[gatewayapi.GRPCMethodMatchType]string{
-			gatewayapi.GRPCMethodMatchType(""):          "",
-			gatewayapi.GRPCMethodMatchExact:             "",
-			gatewayapi.GRPCMethodMatchRegularExpression: ".+",
+		map[gwtypes.GRPCMethodMatchType]string{
+			gwtypes.GRPCMethodMatchType(""):          "",
+			gwtypes.GRPCMethodMatchExact:             "",
+			gwtypes.GRPCMethodMatchRegularExpression: ".+",
 		}
 }
 
-func generateKongPathFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch) *string {
+func generateKongPathFromGRPCMethodMatch(methodMatch *gwtypes.GRPCMethodMatch) *string {
 	serviceMap, methodMap := getGRPCMatchDefaults()
 	var method, service string
 	matchMethod := methodMatch.Method
 	matchService := methodMatch.Service
-	matchType := gatewayapi.GRPCMethodMatchExact
+	matchType := gwtypes.GRPCMethodMatchExact
 	if methodMatch.Type != nil {
 		matchType = *methodMatch.Type
 	}
@@ -65,7 +65,7 @@ func generateKongPathFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch
 	// both parts through regexp.QuoteMeta to escape them. We also anchor the
 	// method with a trailing "$" so e.g. "/svc/Echo" does not also match
 	// "/svc/EchoTwo".
-	if matchType == gatewayapi.GRPCMethodMatchExact {
+	if matchType == gwtypes.GRPCMethodMatchExact {
 		if matchService != nil {
 			service = regexp.QuoteMeta(service)
 		}
@@ -78,7 +78,7 @@ func generateKongPathFromGRPCMethodMatch(methodMatch *gatewayapi.GRPCMethodMatch
 }
 
 func GenerateKongRoutesFromGRPCRouteRule(
-	grpcroute *gatewayapi.GRPCRoute,
+	grpcroute *gwtypes.GRPCRoute,
 	ruleNumber int,
 	storer store.Storer,
 ) []kongstate.Route {
@@ -154,12 +154,12 @@ func GenerateKongRoutesFromGRPCRouteRule(
 // in an GRPCRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
 // The hostname field is optional. If not specified, the configured value will be obtained from parentRefs.
-func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []*string {
+func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gwtypes.GRPCRoute, storer store.Storer) []*string {
 	hostnames := getEffectiveHostnamesForGRPCRoute(grpcroute, storer)
 	if len(hostnames) == 0 {
 		return nil
 	}
-	return lo.Map(hostnames, func(h gatewayapi.Hostname, _ int) *string {
+	return lo.Map(hostnames, func(h gwtypes.Hostname, _ int) *string {
 		return new(string(h))
 	})
 }
@@ -169,7 +169,7 @@ func getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute *gatewayapi.GRPCRout
 // spec; if specified, those hostnames are used directly. If not specified, the
 // hostnames are inherited from the listeners of the Gateways referenced in the
 // GRPCRoute's parentRefs (honoring sectionName when set).
-func getEffectiveHostnamesForGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer store.Storer) []gatewayapi.Hostname {
+func getEffectiveHostnamesForGRPCRoute(grpcroute *gwtypes.GRPCRoute, storer store.Storer) []gwtypes.Hostname {
 	if len(grpcroute.Spec.Hostnames) > 0 {
 		return grpcroute.Spec.Hostnames
 	}
@@ -182,7 +182,7 @@ func getEffectiveHostnamesForGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer s
 		return nil
 	}
 
-	hostnames := make([]gatewayapi.Hostname, 0)
+	hostnames := make([]gwtypes.Hostname, 0)
 	for _, parentRef := range grpcroute.Spec.ParentRefs {
 		// we only care about Gateways
 		if parentRef.Kind != nil && *parentRef.Kind != "Gateway" {
@@ -226,8 +226,8 @@ func getEffectiveHostnamesForGRPCRoute(grpcroute *gatewayapi.GRPCRoute, storer s
 	return hostnames
 }
 
-func generateTagsForGRPCRoute(grpcroute *gatewayapi.GRPCRoute) []*string {
-	ruleNames := lo.FilterMap(grpcroute.Spec.Rules, func(r gatewayapi.GRPCRouteRule, _ int) (string, bool) {
+func generateTagsForGRPCRoute(grpcroute *gwtypes.GRPCRoute) []*string {
+	ruleNames := lo.FilterMap(grpcroute.Spec.Rules, func(r gwtypes.GRPCRouteRule, _ int) (string, bool) {
 		name := strings.TrimSpace(string(lo.FromPtrOr(r.Name, "")))
 		return name, len(name) > 0
 	})

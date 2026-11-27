@@ -13,12 +13,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-func mkUDPRoute(ns, name string, created time.Time) *gatewayapi.UDPRoute {
-	return &gatewayapi.UDPRoute{
+func mkUDPRoute(ns, name string, created time.Time) *gwtypes.UDPRoute {
+	return &gwtypes.UDPRoute{
 		Namespace:         ns,
 		Name:              name,
 		CreationTimestamp: metav1.NewTime(created),
@@ -38,27 +38,27 @@ func TestPickWinningUDPRoute(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		input    []*gatewayapi.UDPRoute
+		input    []*gwtypes.UDPRoute
 		wantName string
 	}{
 		{
 			name:     "single route wins",
-			input:    []*gatewayapi.UDPRoute{older},
+			input:    []*gwtypes.UDPRoute{older},
 			wantName: "route-z",
 		},
 		{
 			name:     "older creationTimestamp wins regardless of name order",
-			input:    []*gatewayapi.UDPRoute{newer, older},
+			input:    []*gwtypes.UDPRoute{newer, older},
 			wantName: "route-z",
 		},
 		{
 			name:     "tied creationTimestamp, namespace alphabetical wins",
-			input:    []*gatewayapi.UDPRoute{sameTimeNsB, sameTimeNsA},
+			input:    []*gwtypes.UDPRoute{sameTimeNsB, sameTimeNsA},
 			wantName: "route-b",
 		},
 		{
 			name:     "tied creationTimestamp and namespace, name alphabetical wins",
-			input:    []*gatewayapi.UDPRoute{sameTimeSameNsB, sameTimeSameNsA},
+			input:    []*gwtypes.UDPRoute{sameTimeSameNsB, sameTimeSameNsA},
 			wantName: "route-a",
 		},
 	}
@@ -74,12 +74,12 @@ func TestPickWinningUDPRoute(t *testing.T) {
 }
 
 func TestPickWinningUDPRouteEmpty(t *testing.T) {
-	assert.Nil(t, pickWinningL4Route[*gatewayapi.UDPRoute](nil))
-	assert.Nil(t, pickWinningL4Route([]*gatewayapi.UDPRoute{}))
+	assert.Nil(t, pickWinningL4Route[*gwtypes.UDPRoute](nil))
+	assert.Nil(t, pickWinningL4Route([]*gwtypes.UDPRoute{}))
 }
 
-func mkUDPRouteWithParents(ns string, parents ...gatewayv1.ParentReference) *gatewayapi.UDPRoute {
-	r := &gatewayapi.UDPRoute{
+func mkUDPRouteWithParents(ns string, parents ...gatewayv1.ParentReference) *gwtypes.UDPRoute {
+	r := &gwtypes.UDPRoute{
 		Namespace: ns, Name: "r",
 	}
 	r.Spec.ParentRefs = parents
@@ -142,7 +142,7 @@ func TestUDPRouteListenerAttachments(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		route       *gatewayapi.UDPRoute
+		route       *gwtypes.UDPRoute
 		gateways    map[types.NamespacedName][]l4Listener
 		wantTargets []l4ListenerKey
 	}{
@@ -250,7 +250,7 @@ func TestUDPRouteListenerAttachments_Predicates(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		route       *gatewayapi.UDPRoute
+		route       *gwtypes.UDPRoute
 		listener    l4Listener
 		wantTargets []l4ListenerKey
 	}{
@@ -318,12 +318,12 @@ func TestUDPRouteListenerAttachments_Predicates(t *testing.T) {
 // Unknown - reflecting that it has no real config on the dataplane - rather than
 // being reported as configured just because it's attached to a listener.
 func TestIngressRulesFromUDPRoutes_ArbitrationReporting(t *testing.T) {
-	gw := &gatewayapi.Gateway{
+	gw := &gwtypes.Gateway{
 		Namespace: "default", Name: "udp-gw",
-		Spec: gatewayapi.GatewaySpec{
-			Listeners: []gatewayapi.Listener{{
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{{
 				Name:     "udp",
-				Protocol: gatewayapi.UDPProtocolType,
+				Protocol: gwtypes.UDPProtocolType,
 				Port:     9999,
 			}},
 		},
@@ -333,7 +333,7 @@ func TestIngressRulesFromUDPRoutes_ArbitrationReporting(t *testing.T) {
 	older.TypeMeta = udpRouteTypeMeta
 	older.Name = "older"
 	older.CreationTimestamp = metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))
-	older.Spec.Rules = []gatewayapi.UDPRouteRule{{
+	older.Spec.Rules = []gwtypes.UDPRouteRule{{
 		BackendRefs: []gatewayv1.BackendRef{{
 			Name: "svc-older", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(53)),
 		}},
@@ -342,16 +342,16 @@ func TestIngressRulesFromUDPRoutes_ArbitrationReporting(t *testing.T) {
 	newer.TypeMeta = udpRouteTypeMeta
 	newer.Name = "newer"
 	newer.CreationTimestamp = metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC))
-	newer.Spec.Rules = []gatewayapi.UDPRouteRule{{
+	newer.Spec.Rules = []gwtypes.UDPRouteRule{{
 		BackendRefs: []gatewayv1.BackendRef{{
 			Name: "svc-newer", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(53)),
 		}},
 	}}
 
 	fakestore, err := store.NewFakeStore(store.FakeObjects{
-		GatewayClasses: []*gatewayapi.GatewayClass{defaultOwnedGatewayClass},
-		Gateways:       []*gatewayapi.Gateway{gw},
-		UDPRoutes:      []*gatewayapi.UDPRoute{older, newer},
+		GatewayClasses: []*gwtypes.GatewayClass{defaultOwnedGatewayClass},
+		Gateways:       []*gwtypes.Gateway{gw},
+		UDPRoutes:      []*gwtypes.UDPRoute{older, newer},
 		Services: []*corev1.Service{
 			{Namespace: "default", Name: "svc-older"},
 			{Namespace: "default", Name: "svc-newer"},

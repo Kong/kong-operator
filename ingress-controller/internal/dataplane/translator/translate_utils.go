@@ -11,6 +11,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -28,7 +29,7 @@ func generateKongServiceFromBackendRefWithName(
 	serviceName string,
 	route client.Object,
 	protocol string,
-	backendRefs ...gatewayapi.BackendRef,
+	backendRefs ...gwtypes.BackendRef,
 ) (kongstate.Service, error) {
 	objName := fmt.Sprintf("%s %s/%s",
 		route.GetObjectKind().GroupVersionKind().String(), route.GetNamespace(), route.GetName())
@@ -38,10 +39,10 @@ func generateKongServiceFromBackendRefWithName(
 	}
 	allowed := gatewayapi.GetPermittedForReferenceGrantFrom(
 		logger,
-		gatewayapi.ReferenceGrantFrom{
-			Group:     gatewayapi.Group(route.GetObjectKind().GroupVersionKind().Group),
-			Kind:      gatewayapi.Kind(route.GetObjectKind().GroupVersionKind().Kind),
-			Namespace: gatewayapi.Namespace(route.GetNamespace()),
+		gwtypes.ReferenceGrantFrom{
+			Group:     gwtypes.Group(route.GetObjectKind().GroupVersionKind().Group),
+			Kind:      gwtypes.Kind(route.GetObjectKind().GroupVersionKind().Kind),
+			Namespace: gwtypes.Namespace(route.GetNamespace()),
 		},
 		grants,
 	)
@@ -100,7 +101,7 @@ func generateKongServiceFromBackendRefWithRuleNumber(
 	route client.Object,
 	ruleNumber int,
 	protocol string,
-	backendRefs ...gatewayapi.BackendRef,
+	backendRefs ...gwtypes.BackendRef,
 ) (kongstate.Service, error) {
 	// the service name needs to uniquely identify this service given it's list of
 	// one or more backends.

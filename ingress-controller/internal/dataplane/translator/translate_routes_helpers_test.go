@@ -7,29 +7,29 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 	testCases := []struct {
 		name      string
-		route     *gatewayapi.TCPRoute
-		gwPorts   []gatewayapi.PortNumber
-		routeRule gatewayapi.TCPRouteRule
+		route     *gwtypes.TCPRoute
+		gwPorts   []gwtypes.PortNumber
+		routeRule gwtypes.TCPRouteRule
 		expected  []kongstate.Route
 	}{
 		{
 			name: "TCPRoute gets translated correctly to kong.Route",
-			route: &gatewayapi.TCPRoute{
+			route: &gwtypes.TCPRoute{
 				Name:      "mytcproute-name",
 				Namespace: "mynamespace",
 			},
-			gwPorts: []gatewayapi.PortNumber{8080},
-			routeRule: gatewayapi.TCPRouteRule{
-				BackendRefs: []gatewayapi.BackendRef{
+			gwPorts: []gwtypes.PortNumber{8080},
+			routeRule: gwtypes.TCPRouteRule{
+				BackendRefs: []gwtypes.BackendRef{
 					{
-						Port: new(gatewayapi.PortNumber(1234)),
+						Port: new(gwtypes.PortNumber(1234)),
 					},
 				},
 			},
@@ -57,21 +57,21 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 		},
 		{
 			name: "TCPRoute with multiple backends and different Gateway port get translated correctly to kong.Route",
-			route: &gatewayapi.TCPRoute{
+			route: &gwtypes.TCPRoute{
 				Name:      "mytcproute-name",
 				Namespace: "mynamespace",
 			},
-			routeRule: gatewayapi.TCPRouteRule{
-				BackendRefs: []gatewayapi.BackendRef{
+			routeRule: gwtypes.TCPRouteRule{
+				BackendRefs: []gwtypes.BackendRef{
 					{
-						Port: new(gatewayapi.PortNumber(1234)),
+						Port: new(gwtypes.PortNumber(1234)),
 					},
 					{
-						Port: new(gatewayapi.PortNumber(5678)),
+						Port: new(gwtypes.PortNumber(5678)),
 					},
 				},
 			},
-			gwPorts: []gatewayapi.PortNumber{8080, 8888},
+			gwPorts: []gwtypes.PortNumber{8080, 8888},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -112,25 +112,25 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 	testCases := []struct {
 		name      string
-		route     *gatewayapi.UDPRoute
-		gwPorts   []gatewayapi.PortNumber
-		routeRule gatewayapi.UDPRouteRule
+		route     *gwtypes.UDPRoute
+		gwPorts   []gwtypes.PortNumber
+		routeRule gwtypes.UDPRouteRule
 		expected  []kongstate.Route
 	}{
 		{
 			name: "UDPRoute gets translated correctly to kong.Route",
-			route: &gatewayapi.UDPRoute{
+			route: &gwtypes.UDPRoute{
 				Name:      "myudproute-name",
 				Namespace: "mynamespace",
 			},
-			routeRule: gatewayapi.UDPRouteRule{
-				BackendRefs: []gatewayapi.BackendRef{
+			routeRule: gwtypes.UDPRouteRule{
+				BackendRefs: []gwtypes.BackendRef{
 					{
-						Port: new(gatewayapi.PortNumber(1234)),
+						Port: new(gwtypes.PortNumber(1234)),
 					},
 				},
 			},
-			gwPorts: []gatewayapi.PortNumber{8080},
+			gwPorts: []gwtypes.PortNumber{8080},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -155,21 +155,21 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 		},
 		{
 			name: "UDPRoute with multiple backends and multiple Gateway ports gets translated correctly to kong.Route",
-			route: &gatewayapi.UDPRoute{
+			route: &gwtypes.UDPRoute{
 				Name:      "myudproute-name",
 				Namespace: "mynamespace",
 			},
-			routeRule: gatewayapi.UDPRouteRule{
-				BackendRefs: []gatewayapi.BackendRef{
+			routeRule: gwtypes.UDPRouteRule{
+				BackendRefs: []gwtypes.BackendRef{
 					{
-						Port: new(gatewayapi.PortNumber(1234)),
+						Port: new(gwtypes.PortNumber(1234)),
 					},
 					{
-						Port: new(gatewayapi.PortNumber(5678)),
+						Port: new(gwtypes.PortNumber(5678)),
 					},
 				},
 			},
-			gwPorts: []gatewayapi.PortNumber{8080, 8888},
+			gwPorts: []gwtypes.PortNumber{8080, 8888},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -210,23 +210,23 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 	testcases := []struct {
 		name      string
-		route     *gatewayapi.TLSRoute
-		routeRule gatewayapi.TLSRouteRule
+		route     *gwtypes.TLSRoute
+		routeRule gwtypes.TLSRouteRule
 		expected  []kongstate.Route
 	}{
 		{
 			name: "TLSRoute gets translated correctly to kong.Route",
-			route: &gatewayapi.TLSRoute{
+			route: &gwtypes.TLSRoute{
 				Name:      "mytlsroute-name",
 				Namespace: "mynamespace",
-				Spec: gatewayapi.TLSRouteSpec{
-					Hostnames: []gatewayapi.Hostname{
+				Spec: gwtypes.TLSRouteSpec{
+					Hostnames: []gwtypes.Hostname{
 						"hostname.com",
 						"hostname2.com",
 					},
 				},
 			},
-			routeRule: gatewayapi.TLSRouteRule{},
+			routeRule: gwtypes.TLSRouteRule{},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{
@@ -250,12 +250,12 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 		},
 		{
 			name: "TLSRoute without hostnames gets translated correctly to kong.Route without SNIs",
-			route: &gatewayapi.TLSRoute{
+			route: &gwtypes.TLSRoute{
 				Name:      "mytlsroute-name",
 				Namespace: "mynamespace",
-				Spec:      gatewayapi.TLSRouteSpec{},
+				Spec:      gwtypes.TLSRouteSpec{},
 			},
-			routeRule: gatewayapi.TLSRouteRule{},
+			routeRule: gwtypes.TLSRouteRule{},
 			expected: []kongstate.Route{
 				{
 					Ingress: util.K8sObjectInfo{

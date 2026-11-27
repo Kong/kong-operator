@@ -39,40 +39,40 @@ var supportedTypes = []cacheStoreSupportedType{
 	// Gateway API types
 	{
 		Type:    "HTTPRoute",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "UDPRoute",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "TCPRoute",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "TLSRoute",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "GRPCRoute",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "ReferenceGrant",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "Gateway",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	{
 		Type:    "GatewayClass",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 		KeyFunc: clusterWideKeyFunc,
 	},
 	{
 		Type:    "BackendTLSPolicy",
-		Package: "gatewayapi",
+		Package: "gwtypes",
 	},
 	// Kong types
 	{

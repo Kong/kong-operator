@@ -24,22 +24,22 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
 	IngressesV1        []*netv1.Ingress
 	IngressClassesV1   []*netv1.IngressClass
-	HTTPRoutes         []*gatewayapi.HTTPRoute
-	UDPRoutes          []*gatewayapi.UDPRoute
-	TCPRoutes          []*gatewayapi.TCPRoute
-	TLSRoutes          []*gatewayapi.TLSRoute
-	GRPCRoutes         []*gatewayapi.GRPCRoute
-	ReferenceGrants    []*gatewayapi.ReferenceGrant
-	Gateways           []*gatewayapi.Gateway
-	GatewayClasses     []*gatewayapi.GatewayClass
-	BackendTLSPolicies []*gatewayapi.BackendTLSPolicy
+	HTTPRoutes         []*gwtypes.HTTPRoute
+	UDPRoutes          []*gwtypes.UDPRoute
+	TCPRoutes          []*gwtypes.TCPRoute
+	TLSRoutes          []*gwtypes.TLSRoute
+	GRPCRoutes         []*gwtypes.GRPCRoute
+	ReferenceGrants    []*gwtypes.ReferenceGrant
+	Gateways           []*gwtypes.Gateway
+	GatewayClasses     []*gwtypes.GatewayClass
+	BackendTLSPolicies []*gwtypes.BackendTLSPolicy
 
 	IngressClassParametersV1alpha1 []*configurationv1alpha1.IngressClassParameters
 	Services                       []*corev1.Service
@@ -286,15 +286,15 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
 		reflect.TypeFor[*netv1.Ingress]():                                netv1.SchemeGroupVersion.WithKind("Ingress"),
 		reflect.TypeFor[*netv1.IngressClass]():                           netv1.SchemeGroupVersion.WithKind("IngressClass"),
-		reflect.TypeFor[*gatewayapi.HTTPRoute]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("HTTPRoute"),
-		reflect.TypeFor[*gatewayapi.UDPRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("UDPRoute"),
-		reflect.TypeFor[*gatewayapi.TCPRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TCPRoute"),
-		reflect.TypeFor[*gatewayapi.TLSRoute]():                          schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"),
-		reflect.TypeFor[*gatewayapi.GRPCRoute]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"),
-		reflect.TypeFor[*gatewayapi.ReferenceGrant]():                    schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"),
-		reflect.TypeFor[*gatewayapi.Gateway]():                           schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"),
-		reflect.TypeFor[*gatewayapi.GatewayClass]():                      schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GatewayClass"),
-		reflect.TypeFor[*gatewayapi.BackendTLSPolicy]():                  schema.GroupVersion(gatewayv1.GroupVersion).WithKind("BackendTLSPolicy"),
+		reflect.TypeFor[*gwtypes.HTTPRoute]():                            schema.GroupVersion(gatewayv1.GroupVersion).WithKind("HTTPRoute"),
+		reflect.TypeFor[*gwtypes.UDPRoute]():                             schema.GroupVersion(gatewayv1.GroupVersion).WithKind("UDPRoute"),
+		reflect.TypeFor[*gwtypes.TCPRoute]():                             schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TCPRoute"),
+		reflect.TypeFor[*gwtypes.TLSRoute]():                             schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"),
+		reflect.TypeFor[*gwtypes.GRPCRoute]():                            schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"),
+		reflect.TypeFor[*gwtypes.ReferenceGrant]():                       schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"),
+		reflect.TypeFor[*gwtypes.Gateway]():                              schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"),
+		reflect.TypeFor[*gwtypes.GatewayClass]():                         schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GatewayClass"),
+		reflect.TypeFor[*gwtypes.BackendTLSPolicy]():                     schema.GroupVersion(gatewayv1.GroupVersion).WithKind("BackendTLSPolicy"),
 		reflect.TypeFor[*configurationv1alpha1.IngressClassParameters](): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
 		reflect.TypeFor[*corev1.Service]():                               corev1.SchemeGroupVersion.WithKind("Service"),
 		reflect.TypeFor[*discoveryv1.EndpointSlice]():                    discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),

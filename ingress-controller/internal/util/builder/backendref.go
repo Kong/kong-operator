@@ -1,38 +1,38 @@
 package builder
 
 import (
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // BackendRefBuilder is a builder for gateway api BackendRef.
 // Will set default values, as specified in the gateway API, for fields that are not set.
 // Primarily used for testing.
 type BackendRefBuilder struct {
-	backendRef gatewayapi.BackendRef
+	backendRef gwtypes.BackendRef
 }
 
 func NewBackendRef(name string) *BackendRefBuilder {
 	return &BackendRefBuilder{
-		backendRef: gatewayapi.BackendRef{
-			BackendObjectReference: gatewayapi.BackendObjectReference{
-				Name: gatewayapi.ObjectName(name),
+		backendRef: gwtypes.BackendRef{
+			BackendObjectReference: gwtypes.BackendObjectReference{
+				Name: gwtypes.ObjectName(name),
 				Kind: util.StringToGatewayAPIKindPtr("Service"), // default value
 			},
 		},
 	}
 }
 
-func (b *BackendRefBuilder) Build() gatewayapi.BackendRef {
+func (b *BackendRefBuilder) Build() gwtypes.BackendRef {
 	return b.backendRef
 }
 
-func (b *BackendRefBuilder) ToSlice() []gatewayapi.BackendRef {
-	return []gatewayapi.BackendRef{b.backendRef}
+func (b *BackendRefBuilder) ToSlice() []gwtypes.BackendRef {
+	return []gwtypes.BackendRef{b.backendRef}
 }
 
 func (b *BackendRefBuilder) WithPort(port int) *BackendRefBuilder {
-	val := gatewayapi.PortNumber(port)
+	val := gwtypes.PortNumber(port)
 	b.backendRef.Port = &val
 	return b
 }
@@ -43,19 +43,19 @@ func (b *BackendRefBuilder) WithWeight(weight int) *BackendRefBuilder {
 }
 
 func (b *BackendRefBuilder) WithKind(kind string) *BackendRefBuilder {
-	val := gatewayapi.Kind(kind)
+	val := gwtypes.Kind(kind)
 	b.backendRef.Kind = &val
 	return b
 }
 
 func (b *BackendRefBuilder) WithGroup(group string) *BackendRefBuilder {
-	val := gatewayapi.Group(group)
+	val := gwtypes.Group(group)
 	b.backendRef.Group = &val
 	return b
 }
 
 func (b *BackendRefBuilder) WithNamespace(namespace string) *BackendRefBuilder {
-	val := gatewayapi.Namespace(namespace)
+	val := gwtypes.Namespace(namespace)
 	b.backendRef.Namespace = &val
 	return b
 }

@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/net"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // TODO: for now this can stay here but ideally we'd use a common package for this
@@ -32,7 +32,7 @@ func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cl
 		var (
 			ns    = nn.Namespace
 			name  = nn.Name
-			route = gatewayapi.HTTPRoute{}
+			route = gwtypes.HTTPRoute{}
 		)
 
 		err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: ns, Name: name}, &route)
@@ -46,7 +46,7 @@ func HTTPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cl
 			return false
 		}
 
-		return lo.ContainsBy(route.Status.Parents, func(p gatewayapi.RouteParentStatus) bool {
+		return lo.ContainsBy(route.Status.Parents, func(p gwtypes.RouteParentStatus) bool {
 			var count int
 			for _, cond := range conds {
 				contains := lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
@@ -72,7 +72,7 @@ func HTTPRouteEventuallyNotContainsConditions(ctx context.Context, t *testing.T,
 		var (
 			ns    = nn.Namespace
 			name  = nn.Name
-			route = gatewayapi.HTTPRoute{}
+			route = gwtypes.HTTPRoute{}
 		)
 
 		err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: ns, Name: name}, &route)
@@ -86,7 +86,7 @@ func HTTPRouteEventuallyNotContainsConditions(ctx context.Context, t *testing.T,
 			return false
 		}
 
-		return !lo.ContainsBy(route.Status.Parents, func(p gatewayapi.RouteParentStatus) bool {
+		return !lo.ContainsBy(route.Status.Parents, func(p gwtypes.RouteParentStatus) bool {
 			var count int
 			for _, cond := range conds {
 				contains := lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
@@ -116,7 +116,7 @@ func TLSRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cli
 		var (
 			ns    = nn.Namespace
 			name  = nn.Name
-			route = gatewayapi.TLSRoute{}
+			route = gwtypes.TLSRoute{}
 		)
 
 		err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: ns, Name: name}, &route)
@@ -130,7 +130,7 @@ func TLSRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cli
 			return false
 		}
 
-		return lo.ContainsBy(route.Status.Parents, func(p gatewayapi.RouteParentStatus) bool {
+		return lo.ContainsBy(route.Status.Parents, func(p gwtypes.RouteParentStatus) bool {
 			var count int
 			for _, cond := range conds {
 				contains := lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {
@@ -160,7 +160,7 @@ func UDPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cli
 		var (
 			ns    = nn.Namespace
 			name  = nn.Name
-			route = gatewayapi.UDPRoute{}
+			route = gwtypes.UDPRoute{}
 		)
 
 		err := client.Get(ctx, ctrlclient.ObjectKey{Namespace: ns, Name: name}, &route)
@@ -173,7 +173,7 @@ func UDPRouteEventuallyContainsConditions(ctx context.Context, t *testing.T, cli
 			return false
 		}
 
-		return lo.ContainsBy(route.Status.Parents, func(p gatewayapi.RouteParentStatus) bool {
+		return lo.ContainsBy(route.Status.Parents, func(p gwtypes.RouteParentStatus) bool {
 			var count int
 			for _, cond := range conds {
 				contains := lo.ContainsBy(p.Conditions, func(c metav1.Condition) bool {

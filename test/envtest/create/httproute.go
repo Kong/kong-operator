@@ -8,8 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // HTTPRoutes creates a number of dummy HTTPRoutes for the given Gateway.
@@ -17,9 +17,9 @@ func HTTPRoutes(
 	ctx context.Context,
 	t *testing.T,
 	ctrlClient ctrlclient.Client,
-	gw gatewayapi.Gateway,
+	gw gwtypes.Gateway,
 	numOfRoutes int,
-) []*gatewayapi.HTTPRoute {
+) []*gwtypes.HTTPRoute {
 	svc := &corev1.Service{
 		Name:      "backend-svc",
 		Namespace: gw.Namespace,
@@ -36,30 +36,30 @@ func HTTPRoutes(
 	require.NoError(t, ctrlClient.Create(ctx, svc))
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, svc) })
 
-	routes := make([]*gatewayapi.HTTPRoute, 0, numOfRoutes)
+	routes := make([]*gwtypes.HTTPRoute, 0, numOfRoutes)
 	for range numOfRoutes {
-		httpPort := gatewayapi.PortNumber(80)
-		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
-		httpRoute := &gatewayapi.HTTPRoute{
+		httpPort := gwtypes.PortNumber(80)
+		pathMatchPrefix := gwtypes.PathMatchPathPrefix
+		httpRoute := &gwtypes.HTTPRoute{
 			GenerateName: "httproute-",
 			Namespace:    gw.Namespace,
-			Spec: gatewayapi.HTTPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{
-					ParentRefs: []gatewayapi.ParentReference{{
-						Name: gatewayapi.ObjectName(gw.Name),
+			Spec: gwtypes.HTTPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{
+					ParentRefs: []gwtypes.ParentReference{{
+						Name: gwtypes.ObjectName(gw.Name),
 					}},
 				},
-				Rules: []gatewayapi.HTTPRouteRule{{
-					Matches: []gatewayapi.HTTPRouteMatch{
+				Rules: []gwtypes.HTTPRouteRule{{
+					Matches: []gwtypes.HTTPRouteMatch{
 						{
-							Path: &gatewayapi.HTTPPathMatch{
+							Path: &gwtypes.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: new("/test-http-route"),
 							},
 						},
 					},
-					BackendRefs: []gatewayapi.HTTPBackendRef{{
-						Name: gatewayapi.ObjectName("backend-svc"),
+					BackendRefs: []gwtypes.HTTPBackendRef{{
+						Name: gwtypes.ObjectName("backend-svc"),
 						Port: &httpPort,
 						Kind: util.StringToGatewayAPIKindPtr("Service"),
 					}},

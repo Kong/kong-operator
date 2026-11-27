@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestOptionalNamespacedName(t *testing.T) {
@@ -36,15 +36,15 @@ func TestOptionalNamespacedName(t *testing.T) {
 			Namespace: "default",
 		}
 		presentOptional := NewOptionalNamespacedName(mo.Some(namespacedName))
-		assert.True(t, presentOptional.Matches(&gatewayapi.Gateway{
+		assert.True(t, presentOptional.Matches(&gwtypes.Gateway{
 			Name:      "example",
 			Namespace: "default",
 		}))
-		assert.False(t, presentOptional.Matches(&gatewayapi.Gateway{
+		assert.False(t, presentOptional.Matches(&gwtypes.Gateway{
 			Name:      "dummy",
 			Namespace: "default",
 		}))
-		assert.False(t, presentOptional.Matches(&gatewayapi.Gateway{
+		assert.False(t, presentOptional.Matches(&gwtypes.Gateway{
 			Name:      "example",
 			Namespace: "dummy",
 		}))

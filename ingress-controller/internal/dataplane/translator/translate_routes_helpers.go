@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -19,7 +19,7 @@ import (
 
 type tTCPorUDPorTLSRoute interface {
 	// Only accept TCP, UDP and TLS routes
-	*gatewayapi.UDPRoute | *gatewayapi.TCPRoute | *gatewayapi.TLSRoute
+	*gwtypes.UDPRoute | *gwtypes.TCPRoute | *gwtypes.TLSRoute
 }
 
 type tRoute interface {
@@ -29,7 +29,7 @@ type tRoute interface {
 }
 
 type tRouteRule interface {
-	gatewayapi.UDPRouteRule | gatewayapi.TCPRouteRule | gatewayapi.TLSRouteRule
+	gwtypes.UDPRouteRule | gwtypes.TCPRouteRule | gwtypes.TLSRouteRule
 }
 
 // checkBackendRefs checks if BackendRefs are properly configured for
@@ -40,15 +40,15 @@ func checkBackendRefs[TRouteRule tRouteRule](t TRouteRule) error {
 	//
 	// Related golang issue: https://github.com/golang/go/issues/48522
 	switch tt := any(t).(type) {
-	case gatewayapi.UDPRouteRule:
+	case gwtypes.UDPRouteRule:
 		if len(tt.BackendRefs) == 0 {
 			return errors.New("UDPRoute rules must include at least one backendRef")
 		}
-	case gatewayapi.TCPRouteRule:
+	case gwtypes.TCPRouteRule:
 		if len(tt.BackendRefs) == 0 {
 			return errors.New("TCPRoute rules must include at least one backendRef")
 		}
-	case gatewayapi.TLSRouteRule:
+	case gwtypes.TLSRouteRule:
 		// TLSRoutes don't require BackendRefs.
 	}
 	return nil
@@ -58,7 +58,7 @@ func checkBackendRefs[TRouteRule tRouteRule](t TRouteRule) error {
 // to one or more Kong Route objects to route traffic to services.
 func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 	route T,
-	gwPorts []gatewayapi.PortNumber,
+	gwPorts []gwtypes.PortNumber,
 	ruleNumber int,
 	rule TRule,
 ) ([]kongstate.Route, error) {
@@ -77,21 +77,21 @@ func generateKongRoutesFromRouteRule[T tRoute, TRule tRouteRule](
 // routeToKongRoute converts Gateway Route to kong.Route.
 func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 	r TRoute,
-	gwPorts []gatewayapi.PortNumber,
+	gwPorts []gwtypes.PortNumber,
 	ruleNumber int,
 ) kong.Route {
-	destinations := lo.Map(gwPorts, func(p gatewayapi.PortNumber, _ int) *kong.CIDRPort {
+	destinations := lo.Map(gwPorts, func(p gwtypes.PortNumber, _ int) *kong.CIDRPort {
 		return &kong.CIDRPort{
 			Port: new(int(p)),
 		}
 	})
 
 	switch rr := any(r).(type) {
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return udpRouteToKongRoute(rr, destinations, ruleNumber)
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return tcpRouteToKongRoute(rr, destinations, ruleNumber)
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return tlsRouteToKongRoute(rr, ruleNumber)
 	default:
 		return kong.Route{}
@@ -99,7 +99,7 @@ func routeToKongRoute[TRoute tTCPorUDPorTLSRoute](
 }
 
 func udpRouteToKongRoute(
-	r *gatewayapi.UDPRoute,
+	r *gwtypes.UDPRoute,
 	destinations []*kong.CIDRPort,
 	ruleNumber int,
 ) kong.Route {
@@ -122,7 +122,7 @@ func udpRouteToKongRoute(
 }
 
 func tcpRouteToKongRoute(
-	r *gatewayapi.TCPRoute,
+	r *gwtypes.TCPRoute,
 	destinations []*kong.CIDRPort,
 	ruleNumber int,
 ) kong.Route {
@@ -144,7 +144,7 @@ func tcpRouteToKongRoute(
 	}
 }
 
-func tlsRouteToKongRoute(r *gatewayapi.TLSRoute, ruleNumber int) kong.Route {
+func tlsRouteToKongRoute(r *gwtypes.TLSRoute, ruleNumber int) kong.Route {
 	hostnames := make([]*string, 0, len(r.Spec.Hostnames))
 	for _, hostname := range r.Spec.Hostnames {
 		hostnames = append(hostnames, new(string(hostname)))
@@ -188,10 +188,10 @@ func generateRouteName(typ routeType, namespace, name string, ruleNumber int) st
 
 func (t *Translator) getGatewayListeningPorts(
 	routeNamespace string,
-	protocol gatewayapi.ProtocolType,
-	prs []gatewayapi.ParentReference,
-) []gatewayapi.PortNumber {
-	var gwPorts []gatewayapi.PortNumber
+	protocol gwtypes.ProtocolType,
+	prs []gwtypes.ParentReference,
+) []gwtypes.PortNumber {
+	var gwPorts []gwtypes.PortNumber
 	for _, pr := range prs {
 		// When namespace is explicitly specified in the parentRef,
 		// it should be used instead of namespace of the whole Route.
@@ -208,7 +208,7 @@ func (t *Translator) getGatewayListeningPorts(
 		// If no sectionName is specified, all ports are used (according to the specification
 		// "When unspecified (empty string), this will reference the entire resource." - see
 		// https://github.com/kubernetes-sigs/gateway-api/blob/ebe9f31ef27819c3b29f698a3e9b91d279453c59/apis/v1/shared_types.go#L107).
-		gwPorts = append(gwPorts, lo.FilterMap(gw.Spec.Listeners, func(l gatewayapi.Listener, _ int) (gatewayapi.PortNumber, bool) {
+		gwPorts = append(gwPorts, lo.FilterMap(gw.Spec.Listeners, func(l gwtypes.Listener, _ int) (gwtypes.PortNumber, bool) {
 			if (pr.SectionName == nil || *pr.SectionName == l.Name) && protocol == l.Protocol {
 				return l.Port, true
 			}

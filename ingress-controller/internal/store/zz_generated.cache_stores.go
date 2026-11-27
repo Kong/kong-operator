@@ -17,7 +17,7 @@ import (
 	kongv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that
@@ -105,23 +105,23 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.EndpointSlice.Get(obj)
 	case *corev1.Namespace:
 		return c.Namespace.Get(obj)
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		return c.HTTPRoute.Get(obj)
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return c.UDPRoute.Get(obj)
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return c.TCPRoute.Get(obj)
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return c.TLSRoute.Get(obj)
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		return c.GRPCRoute.Get(obj)
-	case *gatewayapi.ReferenceGrant:
+	case *gwtypes.ReferenceGrant:
 		return c.ReferenceGrant.Get(obj)
-	case *gatewayapi.Gateway:
+	case *gwtypes.Gateway:
 		return c.Gateway.Get(obj)
-	case *gatewayapi.GatewayClass:
+	case *gwtypes.GatewayClass:
 		return c.GatewayClass.Get(obj)
-	case *gatewayapi.BackendTLSPolicy:
+	case *gwtypes.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Get(obj)
 	case *kongv1.KongPlugin:
 		return c.Plugin.Get(obj)
@@ -166,23 +166,23 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.EndpointSlice.Add(obj)
 	case *corev1.Namespace:
 		return c.Namespace.Add(obj)
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		return c.HTTPRoute.Add(obj)
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return c.UDPRoute.Add(obj)
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return c.TCPRoute.Add(obj)
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return c.TLSRoute.Add(obj)
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		return c.GRPCRoute.Add(obj)
-	case *gatewayapi.ReferenceGrant:
+	case *gwtypes.ReferenceGrant:
 		return c.ReferenceGrant.Add(obj)
-	case *gatewayapi.Gateway:
+	case *gwtypes.Gateway:
 		return c.Gateway.Add(obj)
-	case *gatewayapi.GatewayClass:
+	case *gwtypes.GatewayClass:
 		return c.GatewayClass.Add(obj)
-	case *gatewayapi.BackendTLSPolicy:
+	case *gwtypes.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Add(obj)
 	case *kongv1.KongPlugin:
 		return c.Plugin.Add(obj)
@@ -227,23 +227,23 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.EndpointSlice.Delete(obj)
 	case *corev1.Namespace:
 		return c.Namespace.Delete(obj)
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		return c.HTTPRoute.Delete(obj)
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return c.UDPRoute.Delete(obj)
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return c.TCPRoute.Delete(obj)
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return c.TLSRoute.Delete(obj)
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		return c.GRPCRoute.Delete(obj)
-	case *gatewayapi.ReferenceGrant:
+	case *gwtypes.ReferenceGrant:
 		return c.ReferenceGrant.Delete(obj)
-	case *gatewayapi.Gateway:
+	case *gwtypes.Gateway:
 		return c.Gateway.Delete(obj)
-	case *gatewayapi.GatewayClass:
+	case *gwtypes.GatewayClass:
 		return c.GatewayClass.Delete(obj)
-	case *gatewayapi.BackendTLSPolicy:
+	case *gwtypes.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Delete(obj)
 	case *kongv1.KongPlugin:
 		return c.Plugin.Delete(obj)
@@ -308,15 +308,15 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&corev1.ConfigMap{},
 		&discoveryv1.EndpointSlice{},
 		&corev1.Namespace{},
-		&gatewayapi.HTTPRoute{},
-		&gatewayapi.UDPRoute{},
-		&gatewayapi.TCPRoute{},
-		&gatewayapi.TLSRoute{},
-		&gatewayapi.GRPCRoute{},
-		&gatewayapi.ReferenceGrant{},
-		&gatewayapi.Gateway{},
-		&gatewayapi.GatewayClass{},
-		&gatewayapi.BackendTLSPolicy{},
+		&gwtypes.HTTPRoute{},
+		&gwtypes.UDPRoute{},
+		&gwtypes.TCPRoute{},
+		&gwtypes.TLSRoute{},
+		&gwtypes.GRPCRoute{},
+		&gwtypes.ReferenceGrant{},
+		&gwtypes.Gateway{},
+		&gwtypes.GatewayClass{},
+		&gwtypes.BackendTLSPolicy{},
 		&kongv1.KongPlugin{},
 		&kongv1.KongClusterPlugin{},
 		&kongv1.KongConsumer{},

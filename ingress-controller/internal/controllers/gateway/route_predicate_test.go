@@ -12,45 +12,45 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 	type httpRouteTestCase struct {
 		name           string
 		objects        []client.Object
-		route          *gatewayapi.HTTPRoute
+		route          *gwtypes.HTTPRoute
 		gatewayNN      controllers.OptionalNamespacedName
 		expectedResult bool
 	}
 
-	kongGWClass := &gatewayapi.GatewayClass{
+	kongGWClass := &gwtypes.GatewayClass{
 		Name: "kong",
-		Spec: gatewayapi.GatewayClassSpec{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: "konghq.com/kic-gateway-controller",
 		},
 	}
 
-	anotherGWClass := &gatewayapi.GatewayClass{
+	anotherGWClass := &gwtypes.GatewayClass{
 		Name: "another",
-		Spec: gatewayapi.GatewayClassSpec{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: "another",
 		},
 	}
 
-	kongGW := &gatewayapi.Gateway{
+	kongGW := &gwtypes.Gateway{
 		Name:      "kong",
 		Namespace: "default",
-		Spec: gatewayapi.GatewaySpec{
+		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "kong",
 		},
 	}
 
-	anotherGW := &gatewayapi.Gateway{
+	anotherGW := &gwtypes.Gateway{
 		Name:      "another",
 		Namespace: "default",
-		Spec: gatewayapi.GatewaySpec{
+		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "another",
 		},
 	}
@@ -62,17 +62,17 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				kongGW,
 				kongGWClass,
 			},
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "kong-httproute",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Group:     new(gatewayapi.V1Group),
-								Kind:      new(gatewayapi.Kind("Gateway")),
-								Namespace: new(gatewayapi.Namespace("default")),
-								Name:      gatewayapi.ObjectName("kong"),
+								Group:     new(gwtypes.V1Group),
+								Kind:      new(gwtypes.Kind("Gateway")),
+								Namespace: new(gwtypes.Namespace("default")),
+								Name:      gwtypes.ObjectName("kong"),
 							},
 						},
 					},
@@ -86,17 +86,17 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				anotherGW,
 				anotherGWClass,
 			},
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "kong-httproute",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Group:     new(gatewayapi.V1Group),
-								Kind:      new(gatewayapi.Kind("Gateway")),
-								Namespace: new(gatewayapi.Namespace("default")),
-								Name:      gatewayapi.ObjectName("another"),
+								Group:     new(gwtypes.V1Group),
+								Kind:      new(gwtypes.Kind("Gateway")),
+								Namespace: new(gwtypes.Namespace("default")),
+								Name:      gwtypes.ObjectName("another"),
 							},
 						},
 					},
@@ -116,16 +116,16 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 					Name:      "another",
 				},
 			)),
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "kong-httproute",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Group: new(gatewayapi.V1Group),
-								Kind:  new(gatewayapi.Kind("Gateway")),
-								Name:  gatewayapi.ObjectName("another"),
+								Group: new(gwtypes.V1Group),
+								Kind:  new(gwtypes.Kind("Gateway")),
+								Name:  gwtypes.ObjectName("another"),
 							},
 						},
 					},
@@ -139,20 +139,20 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				kongGW,
 				kongGWClass,
 			},
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "kong-httproute",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Kind: new(gatewayapi.Kind("Service")),
-								Name: gatewayapi.ObjectName("kuma"),
+								Kind: new(gwtypes.Kind("Service")),
+								Name: gwtypes.ObjectName("kuma"),
 							},
 							{
-								Group: new(gatewayapi.V1Group),
-								Kind:  new(gatewayapi.Kind("Gateway")),
-								Name:  gatewayapi.ObjectName("kong"),
+								Group: new(gwtypes.V1Group),
+								Kind:  new(gwtypes.Kind("Gateway")),
+								Name:  gwtypes.ObjectName("kong"),
 							},
 						},
 					},
@@ -162,16 +162,16 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 		},
 		{
 			name: "parent ref pointing to non-exist gateway",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "kong-httproute",
 				Namespace: "default",
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Group: new(gatewayapi.V1Group),
-								Kind:  new(gatewayapi.Kind("Gateway")),
-								Name:  gatewayapi.ObjectName("non-exist"),
+								Group: new(gwtypes.V1Group),
+								Kind:  new(gwtypes.Kind("Gateway")),
+								Name:  gwtypes.ObjectName("non-exist"),
 							},
 						},
 					},
@@ -185,7 +185,7 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(tc.objects...).Build()
 		t.Run(tc.name, func(t *testing.T) {
 			logger := logr.Discard()
-			result := IsRouteAttachedToReconciledGateway[*gatewayapi.HTTPRoute](cl, logger, tc.gatewayNN, tc.route)
+			result := IsRouteAttachedToReconciledGateway[*gwtypes.HTTPRoute](cl, logger, tc.gatewayNN, tc.route)
 			require.Equal(t, tc.expectedResult, result)
 		},
 		)
@@ -193,26 +193,26 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 }
 
 func TestRouteHasKongParentStatus(t *testing.T) {
-	gwNamespace := gatewayapi.Namespace("default")
-	otherNamespace := gatewayapi.Namespace("other-ns")
+	gwNamespace := gwtypes.Namespace("default")
+	otherNamespace := gwtypes.Namespace("other-ns")
 
 	testCases := []struct {
 		name      string
-		route     *gatewayapi.HTTPRoute
+		route     *gwtypes.HTTPRoute
 		gatewayNN controllers.OptionalNamespacedName
 		expected  bool
 	}{
 		{
 			name: "no gatewayNN set, route has our controller status - returns true",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:      "gateway-a",
 									Namespace: &gwNamespace,
 								},
@@ -225,15 +225,15 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		},
 		{
 			name: "no gatewayNN set, route has another controller status - returns false",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: "another-controller",
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:      "gateway-a",
 									Namespace: &gwNamespace,
 								},
@@ -246,15 +246,15 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		},
 		{
 			name: "gatewayNN set, route has matching gateway status - returns true",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:      "gateway-a",
 									Namespace: &gwNamespace,
 								},
@@ -271,15 +271,15 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		},
 		{
 			name: "gatewayNN set, route has status for different gateway - returns false",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:      "gateway-b",
 									Namespace: &otherNamespace,
 								},
@@ -296,22 +296,22 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		},
 		{
 			name: "gatewayNN set, route has status for matching and non-matching gateways - returns true",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:      "gateway-other",
 									Namespace: &gwNamespace,
 								},
 							},
 							{
 								ControllerName: GetControllerName(),
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name:      "gateway-a",
 									Namespace: &gwNamespace,
 								},
@@ -328,15 +328,15 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		},
 		{
 			name: "gatewayNN set, parentRef namespace nil defaults to route namespace - returns true",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Name:      "test-route",
 				Namespace: "default",
-				Status: gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
+				Status: gwtypes.HTTPRouteStatus{
+					RouteStatus: gwtypes.RouteStatus{
+						Parents: []gwtypes.RouteParentStatus{
 							{
 								ControllerName: GetControllerName(),
-								ParentRef: gatewayapi.ParentReference{
+								ParentRef: gwtypes.ParentReference{
 									Name: "gateway-a",
 									// Namespace is nil, defaults to route's namespace
 								},
@@ -355,7 +355,7 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := routeHasKongParentStatus[*gatewayapi.HTTPRoute](tc.route, tc.gatewayNN)
+			result := routeHasKongParentStatus[*gwtypes.HTTPRoute](tc.route, tc.gatewayNN)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

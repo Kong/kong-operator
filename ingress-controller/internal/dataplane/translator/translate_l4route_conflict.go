@@ -9,16 +9,17 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // L4Route constrains layer-4 Gateway API route types whose listener
 // arbitration follows GEP-2645 (single winner per listener; no SNI
-// multiplexing). Embedding gatewayapi.RouteT lets this type parameter be
+// multiplexing). Embedding gwtypes.RouteT lets this type parameter be
 // passed directly to the shared listener-attachment predicates in the
 // gatewayapi package.
 type L4Route interface {
-	gatewayapi.RouteT
-	*gatewayapi.UDPRoute | *gatewayapi.TCPRoute
+	gwtypes.RouteT
+	*gwtypes.UDPRoute | *gwtypes.TCPRoute
 }
 
 // pickWinningL4Route returns the route that wins GEP-2645 arbitration for a
@@ -74,9 +75,9 @@ type l4ListenerKey struct {
 // distinct types that share the same CommonRouteSpec shape.
 func l4RouteParentRefs[T L4Route](r T) []gatewayv1.ParentReference {
 	switch rr := any(r).(type) {
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return rr.Spec.ParentRefs
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return rr.Spec.ParentRefs
 	}
 	return nil

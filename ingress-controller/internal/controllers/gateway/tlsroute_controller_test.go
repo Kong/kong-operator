@@ -11,31 +11,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
-func newTLSRoute(backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
-	return gatewayapi.TLSRoute{
+func newTLSRoute(backendRef gwtypes.BackendRef) gwtypes.TLSRoute {
+	return gwtypes.TLSRoute{
 		Name:       "route",
 		Namespace:  "default",
 		Generation: 1,
-		Spec: gatewayapi.TLSRouteSpec{
-			Rules: []gatewayapi.TLSRouteRule{{
-				BackendRefs: []gatewayapi.BackendRef{backendRef},
+		Spec: gwtypes.TLSRouteSpec{
+			Rules: []gwtypes.TLSRouteRule{{
+				BackendRefs: []gwtypes.BackendRef{backendRef},
 			}},
 		},
 	}
 }
 
-func serviceBackendRef(namespace *gatewayapi.Namespace) gatewayapi.BackendRef {
-	return gatewayapi.BackendRef{
-		Name:      gatewayapi.ObjectName("svc"),
+func serviceBackendRef(namespace *gwtypes.Namespace) gwtypes.BackendRef {
+	return gwtypes.BackendRef{
+		Name:      gwtypes.ObjectName("svc"),
 		Namespace: namespace,
 		Kind:      util.StringToGatewayAPIKindPtr("Service"),
-		Group:     util.StringToTypedPtr[*gatewayapi.Group](""),
+		Group:     util.StringToTypedPtr[*gwtypes.Group](""),
 	}
 }
 
@@ -43,16 +43,16 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
 
-	otherNS := gatewayapi.Namespace("other")
-	grantFromTLSRouteToService := gatewayapi.ReferenceGrant{
+	otherNS := gwtypes.Namespace("other")
+	grantFromTLSRouteToService := gwtypes.ReferenceGrant{
 		Name: "grant", Namespace: "other",
-		Spec: gatewayapi.ReferenceGrantSpec{
-			From: []gatewayapi.ReferenceGrantFrom{{
-				Group:     gatewayapi.V1Group,
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{{
+				Group:     gwtypes.V1Group,
 				Kind:      "TLSRoute",
 				Namespace: "default",
 			}},
-			To: []gatewayapi.ReferenceGrantTo{{
+			To: []gwtypes.ReferenceGrantTo{{
 				Group: "",
 				Kind:  "Service",
 			}},
@@ -62,8 +62,8 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 	tests := []struct {
 		name               string
 		objects            []client.Object
-		route              gatewayapi.TLSRoute
-		wantReason         gatewayapi.RouteConditionReason
+		route              gwtypes.TLSRoute
+		wantReason         gwtypes.RouteConditionReason
 		wantMessageContain string
 	}{
 		{
@@ -72,24 +72,24 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
 			route:      newTLSRoute(serviceBackendRef(nil)),
-			wantReason: gatewayapi.RouteReasonResolvedRefs,
+			wantReason: gwtypes.RouteReasonResolvedRefs,
 		},
 		{
 			name:               "backend service missing",
 			objects:            []client.Object{},
 			route:              newTLSRoute(serviceBackendRef(nil)),
-			wantReason:         gatewayapi.RouteReasonBackendNotFound,
+			wantReason:         gwtypes.RouteReasonBackendNotFound,
 			wantMessageContain: "target default/svc",
 		},
 		{
 			name:    "unsupported backend kind",
 			objects: []client.Object{},
-			route: newTLSRoute(gatewayapi.BackendRef{
+			route: newTLSRoute(gwtypes.BackendRef{
 				Name:  "svc",
 				Kind:  util.StringToGatewayAPIKindPtr("Foo"),
-				Group: util.StringToTypedPtr[*gatewayapi.Group]("example.com"),
+				Group: util.StringToTypedPtr[*gwtypes.Group]("example.com"),
 			}),
-			wantReason:         gatewayapi.RouteReasonInvalidKind,
+			wantReason:         gwtypes.RouteReasonInvalidKind,
 			wantMessageContain: "unsupported type example.com/Foo",
 		},
 		{
@@ -98,7 +98,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 				&corev1.Service{Name: "svc", Namespace: "other"},
 			},
 			route:              newTLSRoute(serviceBackendRef(&otherNS)),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
+			wantReason:         gwtypes.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
 		{
@@ -108,21 +108,21 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 				grantFromTLSRouteToService.DeepCopy(),
 			},
 			route:      newTLSRoute(serviceBackendRef(&otherNS)),
-			wantReason: gatewayapi.RouteReasonResolvedRefs,
+			wantReason: gwtypes.RouteReasonResolvedRefs,
 		},
 		{
 			name: "cross-namespace grant for wrong to-kind",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "other"},
-				&gatewayapi.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					Name: "grant", Namespace: "other",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{{
-							Group:     gatewayapi.V1Group,
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
+							Group:     gwtypes.V1Group,
 							Kind:      "TLSRoute",
 							Namespace: "default",
 						}},
-						To: []gatewayapi.ReferenceGrantTo{{
+						To: []gwtypes.ReferenceGrantTo{{
 							Group: "",
 							Kind:  "ConfigMap",
 						}},
@@ -130,22 +130,22 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 				},
 			},
 			route:              newTLSRoute(serviceBackendRef(&otherNS)),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
+			wantReason:         gwtypes.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
 		{
 			name: "cross-namespace grant for wrong from-kind",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "other"},
-				&gatewayapi.ReferenceGrant{
+				&gwtypes.ReferenceGrant{
 					Name: "grant", Namespace: "other",
-					Spec: gatewayapi.ReferenceGrantSpec{
-						From: []gatewayapi.ReferenceGrantFrom{{
-							Group:     gatewayapi.V1Group,
+					Spec: gwtypes.ReferenceGrantSpec{
+						From: []gwtypes.ReferenceGrantFrom{{
+							Group:     gwtypes.V1Group,
 							Kind:      "HTTPRoute",
 							Namespace: "default",
 						}},
-						To: []gatewayapi.ReferenceGrantTo{{
+						To: []gwtypes.ReferenceGrantTo{{
 							Group: "",
 							Kind:  "Service",
 						}},
@@ -153,7 +153,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 				},
 			},
 			route:              newTLSRoute(serviceBackendRef(&otherNS)),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
+			wantReason:         gwtypes.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
 	}
@@ -191,13 +191,13 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
 
-	otherNS := gatewayapi.Namespace("other")
+	otherNS := gwtypes.Namespace("other")
 	parentKey := "default/gw//"
 
-	newParentStatuses := func(conds ...metav1.Condition) map[string]*gatewayapi.RouteParentStatus {
-		return map[string]*gatewayapi.RouteParentStatus{
+	newParentStatuses := func(conds ...metav1.Condition) map[string]*gwtypes.RouteParentStatus {
+		return map[string]*gwtypes.RouteParentStatus{
 			parentKey: {
-				ParentRef:      gatewayapi.ParentReference{Name: "gw"},
+				ParentRef:      gwtypes.ParentReference{Name: "gw"},
 				ControllerName: GetControllerName(),
 				Conditions:     conds,
 			},
@@ -219,9 +219,9 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 
 		conds := parentStatuses[parentKey].Conditions
 		require.Len(t, conds, 1)
-		assert.Equal(t, string(gatewayapi.RouteConditionResolvedRefs), conds[0].Type)
+		assert.Equal(t, string(gwtypes.RouteConditionResolvedRefs), conds[0].Type)
 		assert.Equal(t, metav1.ConditionTrue, conds[0].Status)
-		assert.Equal(t, string(gatewayapi.RouteReasonResolvedRefs), conds[0].Reason)
+		assert.Equal(t, string(gwtypes.RouteReasonResolvedRefs), conds[0].Reason)
 		assert.Equal(t, route.Generation, conds[0].ObservedGeneration)
 	})
 
@@ -232,9 +232,9 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 		r := &TLSRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
-			Type:   string(gatewayapi.RouteConditionResolvedRefs),
+			Type:   string(gwtypes.RouteConditionResolvedRefs),
 			Status: metav1.ConditionTrue,
-			Reason: string(gatewayapi.RouteReasonResolvedRefs),
+			Reason: string(gwtypes.RouteReasonResolvedRefs),
 		})
 
 		_, changed, err := r.setRouteConditionResolvedRefsCondition(ctx, &route, parentStatuses)
@@ -244,7 +244,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 		conds := parentStatuses[parentKey].Conditions
 		require.Len(t, conds, 1)
 		assert.Equal(t, metav1.ConditionFalse, conds[0].Status)
-		assert.Equal(t, string(gatewayapi.RouteReasonBackendNotFound), conds[0].Reason)
+		assert.Equal(t, string(gwtypes.RouteReasonBackendNotFound), conds[0].Reason)
 	})
 
 	t.Run("no-op when condition already matches", func(t *testing.T) {
@@ -255,9 +255,9 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 		r := &TLSRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
-			Type:   string(gatewayapi.RouteConditionResolvedRefs),
+			Type:   string(gwtypes.RouteConditionResolvedRefs),
 			Status: metav1.ConditionTrue,
-			Reason: string(gatewayapi.RouteReasonResolvedRefs),
+			Reason: string(gwtypes.RouteReasonResolvedRefs),
 		})
 
 		_, changed, err := r.setRouteConditionResolvedRefsCondition(ctx, &route, parentStatuses)
@@ -283,24 +283,24 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 		conds := parentStatuses[parentKey].Conditions
 		require.Len(t, conds, 1)
 		assert.Equal(t, metav1.ConditionFalse, conds[0].Status)
-		assert.Equal(t, string(gatewayapi.RouteReasonRefNotPermitted), conds[0].Reason)
+		assert.Equal(t, string(gwtypes.RouteReasonRefNotPermitted), conds[0].Reason)
 	})
 }
 
 func TestIsTLSReferenceGranted(t *testing.T) {
-	svcKind := gatewayapi.Kind("Service")
-	emptyGroup := gatewayapi.Group("")
-	specificName := gatewayapi.ObjectName("svc")
-	otherName := gatewayapi.ObjectName("other")
+	svcKind := gwtypes.Kind("Service")
+	emptyGroup := gwtypes.Group("")
+	specificName := gwtypes.ObjectName("svc")
+	otherName := gwtypes.ObjectName("other")
 
-	makeGrant := func(from gatewayapi.ReferenceGrantFrom, to gatewayapi.ReferenceGrantTo) gatewayapi.ReferenceGrantSpec {
-		return gatewayapi.ReferenceGrantSpec{
-			From: []gatewayapi.ReferenceGrantFrom{from},
-			To:   []gatewayapi.ReferenceGrantTo{to},
+	makeGrant := func(from gwtypes.ReferenceGrantFrom, to gwtypes.ReferenceGrantTo) gwtypes.ReferenceGrantSpec {
+		return gwtypes.ReferenceGrantSpec{
+			From: []gwtypes.ReferenceGrantFrom{from},
+			To:   []gwtypes.ReferenceGrantTo{to},
 		}
 	}
 
-	backendRef := gatewayapi.BackendRef{
+	backendRef := gwtypes.BackendRef{
 		Name:  specificName,
 		Kind:  &svcKind,
 		Group: &emptyGroup,
@@ -308,15 +308,15 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		spec   gatewayapi.ReferenceGrantSpec
+		spec   gwtypes.ReferenceGrantSpec
 		fromNS string
 		want   bool
 	}{
 		{
 			name: "matching grant (any name)",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "TLSRoute", Namespace: "default"},
-				gatewayapi.ReferenceGrantTo{Group: "", Kind: "Service"},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "TLSRoute", Namespace: "default"},
+				gwtypes.ReferenceGrantTo{Group: "", Kind: "Service"},
 			),
 			fromNS: "default",
 			want:   true,
@@ -324,8 +324,8 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 		{
 			name: "matching grant with specific to.Name",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "TLSRoute", Namespace: "default"},
-				gatewayapi.ReferenceGrantTo{Group: "", Kind: "Service", Name: &specificName},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "TLSRoute", Namespace: "default"},
+				gwtypes.ReferenceGrantTo{Group: "", Kind: "Service", Name: &specificName},
 			),
 			fromNS: "default",
 			want:   true,
@@ -333,8 +333,8 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 		{
 			name: "to.Name mismatch",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "TLSRoute", Namespace: "default"},
-				gatewayapi.ReferenceGrantTo{Group: "", Kind: "Service", Name: &otherName},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "TLSRoute", Namespace: "default"},
+				gwtypes.ReferenceGrantTo{Group: "", Kind: "Service", Name: &otherName},
 			),
 			fromNS: "default",
 			want:   false,
@@ -342,8 +342,8 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 		{
 			name: "wrong from.Kind",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "HTTPRoute", Namespace: "default"},
-				gatewayapi.ReferenceGrantTo{Group: "", Kind: "Service"},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "HTTPRoute", Namespace: "default"},
+				gwtypes.ReferenceGrantTo{Group: "", Kind: "Service"},
 			),
 			fromNS: "default",
 			want:   false,
@@ -351,8 +351,8 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 		{
 			name: "wrong from.Namespace",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "TLSRoute", Namespace: "elsewhere"},
-				gatewayapi.ReferenceGrantTo{Group: "", Kind: "Service"},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "TLSRoute", Namespace: "elsewhere"},
+				gwtypes.ReferenceGrantTo{Group: "", Kind: "Service"},
 			),
 			fromNS: "default",
 			want:   false,
@@ -360,8 +360,8 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 		{
 			name: "wrong to.Kind",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "TLSRoute", Namespace: "default"},
-				gatewayapi.ReferenceGrantTo{Group: "", Kind: "ConfigMap"},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "TLSRoute", Namespace: "default"},
+				gwtypes.ReferenceGrantTo{Group: "", Kind: "ConfigMap"},
 			),
 			fromNS: "default",
 			want:   false,
@@ -369,8 +369,8 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 		{
 			name: "wrong to.Group",
 			spec: makeGrant(
-				gatewayapi.ReferenceGrantFrom{Group: gatewayapi.V1Group, Kind: "TLSRoute", Namespace: "default"},
-				gatewayapi.ReferenceGrantTo{Group: "example.com", Kind: "Service"},
+				gwtypes.ReferenceGrantFrom{Group: gwtypes.V1Group, Kind: "TLSRoute", Namespace: "default"},
+				gwtypes.ReferenceGrantTo{Group: "example.com", Kind: "Service"},
 			),
 			fromNS: "default",
 			want:   false,

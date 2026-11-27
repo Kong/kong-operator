@@ -25,9 +25,9 @@ import (
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -83,7 +83,7 @@ func (r *KongUpstreamPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	if r.HTTPRouteEnabled {
 		// Watch for HTTPRoute changes to trigger reconciliation for the KongUpstreamPolicies referenced by the Services
 		// of the HTTPRoute.
-		blder.Watches(&gatewayapi.HTTPRoute{},
+		blder.Watches(&gwtypes.HTTPRoute{},
 			handler.EnqueueRequestsFromMapFunc(r.getUpstreamPoliciesForHTTPRouteServices),
 		)
 	}
@@ -146,7 +146,7 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 	if r.HTTPRouteEnabled {
 		if err := mgr.GetCache().IndexField(
 			context.Background(),
-			&gatewayapi.HTTPRoute{},
+			&gwtypes.HTTPRoute{},
 			routeBackendRefServiceNameIndexKey,
 			indexRoutesOnBackendRefServiceName,
 		); err != nil {
@@ -167,7 +167,7 @@ func (r *KongUpstreamPolicyReconciler) setupIndices(mgr ctrl.Manager) error {
 		if r.HTTPRouteEnabled {
 			if err := mgr.GetCache().IndexField(
 				context.Background(),
-				&gatewayapi.HTTPRoute{},
+				&gwtypes.HTTPRoute{},
 				routeBackendRefServiceFacadeIndexKey,
 				indexRoutesOnBackendRefServiceFacadeName,
 			); err != nil {
@@ -225,7 +225,7 @@ func indexIngressesOnBackendServiceName(o client.Object) []string {
 
 // indexRoutesOnBackendRefServiceName indexes the HTTPRoutes on the backendReferences.
 func indexRoutesOnBackendRefServiceName(o client.Object) []string {
-	httpRoute, ok := o.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := o.(*gwtypes.HTTPRoute)
 	if !ok {
 		return []string{}
 	}
@@ -245,7 +245,7 @@ func indexRoutesOnBackendRefServiceName(o client.Object) []string {
 
 // indexRoutesOnBackendRefServiceFacadeName indexes the HTTPRoutes on the backendReferences using KongServiceFacades as backends.
 func indexRoutesOnBackendRefServiceFacadeName(o client.Object) []string {
-	httpRoute, ok := o.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := o.(*gwtypes.HTTPRoute)
 	if !ok {
 		return []string{}
 	}
@@ -365,7 +365,7 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx
 // getUpstreamPoliciesForHTTPRouteServices enqueues a new reconcile request for the KongUpstreamPolicies referenced by
 // the Services of an HTTPRoute.
 func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(ctx context.Context, obj client.Object) []reconcile.Request {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := obj.(*gwtypes.HTTPRoute)
 	if !ok {
 		return nil
 	}

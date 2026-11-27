@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestIndexIngressesOnBackendServiceName(t *testing.T) {
@@ -125,26 +125,26 @@ func TestIndexRoutesOnBackendRefServiceFacadeName(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute with ServiceFacade backendRef and non-ServiceFacade backendRef",
-			object: &gatewayapi.HTTPRoute{
+			object: &gwtypes.HTTPRoute{
 				Namespace: "test-ns",
 				Name:      "test-httproute",
-				Spec: gatewayapi.HTTPRouteSpec{
-					Rules: []gatewayapi.HTTPRouteRule{
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									Name: gatewayapi.ObjectName("svc-1"),
+									Name: gwtypes.ObjectName("svc-1"),
 								},
 								{
-									Group: new(gatewayapi.Group("incubator.ingress-controller.konghq.com")),
-									Kind:  new(gatewayapi.Kind("KongServiceFacade")),
-									Name:  gatewayapi.ObjectName("service-facade-1"),
+									Group: new(gwtypes.Group("incubator.ingress-controller.konghq.com")),
+									Kind:  new(gwtypes.Kind("KongServiceFacade")),
+									Name:  gwtypes.ObjectName("service-facade-1"),
 								},
 								{
-									Group:     new(gatewayapi.Group("incubator.ingress-controller.konghq.com")),
-									Kind:      new(gatewayapi.Kind("KongServiceFacade")),
-									Namespace: new(gatewayapi.Namespace("another-ns")),
-									Name:      gatewayapi.ObjectName("service-facade-1"),
+									Group:     new(gwtypes.Group("incubator.ingress-controller.konghq.com")),
+									Kind:      new(gwtypes.Kind("KongServiceFacade")),
+									Namespace: new(gwtypes.Namespace("another-ns")),
+									Name:      gwtypes.ObjectName("service-facade-1"),
 								},
 							},
 						},

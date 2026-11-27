@@ -17,9 +17,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (
@@ -70,8 +70,8 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	}
 	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
+	gwc := gwtypes.GatewayClass{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		Name: uuid.NewString(),
@@ -82,16 +82,16 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
-	gw := gatewayapi.Gateway{
+	gw := gwtypes.Gateway{
 		Namespace: ns.Name,
 		Name:      "gateway-udp",
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gwc.Name),
+			Listeners: []gwtypes.Listener{
 				{
-					Name:     gatewayapi.SectionName("udp"),
-					Port:     gatewayapi.PortNumber(53),
-					Protocol: gatewayapi.UDPProtocolType,
+					Name:     gwtypes.SectionName("udp"),
+					Port:     gwtypes.PortNumber(53),
+					Protocol: gwtypes.UDPProtocolType,
 				},
 			},
 		},
@@ -99,26 +99,26 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	require.NoError(t, client.Create(ctx, &gw))
 
 	gwOld := gw.DeepCopy()
-	gw.Status = gatewayapi.GatewayStatus{
+	gw.Status = gwtypes.GatewayStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:               string(gatewayapi.GatewayConditionProgrammed),
+				Type:               string(gwtypes.GatewayConditionProgrammed),
 				Status:             metav1.ConditionTrue,
-				Reason:             string(gatewayapi.GatewayReasonProgrammed),
+				Reason:             string(gwtypes.GatewayReasonProgrammed),
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: gw.Generation,
 			},
 			{
-				Type:               string(gatewayapi.GatewayConditionAccepted),
+				Type:               string(gwtypes.GatewayConditionAccepted),
 				Status:             metav1.ConditionTrue,
 				Reason:             "Accepted",
 				LastTransitionTime: metav1.Now(),
 				ObservedGeneration: gw.Generation,
 			},
 		},
-		Listeners: []gatewayapi.ListenerStatus{
+		Listeners: []gwtypes.ListenerStatus{
 			{
-				Name: gatewayapi.SectionName("udp"),
+				Name: gwtypes.SectionName("udp"),
 				Conditions: []metav1.Condition{
 					{
 						Type:               "Accepted",
@@ -127,16 +127,16 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 						LastTransitionTime: metav1.Now(),
 					},
 					{
-						Type:               string(gatewayapi.ListenerConditionProgrammed),
+						Type:               string(gwtypes.ListenerConditionProgrammed),
 						Status:             metav1.ConditionTrue,
-						Reason:             string(gatewayapi.ListenerReasonProgrammed),
+						Reason:             string(gwtypes.ListenerReasonProgrammed),
 						LastTransitionTime: metav1.Now(),
 					},
 				},
-				SupportedKinds: []gatewayapi.RouteGroupKind{
+				SupportedKinds: []gwtypes.RouteGroupKind{
 					{
-						Group: new(gatewayapi.Group(gatewayv1.GroupVersion.Group)),
-						Kind:  gatewayapi.Kind("UDPRoute"),
+						Group: new(gwtypes.Group(gatewayv1.GroupVersion.Group)),
+						Kind:  gwtypes.Kind("UDPRoute"),
 					},
 				},
 			},
@@ -144,28 +144,28 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	}
 	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
-	mkRoute := func(name string) gatewayapi.UDPRoute {
-		return gatewayapi.UDPRoute{
+	mkRoute := func(name string) gwtypes.UDPRoute {
+		return gwtypes.UDPRoute{
 			APIVersion: "gateway.networking.k8s.io/v1",
 			Kind:       "UDPRoute",
 			Namespace:  ns.Name,
 			Name:       name,
-			Spec: gatewayapi.UDPRouteSpec{
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{
-					ParentRefs: []gatewayapi.ParentReference{
+			Spec: gwtypes.UDPRouteSpec{
+				CommonRouteSpec: gwtypes.CommonRouteSpec{
+					ParentRefs: []gwtypes.ParentReference{
 						{
-							Name:      gatewayapi.ObjectName(gw.Name),
-							Namespace: new(gatewayapi.Namespace(ns.Name)),
+							Name:      gwtypes.ObjectName(gw.Name),
+							Namespace: new(gwtypes.Namespace(ns.Name)),
 						},
 					},
 				},
-				Rules: []gatewayapi.UDPRouteRule{
+				Rules: []gwtypes.UDPRouteRule{
 					{
-						BackendRefs: []gatewayapi.BackendRef{
+						BackendRefs: []gwtypes.BackendRef{
 							{
-								Kind: new(gatewayapi.Kind("Service")),
-								Name: gatewayapi.ObjectName(svc.Name),
-								Port: new(gatewayapi.PortNumber(53)),
+								Kind: new(gwtypes.Kind("Service")),
+								Name: gwtypes.ObjectName(svc.Name),
+								Port: new(gwtypes.PortNumber(53)),
 							},
 						},
 					},
@@ -190,7 +190,7 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 		t.Helper()
 		fn := helpers.UDPRouteEventuallyContainsConditions(ctx, t, client, nn,
 			metav1.Condition{
-				Type:   string(gatewayapi.RouteConditionAccepted),
+				Type:   string(gwtypes.RouteConditionAccepted),
 				Status: metav1.ConditionTrue,
 				Reason: "Accepted",
 			},
@@ -213,7 +213,7 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 }
 
 func printUDPRouteConditions(ctx context.Context, client ctrlclient.Client, nn k8stypes.NamespacedName) string {
-	route := &gatewayapi.UDPRoute{}
+	route := &gwtypes.UDPRoute{}
 	if err := client.Get(ctx, nn, route); err != nil {
 		return fmt.Sprintf("failed to get UDPRoute %s: %v", nn.String(), err)
 	}

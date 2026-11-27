@@ -12,8 +12,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // ResolveDependencies resolves dependencies for a given object. Dependencies are all objects referenced by the
@@ -27,15 +27,15 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 	case *netv1.Ingress:
 		return resolveIngressDependencies(cache, obj), nil
 	// Gateway API objects.
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		return resolveHTTPRouteDependencies(cache, obj), nil
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return resolveTLSRouteDependencies(cache, obj), nil
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return resolveTCPRouteDependencies(cache, obj), nil
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return resolveUDPRouteDependencies(cache, obj), nil
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		return resolveGRPCRouteDependencies(cache, obj), nil
 	// Kong specific objects.
 	case *configurationv1.KongPlugin:
@@ -56,10 +56,10 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		*corev1.ConfigMap,
 		*corev1.Namespace,
 		*discoveryv1.EndpointSlice,
-		*gatewayapi.ReferenceGrant,
-		*gatewayapi.Gateway,
-		*gatewayapi.GatewayClass,
-		*gatewayapi.BackendTLSPolicy,
+		*gwtypes.ReferenceGrant,
+		*gwtypes.Gateway,
+		*gwtypes.GatewayClass,
+		*gwtypes.BackendTLSPolicy,
 		*configurationv1beta1.KongUpstreamPolicy,
 		*configurationv1alpha1.IngressClassParameters,
 		*configurationv1alpha1.KongVault:

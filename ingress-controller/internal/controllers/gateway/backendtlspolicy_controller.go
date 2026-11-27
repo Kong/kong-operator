@@ -19,7 +19,7 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -52,12 +52,12 @@ func (r *BackendTLSPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		}).
-		For(&gatewayapi.BackendTLSPolicy{}).
+		For(&gwtypes.BackendTLSPolicy{}).
 		Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForConfigMaps)).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForSecrets)).
 		Watches(&corev1.Service{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForServices)).
-		Watches(&gatewayapi.HTTPRoute{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForHTTPRoutes)).
-		Watches(&gatewayapi.Gateway{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForGateways)).
+		Watches(&gwtypes.HTTPRoute{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForHTTPRoutes)).
+		Watches(&gwtypes.Gateway{}, handler.EnqueueRequestsFromMapFunc(r.listBackendTLSPoliciesForGateways)).
 		Complete(r)
 }
 
@@ -85,7 +85,7 @@ const (
 
 // indexBackendTLSPolicyOnTargetRef indexes BackendTLSPolicy objects by their target service reference.
 func indexBackendTLSPolicyOnTargetRef(obj client.Object) []string {
-	policy, ok := obj.(*gatewayapi.BackendTLSPolicy)
+	policy, ok := obj.(*gwtypes.BackendTLSPolicy)
 	if !ok {
 		return []string{}
 	}
@@ -102,7 +102,7 @@ func indexBackendTLSPolicyOnTargetRef(obj client.Object) []string {
 // indexBackendTLSPolicyOnValidationCACertificateConfigMapRef indexes BackendTLSPolicy objects
 // by their validation CA Certificate configmap reference.
 func indexBackendTLSPolicyOnValidationCACertificateConfigMapRef(obj client.Object) []string {
-	policy, ok := obj.(*gatewayapi.BackendTLSPolicy)
+	policy, ok := obj.(*gwtypes.BackendTLSPolicy)
 	if !ok {
 		return []string{}
 	}
@@ -119,7 +119,7 @@ func indexBackendTLSPolicyOnValidationCACertificateConfigMapRef(obj client.Objec
 // indexBackendTLSPolicyOnValidationCACertificateSecretRef indexes BackendTLSPolicy objects
 // by their validation CA Certificate secret reference.
 func indexBackendTLSPolicyOnValidationCACertificateSecretRef(obj client.Object) []string {
-	policy, ok := obj.(*gatewayapi.BackendTLSPolicy)
+	policy, ok := obj.(*gwtypes.BackendTLSPolicy)
 	if !ok {
 		return []string{}
 	}
@@ -135,7 +135,7 @@ func indexBackendTLSPolicyOnValidationCACertificateSecretRef(obj client.Object) 
 
 // indexHTTPRouteOnParentRef indexes HTTPRoute objects by their parent Gateway references.
 func indexHTTPRouteOnParentRef(obj client.Object) []string {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := obj.(*gwtypes.HTTPRoute)
 	if !ok {
 		return []string{}
 	}
@@ -143,7 +143,7 @@ func indexHTTPRouteOnParentRef(obj client.Object) []string {
 	gateways := []string{}
 	for _, parentRef := range httpRoute.Spec.ParentRefs {
 		// no need to check group and kind nilness, as they have a default value in case not specified
-		if *parentRef.Group == gatewayapi.V1Group && *parentRef.Kind == "Gateway" {
+		if *parentRef.Group == gwtypes.V1Group && *parentRef.Kind == "Gateway" {
 			namespace := httpRoute.Namespace
 			if parentRef.Namespace != nil {
 				namespace = string(*parentRef.Namespace)
@@ -156,7 +156,7 @@ func indexHTTPRouteOnParentRef(obj client.Object) []string {
 
 // indexHTTPRouteOnBackendRef indexes HTTPRoute objects by their backend service references.
 func indexHTTPRouteOnBackendRef(obj client.Object) []string {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := obj.(*gwtypes.HTTPRoute)
 	if !ok {
 		return []string{}
 	}
@@ -182,7 +182,7 @@ func indexHTTPRouteOnBackendRef(obj client.Object) []string {
 func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
-		&gatewayapi.BackendTLSPolicy{},
+		&gwtypes.BackendTLSPolicy{},
 		backendTLSPolicyTargetRefIndexKey,
 		indexBackendTLSPolicyOnTargetRef,
 	); err != nil {
@@ -191,7 +191,7 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
-		&gatewayapi.BackendTLSPolicy{},
+		&gwtypes.BackendTLSPolicy{},
 		backendTLSPolicyValidationCARefConfigMapIndexKey,
 		indexBackendTLSPolicyOnValidationCACertificateConfigMapRef,
 	); err != nil {
@@ -200,7 +200,7 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
-		&gatewayapi.BackendTLSPolicy{},
+		&gwtypes.BackendTLSPolicy{},
 		backendTLSPolicyValidationCARefSecretIndexKey,
 		indexBackendTLSPolicyOnValidationCACertificateSecretRef,
 	); err != nil {
@@ -209,7 +209,7 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
-		&gatewayapi.HTTPRoute{},
+		&gwtypes.HTTPRoute{},
 		httpRouteParentRefIndexKey,
 		indexHTTPRouteOnParentRef,
 	); err != nil {
@@ -218,7 +218,7 @@ func setupBackendTLSPolicyIndices(mgr ctrl.Manager) error {
 
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
-		&gatewayapi.HTTPRoute{},
+		&gwtypes.HTTPRoute{},
 		httpRouteBackendRefIndexKey,
 		indexHTTPRouteOnBackendRef,
 	); err != nil {
@@ -239,7 +239,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForConfigMaps(ctx con
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "ConfigMap", "found", reflect.TypeOf(obj))
 		return nil
 	}
-	policies := gatewayapi.BackendTLSPolicyList{}
+	policies := gwtypes.BackendTLSPolicyList{}
 	if err := r.List(ctx, &policies,
 		client.InNamespace(cm.Namespace),
 		client.MatchingFields{backendTLSPolicyValidationCARefConfigMapIndexKey: cm.Name},
@@ -263,7 +263,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForSecrets(ctx contex
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Secret", "found", reflect.TypeOf(obj))
 		return nil
 	}
-	policies := gatewayapi.BackendTLSPolicyList{}
+	policies := gwtypes.BackendTLSPolicyList{}
 	if err := r.List(ctx, &policies,
 		client.InNamespace(secret.Namespace),
 		client.MatchingFields{backendTLSPolicyValidationCARefSecretIndexKey: secret.Name},
@@ -287,7 +287,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForServices(ctx conte
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Service", "found", reflect.TypeOf(obj))
 		return nil
 	}
-	policies := &gatewayapi.BackendTLSPolicyList{}
+	policies := &gwtypes.BackendTLSPolicyList{}
 	if err := r.List(ctx, policies,
 		client.InNamespace(service.Namespace),
 		client.MatchingFields{backendTLSPolicyTargetRefIndexKey: service.Name},
@@ -307,7 +307,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForServices(ctx conte
 // listBackendTLSPoliciesForHTTPRoutes returns the list of BackendTLSPolicies that targets a service which is used as a backend by
 // the given HTTPRoute.
 func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForHTTPRoutes(ctx context.Context, obj client.Object) []reconcile.Request {
-	httpRoute, ok := obj.(*gatewayapi.HTTPRoute)
+	httpRoute, ok := obj.(*gwtypes.HTTPRoute)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "HTTPRoute", "found", reflect.TypeOf(obj))
 		return nil
@@ -317,7 +317,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForHTTPRoutes(ctx con
 		r.Log.Error(err, "Failed to list BackendTLSPolicies for HTTPRoute", "httpRoute", httpRoute)
 		return nil
 	}
-	return lo.Map(policiesNN, func(policy gatewayapi.BackendTLSPolicy, _ int) reconcile.Request {
+	return lo.Map(policiesNN, func(policy gwtypes.BackendTLSPolicy, _ int) reconcile.Request {
 		return reconcile.Request{
 			Namespace: policy.Namespace,
 			Name:      policy.Name,
@@ -328,7 +328,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForHTTPRoutes(ctx con
 // listBackendTLSPoliciesForGateways returns the list of BackendTLSPolicies that targets a service which is used as a backend by
 // HTTPRoutes connected to the given Gateway.
 func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx context.Context, obj client.Object) []reconcile.Request {
-	gateway, ok := obj.(*gatewayapi.Gateway)
+	gateway, ok := obj.(*gwtypes.Gateway)
 	if !ok {
 		r.Log.Error(fmt.Errorf("invalid type"), "Found invalid type in event handlers", "expected", "Gateway", "found", reflect.TypeOf(obj))
 		return nil
@@ -338,7 +338,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 		return nil
 	}
 
-	httpRoutes := &gatewayapi.HTTPRouteList{}
+	httpRoutes := &gwtypes.HTTPRouteList{}
 	if err := r.List(ctx, httpRoutes,
 		client.MatchingFields{httpRouteParentRefIndexKey: gateway.Namespace + "/" + gateway.Name},
 	); err != nil {
@@ -352,7 +352,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 			r.Log.Error(err, "Failed to list BackendTLSPolicies for HTTPRoute", "httpRoute", httpRoute)
 			return nil
 		}
-		policies = append(policies, lo.Map(policiesUsedByHTTPRoute, func(policy gatewayapi.BackendTLSPolicy, _ int) reconcile.Request {
+		policies = append(policies, lo.Map(policiesUsedByHTTPRoute, func(policy gwtypes.BackendTLSPolicy, _ int) reconcile.Request {
 			return reconcile.Request{
 				Namespace: policy.Namespace,
 				Name:      policy.Name,
@@ -375,7 +375,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1BackendTLSPolicy", req.NamespacedName)
 
-	backendTLSPolicy := new(gatewayapi.BackendTLSPolicy)
+	backendTLSPolicy := new(gwtypes.BackendTLSPolicy)
 	if err := r.Get(ctx, req.NamespacedName, backendTLSPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			backendTLSPolicy.Namespace = req.Namespace

@@ -14,7 +14,7 @@ import (
 
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestCacheStoresGet(t *testing.T) {
@@ -177,31 +177,31 @@ func benchmarkListHTTPRoutes(b *testing.B, count int) {
 
 	// Add some HTTPRoutes to the cache store
 	for i := range count {
-		route := &gatewayapi.HTTPRoute{
+		route := &gwtypes.HTTPRoute{
 			Name:      fmt.Sprintf("route-%d", i),
 			Namespace: "default",
-			Spec: gatewayapi.HTTPRouteSpec{
-				Rules: []gatewayapi.HTTPRouteRule{
+			Spec: gwtypes.HTTPRouteSpec{
+				Rules: []gwtypes.HTTPRouteRule{
 					{
-						Matches: []gatewayapi.HTTPRouteMatch{
+						Matches: []gwtypes.HTTPRouteMatch{
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/test1"),
 								},
-								Method: new(gatewayapi.HTTPMethodGet),
+								Method: new(gwtypes.HTTPMethodGet),
 							},
 							{
-								Path: &gatewayapi.HTTPPathMatch{
-									Type:  new(gatewayapi.PathMatchExact),
+								Path: &gwtypes.HTTPPathMatch{
+									Type:  new(gwtypes.PathMatchExact),
 									Value: new("/test2"),
 								},
-								Method: new(gatewayapi.HTTPMethodGet),
+								Method: new(gwtypes.HTTPMethodGet),
 							},
 						},
 					},
 				},
-				CommonRouteSpec: gatewayapi.CommonRouteSpec{},
+				CommonRouteSpec: gwtypes.CommonRouteSpec{},
 			},
 		}
 

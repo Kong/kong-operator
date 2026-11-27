@@ -7,7 +7,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,7 +25,7 @@ func (t *Translator) ingressRulesFromHTTPRoutes() ingressRules {
 		return result
 	}
 
-	httpRoutesToTranslate := make([]*gatewayapi.HTTPRoute, 0, len(httpRouteList))
+	httpRoutesToTranslate := make([]*gwtypes.HTTPRoute, 0, len(httpRouteList))
 	for _, httproute := range httpRouteList {
 		// Validate each HTTPRoute before translating and register translation failures if an HTTPRoute is invalid.
 		if err := validateHTTPRoute(httproute, t.featureFlags); err != nil {
@@ -39,7 +39,7 @@ func (t *Translator) ingressRulesFromHTTPRoutes() ingressRules {
 	return result
 }
 
-func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlags) error {
+func validateHTTPRoute(httproute *gwtypes.HTTPRoute, featureFlags FeatureFlags) error {
 	spec := httproute.Spec
 
 	// validation for HTTPRoutes will happen at a higher layer, but in spite of that we run
@@ -71,7 +71,7 @@ func validateHTTPRoute(httproute *gatewayapi.HTTPRoute, featureFlags FeatureFlag
 // When the feature flag is false, it combines rules with same backends in an HTTPRoute to a Kong gateway service.
 // When the feature flag ExpressionRoutes is set to true, expression based Kong routes will be translated from matches of HTTPRoutes.
 // Otherwise, traditional Kong routes are translated.
-func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gatewayapi.HTTPRoute, result *ingressRules) {
+func (t *Translator) ingressRulesFromHTTPRoutesWithCombinedService(httpRoutes []*gwtypes.HTTPRoute, result *ingressRules) {
 	translateOptions := subtranslator.TranslateHTTPRouteToKongstateServiceOptions{
 		CombinedServicesFromDifferentHTTPRoutes: t.featureFlags.CombinedServicesFromDifferentHTTPRoutes,
 		ExpressionRoutes:                        t.featureFlags.ExpressionRoutes,

@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
@@ -18,9 +18,9 @@ import (
 const PublishServiceName = "publish-svc"
 
 // Gateway deploys a Gateway, GatewayClass and an ingress service for use in tests.
-func Gateway(ctx context.Context, t *testing.T, client client.Client) (gatewayapi.Gateway, gatewayapi.GatewayClass) {
-	gwc := gatewayapi.GatewayClass{
-		Spec: gatewayapi.GatewayClassSpec{
+func Gateway(ctx context.Context, t *testing.T, client client.Client) (gwtypes.Gateway, gwtypes.GatewayClass) {
+	gwc := gwtypes.GatewayClass{
+		Spec: gwtypes.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
 		GenerateName: "gwc-",
@@ -55,7 +55,7 @@ func Namespace(ctx context.Context, t *testing.T, cl client.Client) *corev1.Name
 
 // GatewayUsingGatewayClass deploys a Gateway, GatewayClass
 // and an ingress service for use in tests.
-func GatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.Client, gwc gatewayapi.GatewayClass) gatewayapi.Gateway {
+func GatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.Client, gwc gwtypes.GatewayClass) gwtypes.Gateway {
 	ns := Namespace(ctx, t, client)
 
 	publishSvc := corev1.Service{
@@ -72,14 +72,14 @@ func GatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.C
 	require.NoError(t, client.Create(ctx, &publishSvc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &publishSvc) })
 
-	gw := gatewayapi.Gateway{
-		Spec: gatewayapi.GatewaySpec{
-			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
-			Listeners: []gatewayapi.Listener{
+	gw := gwtypes.Gateway{
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: gwtypes.ObjectName(gwc.Name),
+			Listeners: []gwtypes.Listener{
 				{
 					Name:          "http",
-					Protocol:      gatewayapi.HTTPProtocolType,
-					Port:          gatewayapi.PortNumber(8000),
+					Protocol:      gwtypes.HTTPProtocolType,
+					Port:          gwtypes.PortNumber(8000),
 					AllowedRoutes: builder.NewAllowedRoutesFromAllNamespaces(),
 				},
 			},

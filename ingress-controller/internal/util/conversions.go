@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
@@ -17,7 +17,7 @@ func StringToTypedPtr[
 	return &ret
 }
 
-// StringToGatewayAPIKindPtr converts a string to a *gatewayapi.Kind.
-func StringToGatewayAPIKindPtr(kind string) *gatewayapi.Kind {
-	return StringToTypedPtr[*gatewayapi.Kind](kind)
+// StringToGatewayAPIKindPtr converts a string to a *gwtypes.Kind.
+func StringToGatewayAPIKindPtr(kind string) *gwtypes.Kind {
+	return StringToTypedPtr[*gwtypes.Kind](kind)
 }

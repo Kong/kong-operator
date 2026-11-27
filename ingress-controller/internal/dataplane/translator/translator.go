@@ -13,17 +13,17 @@ import (
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // -----------------------------------------------------------------------------
 // Translator - Public Constants and Package Variables
 // -----------------------------------------------------------------------------
 
-const KindGateway = gatewayapi.Kind("Gateway")
+const KindGateway = gwtypes.Kind("Gateway")
 
 // -----------------------------------------------------------------------------
 // Translator - Public Types

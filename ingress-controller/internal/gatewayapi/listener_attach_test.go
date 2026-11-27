@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func mkNamespaceGetter(namespaces ...*corev1.Namespace) NamespaceGetter {
@@ -26,54 +28,54 @@ func mkNamespaceGetter(namespaces ...*corev1.Namespace) NamespaceGetter {
 
 var errNamespaceNotFound = errors.New("namespace not found")
 
-func mkRoute(namespace string) *UDPRoute {
-	return &UDPRoute{
+func mkRoute(namespace string) *gwtypes.UDPRoute {
+	return &gwtypes.UDPRoute{
 		Namespace: namespace, Name: "route",
 	}
 }
 
 func TestListenerAllowsNamespace(t *testing.T) {
-	fromAll := NamespacesFromAll
-	fromSame := NamespacesFromSame
-	fromSelector := NamespacesFromSelector
+	fromAll := gwtypes.NamespacesFromAll
+	fromSame := gwtypes.NamespacesFromSame
+	fromSelector := gwtypes.NamespacesFromSelector
 
 	t.Run("nil AllowedRoutes allows any namespace", func(t *testing.T) {
-		ok, err := ListenerAllowsNamespace(Listener{}, mkRoute("app"), "gw-ns", nil, mkNamespaceGetter())
+		ok, err := ListenerAllowsNamespace(gwtypes.Listener{}, mkRoute("app"), "gw-ns", nil, mkNamespaceGetter())
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
 
 	t.Run("From: All allows any namespace", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &fromAll}}}
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: &fromAll}}}
 		ok, err := ListenerAllowsNamespace(listener, mkRoute("app"), "gw-ns", nil, mkNamespaceGetter())
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
 
 	t.Run("From: Same, no parentRef namespace, matches gateway namespace", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &fromSame}}}
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: &fromSame}}}
 		ok, err := ListenerAllowsNamespace(listener, mkRoute("gw-ns"), "gw-ns", nil, mkNamespaceGetter())
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
 
 	t.Run("From: Same, no parentRef namespace, route in different namespace is excluded", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &fromSame}}}
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: &fromSame}}}
 		ok, err := ListenerAllowsNamespace(listener, mkRoute("app"), "gw-ns", nil, mkNamespaceGetter())
 		require.NoError(t, err)
 		assert.False(t, ok)
 	})
 
 	t.Run("From: Same, parentRef namespace set, compares against it instead of gateway namespace", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{From: &fromSame}}}
-		parentRefNS := Namespace("app")
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{From: &fromSame}}}
+		parentRefNS := gwtypes.Namespace("app")
 		ok, err := ListenerAllowsNamespace(listener, mkRoute("app"), "gw-ns", &parentRefNS, mkNamespaceGetter())
 		require.NoError(t, err)
 		assert.True(t, ok)
 	})
 
 	t.Run("From: Selector, route namespace labels match", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{
 			From:     &fromSelector,
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "checkout"}},
 		}}}
@@ -86,7 +88,7 @@ func TestListenerAllowsNamespace(t *testing.T) {
 	})
 
 	t.Run("From: Selector, route namespace labels don't match", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{
 			From:     &fromSelector,
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "checkout"}},
 		}}}
@@ -99,7 +101,7 @@ func TestListenerAllowsNamespace(t *testing.T) {
 	})
 
 	t.Run("From: Selector, route namespace not found, returns error", func(t *testing.T) {
-		listener := Listener{AllowedRoutes: &AllowedRoutes{Namespaces: &RouteNamespaces{
+		listener := gwtypes.Listener{AllowedRoutes: &gwtypes.AllowedRoutes{Namespaces: &gwtypes.RouteNamespaces{
 			From:     &fromSelector,
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "checkout"}},
 		}}}
@@ -109,7 +111,7 @@ func TestListenerAllowsNamespace(t *testing.T) {
 }
 
 func TestGatewayClassControlledBy(t *testing.T) {
-	gwc := &GatewayClass{Spec: GatewayClassSpec{ControllerName: "konghq.com/kic-gateway-controller"}}
+	gwc := &gwtypes.GatewayClass{Spec: gwtypes.GatewayClassSpec{ControllerName: "konghq.com/kic-gateway-controller"}}
 
 	assert.True(t, GatewayClassControlledBy(gwc, "konghq.com/kic-gateway-controller"))
 	assert.False(t, GatewayClassControlledBy(gwc, "example.com/other-controller"))
@@ -121,31 +123,31 @@ func TestListenerResolvedRefsFalse(t *testing.T) {
 	})
 
 	t.Run("listener found but has no ResolvedRefs condition returns false", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name:       "tls",
-			Conditions: []metav1.Condition{{Type: string(ListenerConditionProgrammed), Status: metav1.ConditionFalse}},
+			Conditions: []metav1.Condition{{Type: string(gwtypes.ListenerConditionProgrammed), Status: metav1.ConditionFalse}},
 		}}
 		assert.False(t, ListenerResolvedRefsFalse("tls", 1, lss))
 	})
 
 	t.Run("listener found with ResolvedRefs=True returns false", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
-				{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionTrue, ObservedGeneration: 1},
+				{Type: string(gwtypes.ListenerConditionResolvedRefs), Status: metav1.ConditionTrue, ObservedGeneration: 1},
 			},
 		}}
 		assert.False(t, ListenerResolvedRefsFalse("tls", 1, lss))
 	})
 
 	t.Run("listener found with ResolvedRefs=False at the current generation returns true", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(ListenerConditionResolvedRefs),
+					Type:               string(gwtypes.ListenerConditionResolvedRefs),
 					Status:             metav1.ConditionFalse,
-					Reason:             string(ListenerReasonInvalidCertificateRef),
+					Reason:             string(gwtypes.ListenerReasonInvalidCertificateRef),
 					ObservedGeneration: 1,
 				},
 			},
@@ -157,13 +159,13 @@ func TestListenerResolvedRefsFalse(t *testing.T) {
 		// The Gateway spec may have been fixed since this condition was
 		// observed, and the controller just hasn't reconciled it yet - a stale
 		// False must not be treated as a settled, permanent failure.
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(ListenerConditionResolvedRefs),
+					Type:               string(gwtypes.ListenerConditionResolvedRefs),
 					Status:             metav1.ConditionFalse,
-					Reason:             string(ListenerReasonInvalidCertificateRef),
+					Reason:             string(gwtypes.ListenerReasonInvalidCertificateRef),
 					ObservedGeneration: 1,
 				},
 			},
@@ -172,17 +174,17 @@ func TestListenerResolvedRefsFalse(t *testing.T) {
 	})
 
 	t.Run("only matches the requested listener name", func(t *testing.T) {
-		lss := []ListenerStatus{
+		lss := []gwtypes.ListenerStatus{
 			{
 				Name: "other",
 				Conditions: []metav1.Condition{
-					{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionFalse, ObservedGeneration: 1},
+					{Type: string(gwtypes.ListenerConditionResolvedRefs), Status: metav1.ConditionFalse, ObservedGeneration: 1},
 				},
 			},
 			{
 				Name: "tls",
 				Conditions: []metav1.Condition{
-					{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionTrue, ObservedGeneration: 1},
+					{Type: string(gwtypes.ListenerConditionResolvedRefs), Status: metav1.ConditionTrue, ObservedGeneration: 1},
 				},
 			},
 		}
@@ -196,31 +198,31 @@ func TestListenerProgrammedFalseForSettledReason(t *testing.T) {
 	})
 
 	t.Run("listener found but has no Programmed condition returns false", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name:       "tls",
-			Conditions: []metav1.Condition{{Type: string(ListenerConditionResolvedRefs), Status: metav1.ConditionTrue}},
+			Conditions: []metav1.Condition{{Type: string(gwtypes.ListenerConditionResolvedRefs), Status: metav1.ConditionTrue}},
 		}}
 		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 1, lss))
 	})
 
 	t.Run("Programmed=True returns false", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
-				{Type: string(ListenerConditionProgrammed), Status: metav1.ConditionTrue, ObservedGeneration: 1},
+				{Type: string(gwtypes.ListenerConditionProgrammed), Status: metav1.ConditionTrue, ObservedGeneration: 1},
 			},
 		}}
 		assert.False(t, ListenerProgrammedFalseForSettledReason("tls", 1, lss))
 	})
 
 	t.Run("Programmed=False with reason Pending returns false (transient, keep waiting)", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(ListenerConditionProgrammed),
+					Type:               string(gwtypes.ListenerConditionProgrammed),
 					Status:             metav1.ConditionFalse,
-					Reason:             string(ListenerReasonPending),
+					Reason:             string(gwtypes.ListenerReasonPending),
 					ObservedGeneration: 1,
 				},
 			},
@@ -229,13 +231,13 @@ func TestListenerProgrammedFalseForSettledReason(t *testing.T) {
 	})
 
 	t.Run("Programmed=False with a settled reason at the current generation returns true", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(ListenerConditionProgrammed),
+					Type:               string(gwtypes.ListenerConditionProgrammed),
 					Status:             metav1.ConditionFalse,
-					Reason:             string(ListenerReasonInvalid),
+					Reason:             string(gwtypes.ListenerReasonInvalid),
 					ObservedGeneration: 1,
 				},
 			},
@@ -244,13 +246,13 @@ func TestListenerProgrammedFalseForSettledReason(t *testing.T) {
 	})
 
 	t.Run("Programmed=False with a settled reason from a stale generation returns false", func(t *testing.T) {
-		lss := []ListenerStatus{{
+		lss := []gwtypes.ListenerStatus{{
 			Name: "tls",
 			Conditions: []metav1.Condition{
 				{
-					Type:               string(ListenerConditionProgrammed),
+					Type:               string(gwtypes.ListenerConditionProgrammed),
 					Status:             metav1.ConditionFalse,
-					Reason:             string(ListenerReasonInvalid),
+					Reason:             string(gwtypes.ListenerReasonInvalid),
 					ObservedGeneration: 1,
 				},
 			},

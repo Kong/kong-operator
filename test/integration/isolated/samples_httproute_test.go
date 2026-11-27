@@ -23,8 +23,8 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -184,7 +184,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			ctx = runHTTPRouteExampleTestScenario(ctx, t, samplesManifestPath("feature-gated/gateway-httproute-use-last-valid-config.yaml"))
 
 			namespace := GetNamespaceForT(ctx, t)
-			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+			gateway := GetFromCtxForT[*gwtypes.Gateway](ctx, t)
 			clusterCfg := GetClusterFromCtx(ctx).Config()
 			t.Log("getting a gateway client")
 			gatewayClient, err := gatewayclient.NewForConfig(clusterCfg)
@@ -192,36 +192,36 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			ctx = SetInCtxForT(ctx, t, gatewayClient)
 
 			t.Log("adding additional properly configured route with plugin")
-			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Create(ctx, &gatewayapi.HTTPRoute{
+			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Create(ctx, &gwtypes.HTTPRoute{
 				Namespace: namespace,
 				Name:      additionalRouteName,
 				Annotations: map[string]string{
 					annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 					annotations.AnnotationPrefix + annotations.PluginsKey:   "response-transformer",
 				},
-				Spec: gatewayapi.HTTPRouteSpec{
-					CommonRouteSpec: gatewayapi.CommonRouteSpec{
-						ParentRefs: []gatewayapi.ParentReference{
+				Spec: gwtypes.HTTPRouteSpec{
+					CommonRouteSpec: gwtypes.CommonRouteSpec{
+						ParentRefs: []gwtypes.ParentReference{
 							{
-								Name: gatewayapi.ObjectName(gateway.Name),
+								Name: gwtypes.ObjectName(gateway.Name),
 							},
 						},
 					},
-					Rules: []gatewayapi.HTTPRouteRule{
+					Rules: []gwtypes.HTTPRouteRule{
 						{
-							Matches: []gatewayapi.HTTPRouteMatch{
+							Matches: []gwtypes.HTTPRouteMatch{
 								{
-									Path: &gatewayapi.HTTPPathMatch{
-										Type:  new(gatewayapi.PathMatchPathPrefix),
+									Path: &gwtypes.HTTPPathMatch{
+										Type:  new(gwtypes.PathMatchPathPrefix),
 										Value: new(additionalRoutePath),
 									},
 								},
 							},
-							BackendRefs: []gatewayapi.HTTPBackendRef{
+							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									Kind: new(gatewayapi.Kind("Service")),
+									Kind: new(gwtypes.Kind("Service")),
 									Name: additionalRouteServiceTarget,
-									Port: new(gatewayapi.PortNumber(80)),
+									Port: new(gwtypes.PortNumber(80)),
 								},
 							},
 						},
@@ -286,7 +286,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		Assess("modify working route /httproute-testing to /new-route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			namespace := GetNamespaceForT(ctx, t)
 			gatewayclient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
-			_, err := helpers.UpdateWithRetry(ctx, gatewayclient.GatewayV1().HTTPRoutes(namespace), "httproute-testing", func(route *gatewayapi.HTTPRoute) {
+			_, err := helpers.UpdateWithRetry(ctx, gatewayclient.GatewayV1().HTTPRoutes(namespace), "httproute-testing", func(route *gwtypes.HTTPRoute) {
 				route.Spec.Rules[0].Matches[0].Path.Value = new("/new-route")
 			})
 			require.NoError(t, err)

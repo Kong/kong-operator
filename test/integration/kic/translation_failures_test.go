@@ -23,8 +23,8 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	testutils "github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -126,7 +126,7 @@ func TestTranslationFailures(t *testing.T) {
 				cleaner.Add(gwc)
 
 				gatewayName := testutils.RandomName(testTranslationFailuresObjectsPrefix)
-				gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gatewayapi.Gateway) {
+				gateway, err := helpers.DeployGateway(ctx, gatewayClient, ns, gatewayClassName, func(gw *gwtypes.Gateway) {
 					gw.Name = gatewayName
 				})
 				require.NoError(t, err)
@@ -429,17 +429,17 @@ func pluginUsingInvalidCACert(ns string) *configurationv1.KongPlugin {
 	}
 }
 
-func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gatewayapi.HTTPRoute {
-	backendRefs := make([]gatewayapi.HTTPBackendRef, 0, len(services))
+func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gwtypes.HTTPRoute {
+	backendRefs := make([]gwtypes.HTTPBackendRef, 0, len(services))
 
 	if len(services) > 0 {
-		httpPort := gatewayapi.PortNumber(80)
+		httpPort := gwtypes.PortNumber(80)
 		weight := int32(100 / len(services))
 
 		for _, service := range services {
 			backendRefs = append(backendRefs,
-				gatewayapi.HTTPBackendRef{
-					Name:   gatewayapi.ObjectName(service.Name),
+				gwtypes.HTTPBackendRef{
+					Name:   gwtypes.ObjectName(service.Name),
 					Port:   &httpPort,
 					Kind:   testutils.StringToGatewayAPIKindPtr("Service"),
 					Weight: &weight,
@@ -447,23 +447,23 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 		}
 	}
 
-	pathMatchPrefix := gatewayapi.PathMatchPathPrefix
-	return &gatewayapi.HTTPRoute{
+	pathMatchPrefix := gwtypes.PathMatchPathPrefix
+	return &gwtypes.HTTPRoute{
 		Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 		Annotations: map[string]string{
 			annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		},
-		Spec: gatewayapi.HTTPRouteSpec{
-			CommonRouteSpec: gatewayapi.CommonRouteSpec{
-				ParentRefs: []gatewayapi.ParentReference{{
-					Name: gatewayapi.ObjectName(gatewayName),
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{
+					Name: gwtypes.ObjectName(gatewayName),
 				}},
 			},
-			Rules: []gatewayapi.HTTPRouteRule{
+			Rules: []gwtypes.HTTPRouteRule{
 				{
-					Matches: []gatewayapi.HTTPRouteMatch{
+					Matches: []gwtypes.HTTPRouteMatch{
 						{
-							Path: &gatewayapi.HTTPPathMatch{
+							Path: &gwtypes.HTTPPathMatch{
 								Type:  &pathMatchPrefix,
 								Value: new("/test"),
 							},

@@ -7,35 +7,36 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 	testcases := []struct {
 		name        string
-		route       *gatewayapi.HTTPRoute
-		backendRef  gatewayapi.BackendRef
-		allowedRefs map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo
+		route       *gwtypes.HTTPRoute
+		backendRef  gwtypes.BackendRef
+		allowedRefs map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo
 		expected    bool
 	}{
 		{
 			name: "allowed by grant",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: "example-namespace",
 				Name:      "example-name",
 			},
-			backendRef: gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:  new(gatewayapi.Kind("example-kind")),
-					Group: new(gatewayapi.Group("example-group")),
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Kind:  new(gwtypes.Kind("example-kind")),
+					Group: new(gwtypes.Group("example-group")),
 					Name:  "example-name",
 				},
 			},
-			allowedRefs: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
+			allowedRefs: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
 				"example-namespace": {
 					{
-						Kind:  gatewayapi.Kind("example-kind"),
-						Group: gatewayapi.Group("example-group"),
-						Name:  new(gatewayapi.ObjectName("example-name")),
+						Kind:  gwtypes.Kind("example-kind"),
+						Group: gwtypes.Group("example-group"),
+						Name:  new(gwtypes.ObjectName("example-name")),
 					},
 				},
 			},
@@ -43,24 +44,24 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 		},
 		{
 			name: "allowed by grant with namespace",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: "example-namespace",
 				Name:      "example-name",
 			},
-			backendRef: gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      new(gatewayapi.Kind("example-kind")),
-					Group:     new(gatewayapi.Group("example-group")),
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Kind:      new(gwtypes.Kind("example-kind")),
+					Group:     new(gwtypes.Group("example-group")),
 					Name:      "example-name",
-					Namespace: new(gatewayapi.Namespace("example-namespace")),
+					Namespace: new(gwtypes.Namespace("example-namespace")),
 				},
 			},
-			allowedRefs: map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo{
+			allowedRefs: map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo{
 				"example-namespace": {
 					{
-						Kind:  gatewayapi.Kind("example-kind"),
-						Group: gatewayapi.Group("example-group"),
-						Name:  new(gatewayapi.ObjectName("example-name")),
+						Kind:  gwtypes.Kind("example-kind"),
+						Group: gwtypes.Group("example-group"),
+						Name:  new(gwtypes.ObjectName("example-name")),
 					},
 				},
 			},
@@ -68,32 +69,32 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 		},
 		{
 			name: "allowed because backendRef and route use the same namespace",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: "example-namespace",
 				Name:      "example-name",
 			},
-			backendRef: gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      new(gatewayapi.Kind("example-kind")),
-					Group:     new(gatewayapi.Group("example-group")),
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Kind:      new(gwtypes.Kind("example-kind")),
+					Group:     new(gwtypes.Group("example-group")),
 					Name:      "example-name",
-					Namespace: new(gatewayapi.Namespace("example-namespace")),
+					Namespace: new(gwtypes.Namespace("example-namespace")),
 				},
 			},
 			expected: true,
 		},
 		{
 			name: "not allowed when not in grant and using different namespace",
-			route: &gatewayapi.HTTPRoute{
+			route: &gwtypes.HTTPRoute{
 				Namespace: "example-namespace-2",
 				Name:      "example-name",
 			},
-			backendRef: gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      new(gatewayapi.Kind("example-kind")),
-					Group:     new(gatewayapi.Group("example-group")),
+			backendRef: gwtypes.BackendRef{
+				BackendObjectReference: gwtypes.BackendObjectReference{
+					Kind:      new(gwtypes.Kind("example-kind")),
+					Group:     new(gwtypes.Group("example-group")),
 					Name:      "example-name",
-					Namespace: new(gatewayapi.Namespace("example-namespace")),
+					Namespace: new(gwtypes.Namespace("example-namespace")),
 				},
 			},
 			expected: false,

@@ -3,8 +3,8 @@ package builder
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	internalgatewayapi "github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	internal "github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 type EndpointPortBuilder = internal.EndpointPortBuilder
@@ -18,15 +18,15 @@ func NewEndpointPort(port int32) *EndpointPortBuilder {
 	return internal.NewEndpointPort(port)
 }
 
-func NewAllowedRoutesFromAllNamespaces() *internalgatewayapi.AllowedRoutes {
+func NewAllowedRoutesFromAllNamespaces() *gwtypes.AllowedRoutes {
 	return internal.NewAllowedRoutesFromAllNamespaces()
 }
 
-func NewAllowedRoutesFromSameNamespaces() *internalgatewayapi.AllowedRoutes {
+func NewAllowedRoutesFromSameNamespaces() *gwtypes.AllowedRoutes {
 	return internal.NewAllowedRoutesFromSameNamespaces()
 }
 
-func NewAllowedRoutesFromSelectorNamespace(selector *metav1.LabelSelector) *internalgatewayapi.AllowedRoutes {
+func NewAllowedRoutesFromSelectorNamespace(selector *metav1.LabelSelector) *gwtypes.AllowedRoutes {
 	return internal.NewAllowedRoutesFromSelectorNamespace(selector)
 }
 

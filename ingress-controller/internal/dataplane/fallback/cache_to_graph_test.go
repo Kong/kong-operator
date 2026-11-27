@@ -13,8 +13,8 @@ import (
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/fallback"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
@@ -111,19 +111,19 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 		{
 			name: "cache with HTTPRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
-				&gatewayapi.HTTPRoute{
+				&gwtypes.HTTPRoute{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
-					Spec: gatewayapi.HTTPRouteSpec{
-						Rules: []gatewayapi.HTTPRouteRule{
+					Spec: gwtypes.HTTPRouteSpec{
+						Rules: []gwtypes.HTTPRouteRule{
 							{
-								BackendRefs: []gatewayapi.HTTPBackendRef{
+								BackendRefs: []gwtypes.HTTPBackendRef{
 									{
 										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
+										Kind: new(gwtypes.Kind("Service")),
 									},
 								},
 							},
@@ -150,19 +150,19 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 		{
 			name: "cache with TLSRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
-				&gatewayapi.TLSRoute{
+				&gwtypes.TLSRoute{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
-					Spec: gatewayapi.TLSRouteSpec{
-						Rules: []gatewayapi.TLSRouteRule{
+					Spec: gwtypes.TLSRouteSpec{
+						Rules: []gwtypes.TLSRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									{
 										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
+										Kind: new(gwtypes.Kind("Service")),
 									},
 								},
 							},
@@ -189,19 +189,19 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 		{
 			name: "cache with TCPRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
-				&gatewayapi.TCPRoute{
+				&gwtypes.TCPRoute{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
-					Spec: gatewayapi.TCPRouteSpec{
-						Rules: []gatewayapi.TCPRouteRule{
+					Spec: gwtypes.TCPRouteSpec{
+						Rules: []gwtypes.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									{
 										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
+										Kind: new(gwtypes.Kind("Service")),
 									},
 								},
 							},
@@ -228,19 +228,19 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 		{
 			name: "cache with UDPRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
-				&gatewayapi.UDPRoute{
+				&gwtypes.UDPRoute{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
-					Spec: gatewayapi.UDPRouteSpec{
-						Rules: []gatewayapi.UDPRouteRule{
+					Spec: gwtypes.UDPRouteSpec{
+						Rules: []gwtypes.UDPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{
+								BackendRefs: []gwtypes.BackendRef{
 									{
 										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
+										Kind: new(gwtypes.Kind("Service")),
 									},
 								},
 							},
@@ -267,19 +267,19 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 		{
 			name: "cache with GRPCRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
-				&gatewayapi.GRPCRoute{
+				&gwtypes.GRPCRoute{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 					Annotations: map[string]string{
 						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
-					Spec: gatewayapi.GRPCRouteSpec{
-						Rules: []gatewayapi.GRPCRouteRule{
+					Spec: gwtypes.GRPCRouteSpec{
+						Rules: []gwtypes.GRPCRouteRule{
 							{
-								BackendRefs: []gatewayapi.GRPCBackendRef{
+								BackendRefs: []gwtypes.GRPCBackendRef{
 									{
 										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
+										Kind: new(gwtypes.Kind("Service")),
 									},
 								},
 							},

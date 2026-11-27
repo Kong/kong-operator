@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 // backendRefsToKongStateBackends takes a list of BackendRefs and returns a list of ServiceBackends.
@@ -27,8 +28,8 @@ func backendRefsToKongStateBackends(
 	logger logr.Logger,
 	storer store.Storer,
 	route client.Object,
-	backendRefs []gatewayapi.BackendRef,
-	allowed map[gatewayapi.Namespace][]gatewayapi.ReferenceGrantTo,
+	backendRefs []gwtypes.BackendRef,
+	allowed map[gwtypes.Namespace][]gwtypes.ReferenceGrantTo,
 ) kongstate.ServiceBackends {
 	backends := kongstate.ServiceBackends{}
 
@@ -99,7 +100,7 @@ func backendRefsToKongStateBackends(
 	return backends
 }
 
-func loggerForBackendRef(logger logr.Logger, route client.Object, backendRef gatewayapi.BackendRef) logr.Logger {
+func loggerForBackendRef(logger logr.Logger, route client.Object, backendRef gwtypes.BackendRef) logr.Logger {
 	var (
 		namespace = route.GetNamespace()
 		kind      = "unknown"

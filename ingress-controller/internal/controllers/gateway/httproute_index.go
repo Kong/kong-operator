@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
@@ -19,7 +19,7 @@ const httpRoutePluginRefIndexKey = "httproute-pluginref"
 func setupHTTPRouteIndices(mgr ctrl.Manager) error {
 	if err := mgr.GetCache().IndexField(
 		context.Background(),
-		&gatewayapi.HTTPRoute{},
+		&gwtypes.HTTPRoute{},
 		httpRoutePluginRefIndexKey,
 		indexHTTPRouteOnPluginReferences,
 	); err != nil {
@@ -29,7 +29,7 @@ func setupHTTPRouteIndices(mgr ctrl.Manager) error {
 }
 
 func indexHTTPRouteOnPluginReferences(obj client.Object) []string {
-	httproute, ok := obj.(*gatewayapi.HTTPRoute)
+	httproute, ok := obj.(*gwtypes.HTTPRoute)
 	if !ok {
 		return []string{}
 	}
@@ -45,7 +45,7 @@ func indexHTTPRouteOnPluginReferences(obj client.Object) []string {
 
 	for _, rule := range httproute.Spec.Rules {
 		for _, filter := range rule.Filters {
-			if filter.Type != gatewayapi.HTTPRouteFilterExtensionRef || filter.ExtensionRef == nil {
+			if filter.Type != gwtypes.HTTPRouteFilterExtensionRef || filter.ExtensionRef == nil {
 				continue
 			}
 			if string(filter.ExtensionRef.Group) != configurationv1.GroupVersion.Group || filter.ExtensionRef.Kind != "KongPlugin" {

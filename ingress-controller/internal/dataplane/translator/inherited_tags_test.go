@@ -14,10 +14,10 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	mgrconsts "github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -49,14 +49,14 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 	gwOtherClass := withTags(mkGateway("default", "gw-other-class", "other"), "gw-other-class-tag")
 	gwMissingClass := withTags(mkGateway("default", "gw-missing-class", "missing"), "gw-missing-class-tag")
 
-	httpRoutes := []*gatewayapi.HTTPRoute{
+	httpRoutes := []*gwtypes.HTTPRoute{
 		{
 			Namespace: "default", Name: "single-parent",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
 		},
 		{
 			Namespace: "default", Name: "two-parents",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(
 				gatewayParentRef("", "gw-1"),
 				gatewayParentRef("infra", "gw-2"),
 				// The same Gateway again (e.g. another listener) must not duplicate its tags.
@@ -69,28 +69,28 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 		},
 		{
 			Namespace: "default", Name: "class-tags-only",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-untagged"))},
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-untagged"))},
 		},
 		{
 			Namespace: "default", Name: "gateway-of-other-controller-class",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-other-class"))},
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-other-class"))},
 		},
 		{
 			Namespace: "default", Name: "gateway-with-missing-class",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-missing-class"))},
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-missing-class"))},
 		},
 		{
 			Namespace: "default", Name: "gateway-not-in-store",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "not-ours"))},
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "not-ours"))},
 		},
 		{
 			// The parentRef defaults to the route's namespace, where there is no gw-1.
 			Namespace: "other", Name: "gateway-in-other-namespace",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
 		},
 		{
 			Namespace: "default", Name: "non-gateway-parent",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(
 				func() gatewayv1.ParentReference {
 					pr := gatewayParentRef("", "gw-1")
 					pr.Kind = new(gatewayv1.Kind("Service"))
@@ -106,11 +106,11 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 		},
 		{
 			Namespace: "default", Name: "explicit-gateway-group-and-kind",
-			Spec: gatewayapi.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(
+			Spec: gwtypes.HTTPRouteSpec{CommonRouteSpec: commonRouteSpec(
 				func() gatewayv1.ParentReference {
 					pr := gatewayParentRef("", "gw-1")
 					pr.Kind = new(KindGateway)
-					pr.Group = new(gatewayapi.V1Group)
+					pr.Group = new(gwtypes.V1Group)
 					return pr
 				}(),
 			)},
@@ -118,24 +118,24 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 	}
 
 	s, err := store.NewFakeStore(store.FakeObjects{
-		GatewayClasses: []*gatewayapi.GatewayClass{ownedGWC, untaggedGWC, otherGWC},
-		Gateways:       []*gatewayapi.Gateway{gw1, gw2, gwUntagged, gwOtherClass, gwMissingClass},
+		GatewayClasses: []*gwtypes.GatewayClass{ownedGWC, untaggedGWC, otherGWC},
+		Gateways:       []*gwtypes.Gateway{gw1, gw2, gwUntagged, gwOtherClass, gwMissingClass},
 		HTTPRoutes:     httpRoutes,
-		GRPCRoutes: []*gatewayapi.GRPCRoute{{
+		GRPCRoutes: []*gwtypes.GRPCRoute{{
 			Namespace: "default", Name: "grpc",
-			Spec: gatewayapi.GRPCRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
+			Spec: gwtypes.GRPCRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
 		}},
-		TCPRoutes: []*gatewayapi.TCPRoute{{
+		TCPRoutes: []*gwtypes.TCPRoute{{
 			Namespace: "default", Name: "tcp",
-			Spec: gatewayapi.TCPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
+			Spec: gwtypes.TCPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
 		}},
-		UDPRoutes: []*gatewayapi.UDPRoute{{
+		UDPRoutes: []*gwtypes.UDPRoute{{
 			Namespace: "default", Name: "udp",
-			Spec: gatewayapi.UDPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
+			Spec: gwtypes.UDPRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
 		}},
-		TLSRoutes: []*gatewayapi.TLSRoute{{
+		TLSRoutes: []*gwtypes.TLSRoute{{
 			Namespace: "default", Name: "tls",
-			Spec: gatewayapi.TLSRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
+			Spec: gwtypes.TLSRouteSpec{CommonRouteSpec: commonRouteSpec(gatewayParentRef("", "gw-1"))},
 		}},
 	})
 	require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestBuildInheritedTagIndex(t *testing.T) {
 }
 
 func TestApplyInheritedTags(t *testing.T) {
-	httpRouteGVK := schema.GroupVersionKind{Group: gatewayapi.GroupVersion.Group, Version: "v1", Kind: "HTTPRoute"}
+	httpRouteGVK := schema.GroupVersionKind{Group: gwtypes.GroupVersion.Group, Version: "v1", Kind: "HTTPRoute"}
 	ingressGVK := schema.GroupVersionKind{Group: "networking.k8s.io", Version: "v1", Kind: "Ingress"}
 
 	index := inheritedTagIndex{
@@ -204,7 +204,7 @@ func TestApplyInheritedTags(t *testing.T) {
 		ir := newIngressRules()
 		ir.ServiceNameToServices["combined"] = kongstate.Service{
 			Name:   new("combined"),
-			Parent: &gatewayapi.HTTPRoute{Namespace: "default", Name: "route-b"},
+			Parent: &gwtypes.HTTPRoute{Namespace: "default", Name: "route-b"},
 			// route-b comes first, but the Service's inherited tags are ordered by route key.
 			Routes: []kongstate.Route{
 				newRoute("rb", httpRouteGVK, "route-b"),
@@ -246,7 +246,7 @@ func TestApplyInheritedTags(t *testing.T) {
 		ir := newIngressRules()
 		ir.ServiceNameToServices["svc"] = kongstate.Service{
 			Name:   new("svc"),
-			Parent: &gatewayapi.HTTPRoute{Namespace: "default", Name: "route-a"},
+			Parent: &gwtypes.HTTPRoute{Namespace: "default", Name: "route-a"},
 		}
 		tr := mustNewTranslator(t, mustNewEmptyFakeStore(t))
 		tr.applyInheritedTags(&ir, index)
@@ -262,8 +262,8 @@ func mustNewEmptyFakeStore(t *testing.T) store.Storer {
 }
 
 func TestGenerateKongServiceTagsWithInheritedTags(t *testing.T) {
-	route := withTags(&gatewayapi.HTTPRoute{
-		APIVersion: gatewayapi.GroupVersion.String(), Kind: "HTTPRoute",
+	route := withTags(&gwtypes.HTTPRoute{
+		APIVersion: gwtypes.GroupVersion.String(), Kind: "HTTPRoute",
 		Namespace: "default", Name: "route",
 	}, "route-tag,shared")
 	svc1 := withTags(&corev1.Service{

@@ -15,9 +15,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func getCertFromSecret(secret *corev1.Secret) (string, string, error) {
@@ -62,12 +62,12 @@ func (t *Translator) getGatewayCerts(resolver *inheritedTagResolver) []certWrapp
 	}
 	// Sort Gateways to make the result, and thereby the merged certificates' inherited tags and the
 	// SNI assignment, independent of the store's ordering.
-	slices.SortFunc(gateways, func(a, b *gatewayapi.Gateway) int {
+	slices.SortFunc(gateways, func(a, b *gwtypes.Gateway) int {
 		return cmp.Or(cmp.Compare(a.Namespace, b.Namespace), cmp.Compare(a.Name, b.Name))
 	})
 	for _, gateway := range gateways {
 		gatewayInheritedTags := resolver.forGateway(gateway)
-		statuses := make(map[gatewayapi.SectionName]gatewayapi.ListenerStatus, len(gateway.Status.Listeners))
+		statuses := make(map[gwtypes.SectionName]gwtypes.ListenerStatus, len(gateway.Status.Listeners))
 		for _, status := range gateway.Status.Listeners {
 			statuses[status.Name] = status
 		}

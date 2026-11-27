@@ -44,8 +44,8 @@ import (
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 const (
@@ -93,16 +93,16 @@ type Storer interface {
 	ListIngressClassesV1() []*netv1.IngressClass
 
 	// Gateway API resources.
-	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
-	GetGatewayClass(name string) (*gatewayapi.GatewayClass, error)
-	ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error)
-	ListUDPRoutes() ([]*gatewayapi.UDPRoute, error)
-	ListTCPRoutes() ([]*gatewayapi.TCPRoute, error)
-	ListTLSRoutes() ([]*gatewayapi.TLSRoute, error)
-	ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error)
-	ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error)
-	ListGateways() ([]*gatewayapi.Gateway, error)
-	ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gatewayapi.BackendTLSPolicy, error)
+	GetGateway(namespace string, name string) (*gwtypes.Gateway, error)
+	GetGatewayClass(name string) (*gwtypes.GatewayClass, error)
+	ListHTTPRoutes() ([]*gwtypes.HTTPRoute, error)
+	ListUDPRoutes() ([]*gwtypes.UDPRoute, error)
+	ListTCPRoutes() ([]*gwtypes.TCPRoute, error)
+	ListTLSRoutes() ([]*gwtypes.TLSRoute, error)
+	ListGRPCRoutes() ([]*gwtypes.GRPCRoute, error)
+	ListReferenceGrants() ([]*gwtypes.ReferenceGrant, error)
+	ListGateways() ([]*gwtypes.Gateway, error)
+	ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gwtypes.BackendTLSPolicy, error)
 }
 
 // Store implements Storer and can be used to list Ingress, Services
@@ -306,21 +306,21 @@ func List[T client.Object](cs CacheStores) ([]T, error) {
 func GetTypedStore[T client.Object](cs CacheStores) (cache.Store, error) {
 	var obj T
 	switch any(obj).(type) {
-	case *gatewayapi.HTTPRoute:
+	case *gwtypes.HTTPRoute:
 		return cs.HTTPRoute, nil
-	case *gatewayapi.TCPRoute:
+	case *gwtypes.TCPRoute:
 		return cs.TCPRoute, nil
-	case *gatewayapi.UDPRoute:
+	case *gwtypes.UDPRoute:
 		return cs.UDPRoute, nil
-	case *gatewayapi.TLSRoute:
+	case *gwtypes.TLSRoute:
 		return cs.TLSRoute, nil
-	case *gatewayapi.GRPCRoute:
+	case *gwtypes.GRPCRoute:
 		return cs.GRPCRoute, nil
-	case *gatewayapi.ReferenceGrant:
+	case *gwtypes.ReferenceGrant:
 		return cs.ReferenceGrant, nil
-	case *gatewayapi.Gateway:
+	case *gwtypes.Gateway:
 		return cs.Gateway, nil
-	case *gatewayapi.BackendTLSPolicy:
+	case *gwtypes.BackendTLSPolicy:
 		return cs.BackendTLSPolicy, nil
 	case *configurationv1.KongPlugin:
 		return cs.Plugin, nil
@@ -330,51 +330,51 @@ func GetTypedStore[T client.Object](cs CacheStores) (cache.Store, error) {
 }
 
 // ListHTTPRoutes returns the list of HTTPRoutes in the HTTPRoute cache store.
-func (s Store) ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error) {
-	return List[*gatewayapi.HTTPRoute](s.stores)
+func (s Store) ListHTTPRoutes() ([]*gwtypes.HTTPRoute, error) {
+	return List[*gwtypes.HTTPRoute](s.stores)
 }
 
 // ListUDPRoutes returns the list of UDPRoutes in the UDPRoute cache store.
-func (s Store) ListUDPRoutes() ([]*gatewayapi.UDPRoute, error) {
-	return List[*gatewayapi.UDPRoute](s.stores)
+func (s Store) ListUDPRoutes() ([]*gwtypes.UDPRoute, error) {
+	return List[*gwtypes.UDPRoute](s.stores)
 }
 
 // ListTCPRoutes returns the list of TCPRoutes in the TCPRoute cache store.
-func (s Store) ListTCPRoutes() ([]*gatewayapi.TCPRoute, error) {
-	return List[*gatewayapi.TCPRoute](s.stores)
+func (s Store) ListTCPRoutes() ([]*gwtypes.TCPRoute, error) {
+	return List[*gwtypes.TCPRoute](s.stores)
 }
 
 // ListTLSRoutes returns the list of TLSRoutes in the TLSRoute cache store.
-func (s Store) ListTLSRoutes() ([]*gatewayapi.TLSRoute, error) {
-	return List[*gatewayapi.TLSRoute](s.stores)
+func (s Store) ListTLSRoutes() ([]*gwtypes.TLSRoute, error) {
+	return List[*gwtypes.TLSRoute](s.stores)
 }
 
 // ListGRPCRoutes returns the list of GRPCRoutes in the GRPCRoute cache store.
-func (s Store) ListGRPCRoutes() ([]*gatewayapi.GRPCRoute, error) {
-	return List[*gatewayapi.GRPCRoute](s.stores)
+func (s Store) ListGRPCRoutes() ([]*gwtypes.GRPCRoute, error) {
+	return List[*gwtypes.GRPCRoute](s.stores)
 }
 
 // ListReferenceGrants returns the list of ReferenceGrants in the ReferenceGrant cache store.
-func (s Store) ListReferenceGrants() ([]*gatewayapi.ReferenceGrant, error) {
-	return List[*gatewayapi.ReferenceGrant](s.stores)
+func (s Store) ListReferenceGrants() ([]*gwtypes.ReferenceGrant, error) {
+	return List[*gwtypes.ReferenceGrant](s.stores)
 }
 
 // ListGateways returns the list of Gateways in the Gateway cache store.
-func (s Store) ListGateways() ([]*gatewayapi.Gateway, error) {
-	return List[*gatewayapi.Gateway](s.stores)
+func (s Store) ListGateways() ([]*gwtypes.Gateway, error) {
+	return List[*gwtypes.Gateway](s.stores)
 }
 
 // ListBackendTLSPoliciesByTargetService returns the list of BackendTLSPolicies in the BackendTLSPolicy cache store.
 // The policies are filtered by the target service.
-func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gatewayapi.BackendTLSPolicy, error) {
-	policiesToReturn := []*gatewayapi.BackendTLSPolicy{}
-	policies, err := List[*gatewayapi.BackendTLSPolicy](s.stores)
+func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.NamespacedName) ([]*gwtypes.BackendTLSPolicy, error) {
+	policiesToReturn := []*gwtypes.BackendTLSPolicy{}
+	policies, err := List[*gwtypes.BackendTLSPolicy](s.stores)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, policy := range policies {
-		if lo.ContainsBy(policy.Spec.TargetRefs, func(ref gatewayapi.LocalPolicyTargetReferenceWithSectionName) bool {
+		if lo.ContainsBy(policy.Spec.TargetRefs, func(ref gwtypes.LocalPolicyTargetReferenceWithSectionName) bool {
 			return (ref.Group == "" || ref.Group == "core") &&
 				ref.Kind == "Service" &&
 				(policy.Namespace == service.Namespace && string(ref.Name) == service.Name)
@@ -547,7 +547,7 @@ func (s Store) GetIngressClassParametersV1Alpha1(ingressClass *netv1.IngressClas
 }
 
 // GetGateway returns gateway resource having specified namespace and name.
-func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, error) {
+func (s Store) GetGateway(namespace string, name string) (*gwtypes.Gateway, error) {
 	key := fmt.Sprintf("%v/%v", namespace, name)
 	obj, exists, err := s.stores.Gateway.GetByKey(key)
 	if err != nil {
@@ -556,11 +556,11 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, e
 	if !exists {
 		return nil, NotFoundError{fmt.Sprintf("Gateway %v not found", name)}
 	}
-	return obj.(*gatewayapi.Gateway), nil
+	return obj.(*gwtypes.Gateway), nil
 }
 
 // GetGatewayClass returns the GatewayClass resource having the specified name.
-func (s Store) GetGatewayClass(name string) (*gatewayapi.GatewayClass, error) {
+func (s Store) GetGatewayClass(name string) (*gwtypes.GatewayClass, error) {
 	obj, exists, err := s.stores.GatewayClass.GetByKey(name)
 	if err != nil {
 		return nil, err
@@ -568,7 +568,7 @@ func (s Store) GetGatewayClass(name string) (*gatewayapi.GatewayClass, error) {
 	if !exists {
 		return nil, NotFoundError{fmt.Sprintf("GatewayClass %v not found", name)}
 	}
-	return obj.(*gatewayapi.GatewayClass), nil
+	return obj.(*gwtypes.GatewayClass), nil
 }
 
 // GetKongVault returns kongvault resource having specified name.
@@ -790,23 +790,23 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// Kubernetes Gateway APIs
 	// ----------------------------------------------------------------------------
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"):
-		return &gatewayapi.Gateway{}, nil
+		return &gwtypes.Gateway{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GatewayClass"):
-		return &gatewayapi.GatewayClass{}, nil
+		return &gwtypes.GatewayClass{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("HTTPRoute"):
-		return &gatewayapi.HTTPRoute{}, nil
+		return &gwtypes.HTTPRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GRPCRoute"):
-		return &gatewayapi.GRPCRoute{}, nil
+		return &gwtypes.GRPCRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TCPRoute"):
-		return &gatewayapi.TCPRoute{}, nil
+		return &gwtypes.TCPRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("UDPRoute"):
-		return &gatewayapi.UDPRoute{}, nil
+		return &gwtypes.UDPRoute{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("TLSRoute"):
-		return &gatewayapi.TLSRoute{}, nil
+		return &gwtypes.TLSRoute{}, nil
 	case schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"):
-		return &gatewayapi.ReferenceGrant{}, nil
+		return &gwtypes.ReferenceGrant{}, nil
 	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("BackendTLSPolicy"):
-		return &gatewayapi.BackendTLSPolicy{}, nil
+		return &gwtypes.BackendTLSPolicy{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------

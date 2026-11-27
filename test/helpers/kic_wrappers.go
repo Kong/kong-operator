@@ -17,8 +17,8 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	ic "github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 type HTTPClientOption = ic.HTTPClientOption
@@ -144,27 +144,27 @@ func CreateIngressClass(ctx context.Context, ingressClassName string, client *ku
 }
 
 // DeployGatewayClass bridges to ingress-controller test helpers.
-func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gatewayapi.GatewayClass)) (*gatewayapi.GatewayClass, error) {
+func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gwtypes.GatewayClass)) (*gwtypes.GatewayClass, error) {
 	return ic.DeployGatewayClass(ctx, client, gatewayClassName, opts...)
 }
 
 // DeployGateway bridges to ingress-controller test helpers.
-func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gatewayapi.Gateway)) (*gatewayapi.Gateway, error) {
+func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gwtypes.Gateway)) (*gwtypes.Gateway, error) {
 	return ic.DeployGateway(ctx, client, namespace, gatewayClassName, opts...)
 }
 
 // GetGatewayIsLinkedCallback bridges to ingress-controller test helpers.
-func GetGatewayIsLinkedCallback(ctx context.Context, t *testing.T, c *gatewayclient.Clientset, protocolType gatewayapi.ProtocolType, namespace, name string) func() bool {
+func GetGatewayIsLinkedCallback(ctx context.Context, t *testing.T, c *gatewayclient.Clientset, protocolType gwtypes.ProtocolType, namespace, name string) func() bool {
 	return ic.GetGatewayIsLinkedCallback(ctx, t, c, protocolType, namespace, name)
 }
 
 // GetGatewayIsUnlinkedCallback bridges to ingress-controller test helpers.
-func GetGatewayIsUnlinkedCallback(ctx context.Context, t *testing.T, c *gatewayclient.Clientset, protocolType gatewayapi.ProtocolType, namespace, name string) func() bool {
+func GetGatewayIsUnlinkedCallback(ctx context.Context, t *testing.T, c *gatewayclient.Clientset, protocolType gwtypes.ProtocolType, namespace, name string) func() bool {
 	return ic.GetGatewayIsUnlinkedCallback(ctx, t, c, protocolType, namespace, name)
 }
 
 // GetVerifyProgrammedConditionCallback bridges to ingress-controller test helpers.
-func GetVerifyProgrammedConditionCallback(t *testing.T, c *gatewayclient.Clientset, protocolType gatewayapi.ProtocolType, namespace, name string, expectedStatus metav1.ConditionStatus) func() bool {
+func GetVerifyProgrammedConditionCallback(t *testing.T, c *gatewayclient.Clientset, protocolType gwtypes.ProtocolType, namespace, name string, expectedStatus metav1.ConditionStatus) func() bool {
 	return ic.GetVerifyProgrammedConditionCallback(t, c, protocolType, namespace, name, expectedStatus)
 }
 

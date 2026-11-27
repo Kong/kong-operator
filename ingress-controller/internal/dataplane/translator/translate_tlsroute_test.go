@@ -15,13 +15,13 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestIngressRulesFromTLSRoutes(t *testing.T) {
-	tlsRouteTypeMeta := gatewayapi.TLSRouteTypeMeta
+	tlsRouteTypeMeta := gwtypes.TLSRouteTypeMeta
 	kongVersionNotSupportingWildcardSNI := semver.MustParse("3.4.3")
 	kongVersionSupportingWildcardSNI := semver.MustParse("3.7.0")
 
@@ -31,18 +31,18 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 		return failure
 	}
 
-	tlsRouteExactHostname := &gatewayapi.TLSRoute{
+	tlsRouteExactHostname := &gwtypes.TLSRoute{
 		TypeMeta:  tlsRouteTypeMeta,
 		Namespace: "default",
 		Name:      "tlsroute-1",
-		Spec: gatewayapi.TLSRouteSpec{
-			Hostnames: []gatewayapi.Hostname{
+		Spec: gwtypes.TLSRouteSpec{
+			Hostnames: []gwtypes.Hostname{
 				"foo.com",
 				"bar.com",
 			},
-			Rules: []gatewayapi.TLSRouteRule{
+			Rules: []gwtypes.TLSRouteRule{
 				{
-					BackendRefs: []gatewayapi.BackendRef{
+					BackendRefs: []gwtypes.BackendRef{
 						builder.NewBackendRef("service1").WithPort(80).Build(),
 						builder.NewBackendRef("service2").WithPort(443).Build(),
 					},
@@ -51,17 +51,17 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 		},
 	}
 
-	tlsRouteWildcardHostname := &gatewayapi.TLSRoute{
+	tlsRouteWildcardHostname := &gwtypes.TLSRoute{
 		TypeMeta:  tlsRouteTypeMeta,
 		Namespace: "default",
 		Name:      "tlsroute-1",
-		Spec: gatewayapi.TLSRouteSpec{
-			Hostnames: []gatewayapi.Hostname{
+		Spec: gwtypes.TLSRouteSpec{
+			Hostnames: []gwtypes.Hostname{
 				"*.foo.com",
 			},
-			Rules: []gatewayapi.TLSRouteRule{
+			Rules: []gwtypes.TLSRouteRule{
 				{
-					BackendRefs: []gatewayapi.BackendRef{
+					BackendRefs: []gwtypes.BackendRef{
 						builder.NewBackendRef("service1").WithPort(80).Build(),
 					},
 				},
@@ -73,7 +73,7 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 		name                    string
 		kongVersion             semver.Version
 		expressionRoutesEnabled bool
-		tlsRoutes               []*gatewayapi.TLSRoute
+		tlsRoutes               []*gwtypes.TLSRoute
 		services                []*corev1.Service
 		expectedKongServices    []kongstate.Service
 		expectedKongRoutes      map[string][]kongstate.Route
@@ -83,7 +83,7 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			name:                    "tlsroute with single rule and exact hostnames",
 			kongVersion:             kongVersionNotSupportingWildcardSNI,
 			expressionRoutesEnabled: true,
-			tlsRoutes:               []*gatewayapi.TLSRoute{tlsRouteExactHostname},
+			tlsRoutes:               []*gwtypes.TLSRoute{tlsRouteExactHostname},
 			// After https://github.com/Kong/kubernetes-ingress-controller/pull/5392
 			// is merged the backendRef will be checked for existence in the store
 			// so we need to add them here.
@@ -123,7 +123,7 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 		{
 			name:        "tlsroute with wildcard hostname on Kong version not supporting it",
 			kongVersion: kongVersionNotSupportingWildcardSNI,
-			tlsRoutes:   []*gatewayapi.TLSRoute{tlsRouteWildcardHostname},
+			tlsRoutes:   []*gwtypes.TLSRoute{tlsRouteWildcardHostname},
 			services: []*corev1.Service{
 				{
 					Namespace: "default",
@@ -138,7 +138,7 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			name:                    "tlsroute with wildcard hostname on Kong version supporting it",
 			kongVersion:             kongVersionSupportingWildcardSNI,
 			expressionRoutesEnabled: true,
-			tlsRoutes:               []*gatewayapi.TLSRoute{tlsRouteWildcardHostname},
+			tlsRoutes:               []*gwtypes.TLSRoute{tlsRouteWildcardHostname},
 			services: []*corev1.Service{
 				{
 					Namespace: "default",
