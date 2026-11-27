@@ -20,7 +20,9 @@ import (
 // variant's upstream CA certificates and client certificates) to the referenced entities'
 // names, and the config's secretRefs (the session and token-vault Redis passwords and the
 // passthrough proxy's basic-auth password) to their Secret values. The config certificate
-// references must target the server's own OnPremAIGateway.
+// references must target the server's own OnPremAIGateway. The default prompt and resource
+// ACLs, and the prompts and resources lists, are not carried: the on-prem document has no
+// slot for them.
 func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
 	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayMCPServer %s/%s: %w", obj.Namespace, obj.Name, err)
@@ -321,6 +323,12 @@ func (spec *AIGatewayMCPServerAPISpec) marshalAIGWMCPServerPayload() ([]byte, er
 		delete(a, "auth_strategies")
 		delete(a, "acls")
 		delete(a, "default_tool_acls")
+		// Prompt and resource ACLs have no aigw slot: the on-prem document
+		// carries only default_tool_acls, so the CRD's default_prompt_acls,
+		// default_resource_acls, and the per-prompt/per-resource ACLs below
+		// are dropped rather than pushed with their unresolved references.
+		delete(a, "default_prompt_acls")
+		delete(a, "default_resource_acls")
 	}
 	if ts, ok := cfg["tools"].([]any); ok {
 		for _, t := range ts {
@@ -331,6 +339,12 @@ func (spec *AIGatewayMCPServerAPISpec) marshalAIGWMCPServerPayload() ([]byte, er
 			}
 		}
 	}
+
+	// Neither list has an aigw slot: an MCP Server's prompts and resources,
+	// each a name or URI gated by its own ACLs, are a Konnect-only
+	// access-control surface.
+	delete(cfg, "prompts")
+	delete(cfg, "resources")
 
 	if c, ok := cfg["config"].(map[string]any); ok {
 		if url, ok := c["url"]; ok {

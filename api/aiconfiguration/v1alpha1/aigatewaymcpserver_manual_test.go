@@ -247,3 +247,329 @@ func TestAIGatewayMCPServer_ServerACLsArms(t *testing.T) {
 		})
 	}
 }
+
+// TestAIGatewayMCPServer_DefaultPromptAndResourceACLs guards that the
+// server-level default prompt and resource ACLs reach the Konnect request with
+// their consumer group references resolved to Konnect names, on every access
+// arm that declares them. A missing resolution leaves the {kind,name}
+// reference in the payload, which Konnect rejects.
+func TestAIGatewayMCPServer_DefaultPromptAndResourceACLs(t *testing.T) {
+	t.Parallel()
+
+	newGroup := func(name, konnectName string) *AIGatewayConsumerGroup {
+		group := &AIGatewayConsumerGroup{
+			Name: name, Namespace: "default",
+			Spec: AIGatewayConsumerGroupSpec{
+				APISpec: AIGatewayConsumerGroupAPISpec{Name: AIGatewayEntityIdentifier(konnectName)},
+			},
+		}
+		group.SetKonnectID(name + "-kid")
+		return group
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	cl := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(newGroup("allow-group", "konnect-allow"), newGroup("deny-group", "konnect-deny")).
+		Build()
+
+	promptACLs := AIGatewayMCPACLs{Allow: []AIGatewayACLRef{{Name: "allow-group"}}}
+	resourceACLs := AIGatewayMCPACLs{Deny: []AIGatewayACLRef{{Name: "deny-group"}}}
+
+	consumer := &AIGatewayMCPServerListenerConsumer{
+		DefaultPromptAcls:   promptACLs,
+		DefaultResourceAcls: resourceACLs,
+	}
+	oauth := &AIGatewayMCPServerListenerOauth{
+		AccessTokenClaimField: "sub",
+		DefaultPromptAcls:     promptACLs,
+		DefaultResourceAcls:   resourceACLs,
+	}
+
+	route := AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}}
+	obj := func(cfg *AIGatewayMCPServerConfig) *AIGatewayMCPServer {
+		return &AIGatewayMCPServer{
+			Name: "mcp", Namespace: "default",
+			Spec: AIGatewayMCPServerSpec{
+				APISpec: AIGatewayMCPServerAPISpec{AIGatewayMCPServerConfig: cfg},
+			},
+		}
+	}
+
+	tests := map[string]*AIGatewayMCPServer{
+		"listener/consumer": obj(&AIGatewayMCPServerConfig{
+			Type: AIGatewayMCPServerConfigTypeListener,
+			Listener: &AIGatewayMCPServerListener{
+				Name: "mcp", DisplayName: "MCP",
+				Access: &AIGatewayMCPServerListenerAccess{
+					AclAttributeType: AIGatewayMCPServerListenerAccessTypeConsumer,
+					Consumer:         consumer,
+				},
+				Config: AIGatewayMCPServerListenerConfig{Route: route},
+			},
+		}),
+		"listener/oauth": obj(&AIGatewayMCPServerConfig{
+			Type: AIGatewayMCPServerConfigTypeListener,
+			Listener: &AIGatewayMCPServerListener{
+				Name: "mcp", DisplayName: "MCP",
+				Access: &AIGatewayMCPServerListenerAccess{
+					AclAttributeType: AIGatewayMCPServerListenerAccessTypeOauth,
+					Oauth:            oauth,
+				},
+				Config: AIGatewayMCPServerListenerConfig{Route: route},
+			},
+		}),
+		"conversion-listener/consumer": obj(&AIGatewayMCPServerConfig{
+			Type: AIGatewayMCPServerConfigTypeConversionListener,
+			ConversionListener: &AIGatewayMCPServerConversionListener{
+				Name: "mcp", DisplayName: "MCP",
+				Access: &AIGatewayMCPServerConversionListenerAccess{
+					AclAttributeType: AIGatewayMCPServerConversionListenerAccessTypeConsumer,
+					Consumer:         consumer,
+				},
+				Config: AIGatewayMCPServerConversionListenerConfig{URL: "https://example.com/mcp", Route: route},
+				Tools: []AIGatewayMCPConversionTool{{
+					Name:        "t1",
+					Description: "t1",
+					Method:      "GET",
+				}},
+			},
+		}),
+		"conversion-listener/oauth": obj(&AIGatewayMCPServerConfig{
+			Type: AIGatewayMCPServerConfigTypeConversionListener,
+			ConversionListener: &AIGatewayMCPServerConversionListener{
+				Name: "mcp", DisplayName: "MCP",
+				Access: &AIGatewayMCPServerConversionListenerAccess{
+					AclAttributeType: AIGatewayMCPServerConversionListenerAccessTypeOauth,
+					Oauth:            oauth,
+				},
+				Config: AIGatewayMCPServerConversionListenerConfig{URL: "https://example.com/mcp", Route: route},
+				Tools: []AIGatewayMCPConversionTool{{
+					Name:        "t1",
+					Description: "t1",
+					Method:      "GET",
+				}},
+			},
+		}),
+		"passthrough-listener/consumer": obj(&AIGatewayMCPServerConfig{
+			Type: AIGatewayMCPServerConfigTypePassthroughListener,
+			PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+				Name: "mcp", DisplayName: "MCP",
+				Access: &AIGatewayMCPServerPassthroughListenerAccess{
+					AclAttributeType: AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
+					Consumer:         consumer,
+				},
+				Config: AIGatewayMCPServerWithUpstreamConfig{URL: "https://example.com/mcp", Route: route},
+			},
+		}),
+		"passthrough-listener/oauth": obj(&AIGatewayMCPServerConfig{
+			Type: AIGatewayMCPServerConfigTypePassthroughListener,
+			PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+				Name: "mcp", DisplayName: "MCP",
+				Access: &AIGatewayMCPServerPassthroughListenerAccess{
+					AclAttributeType: AIGatewayMCPServerPassthroughListenerAccessTypeOauth,
+					Oauth:            oauth,
+				},
+				Config: AIGatewayMCPServerWithUpstreamConfig{URL: "https://example.com/mcp", Route: route},
+			},
+		}),
+	}
+
+	for name, mcpServer := range tests {
+		t.Run(name, func(t *testing.T) {
+			req, err := mcpServer.ToCreateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+
+			data, err := json.Marshal(req)
+			require.NoError(t, err)
+
+			var decoded map[string]any
+			require.NoError(t, json.Unmarshal(data, &decoded))
+			access, ok := decoded["access"].(map[string]any)
+			require.True(t, ok, "request has no access block")
+
+			gotPrompt, ok := access["default_prompt_acls"].(map[string]any)
+			require.True(t, ok, "request has no access.default_prompt_acls")
+			require.Equal(t, map[string]any{"allow": []any{"konnect-allow"}}, gotPrompt)
+
+			gotResource, ok := access["default_resource_acls"].(map[string]any)
+			require.True(t, ok, "request has no access.default_resource_acls")
+			require.Equal(t, map[string]any{"deny": []any{"konnect-deny"}}, gotResource)
+		})
+	}
+}
+
+// TestAIGatewayMCPServer_PromptAndResourceACLs guards that a prompt's and a
+// resource's own access.acls reach the Konnect request with their consumer
+// group references resolved, on the variants that proxy to an upstream and
+// therefore declare prompts and resources.
+func TestAIGatewayMCPServer_PromptAndResourceACLs(t *testing.T) {
+	t.Parallel()
+
+	newGroup := func(name, konnectName string) *AIGatewayConsumerGroup {
+		group := &AIGatewayConsumerGroup{
+			Name: name, Namespace: "default",
+			Spec: AIGatewayConsumerGroupSpec{
+				APISpec: AIGatewayConsumerGroupAPISpec{Name: AIGatewayEntityIdentifier(konnectName)},
+			},
+		}
+		group.SetKonnectID(name + "-kid")
+		return group
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	cl := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(newGroup("allow-group", "konnect-allow"), newGroup("deny-group", "konnect-deny")).
+		Build()
+
+	prompts := []AIGatewayMCPPrompt{{
+		Name: "summarize",
+		Access: AIGatewayMCPPromptAccess{
+			Acls: AIGatewayMCPACLs{Allow: []AIGatewayACLRef{{Name: "allow-group"}}},
+		},
+	}}
+	resources := []AIGatewayMCPResource{{
+		URI: "file:///etc/passwd",
+		Access: AIGatewayMCPResourceAccess{
+			Acls: AIGatewayMCPACLs{Deny: []AIGatewayACLRef{{Name: "deny-group"}}},
+		},
+	}}
+
+	route := AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}}
+	tests := map[string]*AIGatewayMCPServer{
+		"passthrough-listener": {
+			Name: "mcp", Namespace: "default",
+			Spec: AIGatewayMCPServerSpec{APISpec: AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+					Type: AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+						Name: "mcp", DisplayName: "MCP",
+						Config:    AIGatewayMCPServerWithUpstreamConfig{URL: "https://example.com/mcp", Route: route},
+						Prompts:   prompts,
+						Resources: resources,
+					},
+				},
+			}},
+		},
+		"upstream-server": {
+			Name: "mcp", Namespace: "default",
+			Spec: AIGatewayMCPServerSpec{APISpec: AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+					Type: AIGatewayMCPServerConfigTypeUpstreamServer,
+					UpstreamServer: &AIGatewayMCPServerUpstreamServer{
+						Name: "mcp", DisplayName: "MCP",
+						Config: AIGatewayMCPServerUpstreamServerConfig{
+							Route:                route,
+							ToolsCacheTtlSeconds: 60,
+						},
+						Prompts:   prompts,
+						Resources: resources,
+					},
+				},
+			}},
+		},
+	}
+
+	for name, mcpServer := range tests {
+		t.Run(name, func(t *testing.T) {
+			req, err := mcpServer.ToCreateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+
+			data, err := json.Marshal(req)
+			require.NoError(t, err)
+
+			var decoded struct {
+				Prompts []struct {
+					Name   string `json:"name"`
+					Access struct {
+						Acls struct {
+							Allow []string `json:"allow"`
+						} `json:"acls"`
+					} `json:"access"`
+				} `json:"prompts"`
+				Resources []struct {
+					URI    string `json:"uri"`
+					Access struct {
+						Acls struct {
+							Deny []string `json:"deny"`
+						} `json:"acls"`
+					} `json:"access"`
+				} `json:"resources"`
+			}
+			require.NoError(t, json.Unmarshal(data, &decoded))
+
+			require.Len(t, decoded.Prompts, 1)
+			require.Equal(t, "summarize", decoded.Prompts[0].Name)
+			require.Equal(t, []string{"konnect-allow"}, decoded.Prompts[0].Access.Acls.Allow)
+
+			require.Len(t, decoded.Resources, 1)
+			require.Equal(t, "file:///etc/passwd", decoded.Resources[0].URI)
+			require.Equal(t, []string{"konnect-deny"}, decoded.Resources[0].Access.Acls.Deny)
+		})
+	}
+}
+
+// TestAIGatewayMCPServer_NoPromptOrResourceACLsEmitsNoDefaults guards the
+// payload shape for a server that sets an access block but no prompt or
+// resource ACLs: those two properties must be absent, not empty. Konnect
+// rejects the property itself below the runtime version that introduced it, so
+// sending an empty default_prompt_acls (or default_resource_acls) fails the
+// create even though the user never set the field. The surrounding access
+// block keeps its pre-existing default_tool_acls, which Konnect accepts on
+// every runtime.
+func TestAIGatewayMCPServer_NoPromptOrResourceACLsEmitsNoDefaults(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	obj := &AIGatewayMCPServer{
+		Name: "mcp", Namespace: "default",
+		Spec: AIGatewayMCPServerSpec{
+			APISpec: AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &AIGatewayMCPServerConfig{
+					Type: AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &AIGatewayMCPServerPassthroughListener{
+						Name:        "mcp",
+						DisplayName: "MCP",
+						Access: &AIGatewayMCPServerPassthroughListenerAccess{
+							AclAttributeType: AIGatewayMCPServerPassthroughListenerAccessTypeOauth,
+							Oauth: &AIGatewayMCPServerListenerOauth{
+								AccessTokenClaimField: ".user.email",
+							},
+						},
+						Config: AIGatewayMCPServerWithUpstreamConfig{
+							URL:   "https://example.com/mcp",
+							Route: AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp"}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, op := range []struct {
+		name string
+		fn   func(*testing.T) any
+	}{
+		{"create", func(t *testing.T) any {
+			req, err := obj.ToCreateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+			return req
+		}},
+		{"update", func(t *testing.T) any {
+			req, err := obj.ToUpdateAIGatewayMCPServerRequest(t.Context(), cl)
+			require.NoError(t, err)
+			return req
+		}},
+	} {
+		t.Run(op.name, func(t *testing.T) {
+			data, err := json.Marshal(op.fn(t))
+			require.NoError(t, err)
+			require.NotContains(t, string(data), "default_prompt_acls")
+			require.NotContains(t, string(data), "default_resource_acls")
+		})
+	}
+}
