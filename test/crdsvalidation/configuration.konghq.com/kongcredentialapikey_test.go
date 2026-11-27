@@ -218,4 +218,68 @@ func TestKongCredentialAPIKey(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("status.sync validation", func(t *testing.T) {
+		const (
+			hexDigest = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+			keyID     = "0123456789abcdef"
+		)
+		apiKey := func() *configurationv1alpha1.KongCredentialAPIKey {
+			return &configurationv1alpha1.KongCredentialAPIKey{
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
+				Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+					ConsumerRef: corev1.LocalObjectReference{
+						Name: "test-kong-consumer",
+					},
+					KongCredentialAPIKeyAPISpec: configurationv1alpha1.KongCredentialAPIKeyAPISpec{
+						Key: "key",
+					},
+				},
+			}
+		}
+		withSync := func(sync configurationv1alpha1.SyncStatus) func(*configurationv1alpha1.KongCredentialAPIKey) {
+			return func(c *configurationv1alpha1.KongCredentialAPIKey) {
+				c.Status.Sync = &sync
+			}
+		}
+
+		common.TestCasesGroup[*configurationv1alpha1.KongCredentialAPIKey]{
+			{
+				Name:       "unkeyed SHA-256 hashes are accepted",
+				TestObject: apiKey(),
+				StatusUpdate: withSync(configurationv1alpha1.SyncStatus{
+					PayloadHash:        "sha256:" + hexDigest,
+					RepresentationHash: "sha256:" + hexDigest,
+					HashVersion:        "v1",
+				}),
+			},
+			{
+				Name:       "keyed HMAC-SHA256 hashes with a key ID are accepted",
+				TestObject: apiKey(),
+				StatusUpdate: withSync(configurationv1alpha1.SyncStatus{
+					PayloadHash:        "hmac-sha256:" + hexDigest,
+					RepresentationHash: "hmac-sha256:" + hexDigest,
+					HashVersion:        "v1",
+					KeyID:              keyID,
+				}),
+			},
+			{
+				Name:       "unknown hash algorithm is rejected",
+				TestObject: apiKey(),
+				StatusUpdate: withSync(configurationv1alpha1.SyncStatus{
+					PayloadHash: "hmac-sha512:" + hexDigest,
+				}),
+				ExpectedStatusUpdateErrorMessage: new("payloadHash in body should match"),
+			},
+			{
+				Name:       "invalid key ID is rejected",
+				TestObject: apiKey(),
+				StatusUpdate: withSync(configurationv1alpha1.SyncStatus{
+					PayloadHash: "hmac-sha256:" + hexDigest,
+					KeyID:       "not-a-key-id",
+				}),
+				ExpectedStatusUpdateErrorMessage: new("keyID in body should match"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }

@@ -15,15 +15,21 @@ type SyncStatus struct {
 	// PayloadHash is the canonical hash of the payload the operator last sent to
 	// Konnect for this entity.
 	//
+	// It is an unkeyed SHA-256 digest (sha256:), or a keyed HMAC-SHA256 digest
+	// (hmac-sha256:) for entities that can carry data read from Secrets.
+	//
 	// +optional
-	// +kubebuilder:validation:Pattern=`^sha256:[0-9a-f]{64}$`
+	// +kubebuilder:validation:Pattern=`^(sha256|hmac-sha256):[0-9a-f]{64}$`
 	PayloadHash string `json:"payloadHash,omitempty"`
 
 	// RepresentationHash is the canonical hash of the entity representation the
 	// operator last received from Konnect.
 	//
+	// It is an unkeyed SHA-256 digest (sha256:), or a keyed HMAC-SHA256 digest
+	// (hmac-sha256:) for entities that can carry data read from Secrets.
+	//
 	// +optional
-	// +kubebuilder:validation:Pattern=`^sha256:[0-9a-f]{64}$`
+	// +kubebuilder:validation:Pattern=`^(sha256|hmac-sha256):[0-9a-f]{64}$`
 	RepresentationHash string `json:"representationHash,omitempty"`
 
 	// HashVersion identifies the hashing scheme used to compute PayloadHash and
@@ -33,6 +39,14 @@ type SyncStatus struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=16
 	HashVersion string `json:"hashVersion,omitempty"`
+
+	// KeyID identifies the operator-managed key used to compute keyed
+	// HMAC-SHA256 hashes. It is derived from the key and does not reveal it.
+	// It is empty for unkeyed SHA-256 hashes.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{16}$`
+	KeyID string `json:"keyID,omitempty"`
 }
 
 // GetSyncStatus returns the internal Konnect synchronization state of the entity.

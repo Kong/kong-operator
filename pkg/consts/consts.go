@@ -174,6 +174,11 @@ const (
 	// version change was observed.
 	DefaultKonnectDriftCheckPeriod = time.Hour
 
+	// DefaultKonnectSyncHashKeySecretName is the default name of the Secret
+	// holding the key used to compute keyed HMAC-SHA256 hashes of
+	// secret-bearing Konnect entities persisted in their status.
+	DefaultKonnectSyncHashKeySecretName = "kong-operator-konnect-sync-hash-key"
+
 	// DefaultKonnectRequestTimeout is the default timeout for requests to Konnect API.
 	DefaultKonnectRequestTimeout = 10 * time.Second
 

@@ -197,6 +197,10 @@ rows:
     type: '`string`'
     description: "Comma-separated list of domains a KonnectAPIAuthConfiguration serverURL host must belong to. A host outside the list is refused and reported with an APIAuthValid=False condition. Must not be empty: a deployment that needs another domain adds it here. Default: konghq.com,konghq.tech."
     default: '`"konghq.com,konghq.tech"`'
+  - flag: '`--konnect-sync-hash-key-secret`'
+    type: '`string`'
+    description: "Name of the Secret, in the operator namespace, holding the key used to compute keyed HMAC-SHA256 hashes of secret-bearing Konnect entities persisted in their status. The operator creates the Secret when it does not exist."
+    default: '`kong-operator-konnect-sync-hash-key`'
   - flag: '`--konnect-sync-period`'
     type: '`duration`'
     description: "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again."

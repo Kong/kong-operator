@@ -673,31 +673,31 @@ func TestConfigVersionTrackerConsumerGroupAssignments(t *testing.T) {
 }
 
 func TestRepresentationHash(t *testing.T) {
-	a, err := representationHash(&sdkkonnectcomp.Service{
+	a, err := representationHash(syncHasher{}, &sdkkonnectcomp.Service{
 		ID: new("id"), Host: "example.com", CreatedAt: new(int64(1)), UpdatedAt: new(int64(1)),
 	})
 	require.NoError(t, err)
-	b, err := representationHash(&sdkkonnectcomp.Service{
+	b, err := representationHash(syncHasher{}, &sdkkonnectcomp.Service{
 		ID: new("id"), Host: "example.com", CreatedAt: new(int64(2)), UpdatedAt: new(int64(2)),
 	})
 	require.NoError(t, err)
 	assert.Equal(t, a, b, "timestamps must be ignored")
 
-	c, err := representationHash(&sdkkonnectcomp.Service{ID: new("id"), Host: "other.example.com"})
+	c, err := representationHash(syncHasher{}, &sdkkonnectcomp.Service{ID: new("id"), Host: "other.example.com"})
 	require.NoError(t, err)
 	assert.NotEqual(t, a, c)
 
-	d, err := representationHash(map[string]any{"b": 1, "a": map[string]any{"y": 1, "x": 2}})
+	d, err := representationHash(syncHasher{}, map[string]any{"b": 1, "a": map[string]any{"y": 1, "x": 2}})
 	require.NoError(t, err)
-	e, err := representationHash(map[string]any{"a": map[string]any{"x": 2, "y": 1}, "b": 1})
+	e, err := representationHash(syncHasher{}, map[string]any{"a": map[string]any{"x": 2, "y": 1}, "b": 1})
 	require.NoError(t, err)
 	assert.Equal(t, d, e, "key order must be ignored")
 
-	f, err := representationHash(map[string]any{
+	f, err := representationHash(syncHasher{}, map[string]any{
 		"a": map[string]any{"created_at": 1, "updated_at": 2, "value": "x"},
 	})
 	require.NoError(t, err)
-	g, err := representationHash(map[string]any{
+	g, err := representationHash(syncHasher{}, map[string]any{
 		"a": map[string]any{"value": "x"},
 	})
 	require.NoError(t, err)
@@ -705,16 +705,23 @@ func TestRepresentationHash(t *testing.T) {
 }
 
 func TestSyncHashEncoding(t *testing.T) {
-	h, err := entityPayloadHash(testCPID, "entity-id", "payload")
+	h, err := entityPayloadHash(syncHasher{}, testCPID, "entity-id", "payload")
 	require.NoError(t, err)
 	assert.Regexp(t, `^sha256:[0-9a-f]{64}$`, h.String())
 
-	parsed, ok := parseHash(h.String())
+	parsed, keyed, ok := parseHash(h.String())
 	require.True(t, ok)
+	assert.False(t, keyed)
 	assert.Equal(t, h, parsed)
 
-	for _, invalid := range []string{"", "sha256:", "sha256:zz", "md5:abcd"} {
-		_, ok := parseHash(invalid)
+	assert.Regexp(t, `^hmac-sha256:[0-9a-f]{64}$`, h.format(true))
+	parsed, keyed, ok = parseHash(h.format(true))
+	require.True(t, ok)
+	assert.True(t, keyed)
+	assert.Equal(t, h, parsed)
+
+	for _, invalid := range []string{"", "sha256:", "sha256:zz", "md5:abcd", "hmac-sha256:", "hmac-sha256:zz", "HMAC-SHA256:" + h.String()[7:]} {
+		_, _, ok := parseHash(invalid)
 		assert.False(t, ok, "hash %q must be rejected", invalid)
 	}
 }
@@ -757,7 +764,7 @@ func TestConfigVersionTrackerStatusMismatchSends(t *testing.T) {
 		{
 			name: "payload hash mismatch",
 			mutate: func(s *configurationv1alpha1.SyncStatus) {
-				h, err := entityPayloadHash(testCPID, "entity-id", "other")
+				h, err := entityPayloadHash(syncHasher{}, testCPID, "entity-id", "other")
 				require.NoError(t, err)
 				s.PayloadHash = h.String()
 			},

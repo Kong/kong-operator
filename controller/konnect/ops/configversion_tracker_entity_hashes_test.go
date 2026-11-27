@@ -11,11 +11,16 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 )
 
 // TestEntitySyncHashesPerType pins the canonical payload and representation
 // SHA-256 golden hashes for every guarded Kong Gateway entity type (17 entity
-// types, including both JSON and expression Route variants).
+// types, including both JSON and expression Route variants), and the keyed
+// HMAC-SHA256 golden hashes of the secret-bearing ones.
 //
 // Because hashing canonicalizes the serialized sdk-konnect-go request and
 // response structs, an SDK upgrade or canonicalization change that alters JSON
@@ -37,14 +42,23 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 	tags := []string{"k8s-name:example", "k8s-namespace:default", "managed-by:kong-operator"}
 
 	testCases := []struct {
-		name                string
+		name string
+		// entity is an instance of the guarded entity type, used to check
+		// whether it is classified as secret-bearing.
+		entity              any
 		payload             func(marker string) any
 		repr                func(marker string) any
 		expectedPayloadHash string
 		expectedReprHash    string
+		// expectedKeyedPayloadHash and expectedKeyedReprHash are the keyed
+		// HMAC-SHA256 golden hashes computed with testSyncHashKey. They are set
+		// only for secret-bearing entity types.
+		expectedKeyedPayloadHash string
+		expectedKeyedReprHash    string
 	}{
 		{
-			name: "service",
+			name:   "service",
+			entity: &configurationv1alpha1.KongService{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertServiceRequest{
 					ControlPlaneID: controlPlaneID,
@@ -96,7 +110,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:01f23fec2ddbaeaf1f4de1bbfdb6c9b9aed115c1fb21fd2c70f38794350cd35a",
 		},
 		{
-			name: "route-json",
+			name:   "route-json",
+			entity: &configurationv1alpha1.KongRoute{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertRouteRequest{
 					ControlPlaneID: controlPlaneID,
@@ -153,7 +168,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:a9c5a07fd789bbe786575b0701488316711cac035ecdadcb8ec6b6af768b9bcb",
 		},
 		{
-			name: "route-expression",
+			name:   "route-expression",
+			entity: &configurationv1alpha1.KongRoute{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertRouteRequest{
 					ControlPlaneID: controlPlaneID,
@@ -190,7 +206,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:3e8f084b75060c40b4d3a51eeb1e168515edb93794df91571c5292fe34d5d38f",
 		},
 		{
-			name: "plugin",
+			name:   "plugin",
+			entity: &configurationv1alpha1.KongPluginBinding{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertPluginRequest{
 					ControlPlaneID: controlPlaneID,
@@ -240,11 +257,14 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 					UpdatedAt: new(int64(1700000100)),
 				}
 			},
-			expectedPayloadHash: "sha256:a5f4c709855a29b146531b39ff9adee4941664738c44aaf5234a8b313daa6e7f",
-			expectedReprHash:    "sha256:2b58ec5838deb93d880672c6a0da25bd45f5623bf867eaa4874b678f67b49520",
+			expectedPayloadHash:      "sha256:a5f4c709855a29b146531b39ff9adee4941664738c44aaf5234a8b313daa6e7f",
+			expectedReprHash:         "sha256:2b58ec5838deb93d880672c6a0da25bd45f5623bf867eaa4874b678f67b49520",
+			expectedKeyedPayloadHash: "hmac-sha256:dc7c92bab3a8ce277c1ad426353d752262e482ac5a3649e2fa92546840392984",
+			expectedKeyedReprHash:    "hmac-sha256:5b73edb033ad02ea63603057e71e902ff595b9457ceb3d75b7a8c360367c9ae3",
 		},
 		{
-			name: "consumer",
+			name:   "consumer",
+			entity: &configurationv1.KongConsumer{},
 			payload: func(marker string) any {
 				return newConsumerSyncPayload(
 					sdkkonnectops.UpsertConsumerRequest{
@@ -277,7 +297,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:a4e941692127003cda2be6429749b1f136f40022798ad9611a3700e49cb6cb30",
 		},
 		{
-			name: "consumer-group",
+			name:   "consumer-group",
+			entity: &configurationv1beta1.KongConsumerGroup{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertConsumerGroupRequest{
 					ControlPlaneID:  controlPlaneID,
@@ -301,7 +322,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:25e851758a0717b362f93261a97073ebf5636f374b7d972959166aadf1ebe4d7",
 		},
 		{
-			name: "upstream",
+			name:   "upstream",
+			entity: &configurationv1alpha1.KongUpstream{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertUpstreamRequest{
 					ControlPlaneID: controlPlaneID,
@@ -361,7 +383,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:efb5d5d36bfb74980a6f50c51da475428bf97bdb04dcb8217387f477399b3fbb",
 		},
 		{
-			name: "target",
+			name:   "target",
+			entity: &configurationv1alpha1.KongTarget{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertTargetWithUpstreamRequest{
 					ControlPlaneID:      controlPlaneID,
@@ -389,7 +412,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:7f14624f880414001f10dd7816d37ef4db75ab4a667e0cf7e07b9ed786263395",
 		},
 		{
-			name: "ca-certificate",
+			name:   "ca-certificate",
+			entity: &configurationv1alpha1.KongCACertificate{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertCaCertificateRequest{
 					ControlPlaneID:  controlPlaneID,
@@ -414,7 +438,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:854a6cd39a94b0189957e481936a407275b699d725cb0a558fe335cf4434ba74",
 		},
 		{
-			name: "certificate",
+			name:   "certificate",
+			entity: &configurationv1alpha1.KongCertificate{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertCertificateRequest{
 					ControlPlaneID: controlPlaneID,
@@ -442,11 +467,14 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 					UpdatedAt: new(int64(1700000100)),
 				}
 			},
-			expectedPayloadHash: "sha256:82d282173c7c8d3fabb286004f2c5ab1416591628225c906086123dae7f59f4d",
-			expectedReprHash:    "sha256:cff9f81e3cbc3819b5db064d62cd5637889d91d26472e86be13c9c63d80aca74",
+			expectedPayloadHash:      "sha256:82d282173c7c8d3fabb286004f2c5ab1416591628225c906086123dae7f59f4d",
+			expectedReprHash:         "sha256:cff9f81e3cbc3819b5db064d62cd5637889d91d26472e86be13c9c63d80aca74",
+			expectedKeyedPayloadHash: "hmac-sha256:ed1edefe4a9160c246073cd6fff268fb043892bc8191047474609554d77b4a0b",
+			expectedKeyedReprHash:    "hmac-sha256:229547b1d248df76917169a462e72d117f56fda179715a244004548d08acf1da",
 		},
 		{
-			name: "sni",
+			name:   "sni",
+			entity: &configurationv1alpha1.KongSNI{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertSniWithCertificateRequest{
 					ControlPlaneID: controlPlaneID,
@@ -472,7 +500,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:097a3665bb77a4f254150f4353142ce7e8ada23e30e4a1b6a78d7335ba27f8c7",
 		},
 		{
-			name: "key",
+			name:   "key",
+			entity: &configurationv1alpha1.KongKey{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertKeyRequest{
 					ControlPlaneID: controlPlaneID,
@@ -508,7 +537,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:96f30f27e17a1394e1c01155cb4371c66b6d6b389b2a601c3397f411ed50caad",
 		},
 		{
-			name: "key-set",
+			name:   "key-set",
+			entity: &configurationv1alpha1.KongKeySet{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertKeySetRequest{
 					ControlPlaneID: controlPlaneID,
@@ -532,7 +562,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:da0ba049702d58e6dbfb5526aaba501e9d6907011f2fb978d2f5e08638988ed4",
 		},
 		{
-			name: "basic-auth-credential",
+			name:   "basic-auth-credential",
+			entity: &configurationv1alpha1.KongCredentialBasicAuth{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertBasicAuthWithConsumerRequest{
 					ControlPlaneID:              controlPlaneID,
@@ -559,7 +590,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:ab835848828027559846a1085c7614589b00361942d08fa60bd41d1b85ca2eb9",
 		},
 		{
-			name: "api-key-credential",
+			name:   "api-key-credential",
+			entity: &configurationv1alpha1.KongCredentialAPIKey{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertKeyAuthWithConsumerRequest{
 					ControlPlaneID:              controlPlaneID,
@@ -584,7 +616,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:4b6852e030c3f4d65babdda3237312ff018cbce0a8580b2194e50e7d3e18700b",
 		},
 		{
-			name: "acl-credential",
+			name:   "acl-credential",
+			entity: &configurationv1alpha1.KongCredentialACL{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertACLWithConsumerRequest{
 					ControlPlaneID:              controlPlaneID,
@@ -609,7 +642,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:51b7b8beb786ed5fff7f33c9162bf1e40952e6af45f48c1b7302ef46ec57a80c",
 		},
 		{
-			name: "jwt-credential",
+			name:   "jwt-credential",
+			entity: &configurationv1alpha1.KongCredentialJWT{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertJwtWithConsumerRequest{
 					ControlPlaneID:              controlPlaneID,
@@ -638,7 +672,8 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			expectedReprHash:    "sha256:2d51dad8ae1e75443b33f0be71042ede911528b876e3fc896a584bf47fb6a721",
 		},
 		{
-			name: "hmac-credential",
+			name:   "hmac-credential",
+			entity: &configurationv1alpha1.KongCredentialHMAC{},
 			payload: func(marker string) any {
 				return sdkkonnectops.UpsertHmacAuthWithConsumerRequest{
 					ControlPlaneID:              controlPlaneID,
@@ -668,11 +703,11 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			payloadHashA, err := entityPayloadHash(controlPlaneID, entityID, tc.payload("a"))
+			payloadHashA, err := entityPayloadHash(syncHasher{}, controlPlaneID, entityID, tc.payload("a"))
 			require.NoError(t, err)
-			payloadHashA2, err := entityPayloadHash(controlPlaneID, entityID, tc.payload("a"))
+			payloadHashA2, err := entityPayloadHash(syncHasher{}, controlPlaneID, entityID, tc.payload("a"))
 			require.NoError(t, err)
-			payloadHashB, err := entityPayloadHash(controlPlaneID, entityID, tc.payload("b"))
+			payloadHashB, err := entityPayloadHash(syncHasher{}, controlPlaneID, entityID, tc.payload("b"))
 			require.NoError(t, err)
 
 			assert.Equal(t, payloadHashA, payloadHashA2, "payload hash must be deterministic")
@@ -685,11 +720,11 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 				tc.name,
 			)
 
-			reprHashA, err := representationHash(tc.repr("a"))
+			reprHashA, err := representationHash(syncHasher{}, tc.repr("a"))
 			require.NoError(t, err)
-			reprHashA2, err := representationHash(tc.repr("a"))
+			reprHashA2, err := representationHash(syncHasher{}, tc.repr("a"))
 			require.NoError(t, err)
-			reprHashB, err := representationHash(tc.repr("b"))
+			reprHashB, err := representationHash(syncHasher{}, tc.repr("b"))
 			require.NoError(t, err)
 
 			assert.Equal(t, reprHashA, reprHashA2, "representation hash must be deterministic")
@@ -700,6 +735,26 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 				reprHashA.String(),
 				"golden representation hash changed for %s; see docs/internal/konnect-sync-hashing.md before updating or bumping SyncHashVersion",
 				tc.name,
+			)
+
+			secretBearing := tc.expectedKeyedPayloadHash != ""
+			require.Equal(t, secretBearing, isSecretBearingSyncEntity(tc.entity),
+				"%T must have keyed golden hashes if and only if it is classified as secret-bearing", tc.entity,
+			)
+			if !secretBearing {
+				return
+			}
+			hasher := syncHasher{key: new(testSyncHashKey(t))}
+			keyedPayloadHash, err := entityPayloadHash(hasher, controlPlaneID, entityID, tc.payload("a"))
+			require.NoError(t, err)
+			keyedReprHash, err := representationHash(hasher, tc.repr("a"))
+			require.NoError(t, err)
+			assert.NotEqual(t, payloadHashA, keyedPayloadHash, "keyed hash must differ from the unkeyed hash")
+			assert.Equal(t, tc.expectedKeyedPayloadHash, keyedPayloadHash.format(true),
+				"golden keyed payload hash changed for %s", tc.name,
+			)
+			assert.Equal(t, tc.expectedKeyedReprHash, keyedReprHash.format(true),
+				"golden keyed representation hash changed for %s", tc.name,
 			)
 		})
 	}
@@ -720,9 +775,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 			B int64  `json:"b"`
 			A string `json:"a"`
 		}
-		ha, err := entityPayloadHash(cpID, id, structAB{A: "hello", B: 42})
+		ha, err := entityPayloadHash(syncHasher{}, cpID, id, structAB{A: "hello", B: 42})
 		require.NoError(t, err)
-		hb, err := entityPayloadHash(cpID, id, structBA{B: 42, A: "hello"})
+		hb, err := entityPayloadHash(syncHasher{}, cpID, id, structBA{B: 42, A: "hello"})
 		require.NoError(t, err)
 		assert.Equal(t, ha, hb)
 	})
@@ -764,9 +819,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 				},
 			},
 		}
-		h1, err := entityPayloadHash(cpID, id, p1)
+		h1, err := entityPayloadHash(syncHasher{}, cpID, id, p1)
 		require.NoError(t, err)
-		h2, err := entityPayloadHash(cpID, id, p2)
+		h2, err := entityPayloadHash(syncHasher{}, cpID, id, p2)
 		require.NoError(t, err)
 		assert.Equal(t, h1, h2)
 	})
@@ -785,18 +840,18 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 			[]string{"cg-a", "cg-b"},
 			[]invalidConsumerGroupRef{{Name: "bad-a", Reason: "NotFound"}, {Name: "bad-b", Reason: "NotFound"}},
 		)
-		hc1, err := entityPayloadHash(cpID, id, c1)
+		hc1, err := entityPayloadHash(syncHasher{}, cpID, id, c1)
 		require.NoError(t, err)
-		hc2, err := entityPayloadHash(cpID, id, c2)
+		hc2, err := entityPayloadHash(syncHasher{}, cpID, id, c2)
 		require.NoError(t, err)
 		assert.Equal(t, hc1, hc2)
 
 		// nil vs empty consumer group slices must hash identically.
 		cNil := newConsumerSyncPayload(sdkkonnectops.UpsertConsumerRequest{ControlPlaneID: cpID, ConsumerID: id}, nil, nil)
 		cEmpty := newConsumerSyncPayload(sdkkonnectops.UpsertConsumerRequest{ControlPlaneID: cpID, ConsumerID: id}, []string{}, []invalidConsumerGroupRef{})
-		hNil, err := entityPayloadHash(cpID, id, cNil)
+		hNil, err := entityPayloadHash(syncHasher{}, cpID, id, cNil)
 		require.NoError(t, err)
-		hEmpty, err := entityPayloadHash(cpID, id, cEmpty)
+		hEmpty, err := entityPayloadHash(syncHasher{}, cpID, id, cEmpty)
 		require.NoError(t, err)
 		assert.Equal(t, hNil, hEmpty)
 	})
@@ -819,9 +874,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 				sdkkonnectcomp.ServiceWithHost{Host: "example.com", Tags: []string{"a", "z"}},
 			),
 		}
-		hs1, err := entityPayloadHash(cpID, id, svc1)
+		hs1, err := entityPayloadHash(syncHasher{}, cpID, id, svc1)
 		require.NoError(t, err)
-		hs2, err := entityPayloadHash(cpID, id, svc2)
+		hs2, err := entityPayloadHash(syncHasher{}, cpID, id, svc2)
 		require.NoError(t, err)
 		assert.NotEqual(t, hs1, hs2, "tags order must remain significant")
 
@@ -835,9 +890,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 			RouteID:        id,
 			Route:          sdkkonnectcomp.CreateRouteRouteJSON(sdkkonnectcomp.RouteJSON{Paths: []string{"/b", "/a"}}),
 		}
-		h1, err := entityPayloadHash(cpID, id, r1)
+		h1, err := entityPayloadHash(syncHasher{}, cpID, id, r1)
 		require.NoError(t, err)
-		h2, err := entityPayloadHash(cpID, id, r2)
+		h2, err := entityPayloadHash(syncHasher{}, cpID, id, r2)
 		require.NoError(t, err)
 		assert.NotEqual(t, h1, h2, "route paths order must remain significant")
 
@@ -857,9 +912,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 				Config: map[string]any{"tags": []string{"a", "z"}, "protocols": []string{"http", "https"}},
 			},
 		}
-		hp1, err := entityPayloadHash(cpID, id, p1)
+		hp1, err := entityPayloadHash(syncHasher{}, cpID, id, p1)
 		require.NoError(t, err)
-		hp2, err := entityPayloadHash(cpID, id, p2)
+		hp2, err := entityPayloadHash(syncHasher{}, cpID, id, p2)
 		require.NoError(t, err)
 		assert.NotEqual(t, hp1, hp2, "arrays inside opaque plugin config must not be reordered")
 	})
@@ -868,9 +923,9 @@ func TestCanonicalPayloadNormalization(t *testing.T) {
 		// The first value is 2^53+1, above float64's exact integer limit, so it
 		// would collapse onto the second value (2^53) if decoded as float64
 		// instead of json.Number, and the two hashes would then match.
-		h1, err := entityPayloadHash(cpID, id, map[string]int64{"n": 9007199254740993})
+		h1, err := entityPayloadHash(syncHasher{}, cpID, id, map[string]int64{"n": 9007199254740993})
 		require.NoError(t, err)
-		h2, err := entityPayloadHash(cpID, id, map[string]int64{"n": 9007199254740992})
+		h2, err := entityPayloadHash(syncHasher{}, cpID, id, map[string]int64{"n": 9007199254740992})
 		require.NoError(t, err)
 		assert.NotEqual(t, h1, h2)
 	})
@@ -898,9 +953,9 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 				UpdatedAt: new(int64(200)),
 			},
 		}
-		hPut, err := representationHash(putRoute)
+		hPut, err := representationHash(syncHasher{}, putRoute)
 		require.NoError(t, err)
-		hGet, err := representationHash(getRoute)
+		hGet, err := representationHash(syncHasher{}, getRoute)
 		require.NoError(t, err)
 		assert.Equal(t, hPut, hGet)
 	})
@@ -923,9 +978,9 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 				Tags: []string{"a", "b"},
 			},
 		}
-		hStored, err := representationHash(stored)
+		hStored, err := representationHash(syncHasher{}, stored)
 		require.NoError(t, err)
-		hReordered, err := representationHash(reordered)
+		hReordered, err := representationHash(syncHasher{}, reordered)
 		require.NoError(t, err)
 		assert.NotEqual(t, hStored, hReordered)
 	})
@@ -949,9 +1004,9 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 				UpdatedAt: new(int64(200)),
 			},
 		}
-		hr1, err := representationHash(r1)
+		hr1, err := representationHash(syncHasher{}, r1)
 		require.NoError(t, err)
-		hr2, err := representationHash(r2)
+		hr2, err := representationHash(syncHasher{}, r2)
 		require.NoError(t, err)
 		assert.NotEqual(t, hr1, hr2, "a change of a route header named created_at must be detected")
 
@@ -969,9 +1024,9 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 			CreatedAt: new(int64(100)),
 			UpdatedAt: new(int64(200)),
 		}
-		h1, err := representationHash(p1)
+		h1, err := representationHash(syncHasher{}, p1)
 		require.NoError(t, err)
-		h2, err := representationHash(p2)
+		h2, err := representationHash(syncHasher{}, p2)
 		require.NoError(t, err)
 		assert.NotEqual(t, h1, h2)
 	})
@@ -988,9 +1043,9 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 			TTL:       new(int64(3600)),
 			CreatedAt: new(int64(100)),
 		}
-		h1, err := representationHash(withoutTTL)
+		h1, err := representationHash(syncHasher{}, withoutTTL)
 		require.NoError(t, err)
-		h2, err := representationHash(withTTL)
+		h2, err := representationHash(syncHasher{}, withTTL)
 		require.NoError(t, err)
 		assert.NotEqual(t, h1, h2)
 	})

@@ -275,17 +275,30 @@ spec:
                       unverifiable, so the entity is sent to Konnect once more.
                     maxLength: 16
                     type: string
+                  keyID:
+                    description: |-
+                      KeyID identifies the operator-managed key used to compute keyed
+                      HMAC-SHA256 hashes. It is derived from the key and does not reveal it.
+                      It is empty for unkeyed SHA-256 hashes.
+                    pattern: ^[0-9a-f]{16}$
+                    type: string
                   payloadHash:
                     description: |-
                       PayloadHash is the canonical hash of the payload the operator last sent to
                       Konnect for this entity.
-                    pattern: ^sha256:[0-9a-f]{64}$
+
+                      It is an unkeyed SHA-256 digest (sha256:), or a keyed HMAC-SHA256 digest
+                      (hmac-sha256:) for entities that can carry data read from Secrets.
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                   representationHash:
                     description: |-
                       RepresentationHash is the canonical hash of the entity representation the
                       operator last received from Konnect.
-                    pattern: ^sha256:[0-9a-f]{64}$
+
+                      It is an unkeyed SHA-256 digest (sha256:), or a keyed HMAC-SHA256 digest
+                      (hmac-sha256:) for entities that can carry data read from Secrets.
+                    pattern: ^(sha256|hmac-sha256):[0-9a-f]{64}$
                     type: string
                 type: object
             type: object
