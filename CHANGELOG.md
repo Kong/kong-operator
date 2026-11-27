@@ -119,7 +119,7 @@
   Konnect and on-prem gateways. With `targets`, the `balancer` (including
   consistent hashing), `protocol` and `path` fields are also available, and
   exactly one of `url` and `targets` must be set. Failover targets are not
-  supported with the `consistent-hashing` balancer. Requires Kong Gateway 2.4
+  supported with the `consistent-hashing` balancer. Requires AI Gateway 2.4
   or later.
   [#6869](https://github.com/Kong/kong-operator/pull/6869)
 

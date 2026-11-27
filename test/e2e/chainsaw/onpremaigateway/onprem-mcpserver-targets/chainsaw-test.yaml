@@ -12,8 +12,7 @@ spec:
     the `onprem-mcpserver-types` test; conversion-only and listener (no
     targets field) are covered there.
 
-    Targets require an AI Gateway data plane with targets support (Kong
-    Gateway 2.4+). The chainsaw suites are not run by PR CI (they are only
+    Targets require an AI Gateway data plane with targets support (AI Gateway 2.4+). The chainsaw suites are not run by PR CI (they are only
     run by the `validate AIGateway dataplane image` dispatch workflow, which
     passes an explicit AIGW_DP_IMAGE), so validate this test with a 2.4
     image there.
