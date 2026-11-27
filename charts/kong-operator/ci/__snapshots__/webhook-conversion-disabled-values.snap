@@ -520,7 +520,7 @@ spec:
                     - message: balancer, protocol, and path are only valid with targets
                       rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                     - message: failover targets are not supported with the consistent-hashing algorithm
-                      rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                      rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover) && t.failover == ''Enabled'')'
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -6691,7 +6691,7 @@ spec:
                         - message: balancer, protocol, and path are only valid with targets
                           rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                         - message: failover targets are not supported with the consistent-hashing algorithm
-                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover) && t.failover == ''Enabled'')'
                       datastores:
                         items:
                           properties:
@@ -10287,7 +10287,7 @@ spec:
                         - message: balancer, protocol, and path are only valid with targets
                           rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                         - message: failover targets are not supported with the consistent-hashing algorithm
-                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover) && t.failover == ''Enabled'')'
                       datastores:
                         items:
                           properties:
@@ -11434,7 +11434,7 @@ spec:
                         - message: balancer, protocol, and path are only valid with targets
                           rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
                         - message: failover targets are not supported with the consistent-hashing algorithm
-                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover) && t.failover == ''Enabled'')'
                       datastores:
                         items:
                           properties:
