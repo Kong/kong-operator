@@ -150,4 +150,64 @@ func TestAIGatewayAgent(t *testing.T) {
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("url and targets validation", func(t *testing.T) {
+		agent := func(mutate func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig)) *aiconfigurationv1alpha1.AIGatewayAgent {
+			obj := validAIGatewayAgent(ns.Name)
+			mutate(&obj.Spec.APISpec.Config)
+			return obj
+		}
+		targets := []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+			{Address: "agent-one:8080", Weight: new(100)},
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayAgent]{
+			{
+				Name: "targets only is accepted",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = targets
+				}),
+			},
+			{
+				Name: "both url and targets is rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.Targets = targets
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
+				Name: "neither url nor targets is rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					// config is required: set an unrelated field so the config
+					// object is present and the CEL rule can fire (an empty
+					// config struct is dropped by omitzero).
+					cfg.MaxRequestBodySize = new(1024)
+				}),
+				ExpectedErrorMessage: new("exactly one of url and targets must be set"),
+			},
+			{
+				Name: "protocol without targets is rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.Protocol = "https"
+				}),
+				ExpectedErrorMessage: new("balancer, protocol, and path are only valid with targets"),
+			},
+			{
+				Name: "failover targets with consistent-hashing are rejected",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+						{Address: "agent-one:8080", Failover: new("Enabled")},
+					}
+					cfg.Balancer = &aiconfigurationv1alpha1.AIGatewayAgentConfigBalancer{
+						Algorithm:         aiconfigurationv1alpha1.AIGatewayAgentConfigBalancerTypeConsistentHashing,
+						ConsistentHashing: &aiconfigurationv1alpha1.AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+					}
+				}),
+				ExpectedErrorMessage: new("failover targets are not supported with the consistent-hashing algorithm"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }
