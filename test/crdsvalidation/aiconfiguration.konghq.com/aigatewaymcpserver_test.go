@@ -402,6 +402,20 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				ExpectedErrorMessage: new("failover targets are not supported with the consistent-hashing algorithm"),
 			},
 			{
+				Name: "conversion-listener with failover disabled and consistent-hashing is accepted",
+				TestObject: conversionListener(func(cfg *aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+						{Address: "mcp-one:8080", Weight: new(100)},
+						{Address: "mcp-two:8080", Failover: new("Disabled")},
+					}
+					cfg.Balancer = &aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfigBalancer{
+						Algorithm:         aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfigBalancerTypeConsistentHashing,
+						ConsistentHashing: &aiconfigurationv1alpha1.AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+					}
+				}),
+			},
+			{
 				Name: "conversion-listener failover targets with round-robin are accepted",
 				TestObject: conversionListener(func(cfg *aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig) {
 					cfg.URL = ""

@@ -67,7 +67,7 @@ type AIGatewayAgentAPISpec struct {
 	// +required
 	// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.targets)",message="exactly one of url and targets must be set"
 	// +kubebuilder:validation:XValidation:rule="(!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)",message="balancer, protocol, and path are only valid with targets"
-	// +kubebuilder:validation:XValidation:rule="!has(self.balancer) || self.balancer.algorithm != 'consistent-hashing' || !self.targets.exists(t, has(t.failover))",message="failover targets are not supported with the consistent-hashing algorithm"
+	// +kubebuilder:validation:XValidation:rule="!has(self.balancer) || self.balancer.algorithm != 'consistent-hashing' || !self.targets.exists(t, has(t.failover) && t.failover == 'Enabled')",message="failover targets are not supported with the consistent-hashing algorithm"
 	Config AIGatewayAgentConfig `json:"config,omitzero"`
 
 	// The display name for this agent.

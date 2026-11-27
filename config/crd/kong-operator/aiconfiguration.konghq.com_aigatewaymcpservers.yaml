@@ -2168,7 +2168,8 @@ spec:
                         - message: failover targets are not supported with the consistent-hashing
                             algorithm
                           rule: '!has(self.balancer) || self.balancer.algorithm !=
-                            ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                            ''consistent-hashing'' || !self.targets.exists(t, has(t.failover)
+                            && t.failover == ''Enabled'')'
                       datastores:
                         description: |-
                           The Token Vault Datastore holding this entity's credential storage: the
@@ -9070,7 +9071,8 @@ spec:
                         - message: failover targets are not supported with the consistent-hashing
                             algorithm
                           rule: '!has(self.balancer) || self.balancer.algorithm !=
-                            ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                            ''consistent-hashing'' || !self.targets.exists(t, has(t.failover)
+                            && t.failover == ''Enabled'')'
                       datastores:
                         description: |-
                           The Token Vault Datastore holding this entity's credential storage: the
@@ -11278,7 +11280,8 @@ spec:
                         - message: failover targets are not supported with the consistent-hashing
                             algorithm
                           rule: '!has(self.balancer) || self.balancer.algorithm !=
-                            ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
+                            ''consistent-hashing'' || !self.targets.exists(t, has(t.failover)
+                            && t.failover == ''Enabled'')'
                       datastores:
                         description: |-
                           The Token Vault Datastore holding this entity's credential storage: the

@@ -208,6 +208,19 @@ func TestAIGatewayAgent(t *testing.T) {
 				}),
 				ExpectedErrorMessage: new("failover targets are not supported with the consistent-hashing algorithm"),
 			},
+			{
+				Name: "failover disabled with consistent-hashing is accepted",
+				TestObject: agent(func(cfg *aiconfigurationv1alpha1.AIGatewayAgentConfig) {
+					cfg.URL = ""
+					cfg.Targets = []aiconfigurationv1alpha1.AIGatewayUpstreamTarget{
+						{Address: "agent-one:8080", Failover: new("Disabled")},
+					}
+					cfg.Balancer = &aiconfigurationv1alpha1.AIGatewayAgentConfigBalancer{
+						Algorithm:         aiconfigurationv1alpha1.AIGatewayAgentConfigBalancerTypeConsistentHashing,
+						ConsistentHashing: &aiconfigurationv1alpha1.AIGatewayUpstreamBalancerConsistentHashingConfig{HashOnHeader: "x-user-id"},
+					}
+				}),
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 }
