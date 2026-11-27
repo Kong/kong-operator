@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/token"
 	"os"
+	"path"
 	"sort"
 	"strings"
 
@@ -34,7 +35,53 @@ type APIGroupVersionConfig struct {
 	// Validation opts into OAS validations not emitted by default.
 	Validation ValidationConfig `yaml:"validation,omitempty"`
 
+	// MutuallyExclusiveFields emits +kubebuilder:validation:AtMostOneOf on
+	// generated schema struct types, for exclusivity rules that the OAS states
+	// only in prose (e.g. in a property description).
+	MutuallyExclusiveFields []MutuallyExclusiveFieldsConfig `yaml:"mutuallyExclusiveFields,omitempty"`
+
 	Types []*TypeConfig `yaml:"types"`
+}
+
+// MutuallyExclusiveFieldsConfig declares a set of fields of which at most one
+// may be set, on every generated schema struct type matched by Schemas.
+type MutuallyExclusiveFieldsConfig struct {
+	// Schemas are generated Go type names or path.Match globs
+	// (e.g. "AIGatewayTarget*Config"). A matched schema receives the marker
+	// only if it has all Fields and none of them is required. Generation fails
+	// if no schema qualifies.
+	Schemas []string `yaml:"schemas"`
+	// Fields are the generated JSON tag names (e.g. "upstreamURL") of which at
+	// most one may be set.
+	Fields []string `yaml:"fields"`
+}
+
+func (c MutuallyExclusiveFieldsConfig) validate() error {
+	if len(c.Schemas) == 0 {
+		return fmt.Errorf("schemas is required")
+	}
+	for _, pattern := range c.Schemas {
+		if pattern == "" {
+			return fmt.Errorf("schemas: empty pattern")
+		}
+		if _, err := path.Match(pattern, ""); err != nil {
+			return fmt.Errorf("schemas: invalid pattern %q: %w", pattern, err)
+		}
+	}
+	if len(c.Fields) < 2 {
+		return fmt.Errorf("fields: at least 2 fields are required, got %d", len(c.Fields))
+	}
+	seen := make(map[string]struct{}, len(c.Fields))
+	for _, field := range c.Fields {
+		if field == "" {
+			return fmt.Errorf("fields: empty field name")
+		}
+		if _, dup := seen[field]; dup {
+			return fmt.Errorf("fields: duplicate field %q", field)
+		}
+		seen[field] = struct{}{}
+	}
+	return nil
 }
 
 // ValidationConfig selects OAS validations emitted on top of the default ones.
@@ -1021,6 +1068,12 @@ func (c *APIGroupVersionConfig) validate() error {
 	for _, tc := range c.Types {
 		if err := tc.validate(); err != nil {
 			return fmt.Errorf("type %q: %w", tc.Path, err)
+		}
+	}
+
+	for i, mef := range c.MutuallyExclusiveFields {
+		if err := mef.validate(); err != nil {
+			return fmt.Errorf("mutuallyExclusiveFields[%d]: %w", i, err)
 		}
 	}
 

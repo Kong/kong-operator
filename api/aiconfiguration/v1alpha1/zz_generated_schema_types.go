@@ -7258,6 +7258,7 @@ type AIGatewayModelAPI struct {
 	// One or more backend models that this model entry routes to.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=64
 	Targets []AIGatewayTarget `json:"targets,omitempty"`
 }
 
@@ -9458,6 +9459,7 @@ type AIGatewayModelModel struct {
 	// One or more backend models that this model entry routes to.
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=64
 	Targets []AIGatewayTarget `json:"targets,omitempty"`
 }
 
@@ -14389,6 +14391,8 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 }
 
 // AIGatewayTargetAnthropicConfig Anthropic-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -14507,6 +14511,8 @@ type AIGatewayTargetAnthropicConfig struct {
 }
 
 // AIGatewayTargetAzureConfig Azure-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetAzureConfig struct {
 	// The Azure OpenAI API version to use.
 	//
@@ -14656,6 +14662,8 @@ type AIGatewayTargetAzureConfig struct {
 // or use passthrough format.
 //
 // **Requires a minimum runtime version of `2.3`**.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetBasetenConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -14769,6 +14777,8 @@ type AIGatewayTargetBasetenConfig struct {
 }
 
 // AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetBedrockConfig struct {
 	// S3 bucket prefix for batch inference jobs.
 	//
@@ -14934,6 +14944,8 @@ type AIGatewayTargetBedrockConfig struct {
 }
 
 // AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -15047,6 +15059,8 @@ type AIGatewayTargetCerebrasConfig struct {
 }
 
 // AIGatewayTargetCohereConfig Cohere-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetCohereConfig struct {
 	// Cohere API version. `v1` uses the legacy `/v1/chat` endpoint; `v2` (default)
 	// uses `/v2/chat` and supports tool calling.
@@ -15787,6 +15801,8 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 
 // AIGatewayTargetDashscopeConfig Alibaba DashScope-specific configuration for a
 // model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -15906,6 +15922,8 @@ type AIGatewayTargetDashscopeConfig struct {
 
 // AIGatewayTargetDatabricksConfig Databricks-specific configuration for a
 // model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16025,6 +16043,8 @@ type AIGatewayTargetDatabricksConfig struct {
 }
 
 // AIGatewayTargetDeepseekConfig Deepseek-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16154,6 +16174,8 @@ type AIGatewayTargetDeepseekConfig struct {
 // `max_tokens` truncation behavior, are returned as produced by Fireworks.
 //
 // **Requires a minimum runtime version of `2.4`**.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetFireworksConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16267,6 +16289,8 @@ type AIGatewayTargetFireworksConfig struct {
 }
 
 // AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16385,6 +16409,8 @@ type AIGatewayTargetGeminiConfig struct {
 
 // AIGatewayTargetHuggingfaceConfig Hugging Face-specific configuration for a
 // model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16509,6 +16535,8 @@ type AIGatewayTargetHuggingfaceConfig struct {
 
 // AIGatewayTargetKimiConfig Kimi (Moonshot AI)-specific configuration for a
 // model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16774,6 +16802,8 @@ type AIGatewayTargetLlama2Config struct {
 // target (or the `vllm` provider); the `llama2` provider is deprecated.
 //
 // **Requires a minimum runtime version of `2.4`**.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetMetaConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -16887,6 +16917,8 @@ type AIGatewayTargetMetaConfig struct {
 }
 
 // AIGatewayTargetMistralConfig Mistral-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -17007,6 +17039,8 @@ type AIGatewayTargetMistralConfig struct {
 }
 
 // AIGatewayTargetOllamaConfig Ollama-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -17120,6 +17154,8 @@ type AIGatewayTargetOllamaConfig struct {
 }
 
 // AIGatewayTargetOpenaiConfig Openai-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -17234,6 +17270,8 @@ type AIGatewayTargetOpenaiConfig struct {
 
 // AIGatewayTargetSagemakerConfig AWS SageMaker-specific configuration for a
 // model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetSagemakerConfig struct {
 	//
 	//
@@ -17411,6 +17449,8 @@ type AIGatewayTargetSagemakerConfigTarget struct {
 // Override the base URL with `upstream_url`.
 //
 // **Requires a minimum runtime version of `2.4`**.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetTogetheraiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -17546,6 +17586,8 @@ type AIGatewayTargetTypesafeConfig struct {
 
 // AIGatewayTargetVercelConfig Vercel AI Gateway-specific configuration for a
 // model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -17773,6 +17815,8 @@ type AIGatewayTargetVllmConfig struct {
 }
 
 // AIGatewayTargetXaiConfig Xai-specific configuration for a model.
+//
+// +kubebuilder:validation:AtMostOneOf=upstreamURL;upstreamBaseURL
 type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//

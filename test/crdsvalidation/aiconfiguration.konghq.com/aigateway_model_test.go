@@ -1,6 +1,7 @@
 package crdsvalidation_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/samber/lo"
@@ -258,6 +259,88 @@ func TestAIGatewayModel(t *testing.T) {
 					return obj
 				}(),
 				ExpectedErrorMessage: new("spec.apiSpec.model.targets[0].config.openai.inputCost in body should be greater than or equal to 0"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("target config upstreamURL and upstreamBaseURL are mutually exclusive", func(t *testing.T) {
+		withOpenaiUpstream := func(upstreamURL, upstreamBaseURL string) *aiconfigurationv1alpha1.AIGatewayModel {
+			obj := validAIGatewayModel(ns.Name)
+			cfg := obj.Spec.APISpec.Model.Targets[0].Config.Openai
+			cfg.UpstreamURL = upstreamURL
+			cfg.UpstreamBaseURL = upstreamBaseURL
+			return obj
+		}
+		withTargetConfig := func(targetConfig *aiconfigurationv1alpha1.AIGatewayTargetConfig) *aiconfigurationv1alpha1.AIGatewayModel {
+			obj := validAIGatewayModel(ns.Name)
+			obj.Spec.APISpec.AIGatewayModelConfig.Model.Targets[0].Config = targetConfig
+			return obj
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayModel]{
+			{
+				Name:       "only upstreamURL is valid",
+				TestObject: withOpenaiUpstream("https://llm.example.com/v1/chat/completions", ""),
+			},
+			{
+				Name:       "only upstreamBaseURL is valid",
+				TestObject: withOpenaiUpstream("", "https://llm.example.com"),
+			},
+			{
+				Name:                 "both upstreamURL and upstreamBaseURL is invalid",
+				TestObject:           withOpenaiUpstream("https://llm.example.com/v1/chat/completions", "https://llm.example.com"),
+				ExpectedErrorMessage: new("at most one of the fields in [upstreamURL upstreamBaseURL] may be set"),
+			},
+			{
+				Name: "both upstreamURL and upstreamBaseURL is invalid for anthropic",
+				TestObject: withTargetConfig(&aiconfigurationv1alpha1.AIGatewayTargetConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayTargetConfigTypeAnthropic,
+					Anthropic: &aiconfigurationv1alpha1.AIGatewayTargetAnthropicConfig{
+						UpstreamURL:     "https://llm.example.com/v1/messages",
+						UpstreamBaseURL: "https://llm.example.com",
+					},
+				}),
+				ExpectedErrorMessage: new("at most one of the fields in [upstreamURL upstreamBaseURL] may be set"),
+			},
+			{
+				// vllm requires upstreamURL and has no default upstream, so it
+				// ignores upstreamBaseURL instead of rejecting it.
+				Name: "both upstreamURL and upstreamBaseURL is valid for vllm",
+				TestObject: withTargetConfig(&aiconfigurationv1alpha1.AIGatewayTargetConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayTargetConfigTypeVllm,
+					Vllm: &aiconfigurationv1alpha1.AIGatewayTargetVllmConfig{
+						UpstreamURL:     "https://llm.example.com/v1/chat/completions",
+						UpstreamBaseURL: "https://llm.example.com",
+					},
+				}),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("targets maxItems validation", func(t *testing.T) {
+		// targets is capped to keep the CEL cost of the per-target rules
+		// within the Kubernetes per-CRD budget.
+		withTargets := func(n int) *aiconfigurationv1alpha1.AIGatewayModel {
+			obj := validAIGatewayModel(ns.Name)
+			model := obj.Spec.APISpec.Model
+			target := model.Targets[0]
+			model.Targets = make([]aiconfigurationv1alpha1.AIGatewayTarget, n)
+			for i := range model.Targets {
+				model.Targets[i] = *target.DeepCopy()
+				model.Targets[i].Name = fmt.Sprintf("target%d", i)
+			}
+			return obj
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayModel]{
+			{
+				Name:       "64 targets is valid",
+				TestObject: withTargets(64),
+			},
+			{
+				Name:                 "65 targets is invalid",
+				TestObject:           withTargets(65),
+				ExpectedErrorMessage: new("spec.apiSpec.model.targets: Too many: 65: must have at most 64 items"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

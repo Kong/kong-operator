@@ -60,6 +60,9 @@ type Config struct {
 	Categories []string
 	// Validation selects OAS validations emitted on top of the default ones.
 	Validation config.ValidationConfig
+	// MutuallyExclusiveFields emits +kubebuilder:validation:AtMostOneOf on the
+	// matched generated schema struct types.
+	MutuallyExclusiveFields []config.MutuallyExclusiveFieldsConfig
 	// SkipGetForUIDEntities is the set of entity names for which getForUID
 	// generation should be skipped (e.g. because a hand-written implementation
 	// already exists in an ops_<entity>_manual.go file).
@@ -1914,6 +1917,10 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 		})
 	}
 
+	if err := g.validateMutuallyExclusiveFields(referencedSchemas, parsed); err != nil {
+		return nil, err
+	}
+
 	if len(referencedSchemas) > 0 {
 		files = append(files, GeneratedFile{
 			Name:    "zz_generated_schema_types.go",
@@ -2340,6 +2347,12 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			case len(schema.Properties) > 0:
 				// It's an object type - generate a struct
 				body.WriteString(comment)
+				if markers := g.mutuallyExclusiveFieldsMarkers(goName, refName, schema, unionMemberDiscriminators); len(markers) > 0 {
+					body.WriteString("//\n")
+					for _, marker := range markers {
+						fmt.Fprintf(&body, "// %s\n", marker)
+					}
+				}
 				fmt.Fprintf(&body, "type %s struct {\n", goName)
 				for _, prop := range schema.Properties {
 					if g.shouldSkipSchemaProperty(goName, prop) || shouldSkipUnionMemberDiscriminator(refName, prop, unionMemberDiscriminators) {

@@ -1533,6 +1533,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 azure:
                                   properties:
                                     apiVersion:
@@ -1697,6 +1702,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 baseten:
                                   properties:
                                     cacheReadCost:
@@ -1849,6 +1859,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 bedrock:
                                   properties:
                                     batchBucketPrefix:
@@ -2027,6 +2042,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cerebras:
                                   properties:
                                     cacheReadCost:
@@ -2179,6 +2199,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cohere:
                                   properties:
                                     apiVersion:
@@ -2351,6 +2376,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 dashscope:
                                   properties:
                                     cacheReadCost:
@@ -2508,6 +2538,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 databricks:
                                   properties:
                                     cacheReadCost:
@@ -2666,6 +2701,11 @@ spec:
                                   required:
                                   - workspaceInstanceID
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 deepseek:
                                   properties:
                                     cacheReadCost:
@@ -2818,6 +2858,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 fireworks:
                                   properties:
                                     cacheReadCost:
@@ -2970,6 +3015,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 gemini:
                                   properties:
                                     cacheReadCost:
@@ -3141,6 +3191,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 huggingface:
                                   properties:
                                     cacheReadCost:
@@ -3303,6 +3358,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 kimi:
                                   properties:
                                     cacheReadCost:
@@ -3460,6 +3520,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 llama2:
                                   properties:
                                     cacheReadCost:
@@ -3776,6 +3841,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 mistral:
                                   properties:
                                     cacheReadCost:
@@ -3937,6 +4007,11 @@ spec:
                                   required:
                                   - format
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 ollama:
                                   properties:
                                     cacheReadCost:
@@ -4089,6 +4164,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 openai:
                                   properties:
                                     cacheReadCost:
@@ -4241,6 +4321,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 sagemaker:
                                   properties:
                                     aws:
@@ -4420,6 +4505,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 togetherai:
                                   properties:
                                     cacheReadCost:
@@ -4572,6 +4662,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 type:
                                   enum:
                                   - anthropic
@@ -4764,6 +4859,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 vllm:
                                   properties:
                                     cacheReadCost:
@@ -5071,6 +5171,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                               required:
                               - type
                               type: object
@@ -5105,6 +5210,7 @@ spec:
                           - name
                           - provider
                           type: object
+                        maxItems: 64
                         type: array
                     required:
                     - capabilities
@@ -6562,6 +6668,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 azure:
                                   properties:
                                     apiVersion:
@@ -6726,6 +6837,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 baseten:
                                   properties:
                                     cacheReadCost:
@@ -6878,6 +6994,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 bedrock:
                                   properties:
                                     batchBucketPrefix:
@@ -7056,6 +7177,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cerebras:
                                   properties:
                                     cacheReadCost:
@@ -7208,6 +7334,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 cohere:
                                   properties:
                                     apiVersion:
@@ -7380,6 +7511,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 dashscope:
                                   properties:
                                     cacheReadCost:
@@ -7537,6 +7673,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 databricks:
                                   properties:
                                     cacheReadCost:
@@ -7695,6 +7836,11 @@ spec:
                                   required:
                                   - workspaceInstanceID
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 deepseek:
                                   properties:
                                     cacheReadCost:
@@ -7847,6 +7993,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 fireworks:
                                   properties:
                                     cacheReadCost:
@@ -7999,6 +8150,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 gemini:
                                   properties:
                                     cacheReadCost:
@@ -8170,6 +8326,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 huggingface:
                                   properties:
                                     cacheReadCost:
@@ -8332,6 +8493,11 @@ spec:
                                       - Disabled
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 kimi:
                                   properties:
                                     cacheReadCost:
@@ -8489,6 +8655,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 llama2:
                                   properties:
                                     cacheReadCost:
@@ -8805,6 +8976,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 mistral:
                                   properties:
                                     cacheReadCost:
@@ -8966,6 +9142,11 @@ spec:
                                   required:
                                   - format
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 ollama:
                                   properties:
                                     cacheReadCost:
@@ -9118,6 +9299,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 openai:
                                   properties:
                                     cacheReadCost:
@@ -9270,6 +9456,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 sagemaker:
                                   properties:
                                     aws:
@@ -9449,6 +9640,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 togetherai:
                                   properties:
                                     cacheReadCost:
@@ -9601,6 +9797,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 type:
                                   enum:
                                   - anthropic
@@ -9793,6 +9994,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                                 vllm:
                                   properties:
                                     cacheReadCost:
@@ -10100,6 +10306,11 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: at most one of the fields in [upstreamURL
+                                      upstreamBaseURL] may be set
+                                    rule: (has(self.upstreamURL)?1:0)+(has(self.upstreamBaseURL)?1:0)
+                                      <= 1
                               required:
                               - type
                               type: object
@@ -10134,6 +10345,7 @@ spec:
                           - name
                           - provider
                           type: object
+                        maxItems: 64
                         type: array
                     required:
                     - capabilities

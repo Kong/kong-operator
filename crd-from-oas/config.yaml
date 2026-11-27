@@ -10,6 +10,13 @@ apiGroupVersions:
         import:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
+    mutuallyExclusiveFields:
+      # The OAS states this only in the upstream_base_url description.
+      # These rules sit under AIGatewayModel's targets array, which needs a
+      # MaxItems cap to keep the CEL cost within budget (see AIGatewayModel's
+      # cel config below).
+      - schemas: ["AIGatewayTarget*Config"]
+        fields: [upstreamURL, upstreamBaseURL]
     types:
       # AI Gateway APIs
       - path: /v1/ai-gateways/{gatewayId}/data-plane-certificates
@@ -99,15 +106,26 @@ apiGroupVersions:
         cel:
           spec:
             apiSpec:
-              # 0 means unlimited, so an explicit 0 must reach the API.
               api:
                 config:
+                  # 0 means unlimited, so an explicit 0 must reach the API.
                   maxRequestBodySize:
                     _allowZero: true
+                # The OAS sets no upper bound on targets. Without one, the
+                # Kubernetes CEL cost estimator assumes ~1M instances of every
+                # rule on a target's provider config (3 MiB request / 3-byte
+                # minimal object), so the AtMostOneOf rules from
+                # mutuallyExclusiveFields (21 providers x 2 variants) exceed
+                # the 100M per-CRD budget and the CRD fails to install.
+                # 64 targets is far above any realistic model configuration.
+                targets: &aigwModelTargetsMaxItems
+                  _validations:
+                    - "+kubebuilder:validation:MaxItems=64"
               model:
                 config:
                   maxRequestBodySize:
                     _allowZero: true
+                targets: *aigwModelTargetsMaxItems
         dataSources:
           # Vector DB credentials and the proxy's basic-auth password. The
           # balancer config repeats under both union variants (api and model),
