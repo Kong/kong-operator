@@ -1071,6 +1071,21 @@ var guardedRepresentationTypes = []any{
 	sdkkonnectcomp.Sni{},
 	sdkkonnectcomp.Target{},
 	sdkkonnectcomp.Upstream{},
+	// AI Gateway entities guarded through ops.skipUnchangedUpdates.
+	sdkkonnectcomp.AIGatewayAgent{},
+	sdkkonnectcomp.AIGatewayAuthStrategy{},
+	sdkkonnectcomp.AIGatewayCACertificate{},
+	sdkkonnectcomp.AIGatewayCertificate{},
+	sdkkonnectcomp.AIGatewayConsumer{},
+	sdkkonnectcomp.AIGatewayConsumerGroup{},
+	sdkkonnectcomp.AIGatewayCustomPolicy{},
+	sdkkonnectcomp.AIGatewayDatastore{},
+	sdkkonnectcomp.AIGatewayMCPServer{},
+	sdkkonnectcomp.AIGatewayModel{},
+	sdkkonnectcomp.AIGatewayModelProvider{},
+	sdkkonnectcomp.AIGatewayPolicy{},
+	sdkkonnectcomp.AIGatewaySNI{},
+	sdkkonnectcomp.AIGatewayVault{},
 }
 
 // TestRepresentationTypesHaveTopLevelTimestampsOnly checks that the volatile
