@@ -78,6 +78,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MinItems=1
 	Authentication []VirtualClusterAuthenticationScheme `json:"authentication,omitempty"`
 
 	// A human-readable description of the virtual cluster.
@@ -112,6 +113,7 @@ type EventGatewayVirtualClusterAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name VirtualClusterName `json:"name,omitzero"`
 
 	// Namespace allows to implement multitenancy using a single backend cluster.

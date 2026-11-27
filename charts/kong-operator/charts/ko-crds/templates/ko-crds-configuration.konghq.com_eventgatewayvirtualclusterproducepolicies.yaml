@@ -114,7 +114,11 @@ spec:
                             type: string
                           partOfRecord:
                             items:
+                              enum:
+                              - key
+                              - value
                               type: string
+                            minItems: 1
                             type: array
                         required:
                         - encryptionKey
@@ -139,6 +143,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -206,6 +211,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       type: string
@@ -223,6 +230,7 @@ spec:
                               - paths
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                           failureMode:
                             enum:
@@ -254,6 +262,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -288,6 +297,8 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
+                                      minItems: 1
                                       type: array
                                     expression:
                                       type: string
@@ -420,6 +431,7 @@ spec:
                               - strategy
                               type: object
                             maxItems: 256
+                            minItems: 1
                             type: array
                         required:
                         - failureMode
@@ -443,6 +455,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -489,6 +502,7 @@ spec:
                               required:
                               - op
                               type: object
+                            minItems: 1
                             type: array
                         type: object
                       description:
@@ -509,6 +523,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -732,6 +747,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -863,6 +879,7 @@ spec:
                         type: object
                       name:
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config

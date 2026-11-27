@@ -287,7 +287,7 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 			})
 			continue
 		}
-		goType := g.testFieldGoType(prop)
+		goType := allowZeroGoType(g.testFieldGoType(prop), g.getAPISpecCursor(entityName).Sub(jsonTagForProperty(prop)))
 		testValue := controllerOpsTestValueForProperty(prop, goType, g.config.APIGroupPackageAlias)
 		if testValue == "" {
 			continue

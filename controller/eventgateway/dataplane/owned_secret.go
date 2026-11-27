@@ -18,6 +18,7 @@ package dataplane
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -28,6 +29,9 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 // manualCertificateConditions are the KegDataPlane conditions reported for a
@@ -148,4 +152,67 @@ func isManualProvisioning(egdp *eventgatewayv1alpha1.KegDataPlane) bool {
 	cs := egdp.Spec.CertificateSecret
 	return cs != nil && cs.Provisioning != nil && *cs.Provisioning == eventgatewayv1alpha1.ManualCertificateProvisioning &&
 		cs.SecretRef != nil
+}
+
+// certificateSecretLabels returns the labels of the client certificate Secrets
+// the operator issues a data plane: from the cluster CA for a
+// KonnectEventGateway, as the shared reconciler provisions them, or from the
+// cp client CA of the GWAdmin of an OnPremEventGateway.
+func (r *Reconciler) certificateSecretLabels(egdp *eventgatewayv1alpha1.KegDataPlane) client.MatchingLabels {
+	labels := k8sresources.GetManagedLabelForOwner(egdp)
+	labels[consts.SecretProvisioningLabelKey] = consts.SecretProvisioningAutomaticLabelValue
+	labels[consts.SecretKEGDataPlaneCertificateLabel] = "true"
+	if r.SecretLabelSelector != "" {
+		labels[r.SecretLabelSelector] = "true"
+	}
+	return labels
+}
+
+// listCertificateSecrets lists the client certificate Secrets the operator
+// issued a data plane: the current one, and, of an OnPremEventGateway, those
+// it replaced, kept until the Deployment rolled out onto it.
+func (r *Reconciler) listCertificateSecrets(ctx context.Context, cl client.Reader, egdp *eventgatewayv1alpha1.KegDataPlane) ([]corev1.Secret, error) {
+	owned, err := k8sutils.ListSecretsForOwner(ctx, cl, egdp.GetUID(), client.InNamespace(egdp.Namespace), r.certificateSecretLabels(egdp))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list the mTLS certificate Secrets of %s/%s: %w", egdp.Namespace, egdp.Name, err)
+	}
+	return owned, nil
+}
+
+// deleteCertificateSecrets deletes the client certificate Secrets the operator
+// created for a data plane: those it issued (see listCertificateSecrets), and,
+// of an OnPremEventGateway, its copies of the Manual ones. A Manual Secret of
+// the user stays. The Deployment, no longer reconciled while the data plane is
+// revoked, still mounts them: its running pods keep their certificate, which
+// the gateway no longer trusts, and a pod started meanwhile waits for its
+// Secret. Once a KongReferenceGrant lets the data plane in again, a
+// certificate is issued or copied again, and the Deployment rolls out onto it.
+func (r *Reconciler) deleteCertificateSecrets(
+	ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane,
+) error {
+	owned, err := r.listCertificateSecrets(ctx, cl, egdp)
+	if err != nil {
+		return err
+	}
+	for i := range owned {
+		if err := cl.Delete(ctx, &owned[i]); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete the mTLS certificate Secret %s/%s of the revoked data plane %s/%s: %w",
+				owned[i].Namespace, owned[i].Name, egdp.Namespace, egdp.Name, err)
+		}
+	}
+	var copies corev1.SecretList
+	if err := cl.List(ctx, &copies, client.InNamespace(egdp.Namespace), client.MatchingLabels{secretCopyLabel: secretCopyManualCertificate}); err != nil {
+		return fmt.Errorf("failed to list the copies of the Manual client certificates of %s/%s: %w", egdp.Namespace, egdp.Name, err)
+	}
+	for i := range copies.Items {
+		copied := &copies.Items[i]
+		if !metav1.IsControlledBy(copied, egdp) {
+			continue
+		}
+		if err := cl.Delete(ctx, copied); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("failed to delete the copy %s/%s of a Manual client certificate of the revoked data plane %s/%s: %w",
+				copied.Namespace, copied.Name, egdp.Namespace, egdp.Name, err)
+		}
+	}
+	return nil
 }

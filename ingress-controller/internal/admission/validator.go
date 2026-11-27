@@ -48,6 +48,8 @@ type KongValidator interface {
 	IngressClassMatcher(obj *metav1.ObjectMeta) bool
 	IngressV1ClassMatcher(ing *netv1.Ingress) bool
 	GetReferenceIndexers() ctrlref.CacheIndexers
+	// IsReady reports whether the validator's Kong Gateway has received its first configuration.
+	IsReady() bool
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -128,6 +130,7 @@ type KongHTTPValidator struct {
 
 	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
+	isReady               func() bool
 }
 
 // NewKongHTTPValidator provides a new KongHTTPValidator object provided
@@ -143,6 +146,7 @@ func NewKongHTTPValidator(
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
 	referenceIndexer ctrlref.CacheIndexers,
+	isReady func() bool,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
@@ -157,7 +161,15 @@ func NewKongHTTPValidator(
 
 		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
+		isReady:               isReady,
 	}
+}
+
+// IsReady reports whether the validator's Kong Gateway has received its first configuration.
+// Until then Kong has no license and rejects validation calls with 403. A validator without
+// a readiness check is always ready.
+func (validator KongHTTPValidator) IsReady() bool {
+	return validator.isReady == nil || validator.isReady()
 }
 
 func (validator KongHTTPValidator) IngressClassMatcher(om *metav1.ObjectMeta) bool {

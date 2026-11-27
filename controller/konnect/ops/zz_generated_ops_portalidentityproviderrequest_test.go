@@ -8,9 +8,11 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
@@ -40,10 +42,11 @@ func TestCreatePortalIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) 
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalIdentityProviderRequestForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToPortalCreateIdentityProvider()
+	expectedRequest, err := obj.ToPortalCreateIdentityProvider(ctx, cl)
 	require.NoError(t, err)
 	expectedID := "portalidentityproviderrequest-id"
 
@@ -60,7 +63,7 @@ func TestCreatePortalIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) 
 		}, nil).
 		Once()
 
-	require.NoError(t, createPortalIdentityProviderRequest(ctx, sdk, obj))
+	require.NoError(t, createPortalIdentityProviderRequest(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -69,10 +72,11 @@ func TestCreatePortalIdentityProviderRequest_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalIdentityProviderRequestForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToPortalCreateIdentityProvider()
+	expectedRequest, err := obj.ToPortalCreateIdentityProvider(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -85,7 +89,7 @@ func TestCreatePortalIdentityProviderRequest_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createPortalIdentityProviderRequest(ctx, sdk, obj)
+	err = createPortalIdentityProviderRequest(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -94,11 +98,12 @@ func TestUpdatePortalIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) 
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalIdentityProviderRequestForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
 	obj.SetKonnectID("portalidentityproviderrequest-id")
-	expectedRequest, err := obj.Spec.APISpec.ToPortalUpdateIdentityProvider()
+	expectedRequest, err := obj.ToPortalUpdateIdentityProvider(ctx, cl)
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -113,7 +118,7 @@ func TestUpdatePortalIdentityProviderRequest_UsesSDKOpsConversion(t *testing.T) 
 		Return(&sdkkonnectops.UpdatePortalIdentityProviderResponse{}, nil).
 		Once()
 
-	require.NoError(t, updatePortalIdentityProviderRequest(ctx, sdk, obj))
+	require.NoError(t, updatePortalIdentityProviderRequest(ctx, cl, sdk, obj))
 }
 
 func TestUpdatePortalIdentityProviderRequest_PropagatesSDKError(t *testing.T) {
@@ -121,11 +126,12 @@ func TestUpdatePortalIdentityProviderRequest_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalAuthSettingsSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalIdentityProviderRequestForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
 	obj.SetKonnectID("portalidentityproviderrequest-id")
-	expectedRequest, err := obj.Spec.APISpec.ToPortalUpdateIdentityProvider()
+	expectedRequest, err := obj.ToPortalUpdateIdentityProvider(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -141,7 +147,7 @@ func TestUpdatePortalIdentityProviderRequest_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updatePortalIdentityProviderRequest(ctx, sdk, obj)
+	err = updatePortalIdentityProviderRequest(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

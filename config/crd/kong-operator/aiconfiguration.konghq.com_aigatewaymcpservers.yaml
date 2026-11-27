@@ -292,6 +292,195 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                description: |-
+                                  Default per-prompt access control rules for allowing or denying consumer
+                                  groups access to
+                                  prompts.
+                                  Evaluated only for callers that already passed the server-level `acls` check
+                                  above.
+                                  Applies to every prompt exposed by this MCP Server unless a specific prompt
+                                  overrides it via that prompt's own `access.acls`.
+                                  Prompts a caller is denied are omitted
+                                  from `prompts/list` and rejected on `prompts/get`.
+                                  When unset, prompts are governed only
+                                  by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                description: |-
+                                  Default per-resource access control rules for allowing or denying consumer
+                                  groups access
+                                  to resources and resource templates.
+                                  Evaluated only for callers that already passed the
+                                  server-level `acls` check above.
+                                  Applies to every resource exposed by this MCP Server
+                                  unless a specific resource overrides it via that resource's own
+                                  `access.acls`.
+                                  Resources a
+                                  caller is denied are omitted from `resources/list` and
+                                  `resources/templates/list` and
+                                  rejected on `resources/read` and `resources/subscribe`.
+                                  When unset, resources are governed
+                                  only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 description: |-
                                   Default per-tool access control rules for allowing or denying consumer
@@ -584,6 +773,198 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                description: |-
+                                  Default per-prompt access control rules for allowing or denying callers
+                                  access to prompts,
+                                  evaluated against the value of the configured `access_token_claim_field`.
+                                  Evaluated only
+                                  for callers that already passed the server-level `acls` check above.
+                                  Applies to every
+                                  prompt exposed by this MCP Server unless a specific prompt overrides it via
+                                  that prompt's
+                                  own `access.acls`.
+                                  Prompts a caller is denied are omitted from `prompts/list` and rejected
+                                  on `prompts/get`.
+                                  When unset, prompts are governed only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                description: |-
+                                  Default per-resource access control rules for allowing or denying callers
+                                  access to
+                                  resources and resource templates, evaluated against the value of the
+                                  configured
+                                  `access_token_claim_field`.
+                                  Evaluated only for callers that already passed the
+                                  server-level `acls` check above.
+                                  Applies to every resource exposed by this MCP Server
+                                  unless a specific resource overrides it via that resource's own
+                                  `access.acls`.
+                                  Resources a
+                                  caller is denied are omitted from `resources/list` and
+                                  `resources/templates/list` and
+                                  rejected on `resources/read` and `resources/subscribe`.
+                                  When unset, resources are governed
+                                  only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 description: |-
                                   Default per-tool access control rules for allowing or denying callers access
@@ -745,6 +1126,46 @@ spec:
                             items:
                               type: string
                             type: array
+                          balancer:
+                            description: |-
+                              Load balancing configuration for `targets`. Only valid with `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            properties:
+                              algorithm:
+                                description: Algorithm designates the type of configuration.
+                                enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                                minLength: 1
+                                type: string
+                              consistent-hashing:
+                                description: ConsistentHashing configuration.
+                                properties:
+                                  hashOnHeader:
+                                    description: |-
+                                      The request header whose value selects the target.
+                                      Requests without the header all hash to the same target.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - hashOnHeader
+                                type: object
+                              least-connections:
+                                description: LeastConnections configuration.
+                                type: object
+                              lowest-latency:
+                                description: LowestLatency configuration.
+                                type: object
+                              round-robin:
+                                description: RoundRobin configuration.
+                                type: object
+                            required:
+                            - algorithm
+                            type: object
                           caCertificates:
                             description: |-
                               The CA certificates used to verify the TLS certificate of the
@@ -790,6 +1211,61 @@ spec:
                               discover:
                                 description: A cache hint Kong emits on a cacheable
                                   operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              promptsList:
+                                description: |-
+                                  Cache hint emitted on `prompts/list` results.
+                                  `cache_scope: public` is rejected when
+                                  `default_prompt_acls` or a prompt's own `access.acls` filters the list per
+                                  subject.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              resourcesList:
+                                description: |-
+                                  Cache hint emitted on `resources/list` and `resources/templates/list`
+                                  results.
+                                  `cache_scope: public` is rejected when `default_resource_acls` or a
+                                  resource's own
+                                  `access.acls` filters either list per subject.
+
+                                  **Requires a minimum runtime version of `2.5`**.
                                 properties:
                                   cacheScope:
                                     description: |-
@@ -889,6 +1365,24 @@ spec:
                             maximum: 2147483646
                             minimum: 0
                             type: integer
+                          path:
+                            description: |-
+                              The path prefix of requests sent to the `targets`.
+                              Only valid with `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            maxLength: 253
+                            pattern: ^/
+                            type: string
+                          protocol:
+                            description: |-
+                              The protocol used to reach the `targets`.
+                              Only valid with `targets`.
+                              If unset, the gateway uses `https`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            maxLength: 253
+                            type: string
                           route:
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
@@ -1532,10 +2026,60 @@ spec:
                                 minimum: 0
                                 type: integer
                             type: object
+                          targets:
+                            description: |-
+                              List of targets the upstream load balances requests across.
+                              Replaces `url`: set exactly one of `url` or `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            items:
+                              description: |-
+                                AIGatewayUpstreamTarget A target is an ip address/hostname with a port that
+                                identifies an instance of a backend service.
+                                Every agent can have many targets.
+                              properties:
+                                address:
+                                  description: |-
+                                    The target address (ip or hostname) and port.
+                                    If the hostname resolves to an SRV record, the `port` value will be
+                                    overridden by the value from the DNS record.
+                                    Each address must be unique within the agent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                failover:
+                                  description: |-
+                                    Whether to use this target only as backup or not.
+                                    A failover target receives traffic only when all other targets are
+                                    unhealthy, or when a request has failed on all of them.
+                                    The gateway checks the health of each target with active and passive health
+                                    checks.
+                                    Failover targets are not supported with the `consistent-hashing` algorithm,
+                                    and at least one target must not be a failover target.
+                                  enum:
+                                  - Enabled
+                                  - Disabled
+                                  type: string
+                                weight:
+                                  description: |-
+                                    The weight this target gets within the upstream loadbalancer (`0`-`65535`).
+                                    If the hostname resolves to an SRV record, the `weight` value will be
+                                    overridden by the value from the DNS record.
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - address
+                              type: object
+                            type: array
                           upstream:
                             description: |-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
+                              Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+                              MCP Servers.
+
+                              **Requires a minimum runtime version of `2.4`**.
                             properties:
                               auth:
                                 description: Authentication to use when proxying to
@@ -1613,7 +2157,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         description: |-
@@ -2882,6 +3425,10 @@ spec:
                             description: |-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
+                              Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+                              MCP Servers.
+
+                              **Requires a minimum runtime version of `2.4`**.
                             properties:
                               auth:
                                 description: Authentication to use when proxying to
@@ -2957,8 +3504,6 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
-                        required:
-                        - url
                         type: object
                       datastores:
                         description: |-
@@ -4122,6 +4667,195 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                description: |-
+                                  Default per-prompt access control rules for allowing or denying consumer
+                                  groups access to
+                                  prompts.
+                                  Evaluated only for callers that already passed the server-level `acls` check
+                                  above.
+                                  Applies to every prompt exposed by this MCP Server unless a specific prompt
+                                  overrides it via that prompt's own `access.acls`.
+                                  Prompts a caller is denied are omitted
+                                  from `prompts/list` and rejected on `prompts/get`.
+                                  When unset, prompts are governed only
+                                  by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                description: |-
+                                  Default per-resource access control rules for allowing or denying consumer
+                                  groups access
+                                  to resources and resource templates.
+                                  Evaluated only for callers that already passed the
+                                  server-level `acls` check above.
+                                  Applies to every resource exposed by this MCP Server
+                                  unless a specific resource overrides it via that resource's own
+                                  `access.acls`.
+                                  Resources a
+                                  caller is denied are omitted from `resources/list` and
+                                  `resources/templates/list` and
+                                  rejected on `resources/read` and `resources/subscribe`.
+                                  When unset, resources are governed
+                                  only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 description: |-
                                   Default per-tool access control rules for allowing or denying consumer
@@ -4414,6 +5148,198 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                description: |-
+                                  Default per-prompt access control rules for allowing or denying callers
+                                  access to prompts,
+                                  evaluated against the value of the configured `access_token_claim_field`.
+                                  Evaluated only
+                                  for callers that already passed the server-level `acls` check above.
+                                  Applies to every
+                                  prompt exposed by this MCP Server unless a specific prompt overrides it via
+                                  that prompt's
+                                  own `access.acls`.
+                                  Prompts a caller is denied are omitted from `prompts/list` and rejected
+                                  on `prompts/get`.
+                                  When unset, prompts are governed only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                description: |-
+                                  Default per-resource access control rules for allowing or denying callers
+                                  access to
+                                  resources and resource templates, evaluated against the value of the
+                                  configured
+                                  `access_token_claim_field`.
+                                  Evaluated only for callers that already passed the
+                                  server-level `acls` check above.
+                                  Applies to every resource exposed by this MCP Server
+                                  unless a specific resource overrides it via that resource's own
+                                  `access.acls`.
+                                  Resources a
+                                  caller is denied are omitted from `resources/list` and
+                                  `resources/templates/list` and
+                                  rejected on `resources/read` and `resources/subscribe`.
+                                  When unset, resources are governed
+                                  only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 description: |-
                                   Default per-tool access control rules for allowing or denying callers access
@@ -4586,6 +5512,61 @@ spec:
                               discover:
                                 description: A cache hint Kong emits on a cacheable
                                   operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              promptsList:
+                                description: |-
+                                  Cache hint emitted on `prompts/list` results.
+                                  `cache_scope: public` is rejected when
+                                  `default_prompt_acls` or a prompt's own `access.acls` filters the list per
+                                  subject.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              resourcesList:
+                                description: |-
+                                  Cache hint emitted on `resources/list` and `resources/templates/list`
+                                  results.
+                                  `cache_scope: public` is rejected when `default_resource_acls` or a
+                                  resource's own
+                                  `access.acls` filters either list per subject.
+
+                                  **Requires a minimum runtime version of `2.5`**.
                                 properties:
                                   cacheScope:
                                     description: |-
@@ -6206,6 +7187,195 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                description: |-
+                                  Default per-prompt access control rules for allowing or denying consumer
+                                  groups access to
+                                  prompts.
+                                  Evaluated only for callers that already passed the server-level `acls` check
+                                  above.
+                                  Applies to every prompt exposed by this MCP Server unless a specific prompt
+                                  overrides it via that prompt's own `access.acls`.
+                                  Prompts a caller is denied are omitted
+                                  from `prompts/list` and rejected on `prompts/get`.
+                                  When unset, prompts are governed only
+                                  by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                description: |-
+                                  Default per-resource access control rules for allowing or denying consumer
+                                  groups access
+                                  to resources and resource templates.
+                                  Evaluated only for callers that already passed the
+                                  server-level `acls` check above.
+                                  Applies to every resource exposed by this MCP Server
+                                  unless a specific resource overrides it via that resource's own
+                                  `access.acls`.
+                                  Resources a
+                                  caller is denied are omitted from `resources/list` and
+                                  `resources/templates/list` and
+                                  rejected on `resources/read` and `resources/subscribe`.
+                                  When unset, resources are governed
+                                  only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 description: |-
                                   Default per-tool access control rules for allowing or denying consumer
@@ -6498,6 +7668,198 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
+                              defaultPromptAcls:
+                                description: |-
+                                  Default per-prompt access control rules for allowing or denying callers
+                                  access to prompts,
+                                  evaluated against the value of the configured `access_token_claim_field`.
+                                  Evaluated only
+                                  for callers that already passed the server-level `acls` check above.
+                                  Applies to every
+                                  prompt exposed by this MCP Server unless a specific prompt overrides it via
+                                  that prompt's
+                                  own `access.acls`.
+                                  Prompts a caller is denied are omitted from `prompts/list` and rejected
+                                  on `prompts/get`.
+                                  When unset, prompts are governed only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              defaultResourceAcls:
+                                description: |-
+                                  Default per-resource access control rules for allowing or denying callers
+                                  access to
+                                  resources and resource templates, evaluated against the value of the
+                                  configured
+                                  `access_token_claim_field`.
+                                  Evaluated only for callers that already passed the
+                                  server-level `acls` check above.
+                                  Applies to every resource exposed by this MCP Server
+                                  unless a specific resource overrides it via that resource's own
+                                  `access.acls`.
+                                  Resources a
+                                  caller is denied are omitted from `resources/list` and
+                                  `resources/templates/list` and
+                                  rejected on `resources/read` and `resources/subscribe`.
+                                  When unset, resources are governed
+                                  only by the server-level `acls`.
+
+                                  **Requires a minimum runtime version of `2.5`**.
+                                properties:
+                                  allow:
+                                    description: List of consumer groups that are
+                                      permitted access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  allowWhen:
+                                    description: |-
+                                      Allow the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  deny:
+                                    description: List of consumer groups that are
+                                      denied access.
+                                    items:
+                                      description: |-
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    type: array
+                                  denyWhen:
+                                    description: |-
+                                      Deny the request if it matches any of these CEL boolean expressions
+                                      evaluated against the request context.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               defaultToolAcls:
                                 description: |-
                                   Default per-tool access control rules for allowing or denying callers access
@@ -6644,6 +8006,46 @@ spec:
                         description: Routing, logging, and server configuration for
                           the MCP Server.
                         properties:
+                          balancer:
+                            description: |-
+                              Load balancing configuration for `targets`. Only valid with `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            properties:
+                              algorithm:
+                                description: Algorithm designates the type of configuration.
+                                enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                                minLength: 1
+                                type: string
+                              consistent-hashing:
+                                description: ConsistentHashing configuration.
+                                properties:
+                                  hashOnHeader:
+                                    description: |-
+                                      The request header whose value selects the target.
+                                      Requests without the header all hash to the same target.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - hashOnHeader
+                                type: object
+                              least-connections:
+                                description: LeastConnections configuration.
+                                type: object
+                              lowest-latency:
+                                description: LowestLatency configuration.
+                                type: object
+                              round-robin:
+                                description: RoundRobin configuration.
+                                type: object
+                            required:
+                            - algorithm
+                            type: object
                           caCertificates:
                             description: |-
                               The CA certificates used to verify the TLS certificate of the
@@ -6734,6 +8136,24 @@ spec:
                             maximum: 2147483646
                             minimum: 0
                             type: integer
+                          path:
+                            description: |-
+                              The path prefix of requests sent to the `targets`.
+                              Only valid with `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            maxLength: 253
+                            pattern: ^/
+                            type: string
+                          protocol:
+                            description: |-
+                              The protocol used to reach the `targets`.
+                              Only valid with `targets`.
+                              If unset, the gateway uses `https`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            maxLength: 253
+                            type: string
                           proxy:
                             description: |-
                               HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
@@ -7501,6 +8921,52 @@ spec:
                                 minimum: 0
                                 type: integer
                             type: object
+                          targets:
+                            description: |-
+                              List of targets the upstream load balances requests across.
+                              Replaces `url`: set exactly one of `url` or `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            items:
+                              description: |-
+                                AIGatewayUpstreamTarget A target is an ip address/hostname with a port that
+                                identifies an instance of a backend service.
+                                Every agent can have many targets.
+                              properties:
+                                address:
+                                  description: |-
+                                    The target address (ip or hostname) and port.
+                                    If the hostname resolves to an SRV record, the `port` value will be
+                                    overridden by the value from the DNS record.
+                                    Each address must be unique within the agent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                failover:
+                                  description: |-
+                                    Whether to use this target only as backup or not.
+                                    A failover target receives traffic only when all other targets are
+                                    unhealthy, or when a request has failed on all of them.
+                                    The gateway checks the health of each target with active and passive health
+                                    checks.
+                                    Failover targets are not supported with the `consistent-hashing` algorithm,
+                                    and at least one target must not be a failover target.
+                                  enum:
+                                  - Enabled
+                                  - Disabled
+                                  type: string
+                                weight:
+                                  description: |-
+                                    The weight this target gets within the upstream loadbalancer (`0`-`65535`).
+                                    If the hostname resolves to an SRV record, the `weight` value will be
+                                    overridden by the value from the DNS record.
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - address
+                              type: object
+                            type: array
                           upstream:
                             description: |-
                               Configuration applied when proxying to the upstream service, including
@@ -7582,7 +9048,6 @@ spec:
                             type: string
                         required:
                         - route
-                        - url
                         type: object
                       datastores:
                         description: |-
@@ -7702,6 +9167,126 @@ spec:
                           - name
                           type: object
                         type: array
+                      prompts:
+                        description: |-
+                          Per-prompt access-control overrides for prompts advertised by the remote MCP
+                          Server.
+                          Each entry is matched to a remote prompt by `name`; only its access-control
+                          rules are
+                          applied.
+                          Prompts without an entry are governed by `access.default_prompt_acls`.
+                          Each
+                          `name` must be unique within this MCP Server.
+
+                          **Requires a minimum runtime version of `2.5`**.
+                        items:
+                          description: |-
+                            AIGatewayMCPPrompt Access-control rules for a prompt advertised by the remote
+                            MCP Server.
+                          properties:
+                            access:
+                              description: Access-control rules for a prompt.
+                              properties:
+                                acls:
+                                  description: |-
+                                    Access control rules for allowing or denying callers access to this prompt
+                                    (`prompts/get`),
+                                    and whether it is listed to them (`prompts/list`).
+                                    When configured, these override the
+                                    MCP Server's `default_prompt_acls` for this prompt.
+                                  properties:
+                                    allow:
+                                      description: List of consumer groups that are
+                                        permitted access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      description: |-
+                                        Allow the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      description: List of consumer groups that are
+                                        denied access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      description: |-
+                                        Deny the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            name:
+                              description: |-
+                                The MCP prompt name.
+                                Matches the prompt advertised by the remote MCP Server under the same
+                                name. Unique within an MCP Server.
+                              maxLength: 128
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
+                              type: string
+                          required:
+                          - access
+                          - name
+                          type: object
+                        type: array
                       rateLimiting:
                         description: |-
                           Rate limits applied to requests to this MCP Server, matched by MCP method or
@@ -7751,6 +9336,130 @@ spec:
                         required:
                         - limits
                         type: object
+                      resources:
+                        description: |-
+                          Per-resource access-control overrides for resources and resource templates
+                          advertised
+                          by the remote MCP Server.
+                          Each entry is matched to a remote resource by `uri`; only its
+                          access-control rules are applied. Resources without an entry are governed by
+                          `access.default_resource_acls`.
+                          Each `uri` must be unique within this MCP Server.
+
+                          **Requires a minimum runtime version of `2.5`**.
+                        items:
+                          description: |-
+                            AIGatewayMCPResource Access-control rules for a resource or resource template
+                            advertised by the remote MCP Server.
+                          properties:
+                            access:
+                              description: Access-control rules for a resource or
+                                resource template.
+                              properties:
+                                acls:
+                                  description: |-
+                                    Access control rules for allowing or denying callers access to this resource
+                                    (`resources/read`, `resources/subscribe`), and whether it is listed to them
+                                    (`resources/list`, `resources/templates/list`).
+                                    When configured, these override the
+                                    MCP Server's `default_resource_acls` for this resource.
+                                  properties:
+                                    allow:
+                                      description: List of consumer groups that are
+                                        permitted access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      description: |-
+                                        Allow the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      description: List of consumer groups that are
+                                        denied access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      description: |-
+                                        Deny the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            uri:
+                              description: |-
+                                The MCP resource URI.
+                                Matches the resource advertised by the remote MCP Server under the
+                                same `uri`, or the resource template advertised under the same
+                                `uriTemplate`.
+                                A URI
+                                template (RFC 6570) also matches every concrete resource URI it expands to,
+                                so one entry
+                                can govern a whole template. Unique within an MCP Server.
+                              maxLength: 2048
+                              minLength: 1
+                              type: string
+                          required:
+                          - access
+                          - uri
+                          type: object
+                        type: array
                       tokenVault:
                         description: |-
                           Resolves an upstream credential per request via Kong's Token Vault instead
@@ -8479,6 +10188,46 @@ spec:
                         description: Routing, logging, and server configuration for
                           the MCP Server.
                         properties:
+                          balancer:
+                            description: |-
+                              Load balancing configuration for `targets`. Only valid with `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            properties:
+                              algorithm:
+                                description: Algorithm designates the type of configuration.
+                                enum:
+                                - consistent-hashing
+                                - least-connections
+                                - lowest-latency
+                                - round-robin
+                                minLength: 1
+                                type: string
+                              consistent-hashing:
+                                description: ConsistentHashing configuration.
+                                properties:
+                                  hashOnHeader:
+                                    description: |-
+                                      The request header whose value selects the target.
+                                      Requests without the header all hash to the same target.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - hashOnHeader
+                                type: object
+                              least-connections:
+                                description: LeastConnections configuration.
+                                type: object
+                              lowest-latency:
+                                description: LowestLatency configuration.
+                                type: object
+                              round-robin:
+                                description: RoundRobin configuration.
+                                type: object
+                            required:
+                            - algorithm
+                            type: object
                           caCertificates:
                             description: |-
                               The CA certificates used to verify the TLS certificate of the
@@ -8569,6 +10318,24 @@ spec:
                             maximum: 2147483646
                             minimum: 0
                             type: integer
+                          path:
+                            description: |-
+                              The path prefix of requests sent to the `targets`.
+                              Only valid with `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            maxLength: 253
+                            pattern: ^/
+                            type: string
+                          protocol:
+                            description: |-
+                              The protocol used to reach the `targets`.
+                              Only valid with `targets`.
+                              If unset, the gateway uses `https`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            maxLength: 253
+                            type: string
                           route:
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
@@ -9339,6 +11106,52 @@ spec:
                                 maxLength: 253
                                 type: string
                             type: object
+                          targets:
+                            description: |-
+                              List of targets the upstream load balances requests across.
+                              Replaces `url`: set exactly one of `url` or `targets`.
+
+                              **Requires a minimum runtime version of `2.4`**.
+                            items:
+                              description: |-
+                                AIGatewayUpstreamTarget A target is an ip address/hostname with a port that
+                                identifies an instance of a backend service.
+                                Every agent can have many targets.
+                              properties:
+                                address:
+                                  description: |-
+                                    The target address (ip or hostname) and port.
+                                    If the hostname resolves to an SRV record, the `port` value will be
+                                    overridden by the value from the DNS record.
+                                    Each address must be unique within the agent.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                failover:
+                                  description: |-
+                                    Whether to use this target only as backup or not.
+                                    A failover target receives traffic only when all other targets are
+                                    unhealthy, or when a request has failed on all of them.
+                                    The gateway checks the health of each target with active and passive health
+                                    checks.
+                                    Failover targets are not supported with the `consistent-hashing` algorithm,
+                                    and at least one target must not be a failover target.
+                                  enum:
+                                  - Enabled
+                                  - Disabled
+                                  type: string
+                                weight:
+                                  description: |-
+                                    The weight this target gets within the upstream loadbalancer (`0`-`65535`).
+                                    If the hostname resolves to an SRV record, the `weight` value will be
+                                    overridden by the value from the DNS record.
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - address
+                              type: object
+                            type: array
                           toolsCacheTtlSeconds:
                             description: |-
                               The time-to-live (TTL) for the upstream tools cache in seconds.
@@ -9350,6 +11163,10 @@ spec:
                             description: |-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
+                              Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+                              MCP Servers.
+
+                              **Requires a minimum runtime version of `2.4`**.
                             properties:
                               auth:
                                 description: Authentication to use when proxying to
@@ -9428,7 +11245,6 @@ spec:
                         required:
                         - route
                         - toolsCacheTtlSeconds
-                        - url
                         type: object
                       datastores:
                         description: |-
@@ -9546,6 +11362,237 @@ spec:
                               type: string
                           required:
                           - name
+                          type: object
+                        type: array
+                      prompts:
+                        description: |-
+                          List of prompts exposed by this MCP Server.
+
+                          **Requires a minimum runtime version of `2.5`**.
+                        items:
+                          description: |-
+                            AIGatewayMCPPrompt Access-control rules for a prompt advertised by the remote
+                            MCP Server.
+                          properties:
+                            access:
+                              description: Access-control rules for a prompt.
+                              properties:
+                                acls:
+                                  description: |-
+                                    Access control rules for allowing or denying callers access to this prompt
+                                    (`prompts/get`),
+                                    and whether it is listed to them (`prompts/list`).
+                                    When configured, these override the
+                                    MCP Server's `default_prompt_acls` for this prompt.
+                                  properties:
+                                    allow:
+                                      description: List of consumer groups that are
+                                        permitted access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      description: |-
+                                        Allow the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      description: List of consumer groups that are
+                                        denied access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      description: |-
+                                        Deny the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            name:
+                              description: |-
+                                The MCP prompt name.
+                                Matches the prompt advertised by the remote MCP Server under the same
+                                name. Unique within an MCP Server.
+                              maxLength: 128
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
+                              type: string
+                          required:
+                          - access
+                          - name
+                          type: object
+                        type: array
+                      resources:
+                        description: |-
+                          List of resources exposed by this MCP Server.
+
+                          **Requires a minimum runtime version of `2.5`**.
+                        items:
+                          description: |-
+                            AIGatewayMCPResource Access-control rules for a resource or resource template
+                            advertised by the remote MCP Server.
+                          properties:
+                            access:
+                              description: Access-control rules for a resource or
+                                resource template.
+                              properties:
+                                acls:
+                                  description: |-
+                                    Access control rules for allowing or denying callers access to this resource
+                                    (`resources/read`, `resources/subscribe`), and whether it is listed to them
+                                    (`resources/list`, `resources/templates/list`).
+                                    When configured, these override the
+                                    MCP Server's `default_resource_acls` for this resource.
+                                  properties:
+                                    allow:
+                                      description: List of consumer groups that are
+                                        permitted access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    allowWhen:
+                                      description: |-
+                                        Allow the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                    deny:
+                                      description: List of consumer groups that are
+                                        denied access.
+                                      items:
+                                        description: |-
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
+                                      type: array
+                                    denyWhen:
+                                      description: |-
+                                        Deny the request if it matches any of these CEL boolean expressions
+                                        evaluated against the request context.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            uri:
+                              description: |-
+                                The MCP resource URI.
+                                Matches the resource advertised by the remote MCP Server under the
+                                same `uri`, or the resource template advertised under the same
+                                `uriTemplate`.
+                                A URI
+                                template (RFC 6570) also matches every concrete resource URI it expands to,
+                                so one entry
+                                can govern a whole template. Unique within an MCP Server.
+                              maxLength: 2048
+                              minLength: 1
+                              type: string
+                          required:
+                          - access
+                          - uri
                           type: object
                         type: array
                       tokenVault:

@@ -337,7 +337,16 @@ spec:
           value: OnPremEventGatewayResolved
         - name: condition_status
           value: "True"
-    - name: 19-revoke-keg-gw-b-to-gateway
+    - name: 19-assert-gw-b-certificate-secret
+      description: "[B, its gateway] The operator issued the client certificate Secret of the KegDataPlane."
+      use:
+        template: ../../_step_templates/assert-dataplane-certificate-secret.yaml
+      bindings:
+        - name: object_name
+          value: keg-gw-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 20-revoke-keg-gw-b-to-gateway
       description: "[D, its gateway] Delete the KongReferenceGrant of the KegDataPlane to its gateway."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -350,7 +359,7 @@ spec:
           value: keg-gw-b-to-gateway
         - name: object_namespace
           value: ($namespace)
-    - name: 20-assert-gw-b-not-permitted-again
+    - name: 21-assert-gw-b-not-permitted-again
       description: "[D, its gateway] Without its KongReferenceGrant, the KegDataPlane reports it again. The near-miss grants (W), created before it, are seen by the reconcile reacting to its deletion: none of them lets it."
       use:
         template: ../../_step_templates/assert-condition.yaml
@@ -369,7 +378,16 @@ spec:
           value: "False"
         - name: condition_reason
           value: RefNotPermitted
-    - name: 21-delete-keg-gw-b-other-kind
+    - name: 22-assert-gw-b-certificate-secret-gone
+      description: "[D, its gateway] Revoked, the KegDataPlane no longer has the client certificate Secret the operator issued."
+      use:
+        template: ../../_step_templates/assert-dataplane-certificate-secret-gone.yaml
+      bindings:
+        - name: object_name
+          value: keg-gw-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 23-delete-keg-gw-b-other-kind
       description: "[D, its gateway] Delete the near-miss KongReferenceGrant keg-gw-b-other-kind."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -382,7 +400,7 @@ spec:
           value: keg-gw-b-other-kind
         - name: object_namespace
           value: ($namespace)
-    - name: 22-delete-keg-gw-b-other-group
+    - name: 24-delete-keg-gw-b-other-group
       description: "[D, its gateway] Delete the near-miss KongReferenceGrant keg-gw-b-other-group."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -395,7 +413,7 @@ spec:
           value: keg-gw-b-other-group
         - name: object_namespace
           value: ($namespace)
-    - name: 23-delete-keg-gw-b-other-namespace
+    - name: 25-delete-keg-gw-b-other-namespace
       description: "[D, its gateway] Delete the near-miss KongReferenceGrant keg-gw-b-other-namespace."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -408,7 +426,7 @@ spec:
           value: keg-gw-b-other-namespace
         - name: object_namespace
           value: ($namespace)
-    - name: 24-delete-keg-gw-b-in-own-namespace
+    - name: 26-delete-keg-gw-b-in-own-namespace
       description: "[D, its gateway] Delete the near-miss KongReferenceGrant keg-gw-b-in-own-namespace."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -421,7 +439,7 @@ spec:
           value: keg-gw-b-in-own-namespace
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 25-delete-keg-gw-b-to-other-kind
+    - name: 27-delete-keg-gw-b-to-other-kind
       description: "[D, its gateway] Delete the near-miss KongReferenceGrant keg-gw-b-to-other-kind."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -434,7 +452,7 @@ spec:
           value: keg-gw-b-to-other-kind
         - name: object_namespace
           value: ($namespace)
-    - name: 26-delete-keg-gw-b-other-name
+    - name: 28-delete-keg-gw-b-other-name
       description: "[D, its gateway] Delete the near-miss KongReferenceGrant keg-gw-b-other-name."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -447,7 +465,7 @@ spec:
           value: keg-gw-b-other-name
         - name: object_namespace
           value: ($namespace)
-    - name: 27-restore-keg-gw-b-to-gateway
+    - name: 29-restore-keg-gw-b-to-gateway
       description: "[D, its gateway] Create the KongReferenceGrant of the KegDataPlane to its gateway again."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -469,7 +487,7 @@ spec:
             - group: ($gateway_group)
               kind: ($gateway_kind)
               name: ($gateway_name)
-    - name: 28-assert-gw-b-programmed-again
+    - name: 30-assert-gw-b-programmed-again
       description: "[D, its gateway] The KegDataPlane is restored."
       use:
         template: ../../_step_templates/assert-condition-status.yaml
@@ -486,7 +504,16 @@ spec:
           value: OnPremEventGatewayResolved
         - name: condition_status
           value: "True"
-    - name: 29-revoke-keg-gw-b-to-gateway-to-delete
+    - name: 31-assert-gw-b-certificate-secret-again
+      description: "[D, its gateway] Restored, the KegDataPlane gets a client certificate Secret again."
+      use:
+        template: ../../_step_templates/assert-dataplane-certificate-secret.yaml
+      bindings:
+        - name: object_name
+          value: keg-gw-b
+        - name: object_namespace
+          value: ($referrer_namespace)
+    - name: 32-revoke-keg-gw-b-to-gateway-to-delete
       description: "[E, its gateway] Delete the KongReferenceGrant of the KegDataPlane to its gateway again."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -499,7 +526,7 @@ spec:
           value: keg-gw-b-to-gateway
         - name: object_namespace
           value: ($namespace)
-    - name: 30-assert-gw-b-not-permitted-to-delete
+    - name: 33-assert-gw-b-not-permitted-to-delete
       description: "[E, its gateway] Without its KongReferenceGrant, the KegDataPlane reports it."
       use:
         template: ../../_step_templates/assert-condition.yaml
@@ -518,7 +545,7 @@ spec:
           value: "False"
         - name: condition_reason
           value: RefNotPermitted
-    - name: 31-delete-gw-b-keg-data-plane-revoked
+    - name: 34-delete-gw-b-keg-data-plane-revoked
       description: "[E, its gateway] The KegDataPlane can be deleted while the KongReferenceGrant it needs is revoked."
       use:
         template: ../../_step_templates/delete-and-wait.yaml
@@ -531,7 +558,7 @@ spec:
           value: keg-gw-b
         - name: object_namespace
           value: ($referrer_namespace)
-    - name: 32-restore-keg-gw-b-to-gateway
+    - name: 35-restore-keg-gw-b-to-gateway
       description: "[E, its gateway] Create the KongReferenceGrant again, so that the other objects of the scenario are deleted with it in place."
       use:
         template: ../../../common/_step_templates/apply-assert-kongreferencegrant.yaml

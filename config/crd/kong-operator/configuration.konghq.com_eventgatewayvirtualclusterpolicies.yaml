@@ -145,6 +145,7 @@ spec:
                                         required:
                                         - match
                                         type: object
+                                      maxItems: 50
                                       type: array
                                     type:
                                       description: Type designates the type of configuration.
@@ -173,6 +174,7 @@ spec:
                               - resourceNames
                               - resourceType
                               type: object
+                            minItems: 1
                             type: array
                         required:
                         - rules
@@ -205,6 +207,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -284,6 +287,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -339,6 +343,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -394,6 +399,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -448,6 +454,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -503,6 +510,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -558,6 +566,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -612,6 +621,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -667,6 +677,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -721,6 +732,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -775,6 +787,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -829,6 +842,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -883,6 +897,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -937,6 +952,7 @@ spec:
                                         - rule
                                         type: object
                                       maxItems: 10
+                                      minItems: 1
                                       type: array
                                   required:
                                   - rules
@@ -963,6 +979,7 @@ spec:
                               - type
                               type: object
                             maxItems: 100
+                            minItems: 1
                             type: array
                         required:
                         - requests
@@ -995,6 +1012,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config

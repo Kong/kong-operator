@@ -8,16 +8,282 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
-// AIGWKeyAuthGeneratedConfig is a type alias.
-type AIGWKeyAuthGeneratedConfig struct {
-	// An optional string (consumer UUID or username) value to use as an
-	// “anonymous” consumer if authentication fails.
-	// If empty (default null), the request will fail with an authentication
-	// failure `4xx`.
+// AIGatewayAgentAccess Access control configuration for an agent.
+type AIGatewayAgentAccess struct {
+	// Access control rules.
+	// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Anonymous string `json:"anonymous,omitzero"`
+	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
+	// List of auth strategies for granting access to the agent.
+	// At most 1 auth strategy of each auth strategy type can be referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
+	// List of identity providers for granting access to the agent.
+	// At most 1 identity provider of each identity provider type can be
+	// referenced.
+	//
+	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+}
+
+// AIGatewayAgentAccessAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+type AIGatewayAgentAccessAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
+	Type AIGatewayAgentAccessAclsType `json:"type,omitempty"`
+
+	// Allow configuration.
+	//
+	// +optional
+	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
+	// Deny configuration.
+	//
+	// +optional
+	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
+	// AllowWhen configuration.
+	//
+	// +optional
+	AllowWhen *AIGatewayAllowWhenACL `json:"allowWhen,omitempty"`
+	// DenyWhen configuration.
+	//
+	// +optional
+	DenyWhen *AIGatewayDenyWhenACL `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayAgentAccessAclsType represents the type of acls.
+type AIGatewayAgentAccessAclsType string
+
+// AIGatewayAgentAccessAclsType values.
+const (
+	AIGatewayAgentAccessAclsTypeAllow     AIGatewayAgentAccessAclsType = "allow"
+	AIGatewayAgentAccessAclsTypeDeny      AIGatewayAgentAccessAclsType = "deny"
+	AIGatewayAgentAccessAclsTypeAllowWhen AIGatewayAgentAccessAclsType = "allowWhen"
+	AIGatewayAgentAccessAclsTypeDenyWhen  AIGatewayAgentAccessAclsType = "denyWhen"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayAgentAccessAclsTypeAllow:
+		if u.Allow != nil {
+			raw, err := json.Marshal(u.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Allow: %w", err)
+			}
+			m["allow"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeDeny:
+		if u.Deny != nil {
+			raw, err := json.Marshal(u.Deny)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Deny: %w", err)
+			}
+			m["deny"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeAllowWhen:
+		if u.AllowWhen != nil {
+			raw, err := json.Marshal(u.AllowWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
+			}
+			m["allowWhen"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeDenyWhen:
+		if u.DenyWhen != nil {
+			raw, err := json.Marshal(u.DenyWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
+			}
+			m["denyWhen"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayAgentAccessAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Allow: %w", err)
+		}
+		u.Allow = &val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Deny: %w", err)
+		}
+		u.Deny = &val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = &val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: nil receiver")
+	}
+	type alias AIGatewayAgentAccess
+	aux := alias{}
+	aux.Acls = &AIGatewayAgentAccessAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayAgentAccess(aux)
+	return nil
+}
+
+// AIGatewayAllowACL is a type alias.
+type AIGatewayAllowACL struct {
+	// List of Consumer Groups Names, or Authenticated Groups Names that are
+	// permitted access.
+	//
+	// +required
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+}
+
+// AIGatewayAllowWhenACL is a type alias.
+type AIGatewayAllowWhenACL struct {
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context (consumer, principal, HTTP attributes,
+	// consumer groups, etc.).
+	// Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
+	// specified.
+	//
+	// **Requires a minimum runtime version of `2.2`**.
+	//
+	// +required
+	AllowWhen []string `json:"allowWhen,omitempty"`
+}
+
+// AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
+type AIGatewayAuthStrategyKeyAuth struct {
+	// Configuration for the key-auth auth strategy.
+	//
+	//
+	// +optional
+	Config AIGatewayAuthStrategyKeyAuthConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
+	// The display name for this auth strategy instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this auth strategy instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
+// strategy.
+type AIGatewayAuthStrategyKeyAuthConfig struct {
 	// An optional boolean value telling the plugin to show or hide the credential
 	// from the upstream service.
 	// If `true`, the plugin strips the credential from the request.
@@ -29,7 +295,7 @@ type AIGWKeyAuthGeneratedConfig struct {
 	// consumer from.
 	//
 	// +optional
-	IdentityRealms []AIGWKeyAuthGeneratedConfigIdentityRealms `json:"identityRealms,omitzero"`
+	IdentityRealms []AIGatewayAuthStrategyKeyAuthConfigIdentityRealms `json:"identityRealms,omitzero"`
 	// If enabled, the plugin reads the request body.
 	// Supported MIME types: `application/www-form-urlencoded`, `application/json`,
 	// and `multipart/form-data`.
@@ -58,7 +324,7 @@ type AIGWKeyAuthGeneratedConfig struct {
 	//
 	//
 	// +optional
-	Principals AIGWKeyAuthGeneratedConfigPrincipals `json:"principals,omitzero"`
+	Principals AIGatewayAuthStrategyKeyAuthConfigPrincipals `json:"principals,omitzero"`
 	// When authentication fails the plugin sends `WWW-Authenticate` header with
 	// `realm` attribute value.
 	//
@@ -74,14 +340,14 @@ type AIGWKeyAuthGeneratedConfig struct {
 	RunOnPreflight string `json:"runOnPreflight,omitzero"`
 }
 
-// AIGWKeyAuthGeneratedConfigIdentityRealms A configuration of Konnect Identity
-// Realms that indicate where to source a consumer from.
-type AIGWKeyAuthGeneratedConfigIdentityRealms struct {
+// AIGatewayAuthStrategyKeyAuthConfigIdentityRealms A configuration of Konnect
+// Identity Realms that indicate where to source a consumer from.
+type AIGatewayAuthStrategyKeyAuthConfigIdentityRealms struct {
 	//
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	Region string `json:"region,omitzero"`
+	Region *string `json:"region,omitempty"`
 	//
 	//
 	// +optional
@@ -90,12 +356,13 @@ type AIGWKeyAuthGeneratedConfigIdentityRealms struct {
 	Scope string `json:"scope,omitzero"`
 }
 
-// AIGWKeyAuthGeneratedConfigPrincipals is a type alias.
-type AIGWKeyAuthGeneratedConfigPrincipals struct {
+// AIGatewayAuthStrategyKeyAuthConfigPrincipals is a type alias.
+type AIGatewayAuthStrategyKeyAuthConfigPrincipals struct {
 	// The Kong Identity directory instance to authenticate against.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
 	Directory string `json:"directory,omitzero"`
 	// When true, authenticate against Kong Identity instead of local credentials.
 	//
@@ -111,8 +378,96 @@ type AIGWKeyAuthGeneratedConfigPrincipals struct {
 	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfig is a type alias.
-type AIGWOpenIDConnectGeneratedConfig struct {
+// AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
+type AIGatewayAuthStrategyOpenIDConnect struct {
+	// Configuration for the OpenID Connect auth strategy.
+	//
+	//
+	// +optional
+	Config AIGatewayAuthStrategyOpenIDConnectConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
+	// The display name for this auth strategy instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this auth strategy instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Enables enrollment protection for the Token Vault datastore linked to this
+	// auth strategy.
+	// Users of the linked Token Vault will need to authenticate using this OIDC
+	// auth strategy
+	// before completing enrollment with upstream providers.
+	// Enrollment links always store upstream
+	// credentials in the Token Vault belonging to the principal who requested the
+	// link.
+	// Enrollment
+	// protection ensures that other principals cannot use an enrollment link to
+	// unknowingly
+	// authorize the storage of their upstream credentials in another principal's
+	// Token Vault.
+	//
+	// Note that the auth strategy used to protect upstream resources such as MCP
+	// servers need not
+	// be the same auth strategy used for enrollment protection.
+	// Omit `token_vault` entirely to
+	// enforce no such enrollment protection.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling
+	// enrollment protection
+	// without one is rejected.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
+}
+
+// AIGatewayAuthStrategyOpenIDConnectConfig Configuration for the OpenID Connect
+// auth strategy.
+type AIGatewayAuthStrategyOpenIDConnectConfig struct {
 	// An optional string (consumer UUID or username) value that functions as an
 	// “anonymous” consumer if authentication fails.
 	// If empty (default null), requests that fail authentication will return a
@@ -328,7 +683,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The JWK used for the private_key_jwt authentication.
 	//
 	// +optional
-	ClientJwk []AIGWOpenIDConnectGeneratedConfigClientJwk `json:"clientJwk,omitempty"`
+	ClientJwk []AIGatewayAuthStrategyOpenIDConnectConfigClientJwk `json:"clientJwk,omitempty"`
 	// The client secret.
 	//
 	// +optional
@@ -336,7 +691,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	//
 	//
 	// +optional
-	ClusterCacheRedis AIGWOpenIDConnectGeneratedConfigClusterCacheRedis `json:"clusterCacheRedis,omitzero"`
+	ClusterCacheRedis AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis `json:"clusterCacheRedis,omitzero"`
 	// The strategy to use for the cluster cache.
 	// If set, the plugin will share cache with nodes configured with the same
 	// strategy backend.
@@ -422,7 +777,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The downstream claim to header mappings.
 	//
 	// +optional
-	DownstreamHeaders []AIGWOpenIDConnectGeneratedConfigDownstreamHeaders `json:"downstreamHeaders,omitempty"`
+	DownstreamHeaders []AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders `json:"downstreamHeaders,omitempty"`
 	// The downstream header claims. Only top level claims are supported.
 	//
 	// +optional
@@ -705,6 +1060,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// claims
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	Leeway float64 `json:"leeway,omitzero"`
 	// What to do after successful login: - `upstream`: proxy request to upstream
 	// service - `response`: terminate request with a response - `redirect`:
@@ -829,7 +1185,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// verification.
 	//
 	// +optional
-	Principals AIGWOpenIDConnectGeneratedConfigPrincipals `json:"principals,omitzero"`
+	Principals AIGatewayAuthStrategyOpenIDConnectConfigPrincipals `json:"principals,omitzero"`
 	// If set to true, only the auth_methods that are compatible with Proof of
 	// Possession (PoP) can be configured when PoP is enabled.
 	// If set to false, all auth_methods will be configurable and PoP checks will
@@ -867,7 +1223,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	ProtectedResourceMetadata AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata `json:"protectedResourceMetadata,omitzero"`
+	ProtectedResourceMetadata AIGatewayAuthStrategyOpenIDConnectConfigProtectedResourceMetadata `json:"protectedResourceMetadata,omitzero"`
 	// The pushed authorization endpoint.
 	// If set it overrides the value in `pushed_authorization_request_endpoint`
 	// returned by the discovery endpoint.
@@ -891,7 +1247,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	//
 	//
 	// +optional
-	Redis AIGWOpenIDConnectGeneratedConfigRedis `json:"redis,omitzero"`
+	Redis AIGatewayAuthStrategyOpenIDConnectConfigRedis `json:"redis,omitzero"`
 	// Specifies how long (in seconds) the plugin waits between discovery attempts.
 	// Discovery is still triggered on an as-needed basis.
 	//
@@ -1214,6 +1570,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// Network IO timeout in milliseconds.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	Timeout float64 `json:"timeout,omitzero"`
 	// ID of the Certificate entity representing the client certificate to use for
 	// mTLS client authentication for connections between Kong and the Auth Server.
@@ -1252,7 +1609,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// Details on how to accept tokens from other identity providers.
 	//
 	// +optional
-	TokenExchange AIGWOpenIDConnectGeneratedConfigTokenExchange `json:"tokenExchange,omitzero"`
+	TokenExchange AIGatewayAuthStrategyOpenIDConnectConfigTokenExchange `json:"tokenExchange,omitzero"`
 	// Endpoint used to perform the legacy token exchange.
 	//
 	// +optional
@@ -1338,7 +1695,7 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The upstream claim to header mappings.
 	//
 	// +optional
-	UpstreamHeaders []AIGWOpenIDConnectGeneratedConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
+	UpstreamHeaders []AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
 	// The upstream header claims. Only top level claims are supported.
 	//
 	// +optional
@@ -1460,9 +1817,9 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	VerifySignature string `json:"verifySignature,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClientJwk The JWK used for the
+// AIGatewayAuthStrategyOpenIDConnectConfigClientJwk The JWK used for the
 // private_key_jwt authentication.
-type AIGWOpenIDConnectGeneratedConfigClientJwk struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigClientJwk struct {
 	//
 	//
 	// +optional
@@ -1588,13 +1945,13 @@ type AIGWOpenIDConnectGeneratedConfigClientJwk struct {
 	Y string `json:"y,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedis is a type alias.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis is a type alias.
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedis struct {
 	// Cloud auth related configs for connecting to a Cloud Provider's Redis
 	// instance.
 	//
 	// +optional
-	CloudAuthentication AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	CloudAuthentication AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
 	// Maximum retry attempts for redirection.
 	//
 	// +optional
@@ -1605,7 +1962,7 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	ClusterNodes []AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes `json:"clusterNodes,omitempty"`
+	ClusterNodes []AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes `json:"clusterNodes,omitempty"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
@@ -1693,7 +2050,7 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	SentinelNodes []AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes `json:"sentinelNodes,omitempty"`
+	SentinelNodes []AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes `json:"sentinelNodes,omitempty"`
 	// Sentinel password to authenticate with a Redis Sentinel instance.
 	// If undefined, no AUTH commands are sent to Redis Sentinels.
 	//
@@ -1743,9 +2100,10 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	Username string `json:"username,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication Cloud
-// auth related configs for connecting to a Cloud Provider's Redis instance.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisCloudAuthentication
+// Cloud auth related configs for connecting to a Cloud Provider's Redis
+// instance.
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisCloudAuthentication struct {
 	// Auth providers to be used to authenticate to a Cloud Provider's Redis
 	// instance.
 	//
@@ -1820,11 +2178,11 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication struct
 	GcpServiceAccountJSON string `json:"gcpServiceAccountJSON,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes Cluster
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes Cluster
 // addresses to use for Redis connections when the `redis` strategy is defined.
 // Defining this field implies using a Redis Cluster.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisClusterNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -1838,11 +2196,12 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes Sentinel node
-// addresses to use for Redis connections when the `redis` strategy is defined.
+// AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes
+// Sentinel node addresses to use for Redis connections when the `redis`
+// strategy is defined.
 // Defining this field implies using a Redis Sentinel.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigClusterCacheRedisSentinelNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -1856,9 +2215,9 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigDownstreamHeaders The downstream claim to
-// header mappings.
-type AIGWOpenIDConnectGeneratedConfigDownstreamHeaders struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders The downstream
+// claim to header mappings.
+type AIGatewayAuthStrategyOpenIDConnectConfigDownstreamHeaders struct {
 	// The name of the header.
 	//
 	// +required
@@ -1871,13 +2230,14 @@ type AIGWOpenIDConnectGeneratedConfigDownstreamHeaders struct {
 	Path []string `json:"path,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigPrincipals Configuration for Kong Identity
-// principal hydration after token verification.
-type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigPrincipals Configuration for Kong
+// Identity principal hydration after token verification.
+type AIGatewayAuthStrategyOpenIDConnectConfigPrincipals struct {
 	// The Kong Identity directory instance to look up against.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
 	Directory string `json:"directory,omitzero"`
 	// When true, query Kong Identity to map a Principal after token verification.
 	//
@@ -1901,7 +2261,7 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	Jit AIGWOpenIDConnectGeneratedConfigPrincipalsJit `json:"jit,omitzero"`
+	Jit AIGatewayAuthStrategyOpenIDConnectConfigPrincipalsJit `json:"jit,omitzero"`
 	// If a Consumer is attached to the matched Principal in Kong Identity, load it
 	// and set it in the request context, overriding consumer_by.
 	//
@@ -1934,8 +2294,8 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 	PrincipalClaim []string `json:"principalClaim,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigPrincipalsJit Token claims to share with the
-// Kong Identity principal lookup.
+// AIGatewayAuthStrategyOpenIDConnectConfigPrincipalsJit Token claims to share
+// with the Kong Identity principal lookup.
 // Kong Identity, not this plugin, decides whether the claims are used: a
 // trusted IdP with JIT provisioning enabled in Konnect maps them onto a
 // principal provisioned just in time.
@@ -1943,7 +2303,7 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 // 'sub') and no additional claims are shared.
 //
 // **Requires a minimum runtime version of `2.3`**.
-type AIGWOpenIDConnectGeneratedConfigPrincipalsJit struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigPrincipalsJit struct {
 	// Send the full set of verified token claims with the Kong Identity principal
 	// lookup.
 	//
@@ -1958,14 +2318,14 @@ type AIGWOpenIDConnectGeneratedConfigPrincipalsJit struct {
 	Claims []string `json:"claims,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata When configured,
-// the plugin advertises this API as an OAuth 2.0 protected resource per RFC
-// 9728.
+// AIGatewayAuthStrategyOpenIDConnectConfigProtectedResourceMetadata When
+// configured, the plugin advertises this API as an OAuth 2.0 protected resource
+// per RFC 9728.
 // It serves a discovery document at the well-known URI and includes
 // resource_metadata in WWW-Authenticate challenge headers.
 //
 // **Requires a minimum runtime version of `2.3`**.
-type AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigProtectedResourceMetadata struct {
 	// List of authorization server issuer URIs to advertise in the RFC 9728
 	// metadata document.
 	//
@@ -1994,13 +2354,13 @@ type AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata struct {
 	ScopesSupported []string `json:"scopesSupported,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedis is a type alias.
-type AIGWOpenIDConnectGeneratedConfigRedis struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigRedis is a type alias.
+type AIGatewayAuthStrategyOpenIDConnectConfigRedis struct {
 	// Cloud auth related configs for connecting to a Cloud Provider's Redis
 	// instance.
 	//
 	// +optional
-	CloudAuthentication AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	CloudAuthentication AIGatewayAuthStrategyOpenIDConnectConfigRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
 	// Maximum retry attempts for redirection.
 	//
 	// +optional
@@ -2011,7 +2371,7 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	ClusterNodes []AIGWOpenIDConnectGeneratedConfigRedisClusterNodes `json:"clusterNodes,omitempty"`
+	ClusterNodes []AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes `json:"clusterNodes,omitempty"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
@@ -2104,7 +2464,7 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	// The minimum length of the array is 1 element.
 	//
 	// +optional
-	SentinelNodes []AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes `json:"sentinelNodes,omitempty"`
+	SentinelNodes []AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes `json:"sentinelNodes,omitempty"`
 	// Sentinel password to authenticate with a Redis Sentinel instance.
 	// If undefined, no AUTH commands are sent to Redis Sentinels.
 	//
@@ -2159,9 +2519,9 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	Username string `json:"username,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication Cloud auth related
-// configs for connecting to a Cloud Provider's Redis instance.
-type AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigRedisCloudAuthentication Cloud auth
+// related configs for connecting to a Cloud Provider's Redis instance.
+type AIGatewayAuthStrategyOpenIDConnectConfigRedisCloudAuthentication struct {
 	// Auth providers to be used to authenticate to a Cloud Provider's Redis
 	// instance.
 	//
@@ -2236,11 +2596,11 @@ type AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication struct {
 	GcpServiceAccountJSON string `json:"gcpServiceAccountJSON,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedisClusterNodes Cluster addresses to use
-// for Redis connections when the `redis` strategy is defined.
+// AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes Cluster addresses
+// to use for Redis connections when the `redis` strategy is defined.
 // Defining this field implies using a Redis Cluster.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigRedisClusterNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigRedisClusterNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -2254,11 +2614,11 @@ type AIGWOpenIDConnectGeneratedConfigRedisClusterNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes Sentinel node addresses to
-// use for Redis connections when the `redis` strategy is defined.
+// AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes Sentinel node
+// addresses to use for Redis connections when the `redis` strategy is defined.
 // Defining this field implies using a Redis Sentinel.
 // The minimum length of the array is 1 element.
-type AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigRedisSentinelNodes struct {
 	// A string representing a host name, such as example.com.
 	//
 	// +optional
@@ -2272,13 +2632,13 @@ type AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes struct {
 	Port int `json:"port,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchange Details on how to accept tokens
-// from other identity providers.
-type AIGWOpenIDConnectGeneratedConfigTokenExchange struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchange Details on how to
+// accept tokens from other identity providers.
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchange struct {
 	// Cache support for token exchange
 	//
 	// +optional
-	Cache AIGWOpenIDConnectGeneratedConfigTokenExchangeCache `json:"cache,omitzero"`
+	Cache AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeCache `json:"cache,omitzero"`
 	// The token exchange grant.
 	// `token_exchange` (default) uses the OAuth 2.0 Token Exchange grant (RFC
 	// 8693).
@@ -2320,19 +2680,19 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchange struct {
 	// Parameters used in the token exchange request.
 	//
 	// +optional
-	Request AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest `json:"request,omitzero"`
+	Request AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequest `json:"request,omitzero"`
 	// Trusted token issuers from which the upstream may accept tokens to be
 	// exchanged.
 	// If a JWT bearer matches all the conditions of a subject token issuer item,
 	// the token will be exchanged.
 	//
 	// +required
-	SubjectTokenIssuers []AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers `json:"subjectTokenIssuers,omitempty"`
+	SubjectTokenIssuers []AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers `json:"subjectTokenIssuers,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeCache Cache support for token
-// exchange
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeCache struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeCache Cache support for
+// token exchange
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeCache struct {
 	// Whether to enable caching.
 	//
 	// +optional
@@ -2346,16 +2706,16 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeCache struct {
 	Ttl int `json:"ttl,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest Parameters used in the
-// token exchange request.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequest Parameters used
+// in the token exchange request.
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequest struct {
 	// How to obtain the actor token to include in the token exchange request.
 	// Represents the identity of the party acting on behalf of the subject.
 	//
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	ActorToken AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken `json:"actorToken,omitzero"`
+	ActorToken AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequestActorToken `json:"actorToken,omitzero"`
 	// Audiences used in the token exchange request.
 	// Values defined here override those defined in `config.audience`.
 	//
@@ -2427,12 +2787,12 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
 	Scopes []string `json:"scopes,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken How to obtain
-// the actor token to include in the token exchange request.
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequestActorToken How to
+// obtain the actor token to include in the token exchange request.
 // Represents the identity of the party acting on behalf of the subject.
 //
 // **Requires a minimum runtime version of `2.3`**.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeRequestActorToken struct {
 	// Header name containing the actor token. Required when `source` is `header`.
 	//
 	// +optional
@@ -2460,11 +2820,12 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken struct {
 	Type string `json:"type,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers Trusted
-// token issuers from which the upstream may accept tokens to be exchanged.
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers
+// Trusted token issuers from which the upstream may accept tokens to be
+// exchanged.
 // If a JWT bearer matches all the conditions of a subject token issuer item,
 // the token will be exchanged.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuers struct {
 	// A token will only be exchanged when it matches all these criteria.
 	// To exchange tokens issued by a different issuer, `conditions` must not be
 	// defined -- every token from that issuer is exchanged unconditionally, since
@@ -2474,7 +2835,7 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
 	// `conditions` must be defined.
 	//
 	// +optional
-	Conditions AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
+	Conditions AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
 	// When true, a token issued by `issuer` that fails to match `conditions` is
 	// denied instead of being passed through unexchanged.
 	// Evaluated independently for this item only, with no effect on other
@@ -2518,15 +2879,15 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
 	VerifySignature string `json:"verifySignature,omitzero"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
-// token will only be exchanged when it matches all these criteria.
+// AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuersConditions
+// A token will only be exchanged when it matches all these criteria.
 // To exchange tokens issued by a different issuer, `conditions` must not be
 // defined -- every token from that issuer is exchanged unconditionally, since a
 // foreign-issued token that isn't exchanged can never pass normal verification
 // against the target issuer anyway.
 // In contrast, to exchange tokens issued by the target issuer itself,
 // `conditions` must be defined.
-type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions struct {
+type AIGatewayAuthStrategyOpenIDConnectConfigTokenExchangeSubjectTokenIssuersConditions struct {
 	// Audience values that must all be present in the token, matched against
 	// `audience_claim`.
 	//
@@ -2549,9 +2910,9 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions 
 	MissingScopes []string `json:"missingScopes,omitempty"`
 }
 
-// AIGWOpenIDConnectGeneratedConfigUpstreamHeaders The upstream claim to header
-// mappings.
-type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
+// AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders The upstream claim to
+// header mappings.
+type AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders struct {
 	// The name of the header.
 	//
 	// +required
@@ -2562,364 +2923,6 @@ type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
 	//
 	// +required
 	Path []string `json:"path,omitempty"`
-}
-
-// AIGatewayAgentAccess Access control configuration for an agent.
-type AIGatewayAgentAccess struct {
-	// Access control rules.
-	// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
-	//
-	// +optional
-	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
-	// List of auth strategies for granting access to the agent.
-	// At most 1 auth strategy of each auth strategy type can be referenced.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
-	// List of identity providers for granting access to the agent.
-	// At most 1 identity provider of each identity provider type can be
-	// referenced.
-	//
-	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
-}
-
-// AIGatewayAgentAccessAcls represents a union type for acls.
-// Only one of the fields should be set based on the Type.
-type AIGatewayAgentAccessAcls struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
-	Type AIGatewayAgentAccessAclsType `json:"type,omitempty"`
-
-	// Allow configuration.
-	//
-	// +optional
-	Allow *AIGatewayAllowACL `json:"allow,omitempty"`
-	// Deny configuration.
-	//
-	// +optional
-	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
-	// AllowWhen configuration.
-	//
-	// +optional
-	AllowWhen *AIGatewayAllowWhenACL `json:"allowWhen,omitempty"`
-	// DenyWhen configuration.
-	//
-	// +optional
-	DenyWhen *AIGatewayDenyWhenACL `json:"denyWhen,omitempty"`
-}
-
-// AIGatewayAgentAccessAclsType represents the type of acls.
-type AIGatewayAgentAccessAclsType string
-
-// AIGatewayAgentAccessAclsType values.
-const (
-	AIGatewayAgentAccessAclsTypeAllow     AIGatewayAgentAccessAclsType = "allow"
-	AIGatewayAgentAccessAclsTypeDeny      AIGatewayAgentAccessAclsType = "deny"
-	AIGatewayAgentAccessAclsTypeAllowWhen AIGatewayAgentAccessAclsType = "allowWhen"
-	AIGatewayAgentAccessAclsTypeDenyWhen  AIGatewayAgentAccessAclsType = "denyWhen"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	switch u.Type {
-	case AIGatewayAgentAccessAclsTypeAllow:
-		if u.Allow != nil {
-			raw, err := json.Marshal(u.Allow)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Allow: %w", err)
-			}
-			m["allow"] = raw
-		}
-	case AIGatewayAgentAccessAclsTypeDeny:
-		if u.Deny != nil {
-			raw, err := json.Marshal(u.Deny)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Deny: %w", err)
-			}
-			m["deny"] = raw
-		}
-	case AIGatewayAgentAccessAclsTypeAllowWhen:
-		if u.AllowWhen != nil {
-			raw, err := json.Marshal(u.AllowWhen)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
-			}
-			m["allowWhen"] = raw
-		}
-	case AIGatewayAgentAccessAclsTypeDenyWhen:
-		if u.DenyWhen != nil {
-			raw, err := json.Marshal(u.DenyWhen)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
-			}
-			m["denyWhen"] = raw
-		}
-	}
-	if u.Type != "" {
-		typeBytes, err := json.Marshal(string(u.Type))
-		if err != nil {
-			return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
-		}
-		m["type"] = typeBytes
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayAgentAccessAclsType(probe.Type)
-	switch probe.Type {
-	case "allow":
-		payload, ok := raw["allow"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayAllowACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Allow: %w", err)
-		}
-		u.Allow = &val
-	case "deny":
-		payload, ok := raw["deny"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDenyACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Deny: %w", err)
-		}
-		u.Deny = &val
-	case "allowWhen":
-		payload, ok := raw["allowWhen"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayAllowWhenACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
-		}
-		u.AllowWhen = &val
-	case "denyWhen":
-		payload, ok := raw["denyWhen"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayDenyWhenACL
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
-		}
-		u.DenyWhen = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: nil receiver")
-	}
-	type alias AIGatewayAgentAccess
-	aux := alias{}
-	aux.Acls = &AIGatewayAgentAccessAcls{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: %w", err)
-	}
-	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
-		aux.Acls = nil
-	}
-	*s = AIGatewayAgentAccess(aux)
-	return nil
-}
-
-// AIGatewayAllowACL is a type alias.
-type AIGatewayAllowACL struct {
-	// List of Consumer Groups Names, or Authenticated Groups Names that are
-	// permitted access.
-	//
-	// +required
-	Allow []AIGatewayACLRef `json:"allow,omitempty"`
-}
-
-// AIGatewayAllowWhenACL is a type alias.
-type AIGatewayAllowWhenACL struct {
-	// Allow the request if it matches any of these CEL boolean expressions
-	// evaluated against the request context (consumer, principal, HTTP attributes,
-	// consumer groups, etc.).
-	// Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
-	// specified.
-	//
-	// **Requires a minimum runtime version of `2.2`**.
-	//
-	// +required
-	AllowWhen []string `json:"allowWhen,omitempty"`
-}
-
-// AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
-type AIGatewayAuthStrategyKeyAuth struct {
-	//
-	//
-	// +optional
-	Config AIGWKeyAuthGeneratedConfig `json:"config,omitzero"`
-	// The Token Vault Datastore holding this entity's credential storage: the
-	// directory credentials
-	// are written to, and the encryption keys that seal them.
-	// Required when `token_vault` is set
-	// (on an auth strategy, when its credential manager is enabled), and the
-	// referenced Datastore
-	// must have type `token-vault`. Only one Datastore can be referenced.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
-	// The display name for this auth strategy instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long, start and end with an alphanumeric
-	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
-	// Values must be 1–127 characters long and must not be empty.
-	// Keys and values must not contain spaces or control characters.
-	//
-	//
-	// +optional
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this auth strategy instance, used as a
-	// stable human-readable reference.
-	// This value is immutable after creation.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
-type AIGatewayAuthStrategyOpenIDConnect struct {
-	//
-	//
-	// +optional
-	Config AIGWOpenIDConnectGeneratedConfig `json:"config,omitzero"`
-	// The Token Vault Datastore holding this entity's credential storage: the
-	// directory credentials
-	// are written to, and the encryption keys that seal them.
-	// Required when `token_vault` is set
-	// (on an auth strategy, when its credential manager is enabled), and the
-	// referenced Datastore
-	// must have type `token-vault`. Only one Datastore can be referenced.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
-	// The display name for this auth strategy instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long, start and end with an alphanumeric
-	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
-	// Values must be 1–127 characters long and must not be empty.
-	// Keys and values must not contain spaces or control characters.
-	//
-	//
-	// +optional
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// A user-defined unique identifier for this auth strategy instance, used as a
-	// stable human-readable reference.
-	// This value is immutable after creation.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-	// Enables enrollment protection for the Token Vault datastore linked to this
-	// auth strategy.
-	// Users of the linked Token Vault will need to authenticate using this OIDC
-	// auth strategy
-	// before completing enrollment with upstream providers.
-	// Enrollment links always store upstream
-	// credentials in the Token Vault belonging to the principal who requested the
-	// link.
-	// Enrollment
-	// protection ensures that other principals cannot use an enrollment link to
-	// unknowingly
-	// authorize the storage of their upstream credentials in another principal's
-	// Token Vault.
-	//
-	// Note that the auth strategy used to protect upstream resources such as MCP
-	// servers need not
-	// be the same auth strategy used for enrollment protection.
-	// Omit `token_vault` entirely to
-	// enforce no such enrollment protection.
-	//
-	// Requires a `token-vault` Datastore reference in `datastores`; enabling
-	// enrollment protection
-	// without one is rejected.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayAzureEmbeddingsModelConfig Azure OpenAI-specific configuration for
@@ -3490,6 +3493,75 @@ type AIGatewayMCPPassthroughTool struct {
 	Name string `json:"name,omitzero"`
 }
 
+// AIGatewayMCPPrompt Access-control rules for a prompt advertised by the remote
+// MCP Server.
+type AIGatewayMCPPrompt struct {
+	// Access-control rules for a prompt.
+	//
+	// +required
+	Access AIGatewayMCPPromptAccess `json:"access,omitzero"`
+	// The MCP prompt name.
+	// Matches the prompt advertised by the remote MCP Server under the same
+	// name. Unique within an MCP Server.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
+	Name string `json:"name,omitzero"`
+}
+
+// AIGatewayMCPPromptAccess Access-control rules for a prompt.
+type AIGatewayMCPPromptAccess struct {
+	// Access control rules for allowing or denying callers access to this prompt
+	// (`prompts/get`),
+	// and whether it is listed to them (`prompts/list`).
+	// When configured, these override the
+	// MCP Server's `default_prompt_acls` for this prompt.
+	//
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
+// AIGatewayMCPResource Access-control rules for a resource or resource template
+// advertised by the remote MCP Server.
+type AIGatewayMCPResource struct {
+	// Access-control rules for a resource or resource template.
+	//
+	// +required
+	Access AIGatewayMCPResourceAccess `json:"access,omitzero"`
+	// The MCP resource URI.
+	// Matches the resource advertised by the remote MCP Server under the
+	// same `uri`, or the resource template advertised under the same
+	// `uriTemplate`.
+	// A URI
+	// template (RFC 6570) also matches every concrete resource URI it expands to,
+	// so one entry
+	// can govern a whole template. Unique within an MCP Server.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=2048
+	URI string `json:"uri,omitzero"`
+}
+
+// AIGatewayMCPResourceAccess Access-control rules for a resource or resource
+// template.
+type AIGatewayMCPResourceAccess struct {
+	// Access control rules for allowing or denying callers access to this resource
+	// (`resources/read`, `resources/subscribe`), and whether it is listed to them
+	// (`resources/list`, `resources/templates/list`).
+	// When configured, these override the
+	// MCP Server's `default_resource_acls` for this resource.
+	//
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
 // AIGatewayMCPServerCacheHint A cache hint Kong emits on a cacheable operation
 // it serves.
 type AIGatewayMCPServerCacheHint struct {
@@ -3634,6 +3706,12 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	AllowedVersions []string `json:"allowedVersions,omitempty"`
+	// Load balancing configuration for `targets`. Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Balancer *AIGatewayMCPServerConversionListenerConfigBalancer `json:"balancer,omitempty"`
 	// The CA certificates used to verify the TLS certificate of the
 	// upstream MCP server.
 	// Each entry references an AIGatewayCACertificate in the cluster.
@@ -3671,7 +3749,25 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
+	// The path prefix of requests sent to the `targets`.
+	// Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^/`
+	Path string `json:"path,omitzero"`
+	// The protocol used to reach the `targets`.
+	// Only valid with `targets`.
+	// If unset, the gateway uses `https`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Protocol AIGatewayUpstreamProtocol `json:"protocol,omitzero"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -3685,18 +3781,29 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
-	// Configuration applied when proxying to the upstream service, including
-	// authentication.
+	// List of targets the upstream load balances requests across.
+	// Replaces `url`: set exactly one of `url` or `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
 	//
 	// +optional
-	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
+	Targets []AIGatewayUpstreamTarget `json:"targets,omitempty"`
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	// Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+	// MCP Servers.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Upstream AIGatewayMCPServerUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -3713,6 +3820,25 @@ type AIGatewayMCPServerConversionListenerConfigCache struct {
 	//
 	// +optional
 	Discover AIGatewayMCPServerCacheHint `json:"discover,omitzero"`
+	// Cache hint emitted on `prompts/list` results.
+	// `cache_scope: public` is rejected when
+	// `default_prompt_acls` or a prompt's own `access.acls` filters the list per
+	// subject.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	PromptsList AIGatewayMCPServerCacheHint `json:"promptsList,omitzero"`
+	// Cache hint emitted on `resources/list` and `resources/templates/list`
+	// results.
+	// `cache_scope: public` is rejected when `default_resource_acls` or a
+	// resource's own
+	// `access.acls` filters either list per subject.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	ResourcesList AIGatewayMCPServerCacheHint `json:"resourcesList,omitzero"`
 	// A cache hint Kong emits on a cacheable operation it serves.
 	//
 	// +optional
@@ -3731,6 +3857,171 @@ type AIGatewayMCPServerConversionListenerConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
+}
+
+// AIGatewayMCPServerConversionListenerConfigBalancer represents a union type for balancer.
+// Only one of the fields should be set based on the Algorithm.
+type AIGatewayMCPServerConversionListenerConfigBalancer struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;round-robin
+	Algorithm AIGatewayMCPServerConversionListenerConfigBalancerType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayUpstreamBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayUpstreamBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayUpstreamBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayUpstreamBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+}
+
+// AIGatewayMCPServerConversionListenerConfigBalancerType represents the type of balancer.
+type AIGatewayMCPServerConversionListenerConfigBalancerType string
+
+// AIGatewayMCPServerConversionListenerConfigBalancerType values.
+const (
+	AIGatewayMCPServerConversionListenerConfigBalancerTypeConsistentHashing AIGatewayMCPServerConversionListenerConfigBalancerType = "consistent-hashing"
+	AIGatewayMCPServerConversionListenerConfigBalancerTypeLeastConnections  AIGatewayMCPServerConversionListenerConfigBalancerType = "least-connections"
+	AIGatewayMCPServerConversionListenerConfigBalancerTypeLowestLatency     AIGatewayMCPServerConversionListenerConfigBalancerType = "lowest-latency"
+	AIGatewayMCPServerConversionListenerConfigBalancerTypeRoundRobin        AIGatewayMCPServerConversionListenerConfigBalancerType = "round-robin"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerConversionListenerConfigBalancer) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Algorithm {
+	case AIGatewayMCPServerConversionListenerConfigBalancerTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerConfigBalancer consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayMCPServerConversionListenerConfigBalancerTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerConfigBalancer least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayMCPServerConversionListenerConfigBalancerTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerConfigBalancer lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayMCPServerConversionListenerConfigBalancerTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerConfigBalancer round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerConfigBalancer algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerConversionListenerConfigBalancer) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfigBalancer: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayMCPServerConversionListenerConfigBalancerType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfigBalancer consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfigBalancer least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfigBalancer lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfigBalancer round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerConversionListenerConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfig: nil receiver")
+	}
+	type alias AIGatewayMCPServerConversionListenerConfig
+	aux := alias{}
+	aux.Balancer = &AIGatewayMCPServerConversionListenerConfigBalancer{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerConversionListenerConfig: %w", err)
+	}
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.RoundRobin == nil {
+		aux.Balancer = nil
+	}
+	*s = AIGatewayMCPServerConversionListenerConfig(aux)
+	return nil
 }
 
 // AIGatewayMCPServerConversionListenerAccess represents a union type for access.
@@ -4074,7 +4365,7 @@ type AIGatewayMCPServerListenerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -4101,6 +4392,25 @@ type AIGatewayMCPServerListenerConfigCache struct {
 	//
 	// +optional
 	Discover AIGatewayMCPServerCacheHint `json:"discover,omitzero"`
+	// Cache hint emitted on `prompts/list` results.
+	// `cache_scope: public` is rejected when
+	// `default_prompt_acls` or a prompt's own `access.acls` filters the list per
+	// subject.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	PromptsList AIGatewayMCPServerCacheHint `json:"promptsList,omitzero"`
+	// Cache hint emitted on `resources/list` and `resources/templates/list`
+	// results.
+	// `cache_scope: public` is rejected when `default_resource_acls` or a
+	// resource's own
+	// `access.acls` filters either list per subject.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	ResourcesList AIGatewayMCPServerCacheHint `json:"resourcesList,omitzero"`
 	// A cache hint Kong emits on a cacheable operation it serves.
 	//
 	// +optional
@@ -4262,6 +4572,41 @@ type AIGatewayMCPServerListenerConsumer struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
+	// Default per-prompt access control rules for allowing or denying consumer
+	// groups access to
+	// prompts.
+	// Evaluated only for callers that already passed the server-level `acls` check
+	// above.
+	// Applies to every prompt exposed by this MCP Server unless a specific prompt
+	// overrides it via that prompt's own `access.acls`.
+	// Prompts a caller is denied are omitted
+	// from `prompts/list` and rejected on `prompts/get`.
+	// When unset, prompts are governed only
+	// by the server-level `acls`.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	DefaultPromptAcls AIGatewayMCPACLs `json:"defaultPromptAcls,omitzero"`
+	// Default per-resource access control rules for allowing or denying consumer
+	// groups access
+	// to resources and resource templates.
+	// Evaluated only for callers that already passed the
+	// server-level `acls` check above.
+	// Applies to every resource exposed by this MCP Server
+	// unless a specific resource overrides it via that resource's own
+	// `access.acls`.
+	// Resources a
+	// caller is denied are omitted from `resources/list` and
+	// `resources/templates/list` and
+	// rejected on `resources/read` and `resources/subscribe`.
+	// When unset, resources are governed
+	// only by the server-level `acls`.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	DefaultResourceAcls AIGatewayMCPACLs `json:"defaultResourceAcls,omitzero"`
 	// Default per-tool access control rules for allowing or denying consumer
 	// groups access to
 	// tools.
@@ -4536,6 +4881,44 @@ type AIGatewayMCPServerListenerOauth struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
+	// Default per-prompt access control rules for allowing or denying callers
+	// access to prompts,
+	// evaluated against the value of the configured `access_token_claim_field`.
+	// Evaluated only
+	// for callers that already passed the server-level `acls` check above.
+	// Applies to every
+	// prompt exposed by this MCP Server unless a specific prompt overrides it via
+	// that prompt's
+	// own `access.acls`.
+	// Prompts a caller is denied are omitted from `prompts/list` and rejected
+	// on `prompts/get`.
+	// When unset, prompts are governed only by the server-level `acls`.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	DefaultPromptAcls AIGatewayMCPACLs `json:"defaultPromptAcls,omitzero"`
+	// Default per-resource access control rules for allowing or denying callers
+	// access to
+	// resources and resource templates, evaluated against the value of the
+	// configured
+	// `access_token_claim_field`.
+	// Evaluated only for callers that already passed the
+	// server-level `acls` check above.
+	// Applies to every resource exposed by this MCP Server
+	// unless a specific resource overrides it via that resource's own
+	// `access.acls`.
+	// Resources a
+	// caller is denied are omitted from `resources/list` and
+	// `resources/templates/list` and
+	// rejected on `resources/read` and `resources/subscribe`.
+	// When unset, resources are governed
+	// only by the server-level `acls`.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	DefaultResourceAcls AIGatewayMCPACLs `json:"defaultResourceAcls,omitzero"`
 	// Default per-tool access control rules for allowing or denying callers access
 	// to tools,
 	// evaluated against the value of the configured `access_token_claim_field`.
@@ -4846,6 +5229,19 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// Per-prompt access-control overrides for prompts advertised by the remote MCP
+	// Server.
+	// Each entry is matched to a remote prompt by `name`; only its access-control
+	// rules are
+	// applied.
+	// Prompts without an entry are governed by `access.default_prompt_acls`.
+	// Each
+	// `name` must be unique within this MCP Server.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	Prompts []AIGatewayMCPPrompt `json:"prompts,omitempty"`
 	// Rate limits applied to requests to this MCP Server, matched by MCP method or
 	// tool name.
 	// Each AI Gateway node counts and enforces the limits independently.
@@ -4854,6 +5250,18 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +optional
 	RateLimiting AIGatewayMCPServerRateLimiting `json:"rateLimiting,omitzero"`
+	// Per-resource access-control overrides for resources and resource templates
+	// advertised
+	// by the remote MCP Server.
+	// Each entry is matched to a remote resource by `uri`; only its
+	// access-control rules are applied. Resources without an entry are governed by
+	// `access.default_resource_acls`.
+	// Each `uri` must be unique within this MCP Server.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	Resources []AIGatewayMCPResource `json:"resources,omitempty"`
 	// Resolves an upstream credential per request via Kong's Token Vault instead
 	// of sending a static
 	// credential.
@@ -5248,6 +5656,115 @@ type AIGatewayMCPServerServerConfigBaseSessionClient struct {
 	Secrets []string `json:"secrets,omitempty"`
 }
 
+// AIGatewayMCPServerUpstreamConfig Configuration applied when proxying to the
+// upstream service, including authentication.
+// Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+// MCP Servers.
+//
+// **Requires a minimum runtime version of `2.4`**.
+type AIGatewayMCPServerUpstreamConfig struct {
+	// Authentication to use when proxying to the upstream service.
+	//
+	// +optional
+	Auth *AIGatewayMCPServerUpstreamConfigAuth `json:"auth,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+type AIGatewayMCPServerUpstreamConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws
+	Type AIGatewayMCPServerUpstreamConfigAuthType `json:"type,omitempty"`
+
+	// AIGatewayUpstreamAuthAWS configuration.
+	//
+	// +optional
+	AIGatewayUpstreamAuthAWS *AIGatewayUpstreamAuthAWS `json:"aws,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamConfigAuthType represents the type of auth.
+type AIGatewayMCPServerUpstreamConfigAuthType string
+
+// AIGatewayMCPServerUpstreamConfigAuthType values.
+const (
+	AIGatewayMCPServerUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS AIGatewayMCPServerUpstreamConfigAuthType = "aws"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerUpstreamConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayMCPServerUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS:
+		if u.AIGatewayUpstreamAuthAWS != nil {
+			raw, err := json.Marshal(u.AIGatewayUpstreamAuthAWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamConfigAuth aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamConfigAuth type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerUpstreamConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerUpstreamConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamAuthAWS
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamConfigAuth aws: %w", err)
+		}
+		u.AIGatewayUpstreamAuthAWS = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerUpstreamConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamConfig: nil receiver")
+	}
+	type alias AIGatewayMCPServerUpstreamConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayMCPServerUpstreamConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.AIGatewayUpstreamAuthAWS == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayMCPServerUpstreamConfig(aux)
+	return nil
+}
+
 // AIGatewayMCPServerUpstreamServer is a type alias.
 type AIGatewayMCPServerUpstreamServer struct {
 	// Routing, logging, and server configuration for the MCP Server.
@@ -5313,6 +5830,18 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// List of prompts exposed by this MCP Server.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	Prompts []AIGatewayMCPPrompt `json:"prompts,omitempty"`
+	// List of resources exposed by this MCP Server.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	Resources []AIGatewayMCPResource `json:"resources,omitempty"`
 	// Resolves an upstream credential per request via Kong's Token Vault instead
 	// of sending a static
 	// credential.
@@ -5342,6 +5871,12 @@ type AIGatewayMCPServerUpstreamServer struct {
 // AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
 // configuration for the MCP Server.
 type AIGatewayMCPServerUpstreamServerConfig struct {
+	// Load balancing configuration for `targets`. Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Balancer *AIGatewayMCPServerUpstreamServerConfigBalancer `json:"balancer,omitempty"`
 	// The CA certificates used to verify the TLS certificate of the
 	// upstream MCP server.
 	// Each entry references an AIGatewayCACertificate in the cluster.
@@ -5371,7 +5906,25 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
+	// The path prefix of requests sent to the `targets`.
+	// Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^/`
+	Path string `json:"path,omitzero"`
+	// The protocol used to reach the `targets`.
+	// Only valid with `targets`.
+	// If unset, the gateway uses `https`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Protocol AIGatewayUpstreamProtocol `json:"protocol,omitzero"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -5385,6 +5938,13 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	//
 	// +optional
 	Server AIGatewayMCPServerUpstreamServerServerConfig `json:"server,omitzero"`
+	// List of targets the upstream load balances requests across.
+	// Replaces `url`: set exactly one of `url` or `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Targets []AIGatewayUpstreamTarget `json:"targets,omitempty"`
 	// The time-to-live (TTL) for the upstream tools cache in seconds.
 	// Set to `0` to refresh on
 	// every client call.
@@ -5395,16 +5955,20 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	ToolsCacheTtlSeconds int `json:"toolsCacheTtlSeconds,omitzero"`
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
+	// Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+	// MCP Servers.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
 	//
 	// +optional
-	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
+	Upstream AIGatewayMCPServerUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -5423,6 +5987,171 @@ type AIGatewayMCPServerUpstreamServerConfigLogging struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Payloads string `json:"payloads,omitzero"`
+}
+
+// AIGatewayMCPServerUpstreamServerConfigBalancer represents a union type for balancer.
+// Only one of the fields should be set based on the Algorithm.
+type AIGatewayMCPServerUpstreamServerConfigBalancer struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;round-robin
+	Algorithm AIGatewayMCPServerUpstreamServerConfigBalancerType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayUpstreamBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayUpstreamBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayUpstreamBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayUpstreamBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+}
+
+// AIGatewayMCPServerUpstreamServerConfigBalancerType represents the type of balancer.
+type AIGatewayMCPServerUpstreamServerConfigBalancerType string
+
+// AIGatewayMCPServerUpstreamServerConfigBalancerType values.
+const (
+	AIGatewayMCPServerUpstreamServerConfigBalancerTypeConsistentHashing AIGatewayMCPServerUpstreamServerConfigBalancerType = "consistent-hashing"
+	AIGatewayMCPServerUpstreamServerConfigBalancerTypeLeastConnections  AIGatewayMCPServerUpstreamServerConfigBalancerType = "least-connections"
+	AIGatewayMCPServerUpstreamServerConfigBalancerTypeLowestLatency     AIGatewayMCPServerUpstreamServerConfigBalancerType = "lowest-latency"
+	AIGatewayMCPServerUpstreamServerConfigBalancerTypeRoundRobin        AIGatewayMCPServerUpstreamServerConfigBalancerType = "round-robin"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerUpstreamServerConfigBalancer) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Algorithm {
+	case AIGatewayMCPServerUpstreamServerConfigBalancerTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerConfigBalancer consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayMCPServerUpstreamServerConfigBalancerTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerConfigBalancer least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayMCPServerUpstreamServerConfigBalancerTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerConfigBalancer lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayMCPServerUpstreamServerConfigBalancerTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerConfigBalancer round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerConfigBalancer algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerUpstreamServerConfigBalancer) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfigBalancer: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayMCPServerUpstreamServerConfigBalancerType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfigBalancer consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfigBalancer least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfigBalancer lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfigBalancer round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerUpstreamServerConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfig: nil receiver")
+	}
+	type alias AIGatewayMCPServerUpstreamServerConfig
+	aux := alias{}
+	aux.Balancer = &AIGatewayMCPServerUpstreamServerConfigBalancer{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerConfig: %w", err)
+	}
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.RoundRobin == nil {
+		aux.Balancer = nil
+	}
+	*s = AIGatewayMCPServerUpstreamServerConfig(aux)
+	return nil
 }
 
 // AIGatewayMCPServerUpstreamServerServerConfig Server-side configuration
@@ -5840,6 +6569,12 @@ type AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt struct {
 // AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
 // configuration for the MCP Server.
 type AIGatewayMCPServerWithUpstreamConfig struct {
+	// Load balancing configuration for `targets`. Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Balancer *AIGatewayMCPServerWithUpstreamConfigBalancer `json:"balancer,omitempty"`
 	// The CA certificates used to verify the TLS certificate of the
 	// upstream MCP server.
 	// Each entry references an AIGatewayCACertificate in the cluster.
@@ -5869,7 +6604,25 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
+	// The path prefix of requests sent to the `targets`.
+	// Only valid with `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^/`
+	Path string `json:"path,omitzero"`
+	// The protocol used to reach the `targets`.
+	// Only valid with `targets`.
+	// If unset, the gateway uses `https`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Protocol AIGatewayUpstreamProtocol `json:"protocol,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -5888,6 +6641,13 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	//
 	// +optional
 	Server AIGatewayMCPServerWithUpstreamConfigServer `json:"server,omitzero"`
+	// List of targets the upstream load balances requests across.
+	// Replaces `url`: set exactly one of `url` or `targets`.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	Targets []AIGatewayUpstreamTarget `json:"targets,omitempty"`
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
 	//
@@ -5899,7 +6659,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -5995,6 +6755,171 @@ type AIGatewayMCPServerWithUpstreamConfigServerSessionClient struct {
 	Secrets []string `json:"secrets,omitempty"`
 }
 
+// AIGatewayMCPServerWithUpstreamConfigBalancer represents a union type for balancer.
+// Only one of the fields should be set based on the Algorithm.
+type AIGatewayMCPServerWithUpstreamConfigBalancer struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;round-robin
+	Algorithm AIGatewayMCPServerWithUpstreamConfigBalancerType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayUpstreamBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayUpstreamBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayUpstreamBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayUpstreamBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+}
+
+// AIGatewayMCPServerWithUpstreamConfigBalancerType represents the type of balancer.
+type AIGatewayMCPServerWithUpstreamConfigBalancerType string
+
+// AIGatewayMCPServerWithUpstreamConfigBalancerType values.
+const (
+	AIGatewayMCPServerWithUpstreamConfigBalancerTypeConsistentHashing AIGatewayMCPServerWithUpstreamConfigBalancerType = "consistent-hashing"
+	AIGatewayMCPServerWithUpstreamConfigBalancerTypeLeastConnections  AIGatewayMCPServerWithUpstreamConfigBalancerType = "least-connections"
+	AIGatewayMCPServerWithUpstreamConfigBalancerTypeLowestLatency     AIGatewayMCPServerWithUpstreamConfigBalancerType = "lowest-latency"
+	AIGatewayMCPServerWithUpstreamConfigBalancerTypeRoundRobin        AIGatewayMCPServerWithUpstreamConfigBalancerType = "round-robin"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerWithUpstreamConfigBalancer) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Algorithm {
+	case AIGatewayMCPServerWithUpstreamConfigBalancerTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerWithUpstreamConfigBalancer consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayMCPServerWithUpstreamConfigBalancerTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerWithUpstreamConfigBalancer least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayMCPServerWithUpstreamConfigBalancerTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerWithUpstreamConfigBalancer lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayMCPServerWithUpstreamConfigBalancerTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerWithUpstreamConfigBalancer round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerWithUpstreamConfigBalancer algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerWithUpstreamConfigBalancer) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfigBalancer: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayMCPServerWithUpstreamConfigBalancerType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfigBalancer consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfigBalancer least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfigBalancer lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfigBalancer round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerWithUpstreamConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfig: nil receiver")
+	}
+	type alias AIGatewayMCPServerWithUpstreamConfig
+	aux := alias{}
+	aux.Balancer = &AIGatewayMCPServerWithUpstreamConfigBalancer{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerWithUpstreamConfig: %w", err)
+	}
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.RoundRobin == nil {
+		aux.Balancer = nil
+	}
+	*s = AIGatewayMCPServerWithUpstreamConfig(aux)
+	return nil
+}
+
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
 // and request body size limits for the MCP Server.
 type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
@@ -6025,7 +6950,7 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// Route configuration for an MCP Server that terminates its own listener.
 	// At least one
 	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -6037,16 +6962,20 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
+	// Applies to `conversion-listener`, `conversion-only`, and `upstream-server`
+	// MCP Servers.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
 	//
 	// +optional
-	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
+	Upstream AIGatewayMCPServerUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
 	// ${scheme}://${host}:${port}/${path}
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
@@ -6272,7 +7201,7 @@ type AIGatewayModelAPI struct {
 	//
 	// +required
 	Config AIGatewayModelAPIConfig `json:"config,omitzero"`
-	// Names of the Datastores this model references.
+	// The Datastores this model references, with the feature that uses each one.
 	//
 	// +optional
 	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
@@ -6344,12 +7273,19 @@ type AIGatewayModelAPIConfig struct {
 	//
 	// +optional
 	Logging AIGatewayLoggingConfig `json:"logging,omitzero"`
-	// Maximum size of request body to parse. Set to 0 for unlimited.
+	// The maximum size, in bytes, of a request body that the gateway reads and
+	// sends to the model.
+	// A request with a larger body fails. Set to 0 for no limit.
+	// If you do not set a value, the gateway uses the request size limit that the
+	// model's providers publish,
+	// with defaults to 8 MB.
+	// If the targets use more than one provider, the gateway uses the highest of
+	// these limits.
+	//
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
 	//
@@ -6374,13 +7310,17 @@ type AIGatewayModelAPIConfigBalancer struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
+	// +kubebuilder:validation:Enum=consistent-hashing;intelligent;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
 	Algorithm AIGatewayModelAPIConfigBalancerType `json:"algorithm,omitempty"`
 
 	// ConsistentHashing configuration.
 	//
 	// +optional
 	ConsistentHashing *AIGatewayModelBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// Intelligent configuration.
+	//
+	// +optional
+	Intelligent *AIGatewayModelBalancerIntelligentConfig `json:"intelligent,omitempty"`
 	// LeastConnections configuration.
 	//
 	// +optional
@@ -6413,6 +7353,7 @@ type AIGatewayModelAPIConfigBalancerType string
 // AIGatewayModelAPIConfigBalancerType values.
 const (
 	AIGatewayModelAPIConfigBalancerTypeConsistentHashing AIGatewayModelAPIConfigBalancerType = "consistent-hashing"
+	AIGatewayModelAPIConfigBalancerTypeIntelligent       AIGatewayModelAPIConfigBalancerType = "intelligent"
 	AIGatewayModelAPIConfigBalancerTypeLeastConnections  AIGatewayModelAPIConfigBalancerType = "least-connections"
 	AIGatewayModelAPIConfigBalancerTypeLowestLatency     AIGatewayModelAPIConfigBalancerType = "lowest-latency"
 	AIGatewayModelAPIConfigBalancerTypeLowestUsage       AIGatewayModelAPIConfigBalancerType = "lowest-usage"
@@ -6432,6 +7373,14 @@ func (u AIGatewayModelAPIConfigBalancer) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer consistent-hashing: %w", err)
 			}
 			m["consistent-hashing"] = raw
+		}
+	case AIGatewayModelAPIConfigBalancerTypeIntelligent:
+		if u.Intelligent != nil {
+			raw, err := json.Marshal(u.Intelligent)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer intelligent: %w", err)
+			}
+			m["intelligent"] = raw
 		}
 	case AIGatewayModelAPIConfigBalancerTypeLeastConnections:
 		if u.LeastConnections != nil {
@@ -6519,6 +7468,16 @@ func (u *AIGatewayModelAPIConfigBalancer) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer consistent-hashing: %w", err)
 		}
 		u.ConsistentHashing = &val
+	case "intelligent":
+		payload, ok := raw["intelligent"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAPIConfigBalancer intelligent: %w", err)
+		}
+		u.Intelligent = &val
 	case "least-connections":
 		payload, ok := raw["least-connections"]
 		if !ok || len(payload) == 0 {
@@ -6594,7 +7553,7 @@ func (s *AIGatewayModelAPIConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelAPIConfig: %w", err)
 	}
-	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.LowestUsage == nil && aux.Balancer.Priority == nil && aux.Balancer.RoundRobin == nil && aux.Balancer.Semantic == nil {
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.Intelligent == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.LowestUsage == nil && aux.Balancer.Priority == nil && aux.Balancer.RoundRobin == nil && aux.Balancer.Semantic == nil {
 		aux.Balancer = nil
 	}
 	*s = AIGatewayModelAPIConfig(aux)
@@ -6797,13 +7756,17 @@ type AIGatewayModelBalancerConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
+	// +kubebuilder:validation:Enum=consistent-hashing;intelligent;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
 	Algorithm AIGatewayModelBalancerConfigType `json:"algorithm,omitempty"`
 
 	// ConsistentHashing configuration.
 	//
 	// +optional
 	ConsistentHashing *AIGatewayModelBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// Intelligent configuration.
+	//
+	// +optional
+	Intelligent *AIGatewayModelBalancerIntelligentConfig `json:"intelligent,omitempty"`
 	// LeastConnections configuration.
 	//
 	// +optional
@@ -6836,6 +7799,7 @@ type AIGatewayModelBalancerConfigType string
 // AIGatewayModelBalancerConfigType values.
 const (
 	AIGatewayModelBalancerConfigTypeConsistentHashing AIGatewayModelBalancerConfigType = "consistent-hashing"
+	AIGatewayModelBalancerConfigTypeIntelligent       AIGatewayModelBalancerConfigType = "intelligent"
 	AIGatewayModelBalancerConfigTypeLeastConnections  AIGatewayModelBalancerConfigType = "least-connections"
 	AIGatewayModelBalancerConfigTypeLowestLatency     AIGatewayModelBalancerConfigType = "lowest-latency"
 	AIGatewayModelBalancerConfigTypeLowestUsage       AIGatewayModelBalancerConfigType = "lowest-usage"
@@ -6855,6 +7819,14 @@ func (u AIGatewayModelBalancerConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig consistent-hashing: %w", err)
 			}
 			m["consistent-hashing"] = raw
+		}
+	case AIGatewayModelBalancerConfigTypeIntelligent:
+		if u.Intelligent != nil {
+			raw, err := json.Marshal(u.Intelligent)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig intelligent: %w", err)
+			}
+			m["intelligent"] = raw
 		}
 	case AIGatewayModelBalancerConfigTypeLeastConnections:
 		if u.LeastConnections != nil {
@@ -6942,6 +7914,16 @@ func (u *AIGatewayModelBalancerConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig consistent-hashing: %w", err)
 		}
 		u.ConsistentHashing = &val
+	case "intelligent":
+		payload, ok := raw["intelligent"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerConfig intelligent: %w", err)
+		}
+		u.Intelligent = &val
 	case "least-connections":
 		payload, ok := raw["least-connections"]
 		if !ok || len(payload) == 0 {
@@ -7071,6 +8053,537 @@ type AIGatewayModelBalancerConsistentHashingConfig struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifier represents a union type for AIGatewayModelBalancerIntelligentClassifier.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelBalancerIntelligentClassifier struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=custom
+	Type AIGatewayModelBalancerIntelligentClassifierType `json:"type,omitempty"`
+
+	// AIGatewayModelBalancerIntelligentClassifierCustom configuration.
+	//
+	// +optional
+	AIGatewayModelBalancerIntelligentClassifierCustom *AIGatewayModelBalancerIntelligentClassifierCustom `json:"custom,omitempty"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifierType represents the type of AIGatewayModelBalancerIntelligentClassifier.
+type AIGatewayModelBalancerIntelligentClassifierType string
+
+// AIGatewayModelBalancerIntelligentClassifierType values.
+const (
+	AIGatewayModelBalancerIntelligentClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom AIGatewayModelBalancerIntelligentClassifierType = "custom"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerIntelligentClassifier) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayModelBalancerIntelligentClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom:
+		if u.AIGatewayModelBalancerIntelligentClassifierCustom != nil {
+			raw, err := json.Marshal(u.AIGatewayModelBalancerIntelligentClassifierCustom)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentClassifier custom: %w", err)
+			}
+			m["custom"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentClassifier type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerIntelligentClassifier) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifier: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelBalancerIntelligentClassifierType(probe.Type)
+	switch probe.Type {
+	case "custom":
+		payload, ok := raw["custom"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentClassifierCustom
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifier custom: %w", err)
+		}
+		u.AIGatewayModelBalancerIntelligentClassifierCustom = &val
+	}
+	return nil
+}
+
+// AIGatewayModelBalancerIntelligentClassifierAuth represents a union type for AIGatewayModelBalancerIntelligentClassifierAuth.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelBalancerIntelligentClassifierAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic
+	Type AIGatewayModelBalancerIntelligentClassifierAuthType `json:"type,omitempty"`
+
+	// AIGatewayModelBalancerIntelligentClassifierAuthBasic configuration.
+	//
+	// +optional
+	AIGatewayModelBalancerIntelligentClassifierAuthBasic *AIGatewayModelBalancerIntelligentClassifierAuthBasic `json:"basic,omitempty"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifierAuthType represents the type of AIGatewayModelBalancerIntelligentClassifierAuth.
+type AIGatewayModelBalancerIntelligentClassifierAuthType string
+
+// AIGatewayModelBalancerIntelligentClassifierAuthType values.
+const (
+	AIGatewayModelBalancerIntelligentClassifierAuthTypeAIGatewayModelBalancerIntelligentClassifierAuthBasic AIGatewayModelBalancerIntelligentClassifierAuthType = "basic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerIntelligentClassifierAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayModelBalancerIntelligentClassifierAuthTypeAIGatewayModelBalancerIntelligentClassifierAuthBasic:
+		if u.AIGatewayModelBalancerIntelligentClassifierAuthBasic != nil {
+			raw, err := json.Marshal(u.AIGatewayModelBalancerIntelligentClassifierAuthBasic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentClassifierAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentClassifierAuth type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerIntelligentClassifierAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifierAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelBalancerIntelligentClassifierAuthType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentClassifierAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifierAuth basic: %w", err)
+		}
+		u.AIGatewayModelBalancerIntelligentClassifierAuthBasic = &val
+	}
+	return nil
+}
+
+// AIGatewayModelBalancerIntelligentClassifierAuthBasic Sends one header, such
+// as an API key, with each request to the classifier service.
+//
+// **Requires a minimum runtime version of `2.5`**.
+type AIGatewayModelBalancerIntelligentClassifierAuthBasic struct {
+	// The header sent with each request to the classifier service.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Headers []AIGatewayModelBalancerIntelligentClassifierAuthBasicHeaders `json:"headers,omitempty"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifierAuthBasicHeaders The header sent
+// with each request to the classifier service.
+type AIGatewayModelBalancerIntelligentClassifierAuthBasicHeaders struct {
+	// The name of the header used for authentication.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// The value of the header, for example `Bearer key...`.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Value string `json:"value,omitzero"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifierCustom A classifier service
+// configured by hand, by its address, model name and credentials.
+//
+// **Requires a minimum runtime version of `2.5`**.
+type AIGatewayModelBalancerIntelligentClassifierCustom struct {
+	// The credentials sent to the classifier service with each request.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +optional
+	Auth *AIGatewayModelBalancerIntelligentClassifierCustomAuth `json:"auth,omitempty"`
+	// The number of tokens the classifier model can read, from the model
+	// provider's documentation.
+	// The request text sent to the classifier is cut to fit.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=4096
+	// +kubebuilder:validation:Maximum=1048576
+	ContextWindow int `json:"contextWindow,omitzero"`
+	// The endpoint path appended to `url`: the path of the System One decisions
+	// API.
+	// Some hosts serve
+	// it at another path.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Format string `json:"format,omitzero"`
+	// The name of the classifier model, sent in each request.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// The time in milliseconds to wait for the classifier's answer.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=100
+	// +kubebuilder:validation:Maximum=60000
+	Timeout int `json:"timeout,omitzero"`
+	// The classifier service's base URL.
+	// The `format` path is appended to it.
+	// It has no query string,
+	// fragment or user info.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^https?://[^?#@]*$`
+	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifierCustomAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelBalancerIntelligentClassifierCustomAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=basic
+	Type AIGatewayModelBalancerIntelligentClassifierCustomAuthType `json:"type,omitempty"`
+
+	// AIGatewayModelBalancerIntelligentClassifierAuthBasic configuration.
+	//
+	// +optional
+	AIGatewayModelBalancerIntelligentClassifierAuthBasic *AIGatewayModelBalancerIntelligentClassifierAuthBasic `json:"basic,omitempty"`
+}
+
+// AIGatewayModelBalancerIntelligentClassifierCustomAuthType represents the type of auth.
+type AIGatewayModelBalancerIntelligentClassifierCustomAuthType string
+
+// AIGatewayModelBalancerIntelligentClassifierCustomAuthType values.
+const (
+	AIGatewayModelBalancerIntelligentClassifierCustomAuthTypeAIGatewayModelBalancerIntelligentClassifierAuthBasic AIGatewayModelBalancerIntelligentClassifierCustomAuthType = "basic"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerIntelligentClassifierCustomAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayModelBalancerIntelligentClassifierCustomAuthTypeAIGatewayModelBalancerIntelligentClassifierAuthBasic:
+		if u.AIGatewayModelBalancerIntelligentClassifierAuthBasic != nil {
+			raw, err := json.Marshal(u.AIGatewayModelBalancerIntelligentClassifierAuthBasic)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentClassifierCustomAuth basic: %w", err)
+			}
+			m["basic"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentClassifierCustomAuth type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerIntelligentClassifierCustomAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifierCustomAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelBalancerIntelligentClassifierCustomAuthType(probe.Type)
+	switch probe.Type {
+	case "basic":
+		payload, ok := raw["basic"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentClassifierAuthBasic
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifierCustomAuth basic: %w", err)
+		}
+		u.AIGatewayModelBalancerIntelligentClassifierAuthBasic = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelBalancerIntelligentClassifierCustom) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifierCustom: nil receiver")
+	}
+	type alias AIGatewayModelBalancerIntelligentClassifierCustom
+	aux := alias{}
+	aux.Auth = &AIGatewayModelBalancerIntelligentClassifierCustomAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentClassifierCustom: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.AIGatewayModelBalancerIntelligentClassifierAuthBasic == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayModelBalancerIntelligentClassifierCustom(aux)
+	return nil
+}
+
+// AIGatewayModelBalancerIntelligentConfig On the first request of a
+// conversation, asks a classifier model what kind of work it is, then
+// selects a target by the cost and quality tradeoff.
+// Later requests in the conversation go to the
+// same target through session affinity, which is always on for this algorithm:
+// `ttl` and `storage`
+// can be set, and `session_affinity.enabled: false` is rejected.
+//
+// **Requires a minimum runtime version of `2.5`**.
+type AIGatewayModelBalancerIntelligentConfig struct {
+	// The classifier model the intelligent balancer asks what kind of work a
+	// conversation is, before it
+	// selects a target.
+	// If the classifier does not answer in time or its answer cannot be used, the
+	// balancer selects a target for general work.
+	//
+	// **Requires a minimum runtime version of `2.5`**.
+	//
+	// +required
+	Classifier *AIGatewayModelBalancerIntelligentConfigClassifier `json:"classifier,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// How the balancer weighs cost versus quality when selecting a target.
+	// `cost` favors the cheapest available target, `quality` favors the
+	// highest-quality target, and `balanced` weighs both.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=balanced;cost;quality
+	CostQualityTradeoff string `json:"costQualityTradeoff,omitzero"`
+	// The period of time (in milliseconds) the target will be considered
+	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	FailTimeout int `json:"failTimeout,omitzero"`
+	// Specifies in which cases an upstream response should be failover to the next
+	// target.
+	// Each option in the array is equivalent to the function of
+	// https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream
+	//
+	// +optional
+	FailoverCriteria []string `json:"failoverCriteria,omitempty"`
+	// Number of unsuccessful attempts to communicate with a target that should
+	// occur in the duration defined by `fail_timeout` before the target is
+	// considered unavailable.
+	// The zero value disables the circuit breaker.
+	// What is considered an unsuccessful attempt is defined by
+	// `failover_criteria`.
+	// Note the cases of `error`, `timeout` and `invalid_header` are always
+	// considered unsuccessful attempts, while the cases of `http_403` and
+	// `http_404` are never considered unsuccessful attempts.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	MaxFails int `json:"maxFails,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// The number of retries to execute upon failure to proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=32767
+	Retries int `json:"retries,omitzero"`
+	// The number of slots in the load balancer algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=10
+	// +kubebuilder:validation:Maximum=65536
+	Slots int `json:"slots,omitzero"`
+	// The version of the intelligent balancing algorithm.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1
+	Version string `json:"version,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	WriteTimeout int `json:"writeTimeout,omitzero"`
+}
+
+// AIGatewayModelBalancerIntelligentConfigClassifier represents a union type for classifier.
+// Only one of the fields should be set based on the Type.
+type AIGatewayModelBalancerIntelligentConfigClassifier struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=custom
+	Type AIGatewayModelBalancerIntelligentConfigClassifierType `json:"type,omitempty"`
+
+	// AIGatewayModelBalancerIntelligentClassifierCustom configuration.
+	//
+	// +optional
+	AIGatewayModelBalancerIntelligentClassifierCustom *AIGatewayModelBalancerIntelligentClassifierCustom `json:"custom,omitempty"`
+}
+
+// AIGatewayModelBalancerIntelligentConfigClassifierType represents the type of classifier.
+type AIGatewayModelBalancerIntelligentConfigClassifierType string
+
+// AIGatewayModelBalancerIntelligentConfigClassifierType values.
+const (
+	AIGatewayModelBalancerIntelligentConfigClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom AIGatewayModelBalancerIntelligentConfigClassifierType = "custom"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayModelBalancerIntelligentConfigClassifier) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Type {
+	case AIGatewayModelBalancerIntelligentConfigClassifierTypeAIGatewayModelBalancerIntelligentClassifierCustom:
+		if u.AIGatewayModelBalancerIntelligentClassifierCustom != nil {
+			raw, err := json.Marshal(u.AIGatewayModelBalancerIntelligentClassifierCustom)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentConfigClassifier custom: %w", err)
+			}
+			m["custom"] = raw
+		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerIntelligentConfigClassifier type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayModelBalancerIntelligentConfigClassifier) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentConfigClassifier: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayModelBalancerIntelligentConfigClassifierType(probe.Type)
+	switch probe.Type {
+	case "custom":
+		payload, ok := raw["custom"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentClassifierCustom
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentConfigClassifier custom: %w", err)
+		}
+		u.AIGatewayModelBalancerIntelligentClassifierCustom = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayModelBalancerIntelligentConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentConfig: nil receiver")
+	}
+	type alias AIGatewayModelBalancerIntelligentConfig
+	aux := alias{}
+	aux.Classifier = &AIGatewayModelBalancerIntelligentConfigClassifier{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayModelBalancerIntelligentConfig: %w", err)
+	}
+	if aux.Classifier != nil && aux.Classifier.Type == "" && aux.Classifier.AIGatewayModelBalancerIntelligentClassifierCustom == nil {
+		aux.Classifier = nil
+	}
+	*s = AIGatewayModelBalancerIntelligentConfig(aux)
+	return nil
 }
 
 // AIGatewayModelBalancerLeastConnectionsConfig is a type alias.
@@ -7888,7 +9401,7 @@ type AIGatewayModelModel struct {
 	//
 	// +required
 	Config AIGatewayModelModelConfig `json:"config,omitzero"`
-	// Names of the Datastores this model references.
+	// The Datastores this model references, with the feature that uses each one.
 	//
 	// +optional
 	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
@@ -7960,12 +9473,19 @@ type AIGatewayModelModelConfig struct {
 	//
 	// +optional
 	Logging AIGatewayLoggingConfig `json:"logging,omitzero"`
-	// Maximum size of request body to parse. Set to 0 for unlimited.
+	// The maximum size, in bytes, of a request body that the gateway reads and
+	// sends to the model.
+	// A request with a larger body fails. Set to 0 for no limit.
+	// If you do not set a value, the gateway uses the request size limit that the
+	// model's providers publish,
+	// with defaults to 8 MB.
+	// If the targets use more than one provider, the gateway uses the highest of
+	// these limits.
+	//
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	MaxRequestBodySize *int `json:"maxRequestBodySize,omitempty"`
 	//
 	//
 	// +optional
@@ -8003,13 +9523,17 @@ type AIGatewayModelModelConfigBalancer struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
+	// +kubebuilder:validation:Enum=consistent-hashing;intelligent;least-connections;lowest-latency;lowest-usage;priority;round-robin;semantic
 	Algorithm AIGatewayModelModelConfigBalancerType `json:"algorithm,omitempty"`
 
 	// ConsistentHashing configuration.
 	//
 	// +optional
 	ConsistentHashing *AIGatewayModelBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// Intelligent configuration.
+	//
+	// +optional
+	Intelligent *AIGatewayModelBalancerIntelligentConfig `json:"intelligent,omitempty"`
 	// LeastConnections configuration.
 	//
 	// +optional
@@ -8042,6 +9566,7 @@ type AIGatewayModelModelConfigBalancerType string
 // AIGatewayModelModelConfigBalancerType values.
 const (
 	AIGatewayModelModelConfigBalancerTypeConsistentHashing AIGatewayModelModelConfigBalancerType = "consistent-hashing"
+	AIGatewayModelModelConfigBalancerTypeIntelligent       AIGatewayModelModelConfigBalancerType = "intelligent"
 	AIGatewayModelModelConfigBalancerTypeLeastConnections  AIGatewayModelModelConfigBalancerType = "least-connections"
 	AIGatewayModelModelConfigBalancerTypeLowestLatency     AIGatewayModelModelConfigBalancerType = "lowest-latency"
 	AIGatewayModelModelConfigBalancerTypeLowestUsage       AIGatewayModelModelConfigBalancerType = "lowest-usage"
@@ -8061,6 +9586,14 @@ func (u AIGatewayModelModelConfigBalancer) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer consistent-hashing: %w", err)
 			}
 			m["consistent-hashing"] = raw
+		}
+	case AIGatewayModelModelConfigBalancerTypeIntelligent:
+		if u.Intelligent != nil {
+			raw, err := json.Marshal(u.Intelligent)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer intelligent: %w", err)
+			}
+			m["intelligent"] = raw
 		}
 	case AIGatewayModelModelConfigBalancerTypeLeastConnections:
 		if u.LeastConnections != nil {
@@ -8148,6 +9681,16 @@ func (u *AIGatewayModelModelConfigBalancer) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer consistent-hashing: %w", err)
 		}
 		u.ConsistentHashing = &val
+	case "intelligent":
+		payload, ok := raw["intelligent"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelBalancerIntelligentConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelModelConfigBalancer intelligent: %w", err)
+		}
+		u.Intelligent = &val
 	case "least-connections":
 		payload, ok := raw["least-connections"]
 		if !ok || len(payload) == 0 {
@@ -8223,7 +9766,7 @@ func (s *AIGatewayModelModelConfig) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelModelConfig: %w", err)
 	}
-	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.LowestUsage == nil && aux.Balancer.Priority == nil && aux.Balancer.RoundRobin == nil && aux.Balancer.Semantic == nil {
+	if aux.Balancer != nil && aux.Balancer.Algorithm == "" && aux.Balancer.ConsistentHashing == nil && aux.Balancer.Intelligent == nil && aux.Balancer.LeastConnections == nil && aux.Balancer.LowestLatency == nil && aux.Balancer.LowestUsage == nil && aux.Balancer.Priority == nil && aux.Balancer.RoundRobin == nil && aux.Balancer.Semantic == nil {
 		aux.Balancer = nil
 	}
 	*s = AIGatewayModelModelConfig(aux)
@@ -9603,6 +11146,92 @@ type AIGatewayModelProviderDeepseekConfig struct {
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
+// AIGatewayModelProviderFireworks Configuration for an upstream model provider.
+type AIGatewayModelProviderFireworks struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderFireworksConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
+}
+
+// AIGatewayModelProviderFireworksConfig Configuration for the model provider.
+type AIGatewayModelProviderFireworksConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
 // AIGatewayModelProviderGemini Config for GCP model provider.
 type AIGatewayModelProviderGemini struct {
 	//
@@ -9980,7 +11609,16 @@ type AIGatewayModelProviderKimiConfig struct {
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
-// AIGatewayModelProviderLlama2 Configuration for an upstream model provider.
+// AIGatewayModelProviderLlama2 Configuration for an upstream `llama2` model
+// provider.
+//
+// Deprecated: the `llama2` provider is deprecated and will be removed in 3.0.
+// Migrate each
+// target by its `format` value: `ollama` maps to the `ollama` provider,
+// `openai` maps to the
+// `openai` provider with `upstream_url` set on the target, or to the `vllm`
+// provider; `raw`
+// has no replacement provider.
 type AIGatewayModelProviderLlama2 struct {
 	// Configuration for the model provider.
 	//
@@ -10059,6 +11697,92 @@ type AIGatewayModelProviderLlama2 struct {
 
 // AIGatewayModelProviderLlama2Config Configuration for the model provider.
 type AIGatewayModelProviderLlama2Config struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderMeta Configuration for an upstream model provider.
+type AIGatewayModelProviderMeta struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderMetaConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
+}
+
+// AIGatewayModelProviderMetaConfig Configuration for the model provider.
+type AIGatewayModelProviderMetaConfig struct {
 	// Basic auth config for an upstream model provider.
 	//
 	//
@@ -10530,6 +12254,93 @@ func (s *AIGatewayModelProviderSagemakerConfig) UnmarshalJSON(data []byte) error
 	}
 	*s = AIGatewayModelProviderSagemakerConfig(aux)
 	return nil
+}
+
+// AIGatewayModelProviderTogetherai Configuration for an upstream model
+// provider.
+type AIGatewayModelProviderTogetherai struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderTogetheraiConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long, start and end with an alphanumeric
+	// character, and may contain dashes (`-`), underscores (`_`), and dots (`.`).
+	// Values must be 1–127 characters long and must not be empty.
+	// Keys and values must not contain spaces or control characters.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
+}
+
+// AIGatewayModelProviderTogetheraiConfig Configuration for the model provider.
+type AIGatewayModelProviderTogetheraiConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
 }
 
 // AIGatewayModelProviderTypesafe Configuration for an upstream model provider.
@@ -12570,7 +14381,7 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayTarget: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Baseten == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Typesafe == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Baseten == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Fireworks == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Meta == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Togetherai == nil && aux.Config.Typesafe == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayTarget(aux)
@@ -12670,6 +14481,19 @@ type AIGatewayTargetAnthropicConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -12799,6 +14623,19 @@ type AIGatewayTargetAzureConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -12911,6 +14748,19 @@ type AIGatewayTargetBasetenConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -13049,6 +14899,19 @@ type AIGatewayTargetBedrockConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -13163,6 +15026,19 @@ type AIGatewayTargetCerebrasConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -13277,6 +15153,19 @@ type AIGatewayTargetCohereConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -13296,7 +15185,7 @@ type AIGatewayTargetConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;baseten;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;baseten;bedrock;cerebras;cohere;dashscope;databricks;deepseek;fireworks;gemini;huggingface;kimi;llama2;meta;mistral;ollama;openai;sagemaker;togetherai;typesafe;vercel;vllm;xai
 	Type AIGatewayTargetConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -13335,6 +15224,10 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Deepseek *AIGatewayTargetDeepseekConfig `json:"deepseek,omitempty"`
+	// Fireworks configuration.
+	//
+	// +optional
+	Fireworks *AIGatewayTargetFireworksConfig `json:"fireworks,omitempty"`
 	// Gemini configuration.
 	//
 	// +optional
@@ -13351,6 +15244,10 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Llama2 *AIGatewayTargetLlama2Config `json:"llama2,omitempty"`
+	// Meta configuration.
+	//
+	// +optional
+	Meta *AIGatewayTargetMetaConfig `json:"meta,omitempty"`
 	// Mistral configuration.
 	//
 	// +optional
@@ -13367,6 +15264,10 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Sagemaker *AIGatewayTargetSagemakerConfig `json:"sagemaker,omitempty"`
+	// Togetherai configuration.
+	//
+	// +optional
+	Togetherai *AIGatewayTargetTogetheraiConfig `json:"togetherai,omitempty"`
 	// Typesafe configuration.
 	//
 	// +optional
@@ -13399,14 +15300,17 @@ const (
 	AIGatewayTargetConfigTypeDashscope   AIGatewayTargetConfigType = "dashscope"
 	AIGatewayTargetConfigTypeDatabricks  AIGatewayTargetConfigType = "databricks"
 	AIGatewayTargetConfigTypeDeepseek    AIGatewayTargetConfigType = "deepseek"
+	AIGatewayTargetConfigTypeFireworks   AIGatewayTargetConfigType = "fireworks"
 	AIGatewayTargetConfigTypeGemini      AIGatewayTargetConfigType = "gemini"
 	AIGatewayTargetConfigTypeHuggingface AIGatewayTargetConfigType = "huggingface"
 	AIGatewayTargetConfigTypeKimi        AIGatewayTargetConfigType = "kimi"
 	AIGatewayTargetConfigTypeLlama2      AIGatewayTargetConfigType = "llama2"
+	AIGatewayTargetConfigTypeMeta        AIGatewayTargetConfigType = "meta"
 	AIGatewayTargetConfigTypeMistral     AIGatewayTargetConfigType = "mistral"
 	AIGatewayTargetConfigTypeOllama      AIGatewayTargetConfigType = "ollama"
 	AIGatewayTargetConfigTypeOpenai      AIGatewayTargetConfigType = "openai"
 	AIGatewayTargetConfigTypeSagemaker   AIGatewayTargetConfigType = "sagemaker"
+	AIGatewayTargetConfigTypeTogetherai  AIGatewayTargetConfigType = "togetherai"
 	AIGatewayTargetConfigTypeTypesafe    AIGatewayTargetConfigType = "typesafe"
 	AIGatewayTargetConfigTypeVercel      AIGatewayTargetConfigType = "vercel"
 	AIGatewayTargetConfigTypeVllm        AIGatewayTargetConfigType = "vllm"
@@ -13489,6 +15393,14 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["deepseek"] = raw
 		}
+	case AIGatewayTargetConfigTypeFireworks:
+		if u.Fireworks != nil {
+			raw, err := json.Marshal(u.Fireworks)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig fireworks: %w", err)
+			}
+			m["fireworks"] = raw
+		}
 	case AIGatewayTargetConfigTypeGemini:
 		if u.Gemini != nil {
 			raw, err := json.Marshal(u.Gemini)
@@ -13521,6 +15433,14 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["llama2"] = raw
 		}
+	case AIGatewayTargetConfigTypeMeta:
+		if u.Meta != nil {
+			raw, err := json.Marshal(u.Meta)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig meta: %w", err)
+			}
+			m["meta"] = raw
+		}
 	case AIGatewayTargetConfigTypeMistral:
 		if u.Mistral != nil {
 			raw, err := json.Marshal(u.Mistral)
@@ -13552,6 +15472,14 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig sagemaker: %w", err)
 			}
 			m["sagemaker"] = raw
+		}
+	case AIGatewayTargetConfigTypeTogetherai:
+		if u.Togetherai != nil {
+			raw, err := json.Marshal(u.Togetherai)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig togetherai: %w", err)
+			}
+			m["togetherai"] = raw
 		}
 	case AIGatewayTargetConfigTypeTypesafe:
 		if u.Typesafe != nil {
@@ -13703,6 +15631,16 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig deepseek: %w", err)
 		}
 		u.Deepseek = &val
+	case "fireworks":
+		payload, ok := raw["fireworks"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetFireworksConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig fireworks: %w", err)
+		}
+		u.Fireworks = &val
 	case "gemini":
 		payload, ok := raw["gemini"]
 		if !ok || len(payload) == 0 {
@@ -13743,6 +15681,16 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig llama2: %w", err)
 		}
 		u.Llama2 = &val
+	case "meta":
+		payload, ok := raw["meta"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetMetaConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig meta: %w", err)
+		}
+		u.Meta = &val
 	case "mistral":
 		payload, ok := raw["mistral"]
 		if !ok || len(payload) == 0 {
@@ -13783,6 +15731,16 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig sagemaker: %w", err)
 		}
 		u.Sagemaker = &val
+	case "togetherai":
+		payload, ok := raw["togetherai"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetTogetheraiConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig togetherai: %w", err)
+		}
+		u.Togetherai = &val
 	case "typesafe":
 		payload, ok := raw["typesafe"]
 		if !ok || len(payload) == 0 {
@@ -13926,6 +15884,19 @@ type AIGatewayTargetDashscopeConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14027,6 +15998,19 @@ type AIGatewayTargetDatabricksConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14133,6 +16117,148 @@ type AIGatewayTargetDeepseekConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetFireworksConfig Fireworks AI-specific configuration for a
+// model.
+// Requests are sent to the Fireworks
+// inference API at `https://api.fireworks.ai/inference/v1` by default, and the
+// target `name`
+// is the Fireworks model ID, passed through as-is (for example,
+// `accounts/fireworks/models/llama-v3p1-70b-instruct`).
+// Use the `openai` format for the
+// Chat Completions, Completions, Responses, Embeddings, Rerank, and Decisions
+// APIs, and the
+// `anthropic` format for the Messages API.
+// To keep traffic in the US-only region, set
+// `upstream_url` to `https://us.api.fireworks.ai/inference/v1`.
+// Upstream errors, including
+// `max_tokens` truncation behavior, are returned as produced by Fireworks.
+//
+// **Requires a minimum runtime version of `2.4`**.
+type AIGatewayTargetFireworksConfig struct {
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per 1M input tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per 1M output tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=500
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
+	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14237,6 +16363,19 @@ type AIGatewayTargetGeminiConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14338,6 +16477,19 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14456,6 +16608,19 @@ type AIGatewayTargetKimiConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14464,6 +16629,13 @@ type AIGatewayTargetKimiConfig struct {
 }
 
 // AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
+//
+// Deprecated: the `llama2` provider is deprecated and will be removed in 3.0.
+// Migrate by the
+// `format` value: `ollama` maps to the `ollama` provider, `openai` maps to the
+// `openai` provider
+// with `upstream_url` set, or to the `vllm` provider; `raw` has no replacement
+// provider.
 type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
@@ -14563,10 +16735,153 @@ type AIGatewayTargetLlama2Config struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayTargetMetaConfig Meta-specific configuration for a model served by
+// Meta's hosted Model API.
+// Requests are
+// sent to `https://api.meta.ai/v1` by default, and the target `name` is the
+// Meta model ID
+// (for example, `muse-spark-1.3`).
+// Model IDs are passed through as-is, including
+// `-contributor` variants, which permit Meta to train on submitted prompts;
+// choose them
+// deliberately.
+// Use the `openai` format for the Chat Completions and Responses APIs and the
+// `anthropic` format for the Messages API.
+// Self-hosted open-weight models (such as Muse Glimmer)
+// should use the `ollama` provider, or the `openai` provider with
+// `upstream_url` set on the
+// target (or the `vllm` provider); the `llama2` provider is deprecated.
+//
+// **Requires a minimum runtime version of `2.4`**.
+type AIGatewayTargetMetaConfig struct {
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per 1M input tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per 1M output tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=500
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
+	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
@@ -14671,6 +16986,19 @@ type AIGatewayTargetMistralConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14771,6 +17099,19 @@ type AIGatewayTargetOllamaConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14871,6 +17212,19 @@ type AIGatewayTargetOpenaiConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -14980,6 +17334,19 @@ type AIGatewayTargetSagemakerConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -15031,6 +17398,129 @@ type AIGatewayTargetSagemakerConfigTarget struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Variant string `json:"variant,omitzero"`
+}
+
+// AIGatewayTargetTogetheraiConfig Together AI-specific configuration for a
+// model.
+// Together AI is fully OpenAI-compatible:
+// requests are sent to `https://api.together.xyz/v1` by default using the
+// `openai` format,
+// and the target `name` is the Together model ID, passed through as-is (for
+// example,
+// `meta-llama/Llama-3.3-70B-Instruct-Turbo`).
+// Override the base URL with `upstream_url`.
+//
+// **Requires a minimum runtime version of `2.4`**.
+type AIGatewayTargetTogetheraiConfig struct {
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per 1M input tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per 1M output tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=500
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
+	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
 // AIGatewayTargetTypesafeConfig Typesafe-specific configuration for a model.
@@ -15148,6 +17638,19 @@ type AIGatewayTargetVercelConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -15248,6 +17751,19 @@ type AIGatewayTargetVllmConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +required
@@ -15349,6 +17865,19 @@ type AIGatewayTargetXaiConfig struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
+	// Base URL used instead of the provider's default upstream endpoint, for
+	// regional or private endpoints.
+	// It overrides only the scheme, host, and base path; the gateway appends the
+	// path of each capability the target serves, so a single target can serve
+	// several capabilities from the same base.
+	// Mutually exclusive with `upstream_url`, which replaces the full URL.
+	// Providers without a default upstream URL ignore it.
+	//
+	// **Requires a minimum runtime version of `2.4`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamBaseURL string `json:"upstreamBaseURL,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
 	// +optional
@@ -15594,6 +18123,176 @@ type AIGatewayUpstreamAuthAWS struct {
 	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
 }
 
+// AIGatewayUpstreamBalancerConfig represents a union type for AIGatewayUpstreamBalancerConfig.
+// Only one of the fields should be set based on the Algorithm.
+type AIGatewayUpstreamBalancerConfig struct {
+	// Algorithm designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=consistent-hashing;least-connections;lowest-latency;round-robin
+	Algorithm AIGatewayUpstreamBalancerConfigType `json:"algorithm,omitempty"`
+
+	// ConsistentHashing configuration.
+	//
+	// +optional
+	ConsistentHashing *AIGatewayUpstreamBalancerConsistentHashingConfig `json:"consistent-hashing,omitempty"`
+	// LeastConnections configuration.
+	//
+	// +optional
+	LeastConnections *AIGatewayUpstreamBalancerLeastConnectionsConfig `json:"least-connections,omitempty"`
+	// LowestLatency configuration.
+	//
+	// +optional
+	LowestLatency *AIGatewayUpstreamBalancerLowestLatencyConfig `json:"lowest-latency,omitempty"`
+	// RoundRobin configuration.
+	//
+	// +optional
+	RoundRobin *AIGatewayUpstreamBalancerRoundRobinConfig `json:"round-robin,omitempty"`
+}
+
+// AIGatewayUpstreamBalancerConfigType represents the type of AIGatewayUpstreamBalancerConfig.
+type AIGatewayUpstreamBalancerConfigType string
+
+// AIGatewayUpstreamBalancerConfigType values.
+const (
+	AIGatewayUpstreamBalancerConfigTypeConsistentHashing AIGatewayUpstreamBalancerConfigType = "consistent-hashing"
+	AIGatewayUpstreamBalancerConfigTypeLeastConnections  AIGatewayUpstreamBalancerConfigType = "least-connections"
+	AIGatewayUpstreamBalancerConfigTypeLowestLatency     AIGatewayUpstreamBalancerConfigType = "lowest-latency"
+	AIGatewayUpstreamBalancerConfigTypeRoundRobin        AIGatewayUpstreamBalancerConfigType = "round-robin"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayUpstreamBalancerConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	switch u.Algorithm {
+	case AIGatewayUpstreamBalancerConfigTypeConsistentHashing:
+		if u.ConsistentHashing != nil {
+			raw, err := json.Marshal(u.ConsistentHashing)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayUpstreamBalancerConfig consistent-hashing: %w", err)
+			}
+			m["consistent-hashing"] = raw
+		}
+	case AIGatewayUpstreamBalancerConfigTypeLeastConnections:
+		if u.LeastConnections != nil {
+			raw, err := json.Marshal(u.LeastConnections)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayUpstreamBalancerConfig least-connections: %w", err)
+			}
+			m["least-connections"] = raw
+		}
+	case AIGatewayUpstreamBalancerConfigTypeLowestLatency:
+		if u.LowestLatency != nil {
+			raw, err := json.Marshal(u.LowestLatency)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayUpstreamBalancerConfig lowest-latency: %w", err)
+			}
+			m["lowest-latency"] = raw
+		}
+	case AIGatewayUpstreamBalancerConfigTypeRoundRobin:
+		if u.RoundRobin != nil {
+			raw, err := json.Marshal(u.RoundRobin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayUpstreamBalancerConfig round-robin: %w", err)
+			}
+			m["round-robin"] = raw
+		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayUpstreamBalancerConfig algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayUpstreamBalancerConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayUpstreamBalancerConfig: nil receiver")
+	}
+	var probe struct {
+		Algorithm string `json:"algorithm"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Algorithm = AIGatewayUpstreamBalancerConfigType(probe.Algorithm)
+	switch probe.Algorithm {
+	case "consistent-hashing":
+		payload, ok := raw["consistent-hashing"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerConsistentHashingConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayUpstreamBalancerConfig consistent-hashing: %w", err)
+		}
+		u.ConsistentHashing = &val
+	case "least-connections":
+		payload, ok := raw["least-connections"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLeastConnectionsConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayUpstreamBalancerConfig least-connections: %w", err)
+		}
+		u.LeastConnections = &val
+	case "lowest-latency":
+		payload, ok := raw["lowest-latency"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerLowestLatencyConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayUpstreamBalancerConfig lowest-latency: %w", err)
+		}
+		u.LowestLatency = &val
+	case "round-robin":
+		payload, ok := raw["round-robin"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamBalancerRoundRobinConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayUpstreamBalancerConfig round-robin: %w", err)
+		}
+		u.RoundRobin = &val
+	}
+	return nil
+}
+
+// AIGatewayUpstreamBalancerConsistentHashingConfig is a type alias.
+type AIGatewayUpstreamBalancerConsistentHashingConfig struct {
+	// The request header whose value selects the target.
+	// Requests without the header all hash to the same target.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	HashOnHeader string `json:"hashOnHeader,omitzero"`
+}
+
+// AIGatewayUpstreamBalancerLeastConnectionsConfig is a type alias.
+type AIGatewayUpstreamBalancerLeastConnectionsConfig struct {
+}
+
+// AIGatewayUpstreamBalancerLowestLatencyConfig is a type alias.
+type AIGatewayUpstreamBalancerLowestLatencyConfig struct {
+}
+
+// AIGatewayUpstreamBalancerRoundRobinConfig is a type alias.
+type AIGatewayUpstreamBalancerRoundRobinConfig struct {
+}
+
 // AIGatewayUpstreamConfig Configuration applied when proxying to the upstream
 // service, including authentication.
 type AIGatewayUpstreamConfig struct {
@@ -15697,6 +18396,43 @@ func (s *AIGatewayUpstreamConfig) UnmarshalJSON(data []byte) error {
 	}
 	*s = AIGatewayUpstreamConfig(aux)
 	return nil
+}
+
+// AIGatewayUpstreamProtocol is a type alias.
+type AIGatewayUpstreamProtocol string
+
+// AIGatewayUpstreamTarget A target is an ip address/hostname with a port that
+// identifies an instance of a backend service.
+// Every agent can have many targets.
+type AIGatewayUpstreamTarget struct {
+	// The target address (ip or hostname) and port.
+	// If the hostname resolves to an SRV record, the `port` value will be
+	// overridden by the value from the DNS record.
+	// Each address must be unique within the agent.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Address string `json:"address,omitzero"`
+	// Whether to use this target only as backup or not.
+	// A failover target receives traffic only when all other targets are
+	// unhealthy, or when a request has failed on all of them.
+	// The gateway checks the health of each target with active and passive health
+	// checks.
+	// Failover targets are not supported with the `consistent-hashing` algorithm,
+	// and at least one target must not be a failover target.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Failover *string `json:"failover,omitempty"`
+	// The weight this target gets within the upstream loadbalancer (`0`-`65535`).
+	// If the hostname resolves to an SRV record, the `weight` value will be
+	// overridden by the value from the DNS record.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Weight *int `json:"weight,omitempty"`
 }
 
 // AIGatewayVaultName An immutable user-defined identifier for this resource.

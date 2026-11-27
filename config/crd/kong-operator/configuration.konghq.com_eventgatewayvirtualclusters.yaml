@@ -261,6 +261,7 @@ spec:
                                     required:
                                     - name
                                     type: object
+                                  minItems: 1
                                   type: array
                                 issuer:
                                   description: Expected token issuer in the token.
@@ -368,6 +369,7 @@ spec:
                                 - password
                                 - username
                                 type: object
+                              minItems: 1
                               type: array
                           required:
                           - mediation
@@ -452,6 +454,7 @@ spec:
                       required:
                       - type
                       type: object
+                    minItems: 1
                     type: array
                   description:
                     description: A human-readable description of the virtual cluster.
@@ -486,6 +489,7 @@ spec:
                     description: The name of the virtual cluster.
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   namespace:
                     description: |-
@@ -521,6 +525,7 @@ spec:
                                         required:
                                         - value
                                         type: object
+                                      minItems: 1
                                       type: array
                                   type: object
                                 glob:
@@ -589,6 +594,7 @@ spec:
                                         required:
                                         - backend
                                         type: object
+                                      minItems: 1
                                       type: array
                                   type: object
                                 glob:

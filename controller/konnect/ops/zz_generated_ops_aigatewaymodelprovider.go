@@ -55,6 +55,9 @@ func createAIGatewayModelProvider(
 	if req.AIGatewayModelProviderDeepseek != nil {
 		req.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDeepseek.Labels)
 	}
+	if req.AIGatewayModelProviderFireworks != nil {
+		req.AIGatewayModelProviderFireworks.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderFireworks.Labels)
+	}
 	if req.AIGatewayModelProviderGemini != nil {
 		req.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderGemini.Labels)
 	}
@@ -66,6 +69,9 @@ func createAIGatewayModelProvider(
 	}
 	if req.AIGatewayModelProviderLlama2 != nil {
 		req.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderLlama2.Labels)
+	}
+	if req.AIGatewayModelProviderMeta != nil {
+		req.AIGatewayModelProviderMeta.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderMeta.Labels)
 	}
 	if req.AIGatewayModelProviderMistral != nil {
 		req.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderMistral.Labels)
@@ -87,6 +93,9 @@ func createAIGatewayModelProvider(
 	}
 	if req.AIGatewayModelProviderSagemaker != nil {
 		req.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if req.AIGatewayModelProviderTogetherai != nil {
+		req.AIGatewayModelProviderTogetherai.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTogetherai.Labels)
 	}
 	if req.AIGatewayModelProviderTypesafe != nil {
 		req.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTypesafe.Labels)
@@ -164,6 +173,9 @@ func updateAIGatewayModelProvider(
 	if req.AIGatewayModelProviderDeepseek != nil {
 		req.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDeepseek.Labels)
 	}
+	if req.AIGatewayModelProviderFireworks != nil {
+		req.AIGatewayModelProviderFireworks.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderFireworks.Labels)
+	}
 	if req.AIGatewayModelProviderGemini != nil {
 		req.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderGemini.Labels)
 	}
@@ -175,6 +187,9 @@ func updateAIGatewayModelProvider(
 	}
 	if req.AIGatewayModelProviderLlama2 != nil {
 		req.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderLlama2.Labels)
+	}
+	if req.AIGatewayModelProviderMeta != nil {
+		req.AIGatewayModelProviderMeta.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderMeta.Labels)
 	}
 	if req.AIGatewayModelProviderMistral != nil {
 		req.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderMistral.Labels)
@@ -196,6 +211,9 @@ func updateAIGatewayModelProvider(
 	}
 	if req.AIGatewayModelProviderSagemaker != nil {
 		req.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if req.AIGatewayModelProviderTogetherai != nil {
+		req.AIGatewayModelProviderTogetherai.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTogetherai.Labels)
 	}
 	if req.AIGatewayModelProviderTypesafe != nil {
 		req.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTypesafe.Labels)
@@ -294,6 +312,8 @@ func getAIGatewayModelProviderForUID(
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderFireworks != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderFireworks.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderFireworks.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderGemini != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface != nil:
@@ -302,6 +322,8 @@ func getAIGatewayModelProviderForUID(
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderLlama2 != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderMeta != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderMeta.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderMeta.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderMistral != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderOllama != nil:
@@ -316,6 +338,8 @@ func getAIGatewayModelProviderForUID(
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderTogetherai != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderTogetherai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderTogetherai.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetLabels()
 			default:

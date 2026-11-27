@@ -40,13 +40,16 @@ type Property struct {
 	// Validations
 	MinLength     *int64
 	MaxLength     *int64
+	MinItems      *int64
 	MaxItems      *int64
 	MaxProperties *int64
 	Minimum       *float64
 	Maximum       *float64
 	Pattern       string
-	Enum          []any
-	Default       any
+	// UnicodePattern is the x-unicode-pattern extension.
+	UnicodePattern string
+	Enum           []any
+	Default        any
 
 	// Reference info
 	RefName     string // If this is a $ref, the referenced schema name
@@ -79,6 +82,11 @@ type Schema struct {
 	OneOf        []*Property   // Root-level oneOf variants (for union type schemas)
 	AnyOf        []*Property   // Root-level anyOf variants (for union type schemas without discriminator)
 	Items        *Property     // For array-type schemas, the items type
+
+	// Constraints of the named schema itself.
+	Enum     []any  // For string schemas
+	MinItems *int64 // For array schemas
+	MaxItems *int64 // For array schemas
 
 	// Discriminator info from the OAS discriminator object.
 	Discriminator        string            // discriminator.propertyName (e.g. "type")
@@ -658,6 +666,13 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	if schema.Type == "array" && schemaValue.Items != nil {
 		schema.Items = ParseProperty("items", schemaValue.Items, 0, p.visited)
 	}
+	if schema.Type == "array" {
+		schema.MinItems = minItems(schemaValue)
+		schema.MaxItems = maxItems(schemaValue)
+	}
+	if len(schemaValue.Enum) > 0 {
+		schema.Enum = schemaValue.Enum
+	}
 
 	// Handle additionalProperties (map value schema)
 	if schemaValue.AdditionalProperties.Schema != nil {
@@ -723,6 +738,31 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 	if len(schemaValue.AllOf) > 0 && len(schemaValue.OneOf) == 0 && len(schemaValue.AnyOf) == 0 &&
 		schemaValue.Discriminator == nil && len(schema.Properties) == 0 {
 		schema.Properties = flattenAllOfProperties(schemaValue, 0, p.visited)
+	}
+
+	// An allOf whose members refine a non-object base (e.g. a $ref to an array
+	// schema with a minItems sibling, as in CreateOIDCIdentityProviderScopes)
+	// constrains that base rather than composing an object: adopt the first
+	// member's concrete non-object type so the schema keeps it instead of
+	// degrading to map[string]string.
+	if len(schemaValue.AllOf) > 0 && schema.Type == "" && len(schema.Properties) == 0 &&
+		len(schema.OneOf) == 0 && len(schema.AnyOf) == 0 && schema.Discriminator == "" {
+		for _, member := range schemaValue.AllOf {
+			memberValue := member.Value
+			if memberValue == nil {
+				continue
+			}
+			memberType := getSchemaType(memberValue)
+			if memberType == "" || memberType == "object" {
+				continue
+			}
+			schema.Type = memberType
+			schema.Format = memberValue.Format
+			if memberType == "array" && memberValue.Items != nil {
+				schema.Items = ParseProperty("items", memberValue.Items, 0, p.visited)
+			}
+			break
+		}
 	}
 
 	// Handle allOf: merge properties from every entry that declares its own,

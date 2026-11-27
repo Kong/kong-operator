@@ -135,7 +135,10 @@ spec:
                     type: object
                   bootstrapServers:
                     items:
+                      minLength: 1
+                      pattern: ^(([a-zA-Z0-9\.\-]+)|\[([a-fA-F0-9:]+)\]):\d+$
                       type: string
+                    minItems: 1
                     type: array
                   description:
                     maxLength: 512
@@ -160,6 +163,7 @@ spec:
                   name:
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   tls:
                     properties:
@@ -201,6 +205,8 @@ spec:
                             - type
                             type: object
                             x-kubernetes-validations:
+                            - message: an inline value must not be empty
+                              rule: '!has(self.value) || self.value.size() >= 1'
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
@@ -238,6 +244,8 @@ spec:
                             - type
                             type: object
                             x-kubernetes-validations:
+                            - message: an inline value must not be empty
+                              rule: '!has(self.value) || self.value.size() >= 1'
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
@@ -259,6 +267,9 @@ spec:
                         type: string
                       tlsVersions:
                         items:
+                          enum:
+                          - tls12
+                          - tls13
                           type: string
                         type: array
                     required:

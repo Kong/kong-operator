@@ -65,6 +65,9 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	if schemaValue.Pattern != "" {
 		prop.Pattern = schemaValue.Pattern
 	}
+	if p, ok := schemaValue.Extensions["x-unicode-pattern"].(string); ok {
+		prop.UnicodePattern = p
+	}
 	if len(schemaValue.Enum) > 0 {
 		prop.Enum = schemaValue.Enum
 	} else if schemaValue.Const != nil {
@@ -77,10 +80,8 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 
 	// Handle array types.
 	if prop.Type == "array" {
-		if schemaValue.MaxItems != nil {
-			maxItems := int64(*schemaValue.MaxItems)
-			prop.MaxItems = &maxItems
-		}
+		prop.MinItems = minItems(schemaValue)
+		prop.MaxItems = maxItems(schemaValue)
 		if schemaValue.Items != nil {
 			prop.Items = ParseProperty("items", schemaValue.Items, depth+1, visited)
 		}
@@ -391,4 +392,22 @@ func flattenAllOfProperties(schemaValue *openapi3.Schema, depth int, visited map
 		return props[i].Name < props[j].Name
 	})
 	return props
+}
+
+// minItems returns the minItems of a schema, or nil when it is 0.
+func minItems(s *openapi3.Schema) *int64 {
+	if s.MinItems == 0 {
+		return nil
+	}
+	v := int64(s.MinItems)
+	return &v
+}
+
+// maxItems returns the maxItems of a schema, or nil.
+func maxItems(s *openapi3.Schema) *int64 {
+	if s.MaxItems == nil {
+		return nil
+	}
+	v := int64(*s.MaxItems)
+	return &v
 }

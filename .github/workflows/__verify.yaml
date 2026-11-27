@@ -102,7 +102,7 @@ jobs:
       # Fork pull requests get no secrets, and a missing App permission must not block the
       # check itself.
       continue-on-error: true
-      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
       with:
         client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
         private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}

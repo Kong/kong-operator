@@ -276,6 +276,21 @@ func (s *steps) assertGatewayHeldBack(name, description string, o *object) {
 	s.assertCondition(name, description, onPremGateway, "Programmed", "False", reason)
 }
 
+// assertCertificateSecret asserts whether a data plane has a client
+// certificate Secret the operator issued: revoking its grant deletes it, so
+// that the key can't be registered again with a certificate of the tenant, and
+// restoring it issues another. Of any other kind, it asserts nothing.
+func (s *steps) assertCertificateSecret(name, description string, o *object, present bool) {
+	if o.Kind != "KegDataPlane" {
+		return
+	}
+	template := "assert-dataplane-certificate-secret.yaml"
+	if !present {
+		template = "assert-dataplane-certificate-secret-gone.yaml"
+	}
+	s.use(name, description, suiteTemplates+template, own("object_name", o.Name, "object_namespace", o.NS))
+}
+
 // assertGatewayPushes asserts, on-prem, the gateway pushes its configuration
 // again, after it was held back.
 func (s *steps) assertGatewayPushes(name string) {

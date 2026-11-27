@@ -210,10 +210,17 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		); errStatus != nil || !res.IsZero() {
 			return res, true, errStatus
 		}
-	} else if !deleting && secretsReadOnlyAtCreation(ent) {
-		// A switch from Secret to inline inputs must not retain a stale failure.
-		if res, err := patch.StatusWithoutCondition(ctx, cl, ent, konnectv1alpha1.SecretRefValidConditionType); err != nil || !res.IsZero() {
-			return res, true, err
+	} else if !deleting {
+		// A switch from Secret refs to inline inputs must not retain a stale
+		// failure. For create-only kinds the entity reads Secrets only at
+		// creation; for generated SensitiveDataSource entities, having no
+		// refs at all means every input is inline, mirroring the
+		// ConfigMapRef condition handling.
+		_, isSensitiveDataSourceEntity := sensitiveDataSecretRefs(ent)
+		if secretsReadOnlyAtCreation(ent) || (isSensitiveDataSourceEntity && len(secretRefs) == 0) {
+			if res, err := patch.StatusWithoutCondition(ctx, cl, ent, konnectv1alpha1.SecretRefValidConditionType); err != nil || !res.IsZero() {
+				return res, true, err
+			}
 		}
 	}
 

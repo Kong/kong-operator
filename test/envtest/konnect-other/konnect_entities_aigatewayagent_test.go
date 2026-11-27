@@ -77,7 +77,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		sdk.AIGatewayAgentsSDK.EXPECT().
 			CreateAiGatewayAgent(mock.Anything, konnectAIGatewayID, mock.MatchedBy(func(req sdkkonnectcomp.CreateAIGatewayAgentRequest) bool {
 				return req.DisplayName == initialDisplayName &&
-					req.Config.URL == agentURL &&
+					req.Config.URL != nil && *req.Config.URL == agentURL &&
 					string(req.Type) == "http" &&
 					req.Labels != nil &&
 					req.Labels[ops.KubernetesUIDLabelKey] != ""
