@@ -65,6 +65,9 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	if schemaValue.Pattern != "" {
 		prop.Pattern = schemaValue.Pattern
 	}
+	if p, ok := schemaValue.Extensions["x-unicode-pattern"].(string); ok {
+		prop.UnicodePattern = p
+	}
 	if len(schemaValue.Enum) > 0 {
 		prop.Enum = schemaValue.Enum
 	} else if schemaValue.Const != nil {

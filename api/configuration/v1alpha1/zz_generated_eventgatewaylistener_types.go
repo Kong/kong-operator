@@ -108,6 +108,7 @@ type EventGatewayListenerAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 
 	// Which port or ports to listen on.

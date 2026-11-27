@@ -74,6 +74,7 @@ type EventGatewayDataPlaneCertificateAPISpec struct {
 	// JSON escaped string of the certificate.
 	//
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.value) || self.value.size() >= 1",message="an inline value must not be empty"
 	Certificate SensitiveDataSource `json:"certificate,omitzero"`
 
 	// A description of the certificate.
@@ -86,6 +87,7 @@ type EventGatewayDataPlaneCertificateAPISpec struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$`
 	Name string `json:"name,omitzero"`
 }
 

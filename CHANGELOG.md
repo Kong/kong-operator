@@ -147,6 +147,13 @@
   holding a refused value can't change the list holding it until the value is
   fixed.
   [#6823](https://github.com/Kong/kong-operator/pull/6823)
+- Event Gateway CRDs and `KonnectEventGateway` refuse the names Konnect
+  refuses: a name must start and end with a letter or a digit, non-ASCII
+  included, and contain only those, spaces and `_ - . : / + '` (e.g. `bc!` or
+  a one-character name is refused). An inline sensitive value
+  (`type: inline`), such as a static key, a trust bundle CA, a schema registry
+  password or a TLS certificate or key, must not be empty.
+  [#6826](https://github.com/Kong/kong-operator/pull/6826)
 - The admission webhook no longer fails or wrongly rejects changes while
   another `Gateway` is starting, for example `KongPlugin` changes failing with
   `internal validation error`. It now validates against a Kong Gateway that

@@ -489,6 +489,7 @@ spec:
                     description: The name of the virtual cluster.
                     maxLength: 255
                     minLength: 1
+                    pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                     type: string
                   namespace:
                     description: |-

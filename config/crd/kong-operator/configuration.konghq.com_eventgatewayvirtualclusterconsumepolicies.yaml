@@ -160,6 +160,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -314,6 +315,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -608,6 +610,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -705,6 +708,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -1127,6 +1131,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
@@ -1172,6 +1177,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     type: object
                   transcode:
@@ -1551,6 +1557,7 @@ spec:
                       name:
                         description: A unique user-defined name of the policy.
                         maxLength: 255
+                        pattern: ^[\p{L}\p{N}][\p{L}\p{N} _\-\.:/+']*[\p{L}\p{N}]$
                         type: string
                     required:
                     - config
