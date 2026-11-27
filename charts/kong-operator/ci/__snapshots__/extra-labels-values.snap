@@ -540,6 +540,13 @@ spec:
                         minLength: 1
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: exactly one of url and targets must be set
+                      rule: has(self.url) != has(self.targets)
+                    - message: balancer, protocol, and path are only valid with targets
+                      rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
+                    - message: failover targets are not supported with the consistent-hashing algorithm
+                      rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -6704,6 +6711,13 @@ spec:
                         required:
                         - route
                         type: object
+                        x-kubernetes-validations:
+                        - message: exactly one of url and targets must be set
+                          rule: has(self.url) != has(self.targets)
+                        - message: balancer, protocol, and path are only valid with targets
+                          rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
+                        - message: failover targets are not supported with the consistent-hashing algorithm
+                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
                       datastores:
                         items:
                           properties:
@@ -10293,6 +10307,13 @@ spec:
                         required:
                         - route
                         type: object
+                        x-kubernetes-validations:
+                        - message: exactly one of url and targets must be set
+                          rule: has(self.url) != has(self.targets)
+                        - message: balancer, protocol, and path are only valid with targets
+                          rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
+                        - message: failover targets are not supported with the consistent-hashing algorithm
+                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
                       datastores:
                         items:
                           properties:
@@ -11433,6 +11454,13 @@ spec:
                         - route
                         - toolsCacheTtlSeconds
                         type: object
+                        x-kubernetes-validations:
+                        - message: exactly one of url and targets must be set
+                          rule: has(self.url) != has(self.targets)
+                        - message: balancer, protocol, and path are only valid with targets
+                          rule: (!has(self.balancer) && !has(self.protocol) && !has(self.path)) || has(self.targets)
+                        - message: failover targets are not supported with the consistent-hashing algorithm
+                          rule: '!has(self.balancer) || self.balancer.algorithm != ''consistent-hashing'' || !self.targets.exists(t, has(t.failover))'
                       datastores:
                         items:
                           properties:
