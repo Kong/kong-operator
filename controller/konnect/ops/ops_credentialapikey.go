@@ -54,6 +54,7 @@ func createKongCredentialAPIKey(
 func updateKongCredentialAPIKey(
 	ctx context.Context,
 	sdk sdkkonnectgo.APIKeysSDK,
+	g *syncGuard,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -61,13 +62,28 @@ func updateKongCredentialAPIKey(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertKeyAuthWithConsumer(ctx,
-		sdkkonnectops.UpsertKeyAuthWithConsumerRequest{
-			ControlPlaneID:              cpID,
-			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
-			KeyAuthID:                   cred.GetKonnectStatus().GetKonnectID(),
-			KeyAuthWithoutParents:       kongCredentialAPIKeyToKeyAuthWithoutParents(cred),
-		})
+	id := cred.GetKonnectStatus().GetKonnectID()
+	consumerID := cred.Status.Konnect.GetConsumerID()
+	req := sdkkonnectops.UpsertKeyAuthWithConsumerRequest{
+		ControlPlaneID:              cpID,
+		ConsumerIDForNestedEntities: consumerID,
+		KeyAuthID:                   id,
+		KeyAuthWithoutParents:       kongCredentialAPIKeyToKeyAuthWithoutParents(cred),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.KeyAuth, error) {
+			resp, err := sdk.GetKeyAuthWithConsumer(ctx, sdkkonnectops.GetKeyAuthWithConsumerRequest{
+				ControlPlaneID:              cpID,
+				ConsumerIDForNestedEntities: consumerID,
+				KeyAuthID:                   id,
+			})
+			return resp.GetKeyAuth(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.KeyAuth, error) {
+			resp, err := sdk.UpsertKeyAuthWithConsumer(ctx, req)
+			return resp.GetKeyAuth(), err
+		},
+	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, cred); errWrap != nil {
 		return errWrap
@@ -150,7 +166,7 @@ func adoptKongCredentialAPIKey(
 	case commonv1alpha1.AdoptModeOverride:
 		credCopy := cred.DeepCopy()
 		credCopy.SetKonnectID(konnectID)
-		if err = updateKongCredentialAPIKey(ctx, sdk, credCopy); err != nil {
+		if err = updateKongCredentialAPIKey(ctx, sdk, nil, credCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

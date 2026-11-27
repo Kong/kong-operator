@@ -437,6 +437,19 @@ func Delete[
 	return err
 }
 
+// isProgrammedForCurrentGeneration reports whether the entity was successfully programmed in Konnect
+// for its current generation.
+func isProgrammedForCurrentGeneration[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	condProgrammed, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+	return ok &&
+		condProgrammed.Status == metav1.ConditionTrue &&
+		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
+		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration()
+}
+
 // isParentNotFoundForCurrentState reports whether the last attempt found that the parent
 // does not exist in Konnect, for the current generation and parent IDs of the entity.
 func isParentNotFoundForCurrentState[
@@ -461,7 +474,7 @@ func shouldUpdate[
 	now time.Time,
 ) (bool, ctrl.Result) {
 	var (
-		condProgrammed, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
+		condProgrammed, _  = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		timeFromLastUpdate = time.Since(condProgrammed.LastTransitionTime.Time)
 	)
 
@@ -469,10 +482,7 @@ func shouldUpdate[
 	// the configured sync period, requeue after the remaining time.
 	// Do the same if its parent did not exist in Konnect at the last attempt,
 	// so that events from other objects do not cause more attempts.
-	programmed := ok &&
-		condProgrammed.Status == metav1.ConditionTrue &&
-		condProgrammed.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed &&
-		condProgrammed.ObservedGeneration == ent.GetObjectMeta().GetGeneration()
+	programmed := isProgrammedForCurrentGeneration(ent)
 	if (programmed || isParentNotFoundForCurrentState(ent)) &&
 		timeFromLastUpdate <= syncPeriod {
 		requeueAfter := syncPeriod - timeFromLastUpdate
@@ -493,6 +503,7 @@ func shouldUpdate[
 
 // Update updates a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
+// When tracker is not nil, periodic updates of Kong Gateway entities that are in sync with Konnect are skipped.
 func Update[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -503,6 +514,7 @@ func Update[
 	cl client.Client,
 	metricRecorder metrics.Recorder,
 	e TEnt,
+	tracker *ConfigVersionTracker,
 ) (ctrl.Result, error) {
 	now := time.Now()
 
@@ -522,7 +534,11 @@ func Update[
 		entityType = e.GetTypeName()
 		statusCode int
 		start      = time.Now()
+		g          *syncGuard
 	)
+	if cpEnt, ok := any(e).(interface{ GetControlPlaneID() string }); ok && tracker != nil {
+		g = tracker.guard(sdk.GetDPNodesSDK(), e.GetUID(), cpEnt.GetControlPlaneID(), isProgrammedForCurrentGeneration(e))
+	}
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		// if the ControlPlane is of type origin, enforce the spec on Konnect.
@@ -536,41 +552,41 @@ func Update[
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
-		err = updateService(ctx, sdk.GetServicesSDK(), ent)
+		err = updateService(ctx, sdk.GetServicesSDK(), g, ent)
 	case *configurationv1alpha1.KongRoute:
-		err = updateRoute(ctx, sdk.GetRoutesSDK(), ent)
+		err = updateRoute(ctx, sdk.GetRoutesSDK(), g, ent)
 	case *configurationv1.KongConsumer:
-		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent)
+		err = updateConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, g, ent)
 	case *configurationv1beta1.KongConsumerGroup:
-		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent)
+		err = updateConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), g, ent)
 	case *configurationv1alpha1.KongPluginBinding:
-		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, ent)
+		err = updatePlugin(ctx, sdk.GetPluginSDK(), cl, g, ent)
 	case *configurationv1alpha1.KongUpstream:
-		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+		err = updateUpstream(ctx, sdk.GetUpstreamsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialBasicAuth:
-		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+		err = updateKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialAPIKey:
-		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+		err = updateKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialACL:
-		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
+		err = updateKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialJWT:
-		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+		err = updateKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
-		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
+		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), g, ent)
 	case *configurationv1alpha1.KongCACertificate:
-		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), ent)
+		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), g, ent)
 	case *configurationv1alpha1.KongCertificate:
-		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), ent)
+		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), g, ent)
 	case *configurationv1alpha1.KongTarget:
-		err = updateTarget(ctx, sdk.GetTargetsSDK(), ent)
+		err = updateTarget(ctx, sdk.GetTargetsSDK(), g, ent)
 	case *configurationv1alpha1.KongVault:
 		err = updateVault(ctx, cl, sdk.GetVaultSDK(), ent)
 	case *configurationv1alpha1.KongKey:
-		err = updateKey(ctx, sdk.GetKeysSDK(), ent)
+		err = updateKey(ctx, sdk.GetKeysSDK(), g, ent)
 	case *configurationv1alpha1.KongKeySet:
-		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+		err = updateKeySet(ctx, sdk.GetKeySetsSDK(), g, ent)
 	case *configurationv1alpha1.KongSNI:
-		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
+		err = updateSNI(ctx, sdk.GetSNIsSDK(), g, ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
@@ -583,6 +599,12 @@ func Update[
 	// TODO: add other manually maintained Konnect types here
 	default:
 		err = UpdateGeneratedOps(ctx, sdk, cl, e)
+	}
+
+	// Leave the status untouched so that its Programmed condition keeps the time
+	// of the last update sent to Konnect.
+	if err == nil && g.notSent() {
+		return ctrl.Result{RequeueAfter: syncPeriod}, nil
 	}
 
 	errSDK, isSDKErr := errors.AsType[*sdkkonnecterrs.SDKError](err)

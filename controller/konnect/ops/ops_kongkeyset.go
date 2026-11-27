@@ -53,6 +53,7 @@ func createKeySet(
 func updateKeySet(
 	ctx context.Context,
 	sdk sdkkonnectgo.KeySetsSDK,
+	g *syncGuard,
 	keySet *configurationv1alpha1.KongKeySet,
 ) error {
 	cpID := keySet.GetControlPlaneID()
@@ -60,11 +61,20 @@ func updateKeySet(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: keySet, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertKeySet(ctx,
-		sdkkonnectops.UpsertKeySetRequest{
-			ControlPlaneID: cpID,
-			KeySetID:       keySet.GetKonnectStatus().GetKonnectID(),
-			KeySet:         kongKeySetToKeySetInput(keySet),
+	id := keySet.GetKonnectStatus().GetKonnectID()
+	req := sdkkonnectops.UpsertKeySetRequest{
+		ControlPlaneID: cpID,
+		KeySetID:       id,
+		KeySet:         kongKeySetToKeySetInput(keySet),
+	}
+	err := upsertUnlessInSync(ctx, g, id, req,
+		func(ctx context.Context) (*sdkkonnectcomp.KeySet, error) {
+			resp, err := sdk.GetKeySet(ctx, id, cpID)
+			return resp.GetKeySet(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.KeySet, error) {
+			resp, err := sdk.UpsertKeySet(ctx, req)
+			return resp.GetKeySet(), err
 		},
 	)
 
@@ -137,7 +147,7 @@ func adoptKeySet(
 	case commonv1alpha1.AdoptModeOverride:
 		keySetCopy := keySet.DeepCopy()
 		keySetCopy.SetKonnectID(konnectID)
-		if err = updateKeySet(ctx, sdk, keySetCopy); err != nil {
+		if err = updateKeySet(ctx, sdk, nil, keySetCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

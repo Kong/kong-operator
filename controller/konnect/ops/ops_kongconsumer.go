@@ -72,6 +72,7 @@ func updateConsumer(
 	sdk sdkkonnectgo.ConsumersSDK,
 	cgSDK sdkkonnectgo.ConsumerGroupsSDK,
 	cl client.Client,
+	g *syncGuard,
 	consumer *configurationv1.KongConsumer,
 ) error {
 	cpID := consumer.GetControlPlaneID()
@@ -80,19 +81,43 @@ func updateConsumer(
 	}
 	id := consumer.GetKonnectStatus().GetKonnectID()
 
-	_, err := sdk.UpsertConsumer(ctx,
-		sdkkonnectops.UpsertConsumerRequest{
-			ControlPlaneID: cpID,
-			ConsumerID:     id,
-			Consumer:       kongConsumerToSDKConsumerInput(consumer),
+	req := sdkkonnectops.UpsertConsumerRequest{
+		ControlPlaneID: cpID,
+		ConsumerID:     id,
+		Consumer:       kongConsumerToSDKConsumerInput(consumer),
+	}
+	// Consumer group assignments are not part of the consumer entity, so they are
+	// included in the payload to send the consumer again when they change.
+	groupIDs, invalidGroups, err := resolveConsumerGroupsKonnectIDs(ctx, consumer, cl)
+	if err != nil {
+		g = nil
+	}
+	payload := struct {
+		Request       sdkkonnectops.UpsertConsumerRequest `json:"request"`
+		GroupIDs      []string                            `json:"group_ids"`
+		InvalidGroups []invalidConsumerGroupRef           `json:"invalid_groups"`
+	}{req, groupIDs, invalidGroups}
+
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.Consumer, error) {
+			resp, err := sdk.GetConsumer(ctx, id, cpID)
+			return resp.GetConsumer(), err
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.Consumer, error) {
+			resp, err := sdk.UpsertConsumer(ctx, req)
+			return resp.GetConsumer(), err
 		},
 	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, consumer); errWrap != nil {
 		return errWrap
 	}
+	if g.skipped() {
+		return nil
+	}
 
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, sdk, cgSDK, cpID); err != nil {
+		g.invalidate()
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Reason:    kcfgkonnect.FailedToAttachConsumerToConsumerGroupReason,
@@ -355,7 +380,7 @@ func adoptConsumer(
 	case commonv1alpha1.AdoptModeOverride:
 		consumerCopy := consumer.DeepCopy()
 		consumerCopy.SetKonnectID(konnectID)
-		if err = updateConsumer(ctx, sdk, cgSDK, cl, consumerCopy); err != nil {
+		if err = updateConsumer(ctx, sdk, cgSDK, cl, nil, consumerCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:

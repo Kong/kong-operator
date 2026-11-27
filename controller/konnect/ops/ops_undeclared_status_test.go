@@ -66,7 +66,7 @@ func TestUpdateProgrammedConditionMessageIsStableOnUndeclaredStatus(t *testing.T
 	ent.SetKonnectID("auth-strategy-id")
 
 	programmedMessage := func() string {
-		_, _ = Update(t.Context(), sdk, 0, cl, &metricsmocks.MockRecorder{}, ent)
+		_, _ = Update(t.Context(), sdk, 0, cl, &metricsmocks.MockRecorder{}, ent, nil)
 		cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 		require.True(t, ok)
 		return cond.Message
