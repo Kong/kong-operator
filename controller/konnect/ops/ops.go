@@ -714,7 +714,7 @@ func Update[
 	case *configurationv1alpha1.KongTarget:
 		err = updateTarget(ctx, sdk.GetTargetsSDK(), g, ent)
 	case *configurationv1alpha1.KongVault:
-		err = updateVault(ctx, cl, sdk.GetVaultSDK(), ent)
+		err = updateVault(ctx, cl, sdk.GetVaultSDK(), g, ent)
 	case *configurationv1alpha1.KongKey:
 		err = updateKey(ctx, sdk.GetKeysSDK(), g, ent)
 	case *configurationv1alpha1.KongKeySet:

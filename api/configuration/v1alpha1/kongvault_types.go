@@ -145,6 +145,10 @@ type KongVaultStatus struct {
 	// +optional
 	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
+	// Sync contains the internal Konnect synchronization state of the entity.
+	// +optional
+	Sync *SyncStatus `json:"sync,omitempty"`
+
 	// Conditions describe the current conditions of the KongVaultStatus.
 	//
 	// Known condition types are:

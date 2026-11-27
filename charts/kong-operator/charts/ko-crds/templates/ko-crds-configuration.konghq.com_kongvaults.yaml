@@ -240,6 +240,18 @@ spec:
                     maxLength: 512
                     type: string
                 type: object
+              sync:
+                properties:
+                  hashVersion:
+                    maxLength: 16
+                    type: string
+                  payloadHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                  representationHash:
+                    pattern: ^sha256:[0-9a-f]{64}$
+                    type: string
+                type: object
             required:
             - conditions
             type: object

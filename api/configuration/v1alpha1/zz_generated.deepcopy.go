@@ -8419,6 +8419,11 @@ func (in *KongVaultStatus) DeepCopyInto(out *KongVaultStatus) {
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
+	if in.Sync != nil {
+		in, out := &in.Sync, &out.Sync
+		*out = new(SyncStatus)
+		**out = **in
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))

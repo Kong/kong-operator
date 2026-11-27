@@ -184,3 +184,13 @@ func (obj *KongCredentialHMAC) GetSyncStatus() *SyncStatus {
 func (obj *KongCredentialHMAC) SetSyncStatus(s *SyncStatus) {
 	obj.Status.Sync = s
 }
+
+// GetSyncStatus returns the internal Konnect synchronization state of the entity.
+func (v *KongVault) GetSyncStatus() *SyncStatus {
+	return v.Status.Sync
+}
+
+// SetSyncStatus sets the internal Konnect synchronization state of the entity.
+func (v *KongVault) SetSyncStatus(s *SyncStatus) {
+	v.Status.Sync = s
+}

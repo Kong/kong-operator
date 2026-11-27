@@ -114,6 +114,28 @@ func TestEntitySyncHashesPerType(t *testing.T) {
 			},
 		},
 		{
+			name: "vault",
+			payload: func(id string) any {
+				return sdkkonnectops.UpsertVaultRequest{
+					ControlPlaneID: controlPlaneID,
+					VaultID:        id,
+					Vault: sdkkonnectcomp.Vault{
+						Name:   "konnect",
+						Prefix: "vault-prefix",
+						Config: map[string]any{"config_store_id": id},
+					},
+				}
+			},
+			repr: func(id string) any {
+				return &sdkkonnectcomp.Vault{
+					ID:     new(id),
+					Name:   "konnect",
+					Prefix: "vault-prefix",
+					Config: map[string]any{"config_store_id": id},
+				}
+			},
+		},
+		{
 			name: "ca-certificate",
 			payload: func(id string) any {
 				return sdkkonnectops.UpsertCaCertificateRequest{
