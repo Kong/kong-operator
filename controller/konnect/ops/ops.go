@@ -355,6 +355,30 @@ func getKonnectIDForUID[
 	}
 }
 
+// controlPlaneRefUnresolvedWithoutID reports whether the entity has no ControlPlane ID
+// because its ControlPlaneRef never resolved to a usable ControlPlane:
+// ControlPlaneRefValid=False with reason Invalid (for example a Control Plane
+// Group) or NotProgrammed (the referenced ControlPlane was never programmed).
+// The ControlPlane ID is only copied to the status once the referenced
+// ControlPlane is programmed, so in both cases the entity can't have been
+// created in Konnect.
+func controlPlaneRefUnresolvedWithoutID(ent k8sutils.ConditionsAware) bool {
+	cpEnt, ok := ent.(interface{ GetControlPlaneID() string })
+	if !ok || cpEnt.GetControlPlaneID() != "" {
+		return false
+	}
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.ControlPlaneRefValidConditionType, ent)
+	if !ok || cond.Status != metav1.ConditionFalse {
+		return false
+	}
+	switch cond.Reason {
+	case konnectv1alpha1.ControlPlaneRefReasonInvalid, konnectv1alpha1.ControlPlaneRefReasonNotProgrammed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Delete deletes a Konnect entity.
 // It returns an error if the entity does not have a Konnect ID or if the operation fails.
 func Delete[
@@ -362,6 +386,18 @@ func Delete[
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, sdk sdkops.SDKWrapper, cl client.Client, metricRecorder metrics.Recorder, ent TEnt) error {
 	if ent.GetKonnectStatus().GetKonnectID() == "" && EntityPersistsKonnectID(ent) {
+		// An entity whose ControlPlaneRef was rejected (for example one that
+		// references a Control Plane Group) or points at a ControlPlane that was
+		// never programmed never gets a ControlPlane ID, so it
+		// can't have been created in Konnect: creation requires that ID. There is
+		// nothing to clean up, and probing Konnect without an ID would fail
+		// forever. An empty ControlPlane ID alone proves nothing: a KongRoute gets
+		// its ControlPlane ID from its KongService after the last status patch, so
+		// the UID probe must still run for it.
+		if controlPlaneRefUnresolvedWithoutID(ent) {
+			return nil
+		}
+
 		// The Konnect ID was never persisted to the status. This can happen if the
 		// operator created the entity in Konnect but was interrupted before writing
 		// the ID to the status (and the in-memory record was lost, e.g. on restart).
