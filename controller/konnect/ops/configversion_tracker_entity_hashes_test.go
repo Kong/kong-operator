@@ -1,6 +1,10 @@
 package ops
 
 import (
+	"maps"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -926,7 +930,31 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 		assert.NotEqual(t, hStored, hReordered)
 	})
 
-	t.Run("opaque plugin config fields named created_at or updated_at are not stripped", func(t *testing.T) {
+	t.Run("nested fields named created_at or updated_at are user data and are kept", func(t *testing.T) {
+		r1 := &sdkkonnectcomp.Route{
+			Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
+			RouteJSON: &sdkkonnectcomp.RouteJSON{
+				ID:        new("r-1"),
+				Headers:   map[string][]string{"created_at": {"a"}},
+				CreatedAt: new(int64(100)),
+				UpdatedAt: new(int64(100)),
+			},
+		}
+		r2 := &sdkkonnectcomp.Route{
+			Type: sdkkonnectcomp.RouteUnionTypeRouteJSON,
+			RouteJSON: &sdkkonnectcomp.RouteJSON{
+				ID:        new("r-1"),
+				Headers:   map[string][]string{"created_at": {"b"}},
+				CreatedAt: new(int64(100)),
+				UpdatedAt: new(int64(200)),
+			},
+		}
+		hr1, err := representationHash(r1)
+		require.NoError(t, err)
+		hr2, err := representationHash(r2)
+		require.NoError(t, err)
+		assert.NotEqual(t, hr1, hr2, "a change of a route header named created_at must be detected")
+
 		p1 := &sdkkonnectcomp.Plugin{
 			ID:        new("p-1"),
 			Name:      "custom",
@@ -966,4 +994,83 @@ func TestCanonicalRepresentationNormalization(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEqual(t, h1, h2)
 	})
+}
+
+// guardedRepresentationTypes are the SDK types of the Konnect representations
+// compared by upsertUnlessInSync.
+var guardedRepresentationTypes = []any{
+	sdkkonnectcomp.ACL{},
+	sdkkonnectcomp.BasicAuth{},
+	sdkkonnectcomp.CACertificate{},
+	sdkkonnectcomp.Certificate{},
+	sdkkonnectcomp.Consumer{},
+	sdkkonnectcomp.ConsumerGroup{},
+	sdkkonnectcomp.HMACAuth{},
+	sdkkonnectcomp.Jwt{},
+	sdkkonnectcomp.Key{},
+	sdkkonnectcomp.KeyAuth{},
+	sdkkonnectcomp.KeySet{},
+	sdkkonnectcomp.Plugin{},
+	sdkkonnectcomp.Route{},
+	sdkkonnectcomp.Service{},
+	sdkkonnectcomp.Sni{},
+	sdkkonnectcomp.Target{},
+	sdkkonnectcomp.Upstream{},
+}
+
+// TestRepresentationTypesHaveTopLevelTimestampsOnly checks that the volatile
+// fields of every guarded representation type are top-level fields, as
+// canonicalRepresentationJSON only removes them from the top-level object.
+// A typed volatile field below the top level would not be removed and would
+// make every GET verification send a PUT.
+func TestRepresentationTypesHaveTopLevelTimestampsOnly(t *testing.T) {
+	for _, v := range guardedRepresentationTypes {
+		rt := reflect.TypeOf(v)
+		t.Run(rt.Name(), func(t *testing.T) {
+			topLevel, nested := volatileFieldPaths(rt, 0, "", map[reflect.Type]bool{})
+			assert.Empty(t, nested, "volatile fields below the top level are not removed before hashing")
+			assert.NotEmpty(t, topLevel, "expected top-level volatile fields")
+		})
+	}
+}
+
+// volatileFieldPaths returns the JSON paths of the volatile fields of rt at the
+// top level and below it. SDK union members are serialized flattened, so they
+// stay at the depth of the union.
+func volatileFieldPaths(rt reflect.Type, depth int, path string, seen map[reflect.Type]bool) (topLevel, nested []string) {
+	for rt.Kind() == reflect.Pointer || rt.Kind() == reflect.Slice || rt.Kind() == reflect.Array {
+		rt = rt.Elem()
+	}
+	if rt.Kind() == reflect.Map {
+		return volatileFieldPaths(rt.Elem(), depth+1, path+"[*]", seen)
+	}
+	if rt.Kind() != reflect.Struct || seen[rt] {
+		return nil, nil
+	}
+	seen = maps.Clone(seen)
+	seen[rt] = true
+	for f := range rt.Fields() {
+		if !f.IsExported() {
+			continue
+		}
+		if f.Tag.Get("union") == "member" {
+			top, below := volatileFieldPaths(f.Type, depth, path, seen)
+			topLevel, nested = append(topLevel, top...), append(nested, below...)
+			continue
+		}
+		name, _, _ := strings.Cut(f.Tag.Get("json"), ",")
+		if name == "" || name == "-" {
+			continue
+		}
+		if slices.Contains(volatileRepresentationFields, name) {
+			if depth == 0 {
+				topLevel = append(topLevel, path+"."+name)
+			} else {
+				nested = append(nested, path+"."+name)
+			}
+		}
+		top, below := volatileFieldPaths(f.Type, depth+1, path+"."+name, seen)
+		topLevel, nested = append(topLevel, top...), append(nested, below...)
+	}
+	return topLevel, nested
 }

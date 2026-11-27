@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"slices"
 	"strings"
 )
 
@@ -88,8 +87,8 @@ func canonicalPayloadJSON(controlPlaneID, konnectID string, payload any) ([]byte
 }
 
 // canonicalRepresentationJSON encodes a Konnect entity representation into
-// canonical JSON: object keys are sorted recursively, and volatile
-// server-managed fields are removed.
+// canonical JSON: object keys are sorted recursively, and the volatile
+// server-managed fields of the entity are removed from the top-level object.
 func canonicalRepresentationJSON(v any) ([]byte, error) {
 	return canonicalizeJSON(v, canonicalizeModeRepresentation)
 }
@@ -99,8 +98,18 @@ func canonicalizeJSON(v any, mode canonicalizeMode) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	canonical := canonicalizeValue(decoded, mode, false)
-	return json.Marshal(canonical)
+	if obj, ok := decoded.(map[string]any); ok && mode == canonicalizeModeRepresentation {
+		// Volatile fields are server-managed fields of the entity itself, so
+		// they are only removed from the top-level object. A nested key with
+		// the same name is user data, for example a route header or a plugin
+		// config field, and a change to it must be detected.
+		for _, field := range volatileRepresentationFields {
+			delete(obj, field)
+		}
+	}
+	// encoding/json sorts the keys of the decoded maps at every depth, and
+	// json.Number keeps the exact encoding of numbers.
+	return json.Marshal(decoded)
 }
 
 func decodeJSONValue(v any) (any, error) {
@@ -117,35 +126,11 @@ func decodeJSONValue(v any) (any, error) {
 	return m, nil
 }
 
-func canonicalizeValue(v any, mode canonicalizeMode, inOpaqueConfig bool) any {
-	switch value := v.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(value))
-		for k, child := range value {
-			if mode == canonicalizeModeRepresentation && !inOpaqueConfig && slices.Contains(volatileRepresentationFields, k) {
-				continue
-			}
-			// Plugin "config" maps hold arbitrary plugin-specific schemas: keep
-			// recursive key sorting, but do not strip fields inside them, as a
-			// plugin config key named like a volatile field is regular data.
-			childOpaque := inOpaqueConfig || k == "config"
-			out[k] = canonicalizeValue(child, mode, childOpaque)
-		}
-		return out
-	case []any:
-		out := make([]any, len(value))
-		for i, child := range value {
-			out[i] = canonicalizeValue(child, mode, inOpaqueConfig)
-		}
-		return out
-	default:
-		return value
-	}
-}
-
-// volatileRepresentationFields are the fields of a Konnect entity
+// volatileRepresentationFields are the top-level fields of a Konnect entity
 // representation that Konnect changes without the entity changing. They are
-// removed, at any depth outside plugin configs, before hashing a representation.
+// removed from the top-level object before hashing a representation; no
+// guarded representation type has such fields below the top level (see
+// TestRepresentationTypesHaveTopLevelTimestampsOnly).
 //
 // Comparing the PUT and GET responses of every guarded entity type against
 // Konnect showed no other such field. A missing entry costs a PUT whenever the

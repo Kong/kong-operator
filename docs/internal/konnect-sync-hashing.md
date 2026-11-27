@@ -42,9 +42,10 @@ Both desired payloads and Konnect representations go through JSON serialization 
 - **Arrays keep their order**: No array is reordered, at any depth. A different order means a different payload or representation:
   - Payloads are built deterministically, so equal desired states produce equal arrays. For example, `GenerateTagsForObject` sorts tags, and `consumerSyncPayload` sorts the resolved consumer group IDs and invalid references.
   - Representations are compared with representations only, and Konnect returns arrays in the same order on PUT and GET (see below).
-- **Opaque plugin `config` preservation**: Inside `"config"` maps on `KongPluginBinding`, keys are recursively sorted, but fields are never stripped because plugin config schemas are plugin-defined.
-- **Volatile representation fields**: When hashing Konnect entity representations (outside `"config"`), the fields listed in `volatileRepresentationFields` (`created_at`, `updated_at`) are stripped recursively.
-  A field missing from the list costs a PUT whenever the entity is verified with a GET, not a missed change.
+- **Volatile representation fields**: When hashing Konnect entity representations, the fields listed in `volatileRepresentationFields` (`created_at`, `updated_at`) are removed from the top-level object only.
+  - They are server-managed fields of the entity itself. `TestRepresentationTypesHaveTopLevelTimestampsOnly` checks that no guarded representation type has them below the top level.
+  - A nested key with the same name is user data, for example a route header, a plugin `config` field, or a label, and is kept so that a change to it is detected.
+  - A field missing from the list costs a PUT whenever the entity is verified with a GET, not a missed change.
 
 ### Verified Konnect PUT vs GET Behavior
 

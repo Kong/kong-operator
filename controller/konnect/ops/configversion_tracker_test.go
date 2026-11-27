@@ -701,7 +701,7 @@ func TestRepresentationHash(t *testing.T) {
 		"a": map[string]any{"value": "x"},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, f, g, "volatile fields must be ignored recursively")
+	assert.NotEqual(t, f, g, "nested fields named like volatile fields are user data and must be kept")
 }
 
 func TestSyncHashEncoding(t *testing.T) {
