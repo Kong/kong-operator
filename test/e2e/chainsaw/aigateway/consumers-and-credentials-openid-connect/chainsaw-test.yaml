@@ -12,11 +12,9 @@ spec:
     OAuth-mapped (not key-auth) consumers: config.consumerClaims maps the token's client_id
     claim to an AIGatewayConsumer's apiSpec.customID. See auth-strategy-openid-connect
     for a minimal, bare (no ACL/consumer group) counterpart. Requests with no bearer token,
-    or an invalid one, fall through openid-connect as an anonymous consumer, which the ACL
-    then denies with 403 (rather than openid-connect itself rejecting with 401). Scenarios
-    covered:
-      1. Requests without an Authorization header are rejected (403).
-      2. Requests with an invalid Bearer token are rejected (403).
+    or an invalid one, are rejected with 401. Scenarios covered:
+      1. Requests without an Authorization header are rejected (401).
+      2. Requests with an invalid Bearer token are rejected (401).
       3. A real access token obtained from the mock OIDC provider's client_credentials
          grant, for a consumer in the allowed AIGatewayConsumerGroup, succeeds (200).
       4. Removing/restoring a consumer's group membership at runtime immediately flips it
@@ -217,8 +215,6 @@ spec:
           value: ($namespace)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
-    # No bearer token / an invalid one falls through openid-connect as an anonymous
-    # consumer, which the ACL then denies with 403 (not openid-connect's own 401).
     - name: 11-Reject-request-without-bearer-token-from-cluster
       bindings:
         - name: method
@@ -226,7 +222,7 @@ spec:
         - name: route_path
           value: ($http_agent_route_path)
         - name: expected_status
-          value: "403"
+          value: "401"
         - name: oidc_token_url
           value: ''
         - name: oidc_client_id
@@ -242,7 +238,7 @@ spec:
         - name: route_path
           value: ($http_agent_route_path)
         - name: expected_status
-          value: "403"
+          value: "401"
         - name: oidc_token_url
           value: ''
         - name: oidc_client_id
@@ -260,7 +256,7 @@ spec:
         - name: request_headers
           value: "Authorization:Bearer not-a-real-token"
         - name: expected_status
-          value: "403"
+          value: "401"
         - name: oidc_token_url
           value: ''
         - name: oidc_client_id
@@ -278,7 +274,7 @@ spec:
         - name: request_headers
           value: "Authorization:Bearer not-a-real-token"
         - name: expected_status
-          value: "403"
+          value: "401"
         - name: oidc_token_url
           value: ''
         - name: oidc_client_id

@@ -14,12 +14,11 @@ spec:
     `type: http` route to the shared go-echo backend (no model routing:
     consumer/credential/ACL enforcement happens in front of the route
     regardless of what backs it). Requests with no credential, or with a
-    credential key-auth can't validate (garbage/deleted), fall through key-auth
-    as an anonymous consumer, which the ACL then denies with 403 (rather than
-    key-auth itself rejecting with 401). Scenarios covered:
+    credential key-auth can't validate (garbage/deleted), are rejected with
+    401. Scenarios covered:
 
       1. Requests without a credential, or with a garbage credential, are
-         rejected (403).
+         rejected (401).
       2. A valid credential for a consumer enrolled in the allowed group
          succeeds (200).
       3. Removing/restoring the consumer's group membership at runtime flips
@@ -222,7 +221,7 @@ spec:
             - name: route_path
               value: ($http_agent_route_path)
             - name: expected_status
-              value: "403"
+              value: "401"
     - name: Reject-request-with-invalid-credential
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
@@ -235,7 +234,7 @@ spec:
             - name: request_headers
               value: (join('', ['apikey:', ($invalid_api_key_value)]))
             - name: expected_status
-              value: "403"
+              value: "401"
     - name: Accept-request-with-valid-credential
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
@@ -492,7 +491,7 @@ spec:
             - name: request_headers
               value: (join('', ['apikey:', ($broken_api_key_value)]))
             - name: expected_status
-              value: "403"
+              value: "401"
     - name: Delete-second-credential-and-revoke-all-access
       try:
         - delete:
@@ -520,7 +519,7 @@ spec:
             - name: request_headers
               value: (join('', ['apikey:', ($api_key_value_2)]))
             - name: expected_status
-              value: "403"
+              value: "401"
   catch:
     - description: Capture debug snapshot on test failure.
       script:
