@@ -701,11 +701,11 @@ func TestRepresentationHash(t *testing.T) {
 		"a": map[string]any{"value": "x"},
 	})
 	require.NoError(t, err)
-	assert.Equal(t, f, g, "volatile fields must be ignored recursively")
+	assert.NotEqual(t, f, g, "nested fields named like volatile fields are user data and must be kept")
 }
 
 func TestSyncHashEncoding(t *testing.T) {
-	h, err := hashJSON("payload")
+	h, err := entityPayloadHash(testCPID, "entity-id", "payload")
 	require.NoError(t, err)
 	assert.Regexp(t, `^sha256:[0-9a-f]{64}$`, h.String())
 
@@ -757,7 +757,7 @@ func TestConfigVersionTrackerStatusMismatchSends(t *testing.T) {
 		{
 			name: "payload hash mismatch",
 			mutate: func(s *configurationv1alpha1.SyncStatus) {
-				h, err := hashJSON("other")
+				h, err := entityPayloadHash(testCPID, "entity-id", "other")
 				require.NoError(t, err)
 				s.PayloadHash = h.String()
 			},
@@ -892,4 +892,59 @@ func TestUpdateSkipsPeriodicUpdateInSyncWithKonnect(t *testing.T) {
 	require.NoError(t, err)
 	_, upserts = services.calls()
 	assert.Equal(t, 1, upserts, "generation change must be sent")
+}
+
+func TestConfigVersionTrackerHashVersionMigration(t *testing.T) {
+	version := newFakeConfigVersion(t)
+	services := newFakeKonnectServices(t)
+	svc := newTestKongService()
+
+	// Seed status with a valid-looking digest produced by a previous hash scheme.
+	// Even if the raw digest bytes match, a mismatched hashVersion must never be
+	// compared directly against the current scheme; it must trigger a one-time
+	// re-sync that rewrites status.sync with the current SyncHashVersion.
+	initialTracker, _ := newTestConfigVersionTracker()
+	g := initialTracker.guard(version.sdk, svc.GetUID(), testCPID, true, nil)
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	oldStatus := g.pendingStatus()
+	require.NotNil(t, oldStatus)
+	oldStatus.HashVersion = "v0"
+	svc.SetSyncStatus(oldStatus)
+	services.calls()
+
+	// Step 1: After upgrading to the current SyncHashVersion, the entity is sent
+	// once without GET-verifying against the incompatible v0 hashes.
+	upgraded, _ := newTestConfigVersionTracker()
+	g = upgraded.guard(version.sdk, svc.GetUID(), testCPID, true, svc.GetSyncStatus())
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	assert.Equal(t, syncOutcomeSent, g.outcome)
+	gets, upserts := services.calls()
+	assert.Equal(t, 0, gets, "mismatched hashVersion must not compare against old representation hash")
+	assert.Equal(t, 1, upserts, "mismatched hashVersion must perform one-time re-sync PUT")
+
+	migratedStatus := g.pendingStatus()
+	require.NotNil(t, migratedStatus)
+	assert.Equal(t, SyncHashVersion, migratedStatus.HashVersion)
+	svc.SetSyncStatus(migratedStatus)
+	rec, ok := g.pendingRecord()
+	require.True(t, ok)
+	upgraded.store(svc.GetUID(), rec)
+
+	// Step 2: Subsequent periodic reconciles in the same process skip both GET and PUT.
+	g = upgraded.guard(version.sdk, svc.GetUID(), testCPID, true, svc.GetSyncStatus())
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	assert.Equal(t, syncOutcomeSkipped, g.outcome)
+	gets, upserts = services.calls()
+	assert.Equal(t, 0, gets)
+	assert.Equal(t, 0, upserts)
+
+	// Step 3: After another restart with the migrated SyncStatus, the entity is
+	// verified with a GET and not PUT again.
+	restarted, _ := newTestConfigVersionTracker()
+	g = restarted.guard(version.sdk, svc.GetUID(), testCPID, true, svc.GetSyncStatus())
+	require.NoError(t, updateService(t.Context(), services.sdk, g, svc))
+	assert.Equal(t, syncOutcomeVerified, g.outcome)
+	gets, upserts = services.calls()
+	assert.Equal(t, 1, gets)
+	assert.Equal(t, 0, upserts)
 }

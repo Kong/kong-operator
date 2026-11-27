@@ -1,9 +1,11 @@
 package ops
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -92,11 +94,7 @@ func updateConsumer(
 	if err != nil {
 		g = nil
 	}
-	payload := struct {
-		Request       sdkkonnectops.UpsertConsumerRequest `json:"request"`
-		GroupIDs      []string                            `json:"group_ids"`
-		InvalidGroups []invalidConsumerGroupRef           `json:"invalid_groups"`
-	}{req, groupIDs, invalidGroups}
+	payload := newConsumerSyncPayload(req, groupIDs, invalidGroups)
 
 	err = upsertUnlessInSync(ctx, g, id, payload,
 		func(ctx context.Context) (*sdkkonnectcomp.Consumer, error) {
@@ -277,8 +275,37 @@ func populateConsumerGroupRefsValidCondition(invalidConsumerGroups []invalidCons
 }
 
 type invalidConsumerGroupRef struct {
-	Name   string
-	Reason string
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
+}
+
+type consumerSyncPayload struct {
+	Request       sdkkonnectops.UpsertConsumerRequest `json:"request"`
+	GroupIDs      []string                            `json:"group_ids,omitempty"`
+	InvalidGroups []invalidConsumerGroupRef           `json:"invalid_groups,omitempty"`
+}
+
+func newConsumerSyncPayload(
+	req sdkkonnectops.UpsertConsumerRequest,
+	groupIDs []string,
+	invalidGroups []invalidConsumerGroupRef,
+) consumerSyncPayload {
+	sortedGroupIDs := slices.Clone(groupIDs)
+	slices.Sort(sortedGroupIDs)
+
+	sortedInvalid := slices.Clone(invalidGroups)
+	slices.SortFunc(sortedInvalid, func(a, b invalidConsumerGroupRef) int {
+		if c := cmp.Compare(a.Name, b.Name); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Reason, b.Reason)
+	})
+
+	return consumerSyncPayload{
+		Request:       req,
+		GroupIDs:      sortedGroupIDs,
+		InvalidGroups: sortedInvalid,
+	}
 }
 
 // resolveConsumerGroupsKonnectIDs resolves the Konnect IDs of the ConsumerGroups referenced by the KongConsumer. It
