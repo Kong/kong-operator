@@ -117,6 +117,10 @@ spec:
                             required:
                             - type
                             type: object
+                            x-kubernetes-validations:
+                            - message: basic must be set when type is basic, and only
+                                then
+                              rule: 'self.type == ''basic'' ? has(self.basic) : !has(self.basic)'
                           endpoint:
                             maxLength: 253
                             minLength: 1
@@ -164,6 +168,10 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: confluent must be set when type is confluent, and only
+                    then
+                  rule: 'self.type == ''confluent'' ? has(self.confluent) : !has(self.confluent)'
               gatewayRef:
                 properties:
                   konnectID:

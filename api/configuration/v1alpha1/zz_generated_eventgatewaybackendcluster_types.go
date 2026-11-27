@@ -163,6 +163,11 @@ type EventGatewayBackendClusterStatus struct {
 
 // EventGatewayBackendClusterAuthentication represents a union type for authentication.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.anonymous) || self.type == 'anonymous'",message="anonymous must be set only when type is anonymous"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslAwsIam' ? has(self.saslAwsIam) : !has(self.saslAwsIam)",message="saslAwsIam must be set when type is saslAwsIam, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslPlain' ? has(self.saslPlain) : !has(self.saslPlain)",message="saslPlain must be set when type is saslPlain, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'saslScram' ? has(self.saslScram) : !has(self.saslScram)",message="saslScram must be set when type is saslScram, and only then"
 type EventGatewayBackendClusterAuthentication struct {
 	// Type designates the type of configuration.
 	//

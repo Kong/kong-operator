@@ -157,6 +157,15 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: stat must be set when type is stat, and
+                                      only then
+                                    rule: 'self.type == ''stat'' ? has(self.stat)
+                                      : !has(self.stat)'
+                                  - message: dynam must be set when type is dynam,
+                                      and only then
+                                    rule: 'self.type == ''dynam'' ? has(self.dynam)
+                                      : !has(self.dynam)'
                                 resourceType:
                                   description: This rule applies to access only for
                                     type of resource
@@ -978,6 +987,59 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: alterClientQuotas must be set when type is
+                                  alterClientQuotas, and only then
+                                rule: 'self.type == ''alterClientQuotas'' ? has(self.alterClientQuotas)
+                                  : !has(self.alterClientQuotas)'
+                              - message: alterConfigs must be set when type is alterConfigs,
+                                  and only then
+                                rule: 'self.type == ''alterConfigs'' ? has(self.alterConfigs)
+                                  : !has(self.alterConfigs)'
+                              - message: alterUserScramCredentials must be set when
+                                  type is alterUserScramCredentials, and only then
+                                rule: 'self.type == ''alterUserScramCredentials''
+                                  ? has(self.alterUserScramCredentials) : !has(self.alterUserScramCredentials)'
+                              - message: consumerGroupHeartbeat must be set when type
+                                  is consumerGroupHeartbeat, and only then
+                                rule: 'self.type == ''consumerGroupHeartbeat'' ? has(self.consumerGroupHeartbeat)
+                                  : !has(self.consumerGroupHeartbeat)'
+                              - message: createPartitions must be set when type is
+                                  createPartitions, and only then
+                                rule: 'self.type == ''createPartitions'' ? has(self.createPartitions)
+                                  : !has(self.createPartitions)'
+                              - message: createTopics must be set when type is createTopics,
+                                  and only then
+                                rule: 'self.type == ''createTopics'' ? has(self.createTopics)
+                                  : !has(self.createTopics)'
+                              - message: fetch must be set when type is fetch, and
+                                  only then
+                                rule: 'self.type == ''fetch'' ? has(self.fetch) :
+                                  !has(self.fetch)'
+                              - message: incrementalAlterConfigs must be set when
+                                  type is incrementalAlterConfigs, and only then
+                                rule: 'self.type == ''incrementalAlterConfigs'' ?
+                                  has(self.incrementalAlterConfigs) : !has(self.incrementalAlterConfigs)'
+                              - message: joinGroup must be set when type is joinGroup,
+                                  and only then
+                                rule: 'self.type == ''joinGroup'' ? has(self.joinGroup)
+                                  : !has(self.joinGroup)'
+                              - message: offsetCommit must be set when type is offsetCommit,
+                                  and only then
+                                rule: 'self.type == ''offsetCommit'' ? has(self.offsetCommit)
+                                  : !has(self.offsetCommit)'
+                              - message: offsetFetch must be set when type is offsetFetch,
+                                  and only then
+                                rule: 'self.type == ''offsetFetch'' ? has(self.offsetFetch)
+                                  : !has(self.offsetFetch)'
+                              - message: produce must be set when type is produce,
+                                  and only then
+                                rule: 'self.type == ''produce'' ? has(self.produce)
+                                  : !has(self.produce)'
+                              - message: txnOffsetCommit must be set when type is
+                                  txnOffsetCommit, and only then
+                                rule: 'self.type == ''txnOffsetCommit'' ? has(self.txnOffsetCommit)
+                                  : !has(self.txnOffsetCommit)'
                             maxItems: 100
                             minItems: 1
                             type: array
@@ -1027,6 +1089,13 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: acls must be set when type is acls, and only then
+                  rule: 'self.type == ''acls'' ? has(self.acls) : !has(self.acls)'
+                - message: requestRuleValidator must be set when type is requestRuleValidator,
+                    and only then
+                  rule: 'self.type == ''requestRuleValidator'' ? has(self.requestRuleValidator)
+                    : !has(self.requestRuleValidator)'
               eventGatewayVirtualClusterRef:
                 description: EventGatewayVirtualClusterRef is the reference to the
                   parent EventGatewayVirtualCluster object.

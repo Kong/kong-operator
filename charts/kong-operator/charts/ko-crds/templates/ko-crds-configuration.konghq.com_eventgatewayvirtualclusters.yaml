@@ -275,6 +275,23 @@ spec:
                       required:
                       - type
                       type: object
+                      x-kubernetes-validations:
+                      - message: anonymous must be set only when type is anonymous
+                        rule: '!has(self.anonymous) || self.type == ''anonymous'''
+                      - message: clientCertificate must be set only when type is clientCertificate
+                        rule: '!has(self.clientCertificate) || self.type == ''clientCertificate'''
+                      - message: oauthBearer must be set when type is oauthBearer,
+                          and only then
+                        rule: 'self.type == ''oauthBearer'' ? has(self.oauthBearer)
+                          : !has(self.oauthBearer)'
+                      - message: saslPlain must be set when type is saslPlain, and
+                          only then
+                        rule: 'self.type == ''saslPlain'' ? has(self.saslPlain) :
+                          !has(self.saslPlain)'
+                      - message: saslScram must be set when type is saslScram, and
+                          only then
+                        rule: 'self.type == ''saslScram'' ? has(self.saslScram) :
+                          !has(self.saslScram)'
                     minItems: 1
                     type: array
                   description:
@@ -339,6 +356,12 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: exactList must be set only when type is exactList
+                                rule: '!has(self.exactList) || self.type == ''exactList'''
+                              - message: glob must be set when type is glob, and only
+                                  then
+                                rule: 'self.type == ''glob'' ? has(self.glob) : !has(self.glob)'
                             type: array
                           topics:
                             items:
@@ -389,6 +412,12 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: exactList must be set only when type is exactList
+                                rule: '!has(self.exactList) || self.type == ''exactList'''
+                              - message: glob must be set when type is glob, and only
+                                  then
+                                rule: 'self.type == ''glob'' ? has(self.glob) : !has(self.glob)'
                             type: array
                         type: object
                       mode:

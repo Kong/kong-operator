@@ -162,6 +162,14 @@ type EventGatewayVirtualClusterConsumePolicyStatus struct {
 
 // EventGatewayVirtualClusterConsumePolicyConfig represents a union type for EventGatewayVirtualClusterConsumePolicyConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'decrypt' ? has(self.decrypt) : !has(self.decrypt)",message="decrypt must be set when type is decrypt, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'decryptFields' ? has(self.decryptFields) : !has(self.decryptFields)",message="decryptFields must be set when type is decryptFields, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'maskFields' ? has(self.maskFields) : !has(self.maskFields)",message="maskFields must be set when type is maskFields, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'modifyHeaders' ? has(self.modifyHeaders) : !has(self.modifyHeaders)",message="modifyHeaders must be set when type is modifyHeaders, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'schemaValidation' ? has(self.schemaValidation) : !has(self.schemaValidation)",message="schemaValidation must be set when type is schemaValidation, and only then"
+// +kubebuilder:validation:XValidation:rule="!has(self.skipRecord) || self.type == 'skipRecord'",message="skipRecord must be set only when type is skipRecord"
+// +kubebuilder:validation:XValidation:rule="self.type == 'transcode' ? has(self.transcode) : !has(self.transcode)",message="transcode must be set when type is transcode, and only then"
 type EventGatewayVirtualClusterConsumePolicyConfig struct {
 	// Type designates the type of configuration.
 	//

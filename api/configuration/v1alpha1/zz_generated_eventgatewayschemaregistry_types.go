@@ -109,6 +109,8 @@ type EventGatewaySchemaRegistryStatus struct {
 
 // EventGatewaySchemaRegistryConfig represents a union type for EventGatewaySchemaRegistryConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'confluent' ? has(self.confluent) : !has(self.confluent)",message="confluent must be set when type is confluent, and only then"
 type EventGatewaySchemaRegistryConfig struct {
 	// Type designates the type of configuration.
 	//

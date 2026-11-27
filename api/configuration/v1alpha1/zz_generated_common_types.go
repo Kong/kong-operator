@@ -215,14 +215,12 @@ func flattenSDKUnionsWalk(v any, paths [][]string) any {
 	return v
 }
 
+// sdkUnionDiscriminatorKeys are the only keys read as union discriminators,
+// in their CRD and SDK forms.
+var sdkUnionDiscriminatorKeys = []string{"type", "op", "schemaType", "schema_type", "outputFormat", "output_format"}
+
 func nestedSDKUnionMember(object map[string]any) (string, string, any, bool) {
-	preferred := []string{"type", "op", "kind", "mode"}
-	for _, key := range preferred {
-		if value, inner, ok := nestedSDKUnionMemberForKey(object, key); ok {
-			return key, value, inner, true
-		}
-	}
-	for key := range object {
+	for _, key := range sdkUnionDiscriminatorKeys {
 		if value, inner, ok := nestedSDKUnionMemberForKey(object, key); ok {
 			return key, value, inner, true
 		}

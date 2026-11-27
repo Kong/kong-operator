@@ -161,6 +161,13 @@ type EventGatewayVirtualClusterProducePolicyStatus struct {
 
 // EventGatewayVirtualClusterProducePolicyConfig represents a union type for EventGatewayVirtualClusterProducePolicyConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'encrypt' ? has(self.encrypt) : !has(self.encrypt)",message="encrypt must be set when type is encrypt, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'encryptFields' ? has(self.encryptFields) : !has(self.encryptFields)",message="encryptFields must be set when type is encryptFields, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'maskFields' ? has(self.maskFields) : !has(self.maskFields)",message="maskFields must be set when type is maskFields, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'modifyHeaders' ? has(self.modifyHeaders) : !has(self.modifyHeaders)",message="modifyHeaders must be set when type is modifyHeaders, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'schemaValidation' ? has(self.schemaValidation) : !has(self.schemaValidation)",message="schemaValidation must be set when type is schemaValidation, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'transcode' ? has(self.transcode) : !has(self.transcode)",message="transcode must be set when type is transcode, and only then"
 type EventGatewayVirtualClusterProducePolicyConfig struct {
 	// Type designates the type of configuration.
 	//

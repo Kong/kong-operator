@@ -100,6 +100,9 @@ type EventGatewayVirtualClusterPolicyStatus struct {
 
 // EventGatewayVirtualClusterPolicyConfig represents a union type for EventGatewayVirtualClusterPolicyConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'acls' ? has(self.acls) : !has(self.acls)",message="acls must be set when type is acls, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'requestRuleValidator' ? has(self.requestRuleValidator) : !has(self.requestRuleValidator)",message="requestRuleValidator must be set when type is requestRuleValidator, and only then"
 type EventGatewayVirtualClusterPolicyConfig struct {
 	// Type designates the type of configuration.
 	//

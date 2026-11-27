@@ -100,6 +100,9 @@ type EventGatewayListenerPolicyStatus struct {
 
 // EventGatewayListenerPolicyConfig represents a union type for EventGatewayListenerPolicyConfig.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'forwardToVirtualCluster' ? has(self.forwardToVirtualCluster) : !has(self.forwardToVirtualCluster)",message="forwardToVirtualCluster must be set when type is forwardToVirtualCluster, and only then"
+// +kubebuilder:validation:XValidation:rule="self.type == 'tlsServer' ? has(self.tlsServer) : !has(self.tlsServer)",message="tlsServer must be set when type is tlsServer, and only then"
 type EventGatewayListenerPolicyConfig struct {
 	// Type designates the type of configuration.
 	//
