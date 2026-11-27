@@ -19,6 +19,7 @@ func createKongCredentialBasicAuth(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: CreateOp}
 	}
@@ -26,6 +27,7 @@ func createKongCredentialBasicAuth(
 	resp, err := sdk.CreateBasicAuthWithConsumer(ctx,
 		sdkkonnectops.CreateBasicAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			BasicAuthWithoutParents:     kongCredentialBasicAuthToBasicAuthWithoutParents(cred),
 		},
@@ -58,6 +60,7 @@ func updateKongCredentialBasicAuth(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
@@ -66,6 +69,7 @@ func updateKongCredentialBasicAuth(
 	consumerID := cred.Status.Konnect.GetConsumerID()
 	req := sdkkonnectops.UpsertBasicAuthWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: consumerID,
 		BasicAuthID:                 id,
 		BasicAuthWithoutParents:     kongCredentialBasicAuthToBasicAuthWithoutParents(cred),
@@ -74,6 +78,7 @@ func updateKongCredentialBasicAuth(
 		func(ctx context.Context) (*sdkkonnectcomp.BasicAuth, error) {
 			resp, err := sdk.GetBasicAuthWithConsumer(ctx, sdkkonnectops.GetBasicAuthWithConsumerRequest{
 				ControlPlaneID:              cpID,
+				Workspace:                   workspace,
 				ConsumerIDForNestedEntities: consumerID,
 				BasicAuthID:                 id,
 			})
@@ -101,10 +106,12 @@ func deleteKongCredentialBasicAuth(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	id := cred.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteBasicAuthWithConsumer(ctx,
 		sdkkonnectops.DeleteBasicAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			BasicAuthID:                 id,
 		})
@@ -121,6 +128,7 @@ func adoptKongCredentialBasicAuth(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -136,6 +144,7 @@ func adoptKongCredentialBasicAuth(
 
 	resp, err := sdk.GetBasicAuthWithConsumer(ctx, sdkkonnectops.GetBasicAuthWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 		BasicAuthID:                 konnectID,
 	})
@@ -200,12 +209,14 @@ func getKongCredentialBasicAuthForUID(
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 
 	req := sdkkonnectops.ListBasicAuthRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cred)),
 	}
 

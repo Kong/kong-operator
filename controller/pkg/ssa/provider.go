@@ -135,6 +135,15 @@ func (p *TypeConverterProvider) TypedToObject(v *typed.TypedValue) (runtime.Obje
 	return p.get().TypedToObject(v)
 }
 
+// Snapshot returns the converter that is current now. Rebuild may swap the
+// provider's converter at any time, so callers that convert two objects and
+// then compare or merge them must use one snapshot for both conversions:
+// TypedValue.Compare and Merge fail when the two values come from different
+// schemas.
+func (p *TypeConverterProvider) Snapshot() managedfields.TypeConverter {
+	return p.get()
+}
+
 // get returns the current converter. Safe to call any time after
 // NewTypeConverterProvider has returned, since construction always performs
 // an initial Rebuild.

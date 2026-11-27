@@ -36,6 +36,11 @@ func TestKongService(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("cp ref workspace", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupCPRefWorkspace(t, obj, common.WorkspaceSupported, "").
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("id immutability", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongService]{
 			{

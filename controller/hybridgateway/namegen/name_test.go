@@ -336,7 +336,7 @@ func TestNewKongUpstreamNameForGRPCRoute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := NewKongUpstreamNameForGRPCRouteRule(tt.route, tt.cp, tt.rule)
-			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + hashForGRPCRouteRuleServiceLikeName(tt.route, tt.rule)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(controlPlaneRefForHash(tt.cp)) + "." + hashForGRPCRouteRuleServiceLikeName(tt.route, tt.rule)
 			assert.Equal(t, expected, result)
 		})
 	}
@@ -400,7 +400,7 @@ func TestNewKongServiceName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := NewKongServiceNameForHTTPRouteRule(tt.route, tt.cp, tt.rule)
-			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(controlPlaneRefForHash(tt.cp)) + "." + utils.Hash32(tt.rule.BackendRefs)
 			assert.Equal(t, expected, result)
 		})
 	}
@@ -558,7 +558,7 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 		}
 	}
 	buildExpected := func(readable string, cp *commonv1alpha1.ControlPlaneRef, backends []gatewayv1.HTTPBackendRef) string {
-		hashPart := "cp" + utils.Hash32(cp) + "." + utils.Hash32(backends)
+		hashPart := "cp" + utils.Hash32(controlPlaneRefForHash(cp)) + "." + utils.Hash32(backends)
 		name := readable + "." + hashPart
 		if len(name) <= maxLen {
 			return name
@@ -690,7 +690,7 @@ func TestNewKongServiceNameForGRPCRoute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := NewKongServiceNameForGRPCRouteRule(tt.route, tt.cp, tt.rule)
-			expected := tt.expectedReadable + ".cp" + utils.Hash32(tt.cp) + "." + utils.Hash32(tt.rule.BackendRefs)
+			expected := tt.expectedReadable + ".cp" + utils.Hash32(controlPlaneRefForHash(tt.cp)) + "." + utils.Hash32(tt.rule.BackendRefs)
 			assert.Equal(t, expected, result)
 		})
 	}
@@ -765,7 +765,7 @@ func TestNewKongRouteNameForMatch_WithoutParentRefKeepsLegacyFormat(t *testing.T
 	}
 
 	result := NewKongRouteNameForMatch(route, cp, nil, match, 0)
-	expected := "http.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".m00"
+	expected := "http.default-test-route.cp" + utils.Hash32(controlPlaneRefForHash(cp)) + "." + utils.Hash32(match) + ".m00"
 	assert.Equal(t, expected, result)
 }
 
@@ -793,7 +793,7 @@ func TestNewKongRouteNameForGRPCRouteMatch_WithoutParentRefKeepsLegacyFormat(t *
 	}
 
 	result := NewKongRouteNameForGRPCRouteMatch(route, cp, nil, match, 0, 0)
-	expected := "grpc.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(match) + ".r00.m00"
+	expected := "grpc.default-test-route.cp" + utils.Hash32(controlPlaneRefForHash(cp)) + "." + utils.Hash32(match) + ".r00.m00"
 	assert.Equal(t, expected, result)
 }
 
@@ -857,7 +857,7 @@ func TestNewKongRouteNameForTLSRouteRule_WithoutParentRefKeepsLegacyFormat(t *te
 	}
 
 	result := NewKongRouteNameForTLSRouteRule(route, cp, nil, rule)
-	expected := "tls.default-test-route.cp" + utils.Hash32(cp) + "." + utils.Hash32(rule)
+	expected := "tls.default-test-route.cp" + utils.Hash32(controlPlaneRefForHash(cp)) + "." + utils.Hash32(rule)
 	assert.Equal(t, expected, result)
 }
 

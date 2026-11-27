@@ -168,6 +168,7 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
 		old := ent.DeepCopyObject().(TEnt)
 		resource.SetControlPlaneID(cp.Status.ID)
+		setWorkspace(ent, cpRef)
 		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
 			if apierrors.IsConflict(err) {

@@ -10744,6 +10744,7 @@ It is used to reference a Control Plane entity.
 | --- | --- |
 | `type` _string_ | Type indicates the type of the control plane being referenced. Allowed values: - konnectNamespacedRef - kic<br /><br />The default is kic, which implies that the Control Plane is KIC. |
 | `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster. It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups, because they are read-only. This field is required when the Type is konnectNamespacedRef. |
+| `workspace` _string_ | Workspace is the name or ID of the Konnect Workspace, in the referenced Control Plane, that the entity belongs to. When unset, the entity belongs to the Control Plane's default Workspace. The Workspace must already exist in Konnect. It can only be set when Type is konnectNamespacedRef, and the referenced Control Plane must support Workspaces. |
 
 _Appears in:_
 
@@ -23729,6 +23730,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state 
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `dataplane_groups` _[][KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatusgroup)_ | DataPlaneGroups is a list of deployed data-plane groups. |
 
 _Appears in:_
@@ -24506,6 +24508,7 @@ MCPServerStatus defines the observed state of MCPServer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `konnectSpec` _[MCPServerKonnectSpec](#konnect-konghq-com-v1alpha1-types-mcpserverkonnectspec)_ | KonnectSpec holds MCPServer-specific status fields related to its state on Konnect, such as the remote name and version. |
 
 _Appears in:_
@@ -25715,6 +25718,7 @@ with references to a ControlPlane, a (client) Certificate, and a list of CA Cert
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `certificateID` _string_ | CertificateID is the Konnect ID of the client Certificate referenced by this entity. |
 | `caCertificateIDs` _[]string_ | CACertificateIDs lists the Konnect IDs of the CA Certificates referenced by this entity. |
 
@@ -25736,6 +25740,7 @@ of a Konnect entity with references to a ControlPlane and a Certificate.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `certificateID` _string_ | CertificateID is the Konnect ID of the Certificate this entity is associated with. |
 
 _Appears in:_
@@ -25757,6 +25762,7 @@ of a Konnect entity with references to a ControlPlane and a Consumer.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `consumerID` _string_ | ConsumerID is the Konnect ID of the Consumer this entity is associated with. |
 
 _Appears in:_
@@ -25781,6 +25787,7 @@ of a Konnect entity with references to a ControlPlane and a KeySet.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `keySetID` _string_ | KeySetID is the Konnect ID of the KeySet this entity is associated with. |
 
 _Appears in:_
@@ -25801,6 +25808,7 @@ of a Konnect entity with references to a ControlPlane and a Service.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `serviceID` _string_ | ServiceID is the Konnect ID of the Service this entity is associated with. |
 
 _Appears in:_
@@ -25821,6 +25829,7 @@ of a Konnect entity with references to a ControlPlane and an Upstream.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 | `upstreamID` _string_ | UpstreamID is the Konnect ID of the Upstream this entity is associated with. |
 
 _Appears in:_
@@ -25841,6 +25850,7 @@ with a reference to a ControlPlane.
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `workspace` _string_ | Workspace is the Konnect Workspace (name or ID) in the ControlPlane this entity belongs to. Empty means the ControlPlane's default Workspace. |
 
 _Appears in:_
 

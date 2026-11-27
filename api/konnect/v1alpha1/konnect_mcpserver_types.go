@@ -66,6 +66,7 @@ type MCPServerSpec struct {
 	//
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
+	// +kubebuilder:validation:XValidation:rule="!has(self.workspace)", message="workspace is not supported for MCPServer"
 	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 }
 

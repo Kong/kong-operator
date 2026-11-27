@@ -95,6 +95,10 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
                 - message: '''konnectID'' type is not supported'
@@ -108,6 +112,8 @@ spec:
                     : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               id:
                 type: string
               secretRef:
@@ -150,6 +156,9 @@ spec:
             - message: KIC is not supported as control plane
               rule: '!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type
                 != ''kic'''
+            - message: 'controlPlaneRef.workspace is not supported: CA Certificates
+                belong to the ControlPlane, not to a Workspace'
+              rule: '!has(self.controlPlaneRef) || !has(self.controlPlaneRef.workspace)'
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type
                 == ''konnectNamespacedRef'')'
@@ -225,6 +234,8 @@ spec:
                     type: string
                   serverURL:
                     maxLength: 512
+                    type: string
+                  workspace:
                     type: string
                 type: object
               sync:

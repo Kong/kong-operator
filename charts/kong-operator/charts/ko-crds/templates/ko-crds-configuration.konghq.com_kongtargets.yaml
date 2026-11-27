@@ -189,6 +189,8 @@ spec:
                     type: string
                   upstreamID:
                     type: string
+                  workspace:
+                    type: string
                 type: object
               sync:
                 properties:

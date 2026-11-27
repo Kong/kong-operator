@@ -68,6 +68,50 @@ func TestCreateKongService(t *testing.T) {
 			},
 		},
 		{
+			name: "success in a non-default workspace",
+			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := mocks.NewMockServicesSDK(t)
+				svc := &configurationv1alpha1.KongService{
+					Spec: configurationv1alpha1.KongServiceSpec{
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Name: new("svc-1"),
+							Host: "example.com",
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+							ControlPlaneID: "123456789",
+							Workspace:      "team-a",
+						},
+					},
+				}
+
+				sdk.
+					EXPECT().
+					CreateService(ctx, sdkkonnectops.CreateServiceRequest{
+						ControlPlaneID: "123456789",
+						Workspace:      "team-a",
+						ServiceRequest: kongServiceToSDKServiceInput(svc),
+					}).
+					Return(
+						&sdkkonnectops.CreateServiceResponse{
+							Service: &sdkkonnectcomp.Service{
+								ID:   new("12345"),
+								Host: "example.com",
+								Name: new("svc-1"),
+							},
+						},
+						nil,
+					)
+
+				return sdk, svc
+			},
+			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
+				assert.Equal(t, "12345", svc.GetKonnectStatus().GetKonnectID())
+				assert.Equal(t, "team-a", svc.GetWorkspace())
+			},
+		},
+		{
 			name: "upsert service using UID when name is missing",
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
@@ -268,6 +312,37 @@ func TestDeleteKongService(t *testing.T) {
 				sdk.
 					EXPECT().
 					DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{ControlPlaneID: "12345", ServiceID: "123456789"}).
+					Return(
+						&sdkkonnectops.DeleteServiceResponse{
+							StatusCode: 200,
+						},
+						nil,
+					)
+
+				return sdk, svc
+			},
+		},
+		{
+			name: "success in a non-default workspace",
+			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := mocks.NewMockServicesSDK(t)
+				svc := &configurationv1alpha1.KongService{
+					Spec: configurationv1alpha1.KongServiceSpec{
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Name: new("svc-1"),
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+							ControlPlaneID: "12345",
+							Workspace:      "team-a",
+							ID:             "123456789",
+						},
+					},
+				}
+				sdk.
+					EXPECT().
+					DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{ControlPlaneID: "12345", Workspace: "team-a", ServiceID: "123456789"}).
 					Return(
 						&sdkkonnectops.DeleteServiceResponse{
 							StatusCode: 200,

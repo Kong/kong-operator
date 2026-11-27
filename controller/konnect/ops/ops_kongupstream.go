@@ -23,6 +23,7 @@ func createUpstream(
 
 	resp, err := sdk.CreateUpstream(ctx, sdkkonnectops.CreateUpstreamRequest{
 		ControlPlaneID: upstream.Status.Konnect.ControlPlaneID,
+		Workspace:      upstream.GetWorkspace(),
 		Upstream:       kongUpstreamToSDKUpstreamInput(upstream),
 	})
 
@@ -57,12 +58,13 @@ func updateUpstream(
 	id := upstream.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectops.UpsertUpstreamRequest{
 		ControlPlaneID: cpID,
+		Workspace:      upstream.GetWorkspace(),
 		UpstreamID:     id,
 		Upstream:       kongUpstreamToSDKUpstreamInput(upstream),
 	}
 	err := upsertUnlessInSync(ctx, g, id, req,
 		func(ctx context.Context) (*sdkkonnectcomp.Upstream, error) {
-			resp, err := sdk.GetUpstream(ctx, sdkkonnectops.GetUpstreamRequest{ControlPlaneID: cpID, UpstreamID: id})
+			resp, err := sdk.GetUpstream(ctx, sdkkonnectops.GetUpstreamRequest{ControlPlaneID: cpID, Workspace: upstream.GetWorkspace(), UpstreamID: id})
 			return resp.GetUpstream(), err
 		},
 		func(ctx context.Context) (*sdkkonnectcomp.Upstream, error) {
@@ -89,6 +91,7 @@ func deleteUpstream(
 	id := upstream.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteUpstream(ctx, sdkkonnectops.DeleteUpstreamRequest{
 		ControlPlaneID: upstream.Status.Konnect.ControlPlaneID,
+		Workspace:      upstream.GetWorkspace(),
 		UpstreamID:     id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, upstream); errWrap != nil {
@@ -104,6 +107,7 @@ func adoptUpstream(
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	cpID := upstream.GetControlPlaneID()
+	workspace := upstream.GetWorkspace()
 	adoptOptions := upstream.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 	if cpID == "" {
@@ -112,6 +116,7 @@ func adoptUpstream(
 	resp, err := sdk.GetUpstream(ctx, sdkkonnectops.GetUpstreamRequest{
 		UpstreamID:     konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -204,12 +209,14 @@ func getKongUpstreamForUID(
 	u *configurationv1alpha1.KongUpstream,
 ) (string, error) {
 	cpID := u.GetControlPlaneID()
+	workspace := u.GetWorkspace()
 
 	reqList := sdkkonnectops.ListUpstreamRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(u)),
 	}
 

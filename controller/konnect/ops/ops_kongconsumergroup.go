@@ -23,6 +23,7 @@ func createConsumerGroup(
 
 	resp, err := sdk.CreateConsumerGroup(ctx, sdkkonnectops.CreateConsumerGroupRequest{
 		ControlPlaneID: group.Status.Konnect.ControlPlaneID,
+		Workspace:      group.GetWorkspace(),
 		ConsumerGroup:  kongConsumerGroupToSDKConsumerGroupInput(group),
 	})
 
@@ -50,6 +51,7 @@ func updateConsumerGroup(
 	group *configurationv1beta1.KongConsumerGroup,
 ) error {
 	cpID := group.GetControlPlaneID()
+	workspace := group.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: UpdateOp}
 	}
@@ -57,6 +59,7 @@ func updateConsumerGroup(
 	id := group.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectops.UpsertConsumerGroupRequest{
 		ControlPlaneID:  cpID,
+		Workspace:       workspace,
 		ConsumerGroupID: id,
 		ConsumerGroup:   kongConsumerGroupToSDKConsumerGroupInput(group),
 	}
@@ -65,6 +68,7 @@ func updateConsumerGroup(
 			// Unlike the upsert, the get wraps the consumer group in a "consumer_group" object.
 			resp, err := sdk.GetConsumerGroup(ctx, sdkkonnectops.GetConsumerGroupRequest{
 				ControlPlaneID:  cpID,
+				Workspace:       workspace,
 				ConsumerGroupID: id,
 			})
 			return resp.GetConsumerGroupInsideWrapper().GetConsumerGroup(), err
@@ -93,6 +97,7 @@ func deleteConsumerGroup(
 	id := consumer.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteConsumerGroup(ctx, sdkkonnectops.DeleteConsumerGroupRequest{
 		ControlPlaneID:  consumer.Status.Konnect.ControlPlaneID,
+		Workspace:       consumer.GetWorkspace(),
 		ConsumerGroupID: id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
@@ -109,12 +114,14 @@ func adoptConsumerGroup(
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
 	cpID := group.GetControlPlaneID()
+	workspace := group.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: AdoptOp}
 	}
 	konnectID := adoptOptions.Konnect.ID
 	req := sdkkonnectops.GetConsumerGroupRequest{
 		ControlPlaneID:  cpID,
+		Workspace:       workspace,
 		ConsumerGroupID: konnectID,
 	}
 	resp, err := sdk.GetConsumerGroup(ctx, req)
@@ -192,12 +199,14 @@ func getKongConsumerGroupForUID(
 	cg *configurationv1beta1.KongConsumerGroup,
 ) (string, error) {
 	cpID := cg.GetControlPlaneID()
+	workspace := cg.GetWorkspace()
 
 	reqList := sdkkonnectops.ListConsumerGroupRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cg)),
 	}
 

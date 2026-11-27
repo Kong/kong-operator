@@ -21,13 +21,23 @@ type ForeignRelations struct {
 	Service       []configurationv1alpha1.KongService
 }
 
-// ForeignRelationsGroupedByControlPlane is a map of ForeignRelations grouped by ControlPlane.
-type ForeignRelationsGroupedByControlPlane map[types.NamespacedName]ForeignRelations
+// ControlPlaneWorkspace identifies a ControlPlane and a Konnect Workspace in it.
+// An empty Workspace is the ControlPlane's default Workspace.
+type ControlPlaneWorkspace struct {
+	types.NamespacedName
+
+	Workspace string
+}
+
+// ForeignRelationsGroupedByControlPlane is a map of ForeignRelations grouped by
+// ControlPlane and Konnect Workspace. Entities in different Workspaces of the
+// same ControlPlane can't be combined in one plugin binding.
+type ForeignRelationsGroupedByControlPlane map[ControlPlaneWorkspace]ForeignRelations
 
 // GetCombinations returns all possible combinations of relations
-// grouped by ControlPlane.
-func (f ForeignRelationsGroupedByControlPlane) GetCombinations() map[types.NamespacedName][]Rel {
-	ret := make(map[types.NamespacedName][]Rel, len(f))
+// grouped by ControlPlane and Konnect Workspace.
+func (f ForeignRelationsGroupedByControlPlane) GetCombinations() map[ControlPlaneWorkspace][]Rel {
+	ret := make(map[ControlPlaneWorkspace][]Rel, len(f))
 	for nn, fr := range f {
 		ret[nn] = fr.GetCombinations()
 	}
@@ -39,7 +49,7 @@ func (relations *ForeignRelations) GroupByControlPlane(
 	ctx context.Context,
 	cl client.Client,
 ) (ForeignRelationsGroupedByControlPlane, error) {
-	ret := make(map[types.NamespacedName]ForeignRelations)
+	ret := make(map[ControlPlaneWorkspace]ForeignRelations)
 	for _, service := range relations.Service {
 		cpRef, ok := controlplane.GetControlPlaneRef(&service).Get()
 		if !ok {
@@ -49,10 +59,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", service.Name, err)
 		}
-		nn := types.NamespacedName{
+		nn := ControlPlaneWorkspace{
 			// TODO: implement cross namespace references
 			Namespace: service.Namespace,
 			Name:      cp.Name,
+			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
 		fr.Service = append(fr.Service, service)
@@ -70,9 +81,10 @@ func (relations *ForeignRelations) GroupByControlPlane(
 				return nil, fmt.Errorf("failed to get ControlPlane for KongRoute %s: %w", route.Name, err)
 			}
 
-			nn := types.NamespacedName{
+			nn := ControlPlaneWorkspace{
 				Namespace: route.Namespace,
 				Name:      cp.Name,
+				Workspace: cpRef.GetWorkspace(),
 			}
 			fr := ret[nn]
 			fr.Route = append(fr.Route, route)
@@ -101,10 +113,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", svc.Name, err)
 		}
 
-		nn := types.NamespacedName{
+		nn := ControlPlaneWorkspace{
 			// TODO: implement cross namespace references
 			Namespace: route.Namespace,
 			Name:      cp.Name,
+			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
 		fr.Route = append(fr.Route, route)
@@ -119,10 +132,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumer %s: %w", consumer.Name, err)
 		}
-		nn := types.NamespacedName{
+		nn := ControlPlaneWorkspace{
 			// TODO: implement cross namespace references
 			Namespace: consumer.Namespace,
 			Name:      cp.Name,
+			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
 		fr.Consumer = append(fr.Consumer, consumer)
@@ -137,10 +151,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumerGroup %s: %w", group.Name, err)
 		}
-		nn := types.NamespacedName{
+		nn := ControlPlaneWorkspace{
 			// TODO: implement cross namespace references
 			Namespace: group.Namespace,
 			Name:      cp.Name,
+			Workspace: cpRef.GetWorkspace(),
 		}
 		fr := ret[nn]
 		fr.ConsumerGroup = append(fr.ConsumerGroup, group)

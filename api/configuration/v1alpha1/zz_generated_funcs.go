@@ -58,6 +58,23 @@ func (obj *KongKey) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongKey status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongKey) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongKey status.
+func (obj *KongKey) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongKey Kind name.
 func (obj KongKey) GetTypeName() string {
 	return "KongKey"
@@ -132,6 +149,23 @@ func (obj *KongKeySet) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongKeySet status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongKeySet) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongKeySet status.
+func (obj *KongKeySet) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongKeySet Kind name.
 func (obj KongKeySet) GetTypeName() string {
 	return "KongKeySet"
@@ -204,6 +238,23 @@ func (obj *KongCredentialBasicAuth) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongCredentialBasicAuth status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCredentialBasicAuth) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCredentialBasicAuth status.
+func (obj *KongCredentialBasicAuth) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongCredentialBasicAuth Kind name.
@@ -281,6 +332,23 @@ func (obj *KongCredentialAPIKey) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongCredentialAPIKey status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCredentialAPIKey) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCredentialAPIKey status.
+func (obj *KongCredentialAPIKey) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongCredentialAPIKey Kind name.
 func (obj KongCredentialAPIKey) GetTypeName() string {
 	return "KongCredentialAPIKey"
@@ -354,6 +422,23 @@ func (obj *KongCredentialJWT) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongCredentialJWT status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCredentialJWT) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCredentialJWT status.
+func (obj *KongCredentialJWT) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongCredentialJWT Kind name.
@@ -431,6 +516,23 @@ func (obj *KongCredentialACL) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongCredentialACL status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCredentialACL) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCredentialACL status.
+func (obj *KongCredentialACL) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongCredentialACL Kind name.
 func (obj KongCredentialACL) GetTypeName() string {
 	return "KongCredentialACL"
@@ -504,6 +606,23 @@ func (obj *KongCredentialHMAC) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongCredentialHMAC status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCredentialHMAC) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCredentialHMAC status.
+func (obj *KongCredentialHMAC) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongCredentialHMAC Kind name.
@@ -581,6 +700,23 @@ func (obj *KongCACertificate) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongCACertificate status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCACertificate) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCACertificate status.
+func (obj *KongCACertificate) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongCACertificate Kind name.
 func (obj KongCACertificate) GetTypeName() string {
 	return "KongCACertificate"
@@ -655,6 +791,23 @@ func (obj *KongCertificate) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongCertificate status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongCertificate) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongCertificate status.
+func (obj *KongCertificate) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongCertificate Kind name.
 func (obj KongCertificate) GetTypeName() string {
 	return "KongCertificate"
@@ -727,6 +880,23 @@ func (obj *KongPluginBinding) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongPluginBinding status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongPluginBinding) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongPluginBinding status.
+func (obj *KongPluginBinding) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongPluginBinding Kind name.
@@ -807,6 +977,23 @@ func (obj *KongService) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongService status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongService) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongService status.
+func (obj *KongService) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongService Kind name.
 func (obj KongService) GetTypeName() string {
 	return "KongService"
@@ -884,6 +1071,23 @@ func (obj *KongRoute) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongRoute status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongRoute) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongRoute status.
+func (obj *KongRoute) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongRoute Kind name.
@@ -970,6 +1174,23 @@ func (obj *KongUpstream) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongUpstream status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongUpstream) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongUpstream status.
+func (obj *KongUpstream) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongUpstream Kind name.
 func (obj KongUpstream) GetTypeName() string {
 	return "KongUpstream"
@@ -1044,6 +1265,23 @@ func (obj *KongTarget) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongTarget status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongTarget) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongTarget status.
+func (obj *KongTarget) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongTarget Kind name.
 func (obj KongTarget) GetTypeName() string {
 	return "KongTarget"
@@ -1106,6 +1344,23 @@ func (obj *KongVault) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongVault status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongVault) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongVault status.
+func (obj *KongVault) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongVault Kind name.
@@ -1182,6 +1437,23 @@ func (obj *KongSNI) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongSNI status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongSNI) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongSNI status.
+func (obj *KongSNI) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongSNI Kind name.
 func (obj KongSNI) GetTypeName() string {
 	return "KongSNI"
@@ -1244,6 +1516,23 @@ func (obj *KongDataPlaneClientCertificate) SetControlPlaneID(id string) {
 		obj.initKonnectStatus()
 	}
 	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the KongDataPlaneClientCertificate status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongDataPlaneClientCertificate) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongDataPlaneClientCertificate status.
+func (obj *KongDataPlaneClientCertificate) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
 }
 
 // GetTypeName returns the KongDataPlaneClientCertificate Kind name.

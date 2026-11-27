@@ -19,6 +19,7 @@ func createKongCredentialAPIKey(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: CreateOp}
 	}
@@ -26,6 +27,7 @@ func createKongCredentialAPIKey(
 	resp, err := sdk.CreateKeyAuthWithConsumer(ctx,
 		sdkkonnectops.CreateKeyAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			KeyAuthWithoutParents:       kongCredentialAPIKeyToKeyAuthWithoutParents(cred),
 		},
@@ -58,6 +60,7 @@ func updateKongCredentialAPIKey(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cred, Op: UpdateOp}
 	}
@@ -66,6 +69,7 @@ func updateKongCredentialAPIKey(
 	consumerID := cred.Status.Konnect.GetConsumerID()
 	req := sdkkonnectops.UpsertKeyAuthWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: consumerID,
 		KeyAuthID:                   id,
 		KeyAuthWithoutParents:       kongCredentialAPIKeyToKeyAuthWithoutParents(cred),
@@ -74,6 +78,7 @@ func updateKongCredentialAPIKey(
 		func(ctx context.Context) (*sdkkonnectcomp.KeyAuth, error) {
 			resp, err := sdk.GetKeyAuthWithConsumer(ctx, sdkkonnectops.GetKeyAuthWithConsumerRequest{
 				ControlPlaneID:              cpID,
+				Workspace:                   workspace,
 				ConsumerIDForNestedEntities: consumerID,
 				KeyAuthID:                   id,
 			})
@@ -101,10 +106,12 @@ func deleteKongCredentialAPIKey(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	id := cred.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteKeyAuthWithConsumer(ctx,
 		sdkkonnectops.DeleteKeyAuthWithConsumerRequest{
 			ControlPlaneID:              cpID,
+			Workspace:                   workspace,
 			ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 			KeyAuthID:                   id,
 		})
@@ -121,6 +128,7 @@ func adoptKongCredentialAPIKey(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -136,6 +144,7 @@ func adoptKongCredentialAPIKey(
 
 	resp, err := sdk.GetKeyAuthWithConsumer(ctx, sdkkonnectops.GetKeyAuthWithConsumerRequest{
 		ControlPlaneID:              cpID,
+		Workspace:                   workspace,
 		ConsumerIDForNestedEntities: cred.Status.Konnect.GetConsumerID(),
 		KeyAuthID:                   konnectID,
 	})
@@ -200,12 +209,14 @@ func getKongCredentialAPIKeyForUID(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()
+	workspace := cred.GetWorkspace()
 
 	req := sdkkonnectops.ListKeyAuthRequest{
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		Tags:           new(UIDLabelForObject(cred)),
 	}
 

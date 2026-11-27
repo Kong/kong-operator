@@ -21,6 +21,7 @@ func createService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	cpID := svc.GetControlPlaneID()
+	workspace := svc.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: svc, Op: CreateOp}
 	}
@@ -29,6 +30,7 @@ func createService(
 		serviceID := string(svc.GetUID())
 		resp, err := sdk.UpsertService(ctx, sdkkonnectops.UpsertServiceRequest{
 			ControlPlaneID: cpID,
+			Workspace:      workspace,
 			ServiceID:      serviceID,
 			ServiceRequest: kongServiceToSDKServiceInput(svc),
 		})
@@ -47,6 +49,7 @@ func createService(
 
 	resp, err := sdk.CreateService(ctx, sdkkonnectops.CreateServiceRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		ServiceRequest: kongServiceToSDKServiceInput(svc),
 	})
 
@@ -81,12 +84,13 @@ func updateService(
 	id := svc.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectops.UpsertServiceRequest{
 		ControlPlaneID: cpID,
+		Workspace:      svc.GetWorkspace(),
 		ServiceID:      id,
 		ServiceRequest: kongServiceToSDKServiceInput(svc),
 	}
 	err := upsertUnlessInSync(ctx, g, id, req,
 		func(ctx context.Context) (*sdkkonnectcomp.Service, error) {
-			resp, err := sdk.GetService(ctx, sdkkonnectops.GetServiceRequest{ControlPlaneID: cpID, ServiceID: id})
+			resp, err := sdk.GetService(ctx, sdkkonnectops.GetServiceRequest{ControlPlaneID: cpID, Workspace: svc.GetWorkspace(), ServiceID: id})
 			return resp.GetService(), err
 		},
 		func(ctx context.Context) (*sdkkonnectcomp.Service, error) {
@@ -113,6 +117,7 @@ func deleteService(
 	id := svc.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{
 		ControlPlaneID: svc.Status.Konnect.ControlPlaneID,
+		Workspace:      svc.GetWorkspace(),
 		ServiceID:      id,
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrap != nil {
@@ -128,6 +133,7 @@ func adoptService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	cpID := svc.GetControlPlaneID()
+	workspace := svc.GetWorkspace()
 	adoptOptions := svc.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 	if cpID == "" {
@@ -136,6 +142,7 @@ func adoptService(
 	resp, err := sdk.GetService(ctx, sdkkonnectops.GetServiceRequest{
 		ServiceID:      konnectID,
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
@@ -229,6 +236,7 @@ func getKongServiceForUID(
 		// Those will be enforced via subsequent updates.
 		Tags:           new(UIDLabelForObject(svc)),
 		ControlPlaneID: svc.GetControlPlaneID(),
+		Workspace:      svc.GetWorkspace(),
 	}
 
 	resp, err := sdk.ListService(ctx, reqList)

@@ -557,7 +557,9 @@ var realSchemaCRDManifests = []string{
 // newRealSchemaTypeConverter is memoized (via [sync.OnceValue]) since it is
 // expensive to build (reads + parses CRD manifests, builds OpenAPI schemas)
 // and is read-only/safe to share across tests.
-var newRealSchemaTypeConverter = sync.OnceValue(func() managedfields.TypeConverter {
+// buildRealSchemaTypeConverter builds a TypeConverter from the real CRD
+// manifests. Each call returns a converter with its own schema.
+func buildRealSchemaTypeConverter() managedfields.TypeConverter {
 	var specs []*kubespec3.OpenAPI
 	for _, file := range realSchemaCRDManifests {
 		path := filepath.Join("..", "..", "..", "config", "crd", "kong-operator", file)
@@ -595,7 +597,9 @@ var newRealSchemaTypeConverter = sync.OnceValue(func() managedfields.TypeConvert
 		panic(fmt.Errorf("failed to create TypeConverter: %w", err))
 	}
 	return tc
-})
+}
+
+var newRealSchemaTypeConverter = sync.OnceValue(buildRealSchemaTypeConverter)
 
 // kongServiceWithHost returns a KongService named "svc" with the given host.
 func kongServiceWithHost(host string) *unstructured.Unstructured {

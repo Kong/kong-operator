@@ -39,6 +39,17 @@ func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetControlPlaneID(id 
 	obj.Status.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KonnectCloudGatewayDataPlaneGroupConfiguration status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) GetWorkspace() string {
+	return obj.Status.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KonnectCloudGatewayDataPlaneGroupConfiguration status.
+func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetWorkspace(ws string) {
+	obj.Status.Workspace = ws
+}
+
 // GetTypeName returns the KonnectCloudGatewayDataPlaneGroupConfiguration Kind name.
 func (obj KonnectCloudGatewayDataPlaneGroupConfiguration) GetTypeName() string {
 	return "KonnectCloudGatewayDataPlaneGroupConfiguration"
@@ -96,6 +107,17 @@ func (obj *MCPServer) GetControlPlaneID() string {
 // SetControlPlaneID sets the ControlPlane ID in the MCPServer status.
 func (obj *MCPServer) SetControlPlaneID(id string) {
 	obj.Status.ControlPlaneID = id
+}
+
+// GetWorkspace returns the Konnect Workspace in the MCPServer status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *MCPServer) GetWorkspace() string {
+	return obj.Status.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the MCPServer status.
+func (obj *MCPServer) SetWorkspace(ws string) {
+	obj.Status.Workspace = ws
 }
 
 // GetTypeName returns the MCPServer Kind name.

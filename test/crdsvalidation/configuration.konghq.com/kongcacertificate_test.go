@@ -235,6 +235,9 @@ func TestKongCACertificate(t *testing.T) {
 
 		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
 			RunWithConfig(t, cfg, scheme)
+		common.NewCRDValidationTestCasesGroupCPRefWorkspace(t, obj, common.WorkspaceNotSupported,
+			"controlPlaneRef.workspace is not supported: CA Certificates belong to the ControlPlane").
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec.id mutability", func(t *testing.T) {

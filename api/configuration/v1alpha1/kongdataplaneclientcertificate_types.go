@@ -49,6 +49,7 @@ type KongDataPlaneClientCertificate struct {
 }
 
 // KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCertificate.
+// +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) || !has(self.controlPlaneRef.workspace)", message="controlPlaneRef.workspace is not supported: data plane client certificates belong to the ControlPlane, not to a Workspace"
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 type KongDataPlaneClientCertificateSpec struct {
 	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.

@@ -58,6 +58,23 @@ func (obj *KongConsumer) SetControlPlaneID(id string) {
 	obj.Status.Konnect.ControlPlaneID = id
 }
 
+// GetWorkspace returns the Konnect Workspace in the KongConsumer status.
+// An empty string means the ControlPlane's default Workspace.
+func (obj *KongConsumer) GetWorkspace() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.Workspace
+}
+
+// SetWorkspace sets the Konnect Workspace in the KongConsumer status.
+func (obj *KongConsumer) SetWorkspace(ws string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.Workspace = ws
+}
+
 // GetTypeName returns the KongConsumer Kind name.
 func (obj KongConsumer) GetTypeName() string {
 	return "KongConsumer"

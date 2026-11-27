@@ -113,8 +113,14 @@ spec:
                     - konnectNamespacedRef
                     - kic
                     type: string
+                  workspace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
                 type: object
                 x-kubernetes-validations:
+                - message: workspace is not supported for KonnectCloudGatewayDataPlaneGroupConfiguration
+                  rule: '!has(self.workspace)'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef
                     must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'')
@@ -124,6 +130,8 @@ spec:
                     : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+                - message: workspace can only be set when type is konnectNamespacedRef
+                  rule: '!has(self.workspace) || (has(self.type) && self.type == ''konnectNamespacedRef'')'
               dataplane_groups:
                 items:
                   properties:
@@ -337,6 +345,8 @@ spec:
                 type: string
               serverURL:
                 maxLength: 512
+                type: string
+              workspace:
                 type: string
             type: object
         required:

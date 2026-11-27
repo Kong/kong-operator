@@ -23,6 +23,7 @@ func createSNI(
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
+	workspace := sni.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: sni, Op: CreateOp}
 	}
@@ -32,6 +33,7 @@ func createSNI(
 
 	resp, err := sdk.CreateSniWithCertificate(ctx, sdkkonnectops.CreateSniWithCertificateRequest{
 		ControlPlaneID:    cpID,
+		Workspace:         workspace,
 		CertificateID:     sni.Status.Konnect.CertificateID,
 		SNIWithoutParents: kongSNIToSNIWithoutParents(sni),
 	})
@@ -56,6 +58,7 @@ func updateSNI(
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
+	workspace := sni.GetWorkspace()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: sni, Op: UpdateOp}
 	}
@@ -67,6 +70,7 @@ func updateSNI(
 
 	req := sdkkonnectops.UpsertSniWithCertificateRequest{
 		ControlPlaneID:    cpID,
+		Workspace:         workspace,
 		CertificateID:     certID,
 		SNIID:             id,
 		SNIWithoutParents: kongSNIToSNIWithoutParents(sni),
@@ -75,6 +79,7 @@ func updateSNI(
 		func(ctx context.Context) (*sdkkonnectcomp.Sni, error) {
 			resp, err := sdk.GetSniWithCertificate(ctx, sdkkonnectops.GetSniWithCertificateRequest{
 				ControlPlaneID: cpID,
+				Workspace:      workspace,
 				CertificateID:  certID,
 				SNIID:          id,
 			})
@@ -102,6 +107,7 @@ func deleteSNI(
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
+	workspace := sni.GetWorkspace()
 	if cpID == "" {
 		return fmt.Errorf("can't delete %T %s without a Konnect ControlPlane ID", sni, client.ObjectKeyFromObject(sni))
 	}
@@ -112,6 +118,7 @@ func deleteSNI(
 
 	_, err := sdk.DeleteSniWithCertificate(ctx, sdkkonnectops.DeleteSniWithCertificateRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		CertificateID:  sni.Status.Konnect.CertificateID,
 		SNIID:          id,
 	})
@@ -146,6 +153,7 @@ func adoptSNI(
 	sni *configurationv1alpha1.KongSNI,
 ) error {
 	cpID := sni.GetControlPlaneID()
+	workspace := sni.GetWorkspace()
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
@@ -158,6 +166,7 @@ func adoptSNI(
 
 	resp, err := sdk.GetSniWithCertificate(ctx, sdkkonnectops.GetSniWithCertificateRequest{
 		ControlPlaneID: cpID,
+		Workspace:      workspace,
 		CertificateID:  sni.Status.Konnect.CertificateID,
 		SNIID:          konnectID,
 	})
@@ -216,6 +225,7 @@ func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectco
 func getKongSNIForUID(ctx context.Context, sdk sdkkonnectgo.SNIsSDK, sni *configurationv1alpha1.KongSNI) (string, error) {
 	resp, err := sdk.ListSni(ctx, sdkkonnectops.ListSniRequest{
 		ControlPlaneID: sni.GetControlPlaneID(),
+		Workspace:      sni.GetWorkspace(),
 		Tags:           new(UIDLabelForObject(sni)),
 	})
 	if err != nil {
