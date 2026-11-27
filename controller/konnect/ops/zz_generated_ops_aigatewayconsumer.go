@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -49,6 +50,7 @@ func updateAIGatewayConsumer(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumersSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayConsumer,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -62,19 +64,56 @@ func updateAIGatewayConsumer(
 	}
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
-	_, err = sdk.UpdateAiGatewayConsumer(ctx, sdkkonnectops.UpdateAiGatewayConsumerRequest{
-		GatewayID:                      parentID,
-		ConsumerIDOrName:               id,
-		UpdateAIGatewayConsumerRequest: *req,
-	})
+	// Associations are not part of the entity, so their resolved state is part
+	// of the payload: the entity is sent again when they change.
+	payload := syncPayloadWithAssociations{Request: req, Associations: map[string]any{}}
+	if state, stateErr := syncStateAIGatewayConsumerConsumerGroups(ctx, cl, obj); stateErr != nil {
+		// A change cannot be detected without the association state: always send.
+		g = nil
+	} else {
+		payload.Associations["ConsumerGroups"] = state
+	}
+
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayConsumer, error) {
+			resp, err := sdk.GetAiGatewayConsumer(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayConsumer, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayConsumer, error) {
+			resp, err := sdk.UpdateAiGatewayConsumer(ctx, sdkkonnectops.UpdateAiGatewayConsumerRequest{
+				GatewayID:                      parentID,
+				ConsumerIDOrName:               id,
+				UpdateAIGatewayConsumerRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayConsumer, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayConsumer(ctx, cl, sdk, obj)
 		})
 	}
 
-	if err := enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, parentID); err != nil {
-		return err
+	switch {
+	case g.skipped():
+		// Neither the entity nor its associations changed: nothing to enforce.
+	case g.notSent():
+		// The entity was verified with a GET: only write the association when it drifted.
+		if err := enforceAIGatewayConsumerConsumerGroupsIfDrifted(ctx, cl, sdk, obj, parentID); err != nil {
+			g.invalidate()
+			return err
+		}
+	default:
+		if err := enforceAIGatewayConsumerConsumerGroups(ctx, cl, sdk, obj, parentID); err != nil {
+			g.invalidate()
+			return err
+		}
 	}
 	return nil
 }

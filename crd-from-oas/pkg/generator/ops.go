@@ -103,6 +103,11 @@ func (g *Generator) generateEntityOpsFile(
 			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
 			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
 		}
+		if updateData != nil && updateData.SkipUnchanged {
+			// The guarded update returns the SDK components representation of the entity.
+			const componentsPath = "github.com/Kong/sdk-konnect-go/models/components"
+			extraImportSet[componentsPath] = sdkImportAlias(componentsPath)
+		}
 		if (createData != nil && createData.SupportsMirror) ||
 			(updateData != nil && updateData.SupportsMirror) ||
 			(deleteData != nil && deleteData.SupportsMirror) {
@@ -204,6 +209,10 @@ func (g *Generator) generateEntityOpsFile(
 			APIPackagePath: g.config.APIGroupPackagePath,
 			SDKGetter:      sdkGetter,
 			NeedsClient:    updateData.NeedsClient,
+			SkipUnchanged:  updateData.SkipUnchanged,
+		}
+		if updateData.SkipUnchanged {
+			updateInfo.ParentIDGetter = updateData.Parents[0].IDGetter
 		}
 	} else {
 		// No update stanza in config: emit a no-op case in the dispatcher so
@@ -313,11 +322,13 @@ func buildDispatcherFile(
 	sort.Slice(infos, func(i, j int) bool { return infos[i].Entity < infos[j].Entity })
 
 	type dispatchCase struct {
-		Entity      string
-		APIAlias    string
-		SDKGetter   string
-		NeedsClient bool
-		SkipUpdate  bool
+		Entity         string
+		APIAlias       string
+		SDKGetter      string
+		NeedsClient    bool
+		SkipUpdate     bool
+		SkipUnchanged  bool
+		ParentIDGetter string
 	}
 
 	importSet := map[string]string{}
@@ -325,11 +336,13 @@ func buildDispatcherFile(
 	for _, info := range infos {
 		importSet[info.APIPackagePath] = info.APIAlias
 		cases = append(cases, dispatchCase{
-			Entity:      info.Entity,
-			APIAlias:    info.APIAlias,
-			SDKGetter:   info.SDKGetter,
-			NeedsClient: info.NeedsClient,
-			SkipUpdate:  info.SkipUpdate,
+			Entity:         info.Entity,
+			APIAlias:       info.APIAlias,
+			SDKGetter:      info.SDKGetter,
+			NeedsClient:    info.NeedsClient,
+			SkipUpdate:     info.SkipUpdate,
+			SkipUnchanged:  info.SkipUnchanged,
+			ParentIDGetter: info.ParentIDGetter,
 		})
 	}
 

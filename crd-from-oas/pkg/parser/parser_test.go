@@ -1428,3 +1428,64 @@ func TestDeclaredPathParams(t *testing.T) {
 
 	assert.Equal(t, []string{"teamId", "portalId", "extraId"}, declaredPathParams(item, op))
 }
+
+func TestParsePaths_GetOperationOnItemPath(t *testing.T) {
+	createBody := &openapi3.RequestBodyRef{
+		Value: &openapi3.RequestBody{
+			Content: openapi3.Content{
+				"application/json": &openapi3.MediaType{
+					Schema: &openapi3.SchemaRef{
+						Value: &openapi3.Schema{
+							Type: &openapi3.Types{"object"},
+							Properties: openapi3.Schemas{
+								"name": &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	responseOf := func(ref string) *openapi3.Responses {
+		return openapi3.NewResponses(openapi3.WithStatus(200, &openapi3.ResponseRef{
+			Value: &openapi3.Response{
+				Content: openapi3.Content{
+					"application/json": &openapi3.MediaType{Schema: &openapi3.SchemaRef{Ref: "#/components/schemas/" + ref}},
+				},
+			},
+		}))
+	}
+	doc := &openapi3.T{
+		Paths: openapi3.NewPaths(
+			openapi3.WithPath("/v1/ai-gateways/{gatewayId}/consumers", &openapi3.PathItem{
+				Post: &openapi3.Operation{OperationID: "create-ai-gateway-consumer", RequestBody: createBody},
+				Get:  &openapi3.Operation{OperationID: "list-ai-gateway-consumers", Responses: responseOf("ListAIGatewayConsumersResponse")},
+			}),
+			openapi3.WithPath("/v1/ai-gateways/{gatewayId}/consumers/{consumerIdOrName}", &openapi3.PathItem{
+				Get: &openapi3.Operation{
+					OperationID: "get-ai-gateway-consumer",
+					Tags:        []string{"AI Gateway Consumers"},
+					Responses:   responseOf("AIGatewayConsumer"),
+				},
+			}),
+			openapi3.WithPath("/v1/ai-gateways/{gatewayId}/consumers/{consumerIdOrName}/consumer-groups", &openapi3.PathItem{
+				Get: &openapi3.Operation{OperationID: "list-ai-gateway-consumer-groups-for-consumer"},
+			}),
+		),
+		Components: &openapi3.Components{Schemas: openapi3.Schemas{}},
+	}
+
+	result, err := NewParser(doc).ParsePaths([]string{"/v1/ai-gateways/{gatewayId}/consumers"})
+	require.NoError(t, err)
+	require.Len(t, result.RequestBodies, 1)
+	var schema *Schema
+	for _, s := range result.RequestBodies {
+		schema = s
+	}
+
+	assert.Equal(t, "get-ai-gateway-consumer", schema.GetOperationID, "nested sub-resource paths must not be picked")
+	assert.Equal(t, []string{"AI Gateway Consumers"}, schema.GetTags)
+	assert.Equal(t, []string{"gatewayId", "consumerIdOrName"}, schema.GetPathParams)
+	assert.Equal(t, "AIGatewayConsumer", schema.GetSuccessResponseRef)
+	assert.Equal(t, "list-ai-gateway-consumers", schema.ListOperationID, "the collection GET stays the list operation")
+}

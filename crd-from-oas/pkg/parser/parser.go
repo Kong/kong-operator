@@ -127,6 +127,12 @@ type Schema struct {
 	ListTags               []string // GET tags (used to derive SDK interface name)
 	ListPathParams         []string // ordered path params from the GET collection path (parent params only)
 	ListSuccessResponseRef string   // ref name of the 2xx success response for the list op (e.g. "ListBackendClustersResponse"); names the nested field on the SDK operations response wrapper
+
+	// GET operation hints for reading a single entity by ID.
+	GetOperationID        string   // GET operationId on the item path (e.g. "get-ai-gateway-consumer")
+	GetTags               []string // GET tags (used to derive SDK interface name)
+	GetPathParams         []string // ordered path params from the GET item path (e.g. ["gatewayId","consumerIdOrName"])
+	GetSuccessResponseRef string   // ref name of the 2xx success response for the get op; names the nested field on the SDK operations response wrapper
 }
 
 // ParsedSpec is the result of parsing an OpenAPI spec via ParsePaths.
@@ -274,6 +280,7 @@ func (p *Parser) parsePath(targetPath string) (string, *Schema, error) {
 		p.extractUpdateOp(targetPath, schema)
 		p.extractDeleteOp(targetPath, schema)
 		p.extractListOp(targetPath, schema)
+		p.extractGetOp(targetPath, schema)
 		return schemaName, schema, nil
 	}
 
@@ -418,6 +425,27 @@ func (p *Parser) extractListOp(targetPath string, schema *Schema) {
 	schema.ListTags = append([]string(nil), listOp.Tags...)
 	schema.ListPathParams = extractPathParams(targetPath)
 	schema.ListSuccessResponseRef = p.extractSuccessResponseRef(listOp.Responses)
+}
+
+// extractGetOp finds the GET operation that reads a single entity — on a
+// sibling path that extends targetPath with one `{<id>}` segment — and
+// populates the Get* fields of the schema.
+func (p *Parser) extractGetOp(targetPath string, schema *Schema) {
+	for pathKey, item := range p.doc.Paths.Map() {
+		if item.Get == nil || !strings.HasPrefix(pathKey, targetPath+"/") {
+			continue
+		}
+		rest := pathKey[len(targetPath)+1:]
+		// Must be a single {param} segment — no nested slashes.
+		if !strings.HasPrefix(rest, "{") || !strings.HasSuffix(rest, "}") || strings.Contains(rest, "/") {
+			continue
+		}
+		schema.GetOperationID = item.Get.OperationID
+		schema.GetTags = append([]string(nil), item.Get.Tags...)
+		schema.GetPathParams = extractPathParams(pathKey)
+		schema.GetSuccessResponseRef = p.extractSuccessResponseRef(item.Get.Responses)
+		return
+	}
 }
 
 // findListOperation returns the GET operation on targetPath (the collection

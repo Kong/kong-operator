@@ -25,41 +25,42 @@ func UpdateGeneratedOps[
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
 	cl client.Client,
+	g *syncGuard,
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
 	case *aiconfigurationv1alpha1.AIGatewayAgent:
-		return updateAIGatewayAgent(ctx, cl, sdk.GetAIGatewayAgentsSDK(), ent)
+		return updateAIGatewayAgent(ctx, cl, sdk.GetAIGatewayAgentsSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
-		return updateAIGatewayAuthStrategy(ctx, cl, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
+		return updateAIGatewayAuthStrategy(ctx, cl, sdk.GetAIGatewayAuthStrategiesSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
-		return updateAIGatewayCACertificate(ctx, cl, sdk.GetAIGatewayCACertificatesSDK(), ent)
+		return updateAIGatewayCACertificate(ctx, cl, sdk.GetAIGatewayCACertificatesSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayCertificate:
-		return updateAIGatewayCertificate(ctx, cl, sdk.GetAIGatewayCertificatesSDK(), ent)
+		return updateAIGatewayCertificate(ctx, cl, sdk.GetAIGatewayCertificatesSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumer:
-		return updateAIGatewayConsumer(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
+		return updateAIGatewayConsumer(ctx, cl, sdk.GetAIGatewayConsumersSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		return nil // Entity does not support update.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
-		return updateAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
+		return updateAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
-		return updateAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
+		return updateAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
 	case *aiconfigurationv1alpha1.AIGatewayDatastore:
-		return updateAIGatewayDatastore(ctx, cl, sdk.GetAIGatewayDatastoresSDK(), ent)
+		return updateAIGatewayDatastore(ctx, cl, sdk.GetAIGatewayDatastoresSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
-		return updateAIGatewayMCPServer(ctx, cl, sdk.GetAIGatewayMCPServersSDK(), ent)
+		return updateAIGatewayMCPServer(ctx, cl, sdk.GetAIGatewayMCPServersSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayModel:
-		return updateAIGatewayModel(ctx, cl, sdk.GetAIGatewayModelsSDK(), ent)
+		return updateAIGatewayModel(ctx, cl, sdk.GetAIGatewayModelsSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayModelProvider:
-		return updateAIGatewayModelProvider(ctx, cl, sdk.GetAIGatewayModelProvidersSDK(), ent)
+		return updateAIGatewayModelProvider(ctx, cl, sdk.GetAIGatewayModelProvidersSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayPolicy:
-		return updateAIGatewayPolicy(ctx, cl, sdk.GetAIGatewayPoliciesSDK(), ent)
+		return updateAIGatewayPolicy(ctx, cl, sdk.GetAIGatewayPoliciesSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewaySNI:
-		return updateAIGatewaySNI(ctx, cl, sdk.GetAIGatewaySNIsSDK(), ent)
+		return updateAIGatewaySNI(ctx, cl, sdk.GetAIGatewaySNIsSDK(), g, ent)
 	case *aiconfigurationv1alpha1.AIGatewayVault:
-		return updateAIGatewayVault(ctx, cl, sdk.GetAIGatewayVaultsSDK(), ent)
+		return updateAIGatewayVault(ctx, cl, sdk.GetAIGatewayVaultsSDK(), g, ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return updateEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
@@ -106,5 +107,43 @@ func UpdateGeneratedOps[
 		return updatePortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
+	}
+}
+
+// generatedAIGatewaySyncScope returns the ID of the AI Gateway that scopes the
+// sync guard of an entity whose generated update skips unchanged periodic
+// updates (ops.skipUnchangedUpdates). It returns false for other entities.
+func generatedAIGatewaySyncScope(e any) (string, bool) {
+	switch e.(type) {
+	case *aiconfigurationv1alpha1.AIGatewayAgent:
+		return e.(*aiconfigurationv1alpha1.AIGatewayAgent).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
+		return e.(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
+		return e.(*aiconfigurationv1alpha1.AIGatewayCACertificate).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayCertificate:
+		return e.(*aiconfigurationv1alpha1.AIGatewayCertificate).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayConsumer:
+		return e.(*aiconfigurationv1alpha1.AIGatewayConsumer).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
+		return e.(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
+		return e.(*aiconfigurationv1alpha1.AIGatewayCustomPolicy).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayDatastore:
+		return e.(*aiconfigurationv1alpha1.AIGatewayDatastore).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
+		return e.(*aiconfigurationv1alpha1.AIGatewayMCPServer).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayModel:
+		return e.(*aiconfigurationv1alpha1.AIGatewayModel).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayModelProvider:
+		return e.(*aiconfigurationv1alpha1.AIGatewayModelProvider).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayPolicy:
+		return e.(*aiconfigurationv1alpha1.AIGatewayPolicy).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewaySNI:
+		return e.(*aiconfigurationv1alpha1.AIGatewaySNI).GetGatewayID(), true
+	case *aiconfigurationv1alpha1.AIGatewayVault:
+		return e.(*aiconfigurationv1alpha1.AIGatewayVault).GetGatewayID(), true
+	default:
+		return "", false
 	}
 }

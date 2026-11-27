@@ -23,14 +23,15 @@ const (
 	versionReadTimeout = 2 * time.Second
 )
 
-// ConfigVersionTracker avoids enforcing unchanged Kong Gateway entities in Konnect on every sync period.
+// ConfigVersionTracker avoids enforcing unchanged Kong Gateway and AI Gateway entities in Konnect on every sync
+// period.
 //
 // For every entity it remembers the hash of the last request sent to Konnect and the hash of the entity
-// representation Konnect returned. For every control plane it tracks the expected config version, which
-// changes whenever the control plane configuration changes.
+// representation Konnect returned. For every config scope, a Kong Gateway control plane or an AI Gateway, it
+// tracks the expected config version, which changes whenever the configuration of the scope changes.
 //
 // A periodic update of an entity is skipped when the request is unchanged and no external change to its
-// control plane was observed since the entity was last checked. When an external change was observed, the
+// config scope was observed since the entity was last checked. When an external change was observed, the
 // entity is fetched from Konnect and only updated when its representation differs.
 //
 // Writes performed by the operator itself also change the config version. They are reported through BeforeWrite and
@@ -70,7 +71,7 @@ type controlPlaneConfigVersion struct {
 
 	// Fields below are guarded by ConfigVersionTracker.mu.
 	serverURL      string
-	sdk            sdkkonnectgo.DPNodesSDK
+	source         versionSource
 	fetchedAt      time.Time
 	fetchErr       bool
 	version        string
@@ -89,16 +90,17 @@ type entitySyncRecord struct {
 	keyID string
 }
 
-// BeforeWrite must be called before the operator sends a write request to the given control plane.
+// BeforeWrite must be called before the operator sends a write request to the given config scope:
+// a Kong Gateway control plane ID, or an AI Gateway scope returned by sdkops.AIGatewayWriteScope.
 // When no other write is in flight and none happened since the config version was last read, it reads the
 // config version first, so that a change made before the write is not attributed to the operator.
-func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID string) {
+func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, scope string) {
 	if t == nil {
 		return
 	}
 	t.mu.Lock()
-	cp := t.controlPlane(controlPlaneID)
-	t.observeCurrentSDK(ctx, cp)
+	cp := t.controlPlane(scope)
+	t.observeCurrentSDK(ctx, scope, cp)
 	if !cp.hasCleanBaseline() {
 		if cp.version == "" {
 			// Without a baseline the version read cannot tell an operator write
@@ -118,12 +120,12 @@ func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID s
 	defer cp.fetchMu.Unlock()
 
 	t.mu.Lock()
-	clean, sdk := cp.hasCleanBaseline(), cp.sdk
+	clean, source := cp.hasCleanBaseline(), cp.source
 	t.mu.Unlock()
 	var ok bool
 	if clean {
 		versionCtx, cancel := versionReadContext(ctx)
-		_, ok = t.refresh(versionCtx, cp, controlPlaneID, sdk)
+		_, ok = t.refresh(versionCtx, cp, scope, source)
 		cancel()
 	}
 
@@ -140,16 +142,16 @@ func (t *ConfigVersionTracker) BeforeWrite(ctx context.Context, controlPlaneID s
 	cp.writesInFlight++
 }
 
-// AfterWrite must be called after the operator received the response to a write request to the given control plane.
+// AfterWrite must be called after the operator received the response to a write request to the given config scope.
 // When no other write is in flight, it reads the config version, so that a later change is attributed to an
 // external actor.
-func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID string) {
+func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, scope string) {
 	if t == nil {
 		return
 	}
 	t.mu.Lock()
-	cp := t.controlPlane(controlPlaneID)
-	t.observeCurrentSDK(ctx, cp)
+	cp := t.controlPlane(scope)
+	t.observeCurrentSDK(ctx, scope, cp)
 	if cp.writesInFlight > 0 {
 		cp.writesInFlight--
 	}
@@ -168,7 +170,7 @@ func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID st
 		defer cp.fetchMu.Unlock()
 
 		t.mu.Lock()
-		rebaseline, sdk := cp.needsRebaseline(), cp.sdk
+		rebaseline, source := cp.needsRebaseline(), cp.source
 		t.mu.Unlock()
 		if !rebaseline {
 			return
@@ -176,7 +178,7 @@ func (t *ConfigVersionTracker) AfterWrite(ctx context.Context, controlPlaneID st
 
 		versionCtx, cancel := versionReadContext(ctx)
 		defer cancel()
-		_, _ = t.refresh(versionCtx, cp, controlPlaneID, sdk)
+		_, _ = t.refresh(versionCtx, cp, scope, source)
 	})
 }
 
@@ -192,14 +194,14 @@ func (t *ConfigVersionTracker) waitForRebaseline() {
 // observeCurrentSDK records the SDK used by the current write. The SDK instance
 // carries the current token, and its server URL identifies the Konnect instance
 // the state belongs to. Reusing a cached SDK would keep using a rotated token.
-func (t *ConfigVersionTracker) observeCurrentSDK(ctx context.Context, cp *controlPlaneConfigVersion) {
+func (t *ConfigVersionTracker) observeCurrentSDK(ctx context.Context, scope string, cp *controlPlaneConfigVersion) {
 	wrapper, ok := sdkops.SDKFromContext(ctx)
 	if !ok {
 		return
 	}
 	serverURL := wrapper.GetServerURL()
 	if cp.serverURL != "" && cp.serverURL != serverURL {
-		// The same control plane ID is being used against a different Konnect
+		// The same config scope is being used against a different Konnect
 		// instance. Do not reuse the version state from the previous instance.
 		cp.version = ""
 		cp.changedAt = time.Time{}
@@ -207,7 +209,11 @@ func (t *ConfigVersionTracker) observeCurrentSDK(ctx context.Context, cp *contro
 		cp.fetchErr = false
 	}
 	cp.serverURL = serverURL
-	cp.sdk = wrapper.GetDPNodesSDK()
+	if id, ok := sdkops.AIGatewayIDFromWriteScope(scope); ok {
+		cp.source = newAIGatewayVersionSource(wrapper.GetAIGatewayNodesSDK(), id)
+	} else {
+		cp.source = newDPNodesVersionSource(wrapper.GetDPNodesSDK(), scope)
+	}
 }
 
 // versionReadContext returns a context for a config version read that is not
@@ -217,11 +223,11 @@ func versionReadContext(ctx context.Context) (context.Context, context.CancelFun
 }
 
 func (cp *controlPlaneConfigVersion) hasCleanBaseline() bool {
-	return !cp.ownWrite && cp.writesInFlight == 0 && cp.version != "" && cp.sdk != nil
+	return !cp.ownWrite && cp.writesInFlight == 0 && cp.version != "" && cp.source != nil
 }
 
 func (cp *controlPlaneConfigVersion) needsRebaseline() bool {
-	return cp.ownWrite && cp.writesInFlight == 0 && cp.version != "" && cp.sdk != nil
+	return cp.ownWrite && cp.writesInFlight == 0 && cp.version != "" && cp.source != nil
 }
 
 // Forget drops what is known about the entity with the given UID.
@@ -234,34 +240,34 @@ func (t *ConfigVersionTracker) Forget(uid types.UID) {
 	delete(t.entities, uid)
 }
 
-func (t *ConfigVersionTracker) controlPlane(controlPlaneID string) *controlPlaneConfigVersion {
-	cp, ok := t.controlPlanes[controlPlaneID]
+func (t *ConfigVersionTracker) controlPlane(scope string) *controlPlaneConfigVersion {
+	cp, ok := t.controlPlanes[scope]
 	if !ok {
 		cp = &controlPlaneConfigVersion{}
-		t.controlPlanes[controlPlaneID] = cp
+		t.controlPlanes[scope] = cp
 	}
 	return cp
 }
 
-// lastExternalChange returns the time of the last observed external change of the control plane's
+// lastExternalChange returns the time of the last observed external change of the config scope's
 // configuration, refreshing the config version when it is older than versionTTL.
 // The returned bool is false when the config version could not be retrieved.
 func (t *ConfigVersionTracker) lastExternalChange(
 	ctx context.Context,
-	sdk sdkkonnectgo.DPNodesSDK,
-	controlPlaneID string,
+	source versionSource,
+	scope string,
 ) (time.Time, bool) {
 	t.mu.Lock()
-	cp := t.controlPlane(controlPlaneID)
-	t.observeCurrentSDK(ctx, cp)
-	if cp.sdk == nil {
-		cp.sdk = sdk
+	cp := t.controlPlane(scope)
+	t.observeCurrentSDK(ctx, scope, cp)
+	if cp.source == nil {
+		cp.source = source
 	}
-	if cp.sdk == nil {
+	if cp.source == nil {
 		t.mu.Unlock()
 		return time.Time{}, false
 	}
-	sdk = cp.sdk
+	source = cp.source
 	t.mu.Unlock()
 
 	cp.fetchMu.Lock()
@@ -275,19 +281,19 @@ func (t *ConfigVersionTracker) lastExternalChange(
 	}
 	t.mu.Unlock()
 
-	return t.refresh(ctx, cp, controlPlaneID, sdk)
+	return t.refresh(ctx, cp, scope, source)
 }
 
-// refresh reads the config version of the control plane and records an external change when it differs from
-// the previous one and the operator did not write to the control plane in between.
+// refresh reads the config version of the config scope and records an external change when it differs from
+// the previous one and the operator did not write to the config scope in between.
 // The caller must hold cp.fetchMu.
 func (t *ConfigVersionTracker) refresh(
 	ctx context.Context,
 	cp *controlPlaneConfigVersion,
-	controlPlaneID string,
-	sdk sdkkonnectgo.DPNodesSDK,
+	scope string,
+	source versionSource,
 ) (time.Time, bool) {
-	version, err := fetchExpectedConfigVersion(ctx, sdk, controlPlaneID)
+	version, err := fetchExpectedConfigVersion(ctx, source)
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -300,8 +306,8 @@ func (t *ConfigVersionTracker) refresh(
 	cp.ownWrite = cp.writesInFlight > 0
 	cp.fetchedAt = now
 	if err != nil {
-		log.Debug(ctrllog.FromContext(ctx), "failed to get Konnect control plane expected config version",
-			"control_plane_id", controlPlaneID, "error", err.Error(),
+		log.Debug(ctrllog.FromContext(ctx), "failed to get Konnect expected config version",
+			"scope", scope, "error", err.Error(),
 		)
 		cp.fetchErr = true
 		return time.Time{}, false
@@ -316,15 +322,68 @@ func (t *ConfigVersionTracker) refresh(
 	return cp.changedAt, true
 }
 
-func fetchExpectedConfigVersion(ctx context.Context, sdk sdkkonnectgo.DPNodesSDK, controlPlaneID string) (string, error) {
+// versionSource reads the expected config version of a config scope.
+type versionSource interface {
+	expectedConfigVersion(ctx context.Context) (string, error)
+}
+
+// dpNodesVersionSource reads the expected config version of a Kong Gateway control plane.
+type dpNodesVersionSource struct {
+	sdk            sdkkonnectgo.DPNodesSDK
+	controlPlaneID string
+}
+
+// newDPNodesVersionSource returns the version source of a Kong Gateway control
+// plane, or nil when sdk is nil.
+func newDPNodesVersionSource(sdk sdkkonnectgo.DPNodesSDK, controlPlaneID string) versionSource {
 	if sdk == nil {
-		return "", errors.New("nil DPNodes SDK")
+		return nil
 	}
-	resp, err := sdk.GetExpectedConfigVersion(ctx, controlPlaneID)
+	return dpNodesVersionSource{sdk: sdk, controlPlaneID: controlPlaneID}
+}
+
+func (s dpNodesVersionSource) expectedConfigVersion(ctx context.Context) (string, error) {
+	resp, err := s.sdk.GetExpectedConfigVersion(ctx, s.controlPlaneID)
 	if err != nil {
 		return "", err
 	}
-	version := resp.GetGetExpectedConfigVersionResponse().GetExpectedConfigVersion()
+	return resp.GetGetExpectedConfigVersionResponse().GetExpectedConfigVersion(), nil
+}
+
+// aiGatewayVersionSource reads the expected config version of an AI Gateway.
+type aiGatewayVersionSource struct {
+	sdk       sdkkonnectgo.AIGatewayNodesSDK
+	gatewayID string
+}
+
+// newAIGatewayVersionSource returns the version source of an AI Gateway, or
+// nil when sdk is nil.
+func newAIGatewayVersionSource(sdk sdkkonnectgo.AIGatewayNodesSDK, gatewayID string) versionSource {
+	if sdk == nil {
+		return nil
+	}
+	return aiGatewayVersionSource{sdk: sdk, gatewayID: gatewayID}
+}
+
+func (s aiGatewayVersionSource) expectedConfigVersion(ctx context.Context) (string, error) {
+	resp, err := s.sdk.GetAiGatewayExpectedConfigVersion(ctx, s.gatewayID)
+	if err != nil {
+		return "", err
+	}
+	if resp == nil {
+		return "", ErrNilResponse
+	}
+	return resp.AIGatewayExpectedConfigVersion.GetExpectedConfigVersion(), nil
+}
+
+func fetchExpectedConfigVersion(ctx context.Context, source versionSource) (string, error) {
+	if source == nil {
+		return "", errors.New("no expected config version source")
+	}
+	version, err := source.expectedConfigVersion(ctx)
+	if err != nil {
+		return "", err
+	}
 	if version == "" {
 		return "", errors.New("empty expected config version")
 	}
@@ -379,10 +438,12 @@ const (
 // syncGuard decides, for a single update of a Konnect entity, whether the entity has to be sent to Konnect.
 // A nil syncGuard always sends.
 type syncGuard struct {
-	tracker        *ConfigVersionTracker
-	sdk            sdkkonnectgo.DPNodesSDK
-	uid            types.UID
-	controlPlaneID string
+	tracker *ConfigVersionTracker
+	source  versionSource
+	uid     types.UID
+	// scope is the config scope of the entity: a Kong Gateway control plane ID,
+	// or an AI Gateway scope returned by sdkops.AIGatewayWriteScope.
+	scope string
 	// periodic is true when the update is only due to the sync period having elapsed,
 	// in which case it can be skipped or verified with a GET instead of being sent.
 	periodic bool
@@ -399,7 +460,9 @@ type syncGuard struct {
 	// secret material, so only keyed hashes may be persisted in status.
 	secretBearing bool
 	// persistable is false when the hashes of the update must not be persisted
-	// in status: a secret-bearing entity without a configured sync hash key.
+	// in status: an entity whose sync state is tracked in memory only, such as
+	// an AI Gateway entity, or a secret-bearing entity without a configured
+	// sync hash key. The pending record is still committed to memory.
 	persistable bool
 	// pending is the record produced by a real PUT, or by a GET verification
 	// of hashes persisted with the previous key. It is persisted in status by
@@ -420,13 +483,35 @@ func (t *ConfigVersionTracker) guard(
 		return nil
 	}
 	return &syncGuard{
-		tracker:        t,
-		sdk:            sdk,
-		uid:            uid,
-		controlPlaneID: controlPlaneID,
-		periodic:       periodic,
-		persisted:      persisted,
-		persistable:    true,
+		tracker:     t,
+		source:      newDPNodesVersionSource(sdk, controlPlaneID),
+		uid:         uid,
+		scope:       controlPlaneID,
+		periodic:    periodic,
+		persisted:   persisted,
+		persistable: true,
+	}
+}
+
+// aiGatewayGuard returns the guard of an update of an AI Gateway entity. Its
+// config scope is the AI Gateway, whose expected config version is read with
+// sdk. The sync state of AI Gateway entities is tracked in memory only.
+func (t *ConfigVersionTracker) aiGatewayGuard(
+	sdk sdkkonnectgo.AIGatewayNodesSDK,
+	uid types.UID,
+	gatewayID string,
+	periodic bool,
+) *syncGuard {
+	if t == nil || sdk == nil || gatewayID == "" || uid == "" {
+		return nil
+	}
+	return &syncGuard{
+		tracker:     t,
+		source:      newAIGatewayVersionSource(sdk, gatewayID),
+		uid:         uid,
+		scope:       sdkops.AIGatewayWriteScope(gatewayID),
+		periodic:    periodic,
+		persistable: false,
 	}
 }
 
@@ -585,7 +670,7 @@ func upsertUnlessInSync[E any](
 	}
 
 	t := g.tracker
-	payloadHash, err := entityPayloadHash(g.hasher, g.controlPlaneID, konnectID, payload)
+	payloadHash, err := entityPayloadHash(g.hasher, g.scope, konnectID, payload)
 	if err != nil {
 		t.Forget(g.uid)
 		_, err := upsert(ctx)
@@ -594,7 +679,7 @@ func upsertUnlessInSync[E any](
 
 	// Fetching the config version before sending ensures a baseline exists before
 	// the first write, so that the write is attributed to the operator.
-	changedAt, versionOK := t.lastExternalChange(ctx, g.sdk, g.controlPlaneID)
+	changedAt, versionOK := t.lastExternalChange(ctx, g.source, g.scope)
 
 	rec, verifyHasher, ok := g.knownRecord()
 	// Hashes persisted with the previous key are compared with hashes computed
@@ -602,7 +687,7 @@ func upsertUnlessInSync[E any](
 	migrating := ok && verifyHasher.keyID() != g.hasher.keyID()
 	comparedPayloadHash := payloadHash
 	if migrating {
-		if comparedPayloadHash, err = entityPayloadHash(verifyHasher, g.controlPlaneID, konnectID, payload); err != nil {
+		if comparedPayloadHash, err = entityPayloadHash(verifyHasher, g.scope, konnectID, payload); err != nil {
 			ok = false
 		}
 	}
@@ -664,4 +749,13 @@ func upsertUnlessInSync[E any](
 	g.pending = &rec
 	g.outcome = syncOutcomeSent
 	return nil
+}
+
+// syncPayloadWithAssociations is the payload of a guarded update of an entity
+// whose associations, such as consumer group membership, are reconciled
+// separately from the entity: their resolved state is part of the payload so
+// that the entity is sent again when they change.
+type syncPayloadWithAssociations struct {
+	Request      any            `json:"request"`
+	Associations map[string]any `json:"associations"`
 }

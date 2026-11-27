@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -45,6 +46,7 @@ func updateAIGatewayConsumerGroup(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayConsumerGroup,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -57,12 +59,28 @@ func updateAIGatewayConsumerGroup(
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayConsumerGroup(ctx, sdkkonnectops.UpdateAiGatewayConsumerGroupRequest{
-		GatewayID:                           parentID,
-		ConsumerGroupIDOrName:               id,
-		UpdateAIGatewayConsumerGroupRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayConsumerGroup, error) {
+			resp, err := sdk.GetAiGatewayConsumerGroup(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayConsumerGroup, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayConsumerGroup, error) {
+			resp, err := sdk.UpdateAiGatewayConsumerGroup(ctx, sdkkonnectops.UpdateAiGatewayConsumerGroupRequest{
+				GatewayID:                           parentID,
+				ConsumerGroupIDOrName:               id,
+				UpdateAIGatewayConsumerGroupRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayConsumerGroup, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayConsumerGroup(ctx, cl, sdk, obj)

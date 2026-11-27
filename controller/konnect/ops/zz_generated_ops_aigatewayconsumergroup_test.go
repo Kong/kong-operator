@@ -123,7 +123,7 @@ func TestUpdateAIGatewayConsumerGroup_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayConsumerGroupResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayConsumerGroup(ctx, cl, sdk, obj))
+	require.NoError(t, updateAIGatewayConsumerGroup(ctx, cl, sdk, nil, obj))
 }
 
 func TestUpdateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
@@ -153,7 +153,7 @@ func TestUpdateAIGatewayConsumerGroup_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayConsumerGroup(ctx, cl, sdk, obj)
+	err = updateAIGatewayConsumerGroup(ctx, cl, sdk, nil, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

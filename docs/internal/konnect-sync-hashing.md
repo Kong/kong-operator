@@ -24,6 +24,9 @@ The sync state guard (`upsertUnlessInSync`) covers the 17 Kong Gateway configura
 - `KongCredentialJWT`
 - `KongCredentialHMAC`
 
+It also covers the Konnect AI Gateway entity types whose generated update opts into `ops.skipUnchangedUpdates`. Their sync state is tracked in memory only.
+See [AI Gateway Entities](#ai-gateway-entities).
+
 ## Two-Layer Design
 
 Hashing in `controller/konnect/ops/configversion_hash.go` is split into two layers:
@@ -151,3 +154,41 @@ Rotation is explicit and needs a restart of every operator replica, for example 
 - **With a one-time re-sync**: replace `key`, or delete the Secret so the operator creates a new one. Every secret-bearing entity is sent to Konnect once, and its status is rewritten with the new key.
 
 Restoring entities from a backup without the key Secret, or with a different one, behaves like the one-time re-sync.
+
+## AI Gateway Entities
+
+Konnect AI Gateway entities (`aiconfiguration.konghq.com`) skip unchanged periodic updates like Kong Gateway entities, with the same guard (`upsertUnlessInSync`) and canonicalization.
+
+### Config Scopes
+
+`ConfigVersionTracker` tracks the expected config version per config scope:
+
+- A Kong Gateway control plane, keyed by its ID, read with `GET /v2/control-planes/{id}/expected-config-version`.
+- An AI Gateway, keyed by `sdkops.AIGatewayWriteScope` (`ai-gateways/<id>`), read with `GET /v1/ai-gateways/{id}/expected-config-version`.
+
+A no-op write does not bump either version, and a change does. This was verified against Konnect for both scopes.
+The write observer transport reports writes to `/v2/control-planes/{id}` and `/v1/ai-gateways/{id}`, and the paths below them, to the matching scope. The operator's own writes are therefore not mistaken for external changes.
+
+### Generated Guard
+
+`ops.skipUnchangedUpdates` in `crd-from-oas/config.yaml` makes the generated `update<Entity>` function take the sync guard from `UpdateGeneratedOps`:
+
+- The payload is the SDK update request, with the Kubernetes metadata labels.
+- The GET-verification reads the entity with its GET-by-ID operation. The parser extracts it from the item path.
+- The generator refuses the option unless the entity has a single `KonnectAIGateway` parent, a GET-by-ID operation, GET and update operations returning the same schema, and no `ops.responseStatusFields`.
+- `generatedAIGatewaySyncScope` tells `ops.Update` which entities are guarded, and the ID of their AI Gateway.
+
+### Associations
+
+An entity with `associations`, such as the consumer groups of `AIGatewayConsumer`, needs two more hand-written helpers per association:
+
+- `syncState<Entity><Field>` returns the resolved association state, which is part of the payload (`syncPayloadWithAssociations`). The entity is sent again when the association, or the validity of a reference, changes.
+  When the state cannot be resolved, the update is not guarded and always sends.
+- `enforce<Entity><Field>IfDrifted` is called when the entity was verified with a GET. It reads the association in Konnect and only writes it when it drifted.
+  A skipped update does not enforce the association. A sent update enforces it like before.
+
+### Persistence
+
+The sync state of AI Gateway entities is not persisted in status. After a restart or a leader change, each entity is sent once more.
+Because the state never crosses operator versions, there are no golden hashes for these types and no `hashVersion` contract yet. Persisting the state would require both.
+

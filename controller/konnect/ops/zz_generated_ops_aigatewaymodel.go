@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -69,6 +70,7 @@ func updateAIGatewayModel(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayModelsSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayModel,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -86,12 +88,28 @@ func updateAIGatewayModel(
 	if req.AIGatewayModelModel != nil {
 		req.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelModel.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayModel(ctx, sdkkonnectops.UpdateAiGatewayModelRequest{
-		GatewayID:                   parentID,
-		ModelIDOrName:               id,
-		UpdateAIGatewayModelRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayModel, error) {
+			resp, err := sdk.GetAiGatewayModel(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayModel, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayModel, error) {
+			resp, err := sdk.UpdateAiGatewayModel(ctx, sdkkonnectops.UpdateAiGatewayModelRequest{
+				GatewayID:                   parentID,
+				ModelIDOrName:               id,
+				UpdateAIGatewayModelRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayModel, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayModel(ctx, cl, sdk, obj)

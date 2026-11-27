@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -84,6 +85,7 @@ func updateAIGatewayVault(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayVaultsSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayVault,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -116,12 +118,28 @@ func updateAIGatewayVault(
 	if req.HashiCorpVault != nil {
 		req.HashiCorpVault.Labels = WithKubernetesMetadataLabels(obj, req.HashiCorpVault.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayVault(ctx, sdkkonnectops.UpdateAiGatewayVaultRequest{
-		GatewayID:                   parentID,
-		VaultIDOrName:               id,
-		UpdateAIGatewayVaultRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayVault, error) {
+			resp, err := sdk.GetAiGatewayVault(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayVault, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayVault, error) {
+			resp, err := sdk.UpdateAiGatewayVault(ctx, sdkkonnectops.UpdateAiGatewayVaultRequest{
+				GatewayID:                   parentID,
+				VaultIDOrName:               id,
+				UpdateAIGatewayVaultRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayVault, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayVault(ctx, cl, sdk, obj)

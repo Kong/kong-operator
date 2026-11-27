@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -45,6 +46,7 @@ func updateAIGatewayPolicy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayPolicy,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -57,12 +59,28 @@ func updateAIGatewayPolicy(
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayPolicy(ctx, sdkkonnectops.UpdateAiGatewayPolicyRequest{
-		GatewayID:                    parentID,
-		PolicyIDOrName:               id,
-		UpdateAIGatewayPolicyRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayPolicy, error) {
+			resp, err := sdk.GetAiGatewayPolicy(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayPolicy, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayPolicy, error) {
+			resp, err := sdk.UpdateAiGatewayPolicy(ctx, sdkkonnectops.UpdateAiGatewayPolicyRequest{
+				GatewayID:                    parentID,
+				PolicyIDOrName:               id,
+				UpdateAIGatewayPolicyRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayPolicy, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayPolicy(ctx, cl, sdk, obj)

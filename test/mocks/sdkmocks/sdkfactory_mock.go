@@ -40,6 +40,7 @@ type MockSDKWrapper struct {
 	SNIsSDK                     *mocks.MockSNIsSDK
 	DataPlaneCertificatesSDK    *mocks.MockDPCertificatesSDK
 	DPNodesSDK                  *mocks.MockDPNodesSDK
+	AIGatewayNodesSDK           *mocks.MockAIGatewayNodesSDK
 	MCPServersSDK               *sdkkonnectgo.MCPServers
 	ConfigStoreSecretsSDK       *mocks.MockConfigStoreSecretsSDK
 
@@ -76,6 +77,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		SNIsSDK:                     mocks.NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    mocks.NewMockDPCertificatesSDK(t),
 		DPNodesSDK:                  mocks.NewMockDPNodesSDK(t),
+		AIGatewayNodesSDK:           mocks.NewMockAIGatewayNodesSDK(t),
 		ConfigStoreSecretsSDK:       mocks.NewMockConfigStoreSecretsSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
@@ -185,6 +187,10 @@ func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificate
 
 func (m MockSDKWrapper) GetDPNodesSDK() sdkkonnectgo.DPNodesSDK {
 	return m.DPNodesSDK
+}
+
+func (m MockSDKWrapper) GetAIGatewayNodesSDK() sdkkonnectgo.AIGatewayNodesSDK {
+	return m.AIGatewayNodesSDK
 }
 
 func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkops.CloudGatewaysSDK {

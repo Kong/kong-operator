@@ -2899,7 +2899,7 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 		Maybe()
 {{- end}}
 
-	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj))
+	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, {{if .Update.SkipUnchanged}}nil, {{end}}obj))
 }
 
 func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
@@ -2979,7 +2979,7 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 		Maybe()
 {{- end}}
 
-	err = update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj)
+	err = update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, {{if .Update.SkipUnchanged}}nil, {{end}}obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 {{- if $.SupportsMirror}}
@@ -2996,7 +2996,7 @@ func TestUpdate{{.Entity}}_MirrorIsNoOp(t *testing.T) {
 	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
 	obj.SetKonnectID("{{$.FixtureName}}-id")
 
-	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj))
+	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, {{if .Update.SkipUnchanged}}nil, {{end}}obj))
 }
 {{- end}}
 {{- end}}
@@ -3466,6 +3466,9 @@ func update{{.Entity}}(
 	cl client.Client,
 	{{- end}}
 	sdk sdkkonnectgo.{{.UpdateSDKInterface}},
+	{{- if .SkipUnchanged}}
+	g *syncGuard,
+	{{- end}}
 	obj *{{.APIAlias}}.{{.Entity}},
 ) error {
 {{- if .SupportsMirror}}
@@ -3518,7 +3521,46 @@ func update{{.Entity}}(
 {{- end}}
 {{- end}}
 {{- end}}
-{{- if .UpdateFullyWrapped}}
+{{- if .SkipUnchanged}}
+{{- $parentID := (index .Parents 0).VarName}}
+{{- if .Associations}}
+
+	// Associations are not part of the entity, so their resolved state is part
+	// of the payload: the entity is sent again when they change.
+	payload := syncPayloadWithAssociations{Request: req, Associations: map[string]any{}}
+{{- range .Associations}}
+	if state, stateErr := syncState{{$.Entity}}{{.GoFieldName}}(ctx, cl, obj); stateErr != nil {
+		// A change cannot be detected without the association state: always send.
+		g = nil
+	} else {
+		payload.Associations["{{.GoFieldName}}"] = state
+	}
+{{- end}}
+{{- else}}
+	payload := req
+{{- end}}
+
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.{{.RespType}}, error) {
+			resp, err := sdk.{{.GetSDKMethod}}(ctx, {{$parentID}}, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.{{.GetRespField}}, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.{{.RespType}}, error) {
+			resp, err := sdk.{{.UpdateSDKMethod}}(ctx, sdkkonnectops.{{.UpdateSDKMethod}}Request{
+				{{.ParentIDField}}: {{$parentID}},
+				{{.EntityIDField}}: id,
+				{{.UpdateBodyField}}: {{if .UpdateReqBodyPointer}}req{{else}}*req{{end}},
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.{{.UpdateRespField}}, nil
+		},
+	)
+{{- else if .UpdateFullyWrapped}}
 {{- range .Parents}}
 	req.{{.SDKFieldName}} = {{.VarName}}
 {{- end}}
@@ -3568,10 +3610,29 @@ func update{{.Entity}}(
 	}
 {{- end}}
 {{- range .Associations}}
+{{- if $.SkipUnchanged}}
+
+	switch {
+	case g.skipped():
+		// Neither the entity nor its associations changed: nothing to enforce.
+	case g.notSent():
+		// The entity was verified with a GET: only write the association when it drifted.
+		if err := enforce{{$.Entity}}{{.GoFieldName}}IfDrifted(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {
+			g.invalidate()
+			return err
+		}
+	default:
+		if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {
+			g.invalidate()
+			return err
+		}
+	}
+{{- else}}
 
 	if err := enforce{{$.Entity}}{{.GoFieldName}}(ctx, cl, sdk, obj, {{(index $.Parents 0).VarName}}); err != nil {
 		return err
 	}
+{{- end}}
 {{- end}}
 	return nil
 }
@@ -3720,6 +3781,7 @@ func UpdateGeneratedOps[
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
 	cl client.Client,
+	g *syncGuard,
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
@@ -3729,11 +3791,27 @@ func UpdateGeneratedOps[
 		return nil // Entity does not support update.
 {{- else}}
 	case *{{.APIAlias}}.{{.Entity}}:
-		return update{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk.{{.SDKGetter}}(), ent)
+		return update{{.Entity}}(ctx, {{if .NeedsClient}}cl, {{end}}sdk.{{.SDKGetter}}(), {{if .SkipUnchanged}}g, {{end}}ent)
 {{- end}}
 {{- end}}
 	default:
 		return fmt.Errorf("unsupported entity type %T", ent)
+	}
+}
+
+// generatedAIGatewaySyncScope returns the ID of the AI Gateway that scopes the
+// sync guard of an entity whose generated update skips unchanged periodic
+// updates (ops.skipUnchangedUpdates). It returns false for other entities.
+func generatedAIGatewaySyncScope(e any) (string, bool) {
+	switch e.(type) {
+{{- range .Cases}}
+{{- if .SkipUnchanged}}
+	case *{{.APIAlias}}.{{.Entity}}:
+		return e.(*{{.APIAlias}}.{{.Entity}}).{{.ParentIDGetter}}(), true
+{{- end}}
+{{- end}}
+	default:
+		return "", false
 	}
 }
 `

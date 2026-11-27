@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -135,6 +136,7 @@ func updateAIGatewayModelProvider(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayModelProvidersSDK,
+	g *syncGuard,
 	obj *aiconfigurationv1alpha1.AIGatewayModelProvider,
 ) error {
 	parentID := obj.GetGatewayID()
@@ -218,12 +220,28 @@ func updateAIGatewayModelProvider(
 	if req.AIGatewayModelProviderTypesafe != nil {
 		req.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTypesafe.Labels)
 	}
+	payload := req
 
-	_, err = sdk.UpdateAiGatewayModelProvider(ctx, sdkkonnectops.UpdateAiGatewayModelProviderRequest{
-		GatewayID:                           parentID,
-		ModelProviderIDOrName:               id,
-		UpdateAIGatewayModelProviderRequest: *req,
-	})
+	err = upsertUnlessInSync(ctx, g, id, payload,
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayModelProvider, error) {
+			resp, err := sdk.GetAiGatewayModelProvider(ctx, parentID, id)
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayModelProvider, nil
+		},
+		func(ctx context.Context) (*sdkkonnectcomp.AIGatewayModelProvider, error) {
+			resp, err := sdk.UpdateAiGatewayModelProvider(ctx, sdkkonnectops.UpdateAiGatewayModelProviderRequest{
+				GatewayID:                           parentID,
+				ModelProviderIDOrName:               id,
+				UpdateAIGatewayModelProviderRequest: *req,
+			})
+			if err != nil || resp == nil {
+				return nil, err
+			}
+			return resp.AIGatewayModelProvider, nil
+		},
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
 			return createAIGatewayModelProvider(ctx, cl, sdk, obj)

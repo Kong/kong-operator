@@ -84,7 +84,35 @@ func TestWriteObservingTransport(t *testing.T) {
 			url:    "https://us.api.konghq.com/v2/control-planes",
 		},
 		{
-			name:   "write outside control planes",
+			name:          "AI Gateway entity update",
+			method:        http.MethodPut,
+			url:           "https://us.api.konghq.com/v1/ai-gateways/aigw-1/consumers/c-1",
+			expectedMarks: []string{"before:ai-gateways/aigw-1", "after:ai-gateways/aigw-1"},
+		},
+		{
+			name:          "AI Gateway consumer group membership update",
+			method:        http.MethodPut,
+			url:           "https://us.api.konghq.com/v1/ai-gateways/aigw-1/consumers/c-1/consumer-groups",
+			expectedMarks: []string{"before:ai-gateways/aigw-1", "after:ai-gateways/aigw-1"},
+		},
+		{
+			name:          "AI Gateway update",
+			method:        http.MethodPut,
+			url:           "https://us.api.konghq.com/v1/ai-gateways/aigw-1",
+			expectedMarks: []string{"before:ai-gateways/aigw-1", "after:ai-gateways/aigw-1"},
+		},
+		{
+			name:   "AI Gateway entity get",
+			method: http.MethodGet,
+			url:    "https://us.api.konghq.com/v1/ai-gateways/aigw-1/consumers/c-1",
+		},
+		{
+			name:   "AI Gateway create",
+			method: http.MethodPost,
+			url:    "https://us.api.konghq.com/v1/ai-gateways",
+		},
+		{
+			name:   "write outside control planes and AI Gateways",
 			method: http.MethodPut,
 			url:    "https://us.api.konghq.com/v1/event-gateways/eg-1/listeners/l-1",
 		},
@@ -133,4 +161,16 @@ func TestWriteObservingTransportNilObserver(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	assert.True(t, called)
+}
+
+func TestAIGatewayWriteScope(t *testing.T) {
+	scope := AIGatewayWriteScope("aigw-1")
+	id, ok := AIGatewayIDFromWriteScope(scope)
+	require.True(t, ok)
+	assert.Equal(t, "aigw-1", id)
+
+	for _, scope := range []string{"cp-1", "ai-gateways/", ""} {
+		_, ok := AIGatewayIDFromWriteScope(scope)
+		assert.False(t, ok, "scope %q is not an AI Gateway scope", scope)
+	}
 }
